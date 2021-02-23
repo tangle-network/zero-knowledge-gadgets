@@ -1,0 +1,9 @@
+[package]
+name = "arkworks-gadgets"
+version = "0.1.0"
+authors = ["Drew Stone <drewstone329@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
