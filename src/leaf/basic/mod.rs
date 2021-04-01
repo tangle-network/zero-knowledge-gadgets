@@ -7,17 +7,17 @@ use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
 pub mod constraints;
 
 #[derive(Default, Clone)]
-pub struct Secrets<F: PrimeField> {
+pub struct Private<F: PrimeField> {
 	r: F,
 	nullifier: F,
 }
 
 #[derive(Default, Clone)]
-pub struct Publics<F: PrimeField> {
+pub struct Public<F: PrimeField> {
 	f: PhantomData<F>,
 }
 
-impl<F: PrimeField> Secrets<F> {
+impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 		Self {
 			r: F::rand(rng),
@@ -33,16 +33,16 @@ struct BasicLeaf<F: PrimeField, H: FixedLengthCRH> {
 
 impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
 	type Output = H::Output;
-	type Publics = Publics<F>;
-	type Secrets = Secrets<F>;
+	type Private = Private<F>;
+	type Public = Public<F>;
 
-	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Secrets, Error> {
-		Ok(Self::Secrets::generate(r))
+	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error> {
+		Ok(Self::Private::generate(r))
 	}
 
 	fn create(
-		s: &Self::Secrets,
-		_: &Self::Publics,
+		s: &Self::Private,
+		_: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Output, Error> {
 		let mut buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
@@ -80,7 +80,7 @@ mod test {
 	fn should_crate_leaf() {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let publics = Publics::default();
+		let publics = Public::default();
 
 		let inputs = to_bytes![secrets.r, secrets.nullifier, Fq::zero()].unwrap();
 

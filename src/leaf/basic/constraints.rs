@@ -1,4 +1,4 @@
-use super::{BasicLeaf, Publics, Secrets};
+use super::{BasicLeaf, Private, Public};
 use crate::leaf::{LeafCreation, LeafCreationGadget};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
@@ -8,17 +8,17 @@ use core::borrow::Borrow;
 use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
 
 #[derive(Clone)]
-pub struct SecretsVar<F: PrimeField> {
+pub struct PrivateVar<F: PrimeField> {
 	r: FpVar<F>,
 	nullifier: FpVar<F>,
 }
 
 #[derive(Clone, Default)]
-pub struct PublicsVar<F: PrimeField> {
+pub struct PublicVar<F: PrimeField> {
 	f: PhantomData<F>,
 }
 
-impl<F: PrimeField> SecretsVar<F> {
+impl<F: PrimeField> PrivateVar<F> {
 	pub fn new(r: FpVar<F>, nullifier: FpVar<F>) -> Self {
 		Self { r, nullifier }
 	}
@@ -40,12 +40,12 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
 	type OutputVar = HG::OutputVar;
-	type PublicsVar = PublicsVar<F>;
-	type SecretsVar = SecretsVar<F>;
+	type PrivateVar = PrivateVar<F>;
+	type PublicVar = PublicVar<F>;
 
 	fn create(
-		s: &Self::SecretsVar,
-		_: &Self::PublicsVar,
+		s: &Self::PrivateVar,
+		_: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
@@ -60,8 +60,8 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	}
 }
 
-impl<F: PrimeField> AllocVar<Secrets<F>, F> for SecretsVar<F> {
-	fn new_variable<T: Borrow<Secrets<F>>>(
+impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
+	fn new_variable<T: Borrow<Private<F>>>(
 		cs: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
@@ -71,17 +71,17 @@ impl<F: PrimeField> AllocVar<Secrets<F>, F> for SecretsVar<F> {
 		let nullifier = secrets.nullifier;
 		let r_var = FpVar::new_variable(cs, || Ok(r), mode)?;
 		let nullifier_var = FpVar::new_variable(r_var.cs(), || Ok(nullifier), mode)?;
-		Ok(SecretsVar::new(r_var, nullifier_var))
+		Ok(PrivateVar::new(r_var, nullifier_var))
 	}
 }
 
-impl<F: PrimeField> AllocVar<Publics<F>, F> for PublicsVar<F> {
-	fn new_variable<T: Borrow<Publics<F>>>(
+impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
+	fn new_variable<T: Borrow<Public<F>>>(
 		_: impl Into<Namespace<F>>,
 		_: impl FnOnce() -> Result<T, SynthesisError>,
 		_: AllocationMode,
 	) -> Result<Self, SynthesisError> {
-		Ok(PublicsVar::default())
+		Ok(PublicVar::default())
 	}
 }
 
@@ -129,10 +129,10 @@ mod test {
 		)
 		.unwrap();
 
-		let public = Publics::default();
-		let public_var = PublicsVar::default();
+		let public = Public::default();
+		let public_var = PublicVar::default();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let secrets_var = SecretsVar::new_witness(cs, || Ok(&secrets)).unwrap();
+		let secrets_var = PrivateVar::new_witness(cs, || Ok(&secrets)).unwrap();
 
 		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
 		let leaf_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
