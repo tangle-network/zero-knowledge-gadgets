@@ -44,7 +44,12 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		let mut bytes = Vec::new();
 		bytes.extend(s.r.to_bytes().unwrap());
 		bytes.extend(s.nullifier.to_bytes().unwrap());
-		HG::evaluate(p, &bytes)
+
+		let bits = vec![Boolean::new_input(bytes.cs(), || Ok(false)).unwrap(); 8];
+		let mut buffer = vec![UInt8::from_bits_le(&bits); H::INPUT_SIZE_BITS / 8];
+
+		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
+		HG::evaluate(p, &buffer)
 	}
 }
 
@@ -66,13 +71,10 @@ impl<F: PrimeField> AllocVar<Secrets<F>, F> for SecretsVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::test_data::{
-		get_mds_3, get_mds_5, get_results_3, get_results_5, get_rounds_3, get_rounds_5,
-	};
+	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
-	use ark_std::{rand::Rng, test_rng};
+	use ark_std::test_rng;
 	use webb_crypto_primitives::crh::poseidon::{
 		constraints::{CRHGadget, PoseidonParametersVar},
 		sbox::PoseidonSbox,
@@ -95,7 +97,7 @@ mod test {
 	type Leaf = BasicLeaf<Fq, PoseidonCRH3>;
 	type LeafGadget = BasicLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	#[test]
-	fn should_crate_leaf() {
+	fn should_crate_leaf_constraints() {
 		let rng = &mut test_rng();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
@@ -111,15 +113,12 @@ mod test {
 		.unwrap();
 
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let secrets_var =
-			SecretsVar::new_variable(cs, || Ok(&secrets), AllocationMode::Witness).unwrap();
+		let secrets_var = SecretsVar::new_witness(cs, || Ok(&secrets)).unwrap();
 
 		let leaf = Leaf::create(&secrets, &params).unwrap();
 		let leaf_var = LeafGadget::create(&secrets_var, &params_var).unwrap();
 
-		let leaf_new_var =
-			FpVar::<Fq>::new_variable(leaf_var.cs(), || Ok(&leaf), AllocationMode::Witness)
-				.unwrap();
+		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
 		assert!(res.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());

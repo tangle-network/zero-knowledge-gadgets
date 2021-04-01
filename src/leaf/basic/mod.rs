@@ -35,21 +35,23 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
 	}
 
 	fn create(s: &Self::Secrets, p: &H::Parameters) -> Result<Self::Output, Error> {
+		let mut buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
 		let bytes = to_bytes![s.r, s.nullifier].unwrap();
-		H::evaluate(p, &bytes)
+		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
+		H::evaluate(p, &buffer)
 	}
 }
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::test_data::{
-		get_mds_3, get_mds_5, get_results_3, get_results_5, get_rounds_3, get_rounds_5,
-	};
+	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
-	use ark_std::{rand::Rng, test_rng};
-	use webb_crypto_primitives::crh::poseidon::{sbox::PoseidonSbox, Rounds, CRH};
+	use ark_std::test_rng;
+	use webb_crypto_primitives::crh::poseidon::{
+		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+	};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;
@@ -67,6 +69,16 @@ mod test {
 	#[test]
 	fn should_crate_leaf() {
 		let rng = &mut test_rng();
-		let secrets = Leaf::generate_secrets(rng);
+		let secrets = Leaf::generate_secrets(rng).unwrap();
+
+		let inputs = to_bytes![secrets.r, secrets.nullifier, Fq::zero()].unwrap();
+
+		let rounds = get_rounds_3::<Fq>();
+		let mds = get_mds_3::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let ev_res = PoseidonCRH3::evaluate(&params, &inputs).unwrap();
+
+		let res = Leaf::create(&secrets, &params).unwrap();
+		assert_eq!(ev_res, res);
 	}
 }
