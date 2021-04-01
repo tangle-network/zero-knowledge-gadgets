@@ -1,0 +1,1 @@
+cargo test --features r1cs

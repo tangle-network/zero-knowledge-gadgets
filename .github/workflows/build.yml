@@ -25,9 +25,6 @@ jobs:
       - name: Set-Up
         run: ./scripts/init.sh
 
-      - name: Install Rustup
-        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
-
       - name: Build
         run: ./scripts/build.sh
 
