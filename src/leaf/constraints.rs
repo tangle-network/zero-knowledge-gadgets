@@ -1,16 +1,23 @@
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::SynthesisError;
+use webb_crypto_primitives::crh::{constraints::FixedLengthCRHGadget, FixedLengthCRH};
 
 use ark_ff::Field;
 use core::fmt::Debug;
 
 use crate::leaf::LeafCreation;
 
-pub trait LeafCreationGadget<L: LeafCreation, F: Field>: Sized {
+pub trait LeafCreationGadget<
+	F: Field,
+	H: FixedLengthCRH,
+	HG: FixedLengthCRHGadget<H, F>,
+	L: LeafCreation<H>,
+>: Sized
+{
 	type OutputVar: EqGadget<F>
 		+ ToBytesGadget<F>
 		+ CondSelectGadget<F>
-		+ AllocVar<L::Output, F>
+		+ AllocVar<H::Output, F>
 		+ R1CSVar<F>
 		+ Debug
 		+ Clone
@@ -18,5 +25,8 @@ pub trait LeafCreationGadget<L: LeafCreation, F: Field>: Sized {
 
 	type SecretsVar: AllocVar<L::Secrets, F> + Clone;
 
-	fn evaluate(s: &Self::SecretsVar) -> Result<Self::OutputVar, SynthesisError>;
+	fn create(
+		s: &Self::SecretsVar,
+		p: &HG::ParametersVar,
+	) -> Result<Self::OutputVar, SynthesisError>;
 }

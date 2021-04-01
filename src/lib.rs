@@ -1,4 +1,5 @@
 mod leaf;
+pub mod test_data;
 
 #[cfg(test)]
 mod tests {
