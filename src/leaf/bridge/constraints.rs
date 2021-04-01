@@ -56,7 +56,7 @@ impl<F: PrimeField> R1CSVar<F> for OutputVar<F> {
 	type Value = Output<F>;
 
 	fn cs(&self) -> ConstraintSystemRef<F> {
-		self.cs()
+		self.leaf.cs()
 	}
 
 	fn value(&self) -> Result<Self::Value, SynthesisError> {
@@ -73,9 +73,9 @@ impl<F: PrimeField> CondSelectGadget<F> for OutputVar<F> {
 		true_val: &Self,
 		false_val: &Self,
 	) -> Result<Self, SynthesisError> {
-		match cond {
-			Boolean::Constant(true) => Ok(true_val.clone()),
-			Boolean::Constant(false) => Ok(false_val.clone()),
+		match cond.value()? {
+			true => Ok(true_val.clone()),
+			false => Ok(false_val.clone()),
 		}
 	}
 }
@@ -121,13 +121,14 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		p: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
-		let leaf_bytes = Vec::new();
+		let mut leaf_bytes = Vec::new();
 		leaf_bytes.extend(s.r.to_bytes()?);
 		leaf_bytes.extend(s.nullifier.to_bytes()?);
 		leaf_bytes.extend(s.rho.to_bytes()?);
 		leaf_bytes.extend(p.chain_id.to_bytes()?);
+		let cs = leaf_bytes.cs();
 
-		let leaf_bits = vec![Boolean::new_witness(leaf_bytes.cs(), || Ok(false))?; 8];
+		let leaf_bits = vec![Boolean::new_witness(cs.clone(), || Ok(false))?; 8];
 		let mut leaf_buffer = vec![UInt8::from_bits_le(&leaf_bits); H::INPUT_SIZE_BITS / 8];
 
 		leaf_buffer
@@ -146,13 +147,12 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 			.iter_mut()
 			.zip(nullifier_hash_bytes)
 			.for_each(|(b, l_b)| *b = l_b);
-		let leaf_res = HG::evaluate(h, &nullifier_hash_buffer)?;
 		let nullifier_hash_res = HG::evaluate(h, &nullifier_hash_buffer)?;
 
-		let a = F::from_le_bytes_mod_order(&to_bytes![leaf_res].unwrap());
-		let b = F::from_le_bytes_mod_order(&to_bytes![nullifier_hash_res].unwrap());
+		let a = F::from_le_bytes_mod_order(&leaf_res.to_bytes()?.value()?);
+		let b = F::from_le_bytes_mod_order(&nullifier_hash_res.to_bytes()?.value()?);
 
-		Self::OutputVar::new_witness(nullifier_hash_bytes.cs(), || {
+		Self::OutputVar::new_witness(cs, || {
 			Ok(Output {
 				leaf: a,
 				nullifier_hash: b,
@@ -199,7 +199,7 @@ impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
 	) -> Result<Self, SynthesisError> {
 		let output = f()?.borrow().clone();
 		let leaf = FpVar::new_witness(cs, || Ok(output.leaf))?;
-		let nullifier_hash = FpVar::new_witness(cs, || Ok(output.nullifier_hash))?;
+		let nullifier_hash = FpVar::new_witness(leaf.cs(), || Ok(output.nullifier_hash))?;
 		Ok(OutputVar::new(leaf, nullifier_hash))
 	}
 }

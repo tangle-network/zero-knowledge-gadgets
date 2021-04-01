@@ -110,53 +110,64 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 	}
 }
 
-// #[cfg(test)]
-// mod test {
-// 	use super::*;
-// 	use crate::test_data::{get_mds_5, get_rounds_5};
-// 	use ark_ed_on_bn254::Fq;
-// 	use ark_ff::{to_bytes, One, Zero};
-// 	use ark_std::test_rng;
-// 	use webb_crypto_primitives::crh::poseidon::{
-// 		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
-// 	};
+#[cfg(test)]
+mod test {
+	use super::*;
+	use crate::test_data::{get_mds_5, get_rounds_5};
+	use ark_ed_on_bn254::Fq;
+	use ark_ff::{to_bytes, One, Zero};
+	use ark_std::test_rng;
+	use webb_crypto_primitives::crh::poseidon::{
+		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+	};
 
-// 	#[derive(Default, Clone)]
-// 	struct PoseidonRounds5;
+	#[derive(Default, Clone)]
+	struct PoseidonRounds5;
 
-// 	impl Rounds for PoseidonRounds5 {
-// 		const FULL_ROUNDS: usize = 8;
-// 		const PARTIAL_ROUNDS: usize = 57;
-// 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-// 		const WIDTH: usize = 5;
-// 	}
+	impl Rounds for PoseidonRounds5 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 5;
+	}
 
-// 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
 
-// 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
-// 	#[test]
-// 	fn should_crate_leaf() {
-// 		let rng = &mut test_rng();
-// 		let secrets = Leaf::generate_secrets(rng).unwrap();
+	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
+	#[test]
+	fn should_crate_leaf() {
+		let rng = &mut test_rng();
+		let secrets = Leaf::generate_secrets(rng).unwrap();
 
-// 		let chain_id = Fq::one();
-// 		let publics = Public::new(chain_id);
+		let chain_id = Fq::one();
+		let publics = Public::new(chain_id);
 
-// 		let inputs = to_bytes![
-// 			secrets.r,
-// 			secrets.nullifier,
-// 			secrets.rho,
-// 			publics.chain_id,
-// 			Fq::zero()
-// 		]
-// 		.unwrap();
+		let leaf_inputs = to_bytes![
+			secrets.r,
+			secrets.nullifier,
+			secrets.rho,
+			publics.chain_id,
+			Fq::zero()
+		]
+		.unwrap();
 
-// 		let rounds = get_rounds_5::<Fq>();
-// 		let mds = get_mds_5::<Fq>();
-// 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-// 		let ev_res = PoseidonCRH5::evaluate(&params, &inputs).unwrap();
+		let nullifier_inputs = to_bytes![
+			secrets.nullifier,
+			Fq::zero(),
+			Fq::zero(),
+			Fq::zero(),
+			Fq::zero()
+		]
+		.unwrap();
 
-// 		let res = Leaf::create(&secrets, &publics, &params).unwrap();
-// 		assert_eq!(ev_res, res);
-// 	}
-// }
+		let rounds = get_rounds_5::<Fq>();
+		let mds = get_mds_5::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
+		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
+
+		let res = Leaf::create(&secrets, &publics, &params).unwrap();
+		assert_eq!(leaf_res, res.leaf);
+		assert_eq!(nullifier_res, res.nullifier_hash);
+	}
+}
