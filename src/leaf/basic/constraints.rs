@@ -114,7 +114,7 @@ mod test {
 	type Leaf = BasicLeaf<Fq, PoseidonCRH3>;
 	type LeafGadget = BasicLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	#[test]
-	fn should_crate_leaf_constraints() {
+	fn should_crate_basic_leaf_constraints() {
 		let rng = &mut test_rng();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();

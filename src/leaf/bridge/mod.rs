@@ -135,7 +135,7 @@ mod test {
 
 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
 	#[test]
-	fn should_crate_leaf() {
+	fn should_crate_bridge_leaf() {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 

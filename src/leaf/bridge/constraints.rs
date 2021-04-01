@@ -204,66 +204,65 @@ impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
 	}
 }
 
-// #[cfg(test)]
-// mod test {
-// 	use super::*;
-// 	use crate::test_data::{get_mds_5, get_rounds_5};
-// 	use ark_ed_on_bn254::Fq;
-// 	use ark_ff::One;
-// 	use ark_r1cs_std::R1CSVar;
-// 	use ark_relations::r1cs::ConstraintSystem;
-// 	use ark_std::test_rng;
-// 	use webb_crypto_primitives::crh::poseidon::{
-// 		constraints::{CRHGadget, PoseidonParametersVar},
-// 		sbox::PoseidonSbox,
-// 		PoseidonParameters, Rounds, CRH,
-// 	};
+#[cfg(test)]
+mod test {
+	use super::*;
+	use crate::test_data::{get_mds_5, get_rounds_5};
+	use ark_ed_on_bn254::Fq;
+	use ark_ff::One;
+	use ark_r1cs_std::R1CSVar;
+	use ark_relations::r1cs::ConstraintSystem;
+	use ark_std::test_rng;
+	use webb_crypto_primitives::crh::poseidon::{
+		constraints::{CRHGadget, PoseidonParametersVar},
+		sbox::PoseidonSbox,
+		PoseidonParameters, Rounds, CRH,
+	};
 
-// 	#[derive(Default, Clone)]
-// 	struct PoseidonRounds5;
+	#[derive(Default, Clone)]
+	struct PoseidonRounds5;
 
-// 	impl Rounds for PoseidonRounds5 {
-// 		const FULL_ROUNDS: usize = 8;
-// 		const PARTIAL_ROUNDS: usize = 57;
-// 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-// 		const WIDTH: usize = 5;
-// 	}
+	impl Rounds for PoseidonRounds5 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 5;
+	}
 
-// 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
-// 	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
+	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
-// 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
-// 	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget,
-// Leaf>; 	#[test]
-// 	fn should_crate_leaf_constraints() {
-// 		let rng = &mut test_rng();
+	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
+	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+	#[test]
+	fn should_crate_bridge_leaf_constraints() {
+		let rng = &mut test_rng();
 
-// 		let cs = ConstraintSystem::<Fq>::new_ref();
+		let cs = ConstraintSystem::<Fq>::new_ref();
 
-// 		let rounds = get_rounds_5::<Fq>();
-// 		let mds = get_mds_5::<Fq>();
-// 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-// 		let params_var = PoseidonParametersVar::new_variable(
-// 			cs.clone(),
-// 			|| Ok(&params),
-// 			AllocationMode::Constant,
-// 		)
-// 		.unwrap();
+		let rounds = get_rounds_5::<Fq>();
+		let mds = get_mds_5::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params_var = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(&params),
+			AllocationMode::Constant,
+		)
+		.unwrap();
 
-// 		let chain_id = Fq::one();
-// 		let public = Public::new(chain_id);
-// 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
-// 		let secrets = Leaf::generate_secrets(rng).unwrap();
-// 		let secrets_var = PrivateVar::new_witness(cs.clone(), ||
-// Ok(&secrets)).unwrap();
+		let chain_id = Fq::one();
+		let public = Public::new(chain_id);
+		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
+		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
 
-// 		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
-// 		let leaf_var = LeafGadget::create(&secrets_var, &public_var,
-// &params_var).unwrap();
+		let bridge_res = Leaf::create(&secrets, &public, &params).unwrap();
+		let bridge_res_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
 
-// 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), ||
-// Ok(leaf)).unwrap(); 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
-// 		assert!(res.value().unwrap());
-// 		assert!(res.cs().is_satisfied().unwrap());
-// 	}
-// }
+		let bridge_new_var =
+			OutputVar::<Fq>::new_witness(bridge_res_var.cs(), || Ok(&bridge_res)).unwrap();
+		let res = bridge_res_var.is_eq(&bridge_new_var).unwrap();
+		assert!(res.value().unwrap());
+		assert!(res.cs().is_satisfied().unwrap());
+	}
+}

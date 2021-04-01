@@ -77,7 +77,7 @@ mod test {
 
 	type Leaf = BasicLeaf<Fq, PoseidonCRH3>;
 	#[test]
-	fn should_crate_leaf() {
+	fn should_crate_basic_leaf() {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
