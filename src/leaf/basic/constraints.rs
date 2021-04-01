@@ -1,4 +1,4 @@
-use super::{BasicLeaf, Secrets};
+use super::{BasicLeaf, Publics, Secrets};
 use crate::leaf::{LeafCreation, LeafCreationGadget};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
@@ -11,6 +11,11 @@ use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
 pub struct SecretsVar<F: PrimeField> {
 	r: FpVar<F>,
 	nullifier: FpVar<F>,
+}
+
+#[derive(Clone, Default)]
+pub struct PublicsVar<F: PrimeField> {
+	f: PhantomData<F>,
 }
 
 impl<F: PrimeField> SecretsVar<F> {
@@ -35,11 +40,13 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
 	type OutputVar = HG::OutputVar;
+	type PublicsVar = PublicsVar<F>;
 	type SecretsVar = SecretsVar<F>;
 
 	fn create(
 		s: &Self::SecretsVar,
-		p: &HG::ParametersVar,
+		_: &Self::PublicsVar,
+		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(s.r.to_bytes().unwrap());
@@ -49,7 +56,7 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		let mut buffer = vec![UInt8::from_bits_le(&bits); H::INPUT_SIZE_BITS / 8];
 
 		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
-		HG::evaluate(p, &buffer)
+		HG::evaluate(h, &buffer)
 	}
 }
 
@@ -65,6 +72,16 @@ impl<F: PrimeField> AllocVar<Secrets<F>, F> for SecretsVar<F> {
 		let r_var = FpVar::new_variable(cs, || Ok(r), mode)?;
 		let nullifier_var = FpVar::new_variable(r_var.cs(), || Ok(nullifier), mode)?;
 		Ok(SecretsVar::new(r_var, nullifier_var))
+	}
+}
+
+impl<F: PrimeField> AllocVar<Publics<F>, F> for PublicsVar<F> {
+	fn new_variable<T: Borrow<Publics<F>>>(
+		_: impl Into<Namespace<F>>,
+		_: impl FnOnce() -> Result<T, SynthesisError>,
+		_: AllocationMode,
+	) -> Result<Self, SynthesisError> {
+		Ok(PublicsVar::default())
 	}
 }
 
@@ -112,11 +129,13 @@ mod test {
 		)
 		.unwrap();
 
+		let public = Publics::default();
+		let public_var = PublicsVar::default();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let secrets_var = SecretsVar::new_witness(cs, || Ok(&secrets)).unwrap();
 
-		let leaf = Leaf::create(&secrets, &params).unwrap();
-		let leaf_var = LeafGadget::create(&secrets_var, &params_var).unwrap();
+		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
+		let leaf_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
 
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();

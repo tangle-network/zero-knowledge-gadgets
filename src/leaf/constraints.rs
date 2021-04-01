@@ -24,9 +24,11 @@ pub trait LeafCreationGadget<
 		+ Sized;
 
 	type SecretsVar: AllocVar<L::Secrets, F> + Clone;
+	type PublicsVar: AllocVar<L::Publics, F> + Clone;
 
 	fn create(
 		s: &Self::SecretsVar,
-		p: &HG::ParametersVar,
+		p: &Self::PublicsVar,
+		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError>;
 }

@@ -12,6 +12,11 @@ pub struct Secrets<F: PrimeField> {
 	nullifier: F,
 }
 
+#[derive(Default, Clone)]
+pub struct Publics<F: PrimeField> {
+	f: PhantomData<F>,
+}
+
 impl<F: PrimeField> Secrets<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 		Self {
@@ -28,13 +33,18 @@ struct BasicLeaf<F: PrimeField, H: FixedLengthCRH> {
 
 impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
 	type Output = H::Output;
+	type Publics = Publics<F>;
 	type Secrets = Secrets<F>;
 
 	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Secrets, Error> {
 		Ok(Self::Secrets::generate(r))
 	}
 
-	fn create(s: &Self::Secrets, p: &H::Parameters) -> Result<Self::Output, Error> {
+	fn create(
+		s: &Self::Secrets,
+		_: &Self::Publics,
+		p: &H::Parameters,
+	) -> Result<Self::Output, Error> {
 		let mut buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
 		let bytes = to_bytes![s.r, s.nullifier].unwrap();
 		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
@@ -70,6 +80,7 @@ mod test {
 	fn should_crate_leaf() {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let publics = Publics::default();
 
 		let inputs = to_bytes![secrets.r, secrets.nullifier, Fq::zero()].unwrap();
 
@@ -78,7 +89,7 @@ mod test {
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs).unwrap();
 
-		let res = Leaf::create(&secrets, &params).unwrap();
+		let res = Leaf::create(&secrets, &publics, &params).unwrap();
 		assert_eq!(ev_res, res);
 	}
 }

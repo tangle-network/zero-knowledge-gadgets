@@ -12,7 +12,12 @@ pub use constraints::*;
 pub trait LeafCreation<H: FixedLengthCRH> {
 	type Output: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Secrets: Clone + Default;
+	type Publics: Clone + Default;
 
 	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Secrets, Error>;
-	fn create(s: &Self::Secrets, h: &H::Parameters) -> Result<Self::Output, Error>;
+	fn create(
+		s: &Self::Secrets,
+		p: &Self::Publics,
+		h: &H::Parameters,
+	) -> Result<Self::Output, Error>;
 }
