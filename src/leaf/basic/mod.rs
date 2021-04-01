@@ -43,12 +43,12 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
 	fn create(
 		s: &Self::Secrets,
 		_: &Self::Publics,
-		p: &H::Parameters,
+		h: &H::Parameters,
 	) -> Result<Self::Output, Error> {
 		let mut buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
 		let bytes = to_bytes![s.r, s.nullifier].unwrap();
 		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
-		H::evaluate(p, &buffer)
+		H::evaluate(h, &buffer)
 	}
 }
 
