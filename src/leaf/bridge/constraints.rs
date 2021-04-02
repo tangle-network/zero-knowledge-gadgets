@@ -1,14 +1,8 @@
 use super::{BridgeLeaf, Output, Private, Public};
 use crate::leaf::{LeafCreation, LeafCreationGadget};
-use ark_ff::{fields::PrimeField, to_bytes};
-use ark_r1cs_std::{
-	eq::EqGadget,
-	fields::fp::{AllocatedFp, FpVar},
-	prelude::*,
-};
-use ark_relations::r1cs::{
-	ConstraintSystemRef, LinearCombination, Namespace, SynthesisError, Variable,
-};
+use ark_ff::fields::PrimeField;
+use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*, R1CSVar};
+use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
 use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
@@ -56,7 +50,7 @@ impl<F: PrimeField> R1CSVar<F> for OutputVar<F> {
 	type Value = Output<F>;
 
 	fn cs(&self) -> ConstraintSystemRef<F> {
-		self.leaf.cs()
+		self.to_bytes().unwrap().cs()
 	}
 
 	fn value(&self) -> Result<Self::Value, SynthesisError> {
@@ -126,10 +120,8 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		leaf_bytes.extend(s.nullifier.to_bytes()?);
 		leaf_bytes.extend(s.rho.to_bytes()?);
 		leaf_bytes.extend(p.chain_id.to_bytes()?);
-		let cs = leaf_bytes.cs();
 
-		let leaf_bits = vec![Boolean::new_witness(cs.clone(), || Ok(false))?; 8];
-		let mut leaf_buffer = vec![UInt8::from_bits_le(&leaf_bits); H::INPUT_SIZE_BITS / 8];
+		let mut leaf_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
 
 		leaf_buffer
 			.iter_mut()
@@ -139,25 +131,19 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 
 		let mut nullifier_hash_bytes = Vec::new();
 		nullifier_hash_bytes.extend(s.nullifier.to_bytes()?);
-		let nullifier_hash_bits =
-			vec![Boolean::new_witness(nullifier_hash_bytes.cs(), || Ok(false))?; 8];
-		let mut nullifier_hash_buffer =
-			vec![UInt8::from_bits_le(&nullifier_hash_bits); H::INPUT_SIZE_BITS / 8];
+		let mut nullifier_hash_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
 		nullifier_hash_buffer
 			.iter_mut()
 			.zip(nullifier_hash_bytes)
 			.for_each(|(b, l_b)| *b = l_b);
 		let nullifier_hash_res = HG::evaluate(h, &nullifier_hash_buffer)?;
 
-		let a = F::from_le_bytes_mod_order(&leaf_res.to_bytes()?.value()?);
-		let b = F::from_le_bytes_mod_order(&nullifier_hash_res.to_bytes()?.value()?);
+		let leaf_chunk = leaf_res.to_bytes()?;
+		let nullifier_hash_chunk = nullifier_hash_res.to_bytes()?;
+		let leaf = Boolean::le_bits_to_fp_var(&leaf_chunk[..32].to_bits_le()?.as_slice())?;
+		let nullifier_hash = Boolean::le_bits_to_fp_var(&nullifier_hash_chunk[..32].to_bits_le()?)?;
 
-		Self::OutputVar::new_witness(cs, || {
-			Ok(Output {
-				leaf: a,
-				nullifier_hash: b,
-			})
-		})
+		Ok(Self::OutputVar::new(leaf, nullifier_hash))
 	}
 }
 
@@ -240,9 +226,17 @@ mod test {
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
+		// Native version
 		let rounds = get_rounds_5::<Fq>();
 		let mds = get_mds_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let chain_id = Fq::one();
+
+		let public = Public::new(chain_id);
+		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let bridge_res = Leaf::create(&secrets, &public, &params).unwrap();
+
+		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),
 			|| Ok(&params),
@@ -250,15 +244,11 @@ mod test {
 		)
 		.unwrap();
 
-		let chain_id = Fq::one();
-		let public = Public::new(chain_id);
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-
-		let bridge_res = Leaf::create(&secrets, &public, &params).unwrap();
 		let bridge_res_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
 
+		// Checking equality
 		let bridge_new_var =
 			OutputVar::<Fq>::new_witness(bridge_res_var.cs(), || Ok(&bridge_res)).unwrap();
 		let res = bridge_res_var.is_eq(&bridge_new_var).unwrap();

@@ -1,6 +1,5 @@
 use ark_ff::bytes::ToBytes;
 use ark_std::{hash::Hash, rand::Rng};
-use core::borrow::Borrow;
 use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
 
 pub mod basic;

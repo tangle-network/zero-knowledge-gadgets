@@ -121,22 +121,23 @@ mod test {
 
 		let rounds = get_rounds_3::<Fq>();
 		let mds = get_mds_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let params_var = PoseidonParametersVar::new_variable(
-			cs.clone(),
-			|| Ok(&params),
-			AllocationMode::Constant,
-		)
-		.unwrap();
 
+		// Native version
 		let public = Public::default();
-		let public_var = PublicVar::default();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let secrets_var = PrivateVar::new_witness(cs, || Ok(&secrets)).unwrap();
-
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
+
+		// Constraints version
+		let public_var = PublicVar::default();
+		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
+		let params_var =
+			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
+				.unwrap();
+
 		let leaf_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
 
+		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
 		assert!(res.value().unwrap());

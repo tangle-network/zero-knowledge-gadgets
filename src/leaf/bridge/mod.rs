@@ -103,10 +103,7 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 		let nullifier_hash_bytes = to_bytes![nullifier_hash_res]?;
 		let nullifier_hash = F::from_le_bytes_mod_order(&nullifier_hash_bytes[..32]);
 
-		Ok(Self::Output {
-			leaf,
-			nullifier_hash,
-		})
+		Ok(Self::Output::new(leaf, nullifier_hash))
 	}
 }
 
