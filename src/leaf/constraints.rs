@@ -17,18 +17,18 @@ pub trait LeafCreationGadget<
 	type OutputVar: EqGadget<F>
 		+ ToBytesGadget<F>
 		+ CondSelectGadget<F>
-		+ AllocVar<H::Output, F>
+		+ AllocVar<L::Output, F>
 		+ R1CSVar<F>
 		+ Debug
 		+ Clone
 		+ Sized;
 
-	type SecretsVar: AllocVar<L::Secrets, F> + Clone;
-	type PublicsVar: AllocVar<L::Publics, F> + Clone;
+	type PrivateVar: AllocVar<L::Private, F> + Clone;
+	type PublicVar: AllocVar<L::Public, F> + Clone;
 
 	fn create(
-		s: &Self::SecretsVar,
-		p: &Self::PublicsVar,
+		s: &Self::PrivateVar,
+		p: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError>;
 }

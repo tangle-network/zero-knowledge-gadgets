@@ -1,4 +1,4 @@
-use super::{BasicLeaf, Publics, Secrets};
+use super::{BasicLeaf, Private, Public};
 use crate::leaf::{LeafCreation, LeafCreationGadget};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
@@ -8,17 +8,17 @@ use core::borrow::Borrow;
 use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
 
 #[derive(Clone)]
-pub struct SecretsVar<F: PrimeField> {
+pub struct PrivateVar<F: PrimeField> {
 	r: FpVar<F>,
 	nullifier: FpVar<F>,
 }
 
 #[derive(Clone, Default)]
-pub struct PublicsVar<F: PrimeField> {
+pub struct PublicVar<F: PrimeField> {
 	f: PhantomData<F>,
 }
 
-impl<F: PrimeField> SecretsVar<F> {
+impl<F: PrimeField> PrivateVar<F> {
 	pub fn new(r: FpVar<F>, nullifier: FpVar<F>) -> Self {
 		Self { r, nullifier }
 	}
@@ -40,12 +40,12 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
 	type OutputVar = HG::OutputVar;
-	type PublicsVar = PublicsVar<F>;
-	type SecretsVar = SecretsVar<F>;
+	type PrivateVar = PrivateVar<F>;
+	type PublicVar = PublicVar<F>;
 
 	fn create(
-		s: &Self::SecretsVar,
-		_: &Self::PublicsVar,
+		s: &Self::PrivateVar,
+		_: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
@@ -60,8 +60,8 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	}
 }
 
-impl<F: PrimeField> AllocVar<Secrets<F>, F> for SecretsVar<F> {
-	fn new_variable<T: Borrow<Secrets<F>>>(
+impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
+	fn new_variable<T: Borrow<Private<F>>>(
 		cs: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
@@ -71,17 +71,17 @@ impl<F: PrimeField> AllocVar<Secrets<F>, F> for SecretsVar<F> {
 		let nullifier = secrets.nullifier;
 		let r_var = FpVar::new_variable(cs, || Ok(r), mode)?;
 		let nullifier_var = FpVar::new_variable(r_var.cs(), || Ok(nullifier), mode)?;
-		Ok(SecretsVar::new(r_var, nullifier_var))
+		Ok(PrivateVar::new(r_var, nullifier_var))
 	}
 }
 
-impl<F: PrimeField> AllocVar<Publics<F>, F> for PublicsVar<F> {
-	fn new_variable<T: Borrow<Publics<F>>>(
+impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
+	fn new_variable<T: Borrow<Public<F>>>(
 		_: impl Into<Namespace<F>>,
 		_: impl FnOnce() -> Result<T, SynthesisError>,
 		_: AllocationMode,
 	) -> Result<Self, SynthesisError> {
-		Ok(PublicsVar::default())
+		Ok(PublicVar::default())
 	}
 }
 
@@ -114,29 +114,30 @@ mod test {
 	type Leaf = BasicLeaf<Fq, PoseidonCRH3>;
 	type LeafGadget = BasicLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	#[test]
-	fn should_crate_leaf_constraints() {
+	fn should_crate_basic_leaf_constraints() {
 		let rng = &mut test_rng();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		let rounds = get_rounds_3::<Fq>();
 		let mds = get_mds_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let params_var = PoseidonParametersVar::new_variable(
-			cs.clone(),
-			|| Ok(&params),
-			AllocationMode::Constant,
-		)
-		.unwrap();
 
-		let public = Publics::default();
-		let public_var = PublicsVar::default();
+		// Native version
+		let public = Public::default();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let secrets_var = SecretsVar::new_witness(cs, || Ok(&secrets)).unwrap();
-
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
+
+		// Constraints version
+		let public_var = PublicVar::default();
+		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
+		let params_var =
+			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
+				.unwrap();
+
 		let leaf_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
 
+		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
 		assert!(res.value().unwrap());
