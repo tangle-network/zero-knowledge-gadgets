@@ -3,6 +3,7 @@ use ark_ff::fields::PrimeField;
 use ark_std::marker::PhantomData;
 use webb_crypto_primitives::Error;
 
+#[cfg(feature = "r1cs")]
 pub mod constraints;
 
 #[derive(Default, Clone)]

@@ -1,5 +1,4 @@
 use super::{Input, SetMembership};
-use crate::set::constraints::SetGadget;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
 	eq::EqGadget,
@@ -9,6 +8,8 @@ use ark_r1cs_std::{
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
+
+use crate::set::constraints::SetGadget;
 
 #[derive(Clone)]
 pub struct InputVar<F: PrimeField> {
