@@ -15,11 +15,12 @@ use crate::set::constraints::SetGadget;
 pub struct InputVar<F: PrimeField> {
 	diffs: Vec<FpVar<F>>,
 	target: FpVar<F>,
+	set: Vec<FpVar<F>>,
 }
 
 impl<F: PrimeField> InputVar<F> {
-	pub fn new(target: FpVar<F>, diffs: Vec<FpVar<F>>) -> Self {
-		Self { target, diffs }
+	pub fn new(target: FpVar<F>, diffs: Vec<FpVar<F>>, set: Vec<FpVar<F>>) -> Self {
+		Self { target, diffs, set }
 	}
 }
 
@@ -30,14 +31,10 @@ pub struct SetMembershipGadget<F: PrimeField> {
 impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
 	type InputVar = InputVar<F>;
 	type OutputVar = FpVar<F>;
-	type SetVar = Vec<FpVar<F>>;
 
-	fn product(
-		input: &Self::InputVar,
-		set: &Self::SetVar,
-	) -> Result<Self::OutputVar, SynthesisError> {
+	fn product(input: &Self::InputVar) -> Result<Self::OutputVar, SynthesisError> {
 		let mut product = FpVar::<F>::zero();
-		for (diff, real) in input.diffs.iter().zip(set.iter()) {
+		for (diff, real) in input.diffs.iter().zip(input.set.iter()) {
 			real.is_eq(&(diff + &input.target))?.cs().is_satisfied()?;
 			product *= diff;
 		}
@@ -54,11 +51,16 @@ impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 	) -> Result<Self, SynthesisError> {
 		let inp = f()?.borrow().clone();
 		let target_var = FpVar::<F>::new_input(cs, || Ok(inp.target))?;
+		let set_var = inp
+			.set
+			.iter()
+			.map(|x| FpVar::<F>::new_input(target_var.cs(), || Ok(x)))
+			.collect::<Result<Vec<_>, _>>()?;
 		let diffs_var = inp
 			.diffs
 			.iter()
 			.map(|x| FpVar::<F>::new_witness(target_var.cs(), || Ok(x)))
 			.collect::<Result<Vec<_>, _>>()?;
-		Ok(InputVar::new(target_var, diffs_var))
+		Ok(InputVar::new(target_var, diffs_var, set_var))
 	}
 }

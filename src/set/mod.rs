@@ -12,8 +12,7 @@ pub use constraints::*;
 pub trait Set<F: PrimeField> {
 	type Output: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Input: Clone + Default;
-	type Set: IntoIterator<Item = F>;
 
-	fn generate_inputs(target: F, set: &Self::Set) -> Self::Input;
-	fn product(inputs: &Self::Input, set: &Self::Set) -> Result<Self::Output, Error>;
+	fn generate_inputs<I: IntoIterator<Item = F>>(target: F, set: I) -> Self::Input;
+	fn product(inputs: &Self::Input) -> Result<Self::Output, Error>;
 }

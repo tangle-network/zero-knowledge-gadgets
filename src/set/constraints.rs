@@ -15,7 +15,6 @@ pub trait SetGadget<F: PrimeField, S: Set<F>>: Sized {
 		+ Sized;
 
 	type InputVar: AllocVar<S::Input, F> + Clone;
-	type SetVar: AllocVar<[F], F> + Clone;
 
-	fn product(s: &Self::InputVar, p: &Self::SetVar) -> Result<Self::OutputVar, SynthesisError>;
+	fn product(input: &Self::InputVar) -> Result<Self::OutputVar, SynthesisError>;
 }

@@ -10,11 +10,12 @@ pub mod constraints;
 pub struct Input<F: PrimeField> {
 	diffs: Vec<F>,
 	target: F,
+	set: Vec<F>,
 }
 
 impl<F: PrimeField> Input<F> {
-	pub fn new(target: F, diffs: Vec<F>) -> Self {
-		Self { target, diffs }
+	pub fn new(target: F, diffs: Vec<F>, set: Vec<F>) -> Self {
+		Self { target, diffs, set }
 	}
 }
 
@@ -25,14 +26,14 @@ struct SetMembership<F: PrimeField> {
 impl<F: PrimeField> Set<F> for SetMembership<F> {
 	type Input = Input<F>;
 	type Output = F;
-	type Set = Vec<F>;
 
-	fn generate_inputs(target: F, set: &Self::Set) -> Self::Input {
-		let diffs = set.iter().map(|x| target - x).collect();
-		Self::Input::new(target, diffs)
+	fn generate_inputs<I: IntoIterator<Item = F>>(target: F, set: I) -> Self::Input {
+		let arr: Vec<F> = set.into_iter().collect();
+		let diffs = arr.iter().map(|x| target - x).collect();
+		Self::Input::new(target, diffs, arr)
 	}
 
-	fn product(input: &Self::Input, _: &Self::Set) -> Result<Self::Output, Error> {
+	fn product(input: &Self::Input) -> Result<Self::Output, Error> {
 		let mut product = F::zero();
 		for item in &input.diffs {
 			product *= item;
@@ -57,8 +58,8 @@ mod test {
 		let mut set = vec![Fq::rand(rng); 5];
 		set.push(root);
 
-		let input = TestSetMembership::generate_inputs(root, &set);
-		let product = TestSetMembership::product(&input, &set).unwrap();
+		let input = TestSetMembership::generate_inputs(root, set);
+		let product = TestSetMembership::product(&input).unwrap();
 
 		assert_eq!(product, Fq::zero());
 	}
