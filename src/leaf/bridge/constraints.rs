@@ -221,7 +221,7 @@ mod test {
 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
 	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
 	#[test]
-	fn should_crate_bridge_leaf_constraints() {
+	fn should_create_bridge_leaf_constraints() {
 		let rng = &mut test_rng();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
