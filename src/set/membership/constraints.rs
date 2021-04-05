@@ -35,7 +35,7 @@ impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
 	fn product(input: &Self::InputVar) -> Result<Self::OutputVar, SynthesisError> {
 		let mut product = FpVar::<F>::zero();
 		for (diff, real) in input.diffs.iter().zip(input.set.iter()) {
-			real.is_eq(&(diff + &input.target))?.cs().is_satisfied()?;
+			real.enforce_equal(&(diff + &input.target))?;
 			product *= diff;
 		}
 
@@ -62,5 +62,40 @@ impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 			.map(|x| FpVar::<F>::new_witness(target_var.cs(), || Ok(x)))
 			.collect::<Result<Vec<_>, _>>()?;
 		Ok(InputVar::new(target_var, diffs_var, set_var))
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use crate::set::Set;
+	use ark_ed_on_bn254::Fq;
+	use ark_ff::UniformRand;
+	use ark_relations::r1cs::ConstraintSystem;
+	use ark_std::test_rng;
+
+	type TestSetMembership = SetMembership<Fq>;
+	type TestSetMembershipGadget = SetMembershipGadget<Fq>;
+	#[test]
+	fn test_native_equality() {
+		let rng = &mut test_rng();
+		let root = Fq::rand(rng);
+		let mut set = vec![Fq::rand(rng); 5];
+		set.push(root);
+
+		// Native
+		let input = TestSetMembership::generate_inputs(root, set);
+		let product = TestSetMembership::product(&input).unwrap();
+
+		// Constraint version
+		let cs = ConstraintSystem::<Fq>::new_ref();
+		let input_var = InputVar::new_variable(cs, || Ok(input), AllocationMode::Input).unwrap();
+		let product_var = TestSetMembershipGadget::product(&input_var).unwrap();
+
+		let native_product_var =
+			FpVar::<Fq>::new_witness(product_var.cs(), || Ok(&product)).unwrap();
+		let res = product_var.is_eq(&native_product_var).unwrap();
+		assert!(res.value().unwrap());
+		assert!(res.cs().is_satisfied().unwrap());
 	}
 }

@@ -29,7 +29,7 @@ impl<F: PrimeField> Set<F> for SetMembership<F> {
 
 	fn generate_inputs<I: IntoIterator<Item = F>>(target: F, set: I) -> Self::Input {
 		let arr: Vec<F> = set.into_iter().collect();
-		let diffs = arr.iter().map(|x| target - x).collect();
+		let diffs = arr.iter().map(|x| *x - target).collect();
 		Self::Input::new(target, diffs, arr)
 	}
 
