@@ -10,7 +10,7 @@ pub mod constraints;
 #[cfg(feature = "r1cs")]
 pub use constraints::*;
 
-pub trait LeafCreation<H: FixedLengthCRH> {
+pub trait LeafCreation<H: FixedLengthCRH>: Sized {
 	type Output: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Private: Clone + Default;
 	type Public: Clone + Default;

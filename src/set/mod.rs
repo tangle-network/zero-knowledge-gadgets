@@ -9,10 +9,9 @@ pub mod constraints;
 #[cfg(feature = "r1cs")]
 pub use constraints::*;
 
-pub trait Set<F: PrimeField> {
-	type Output: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
+pub trait Set<F: PrimeField>: Sized {
 	type Input: Clone + Default;
 
-	fn generate_inputs<I: IntoIterator<Item = F>>(target: F, set: I) -> Self::Input;
-	fn product(inputs: &Self::Input) -> Result<Self::Output, Error>;
+	fn generate_inputs<T: ToBytes, I: IntoIterator<Item = F>>(target: &T, set: I) -> Self::Input;
+	fn check_membership(inputs: &Self::Input) -> Result<bool, Error>;
 }

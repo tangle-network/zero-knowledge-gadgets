@@ -29,7 +29,7 @@ impl<F: PrimeField> Private<F> {
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
-	chain_id: F,
+	pub chain_id: F,
 }
 
 impl<F: PrimeField> Public<F> {
@@ -40,8 +40,8 @@ impl<F: PrimeField> Public<F> {
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default)]
 pub struct Output<F: PrimeField> {
-	leaf: F,
-	nullifier_hash: F,
+	pub leaf: F,
+	pub nullifier_hash: F,
 }
 
 impl<F: PrimeField> Output<F> {
@@ -61,7 +61,8 @@ impl<F: PrimeField> ToBytes for Output<F> {
 	}
 }
 
-struct BridgeLeaf<F: PrimeField, H: FixedLengthCRH> {
+#[derive(Clone)]
+pub struct BridgeLeaf<F: PrimeField, H: FixedLengthCRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }

@@ -172,7 +172,7 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 		_: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let public = f()?.borrow().clone();
-		let chain_id = FpVar::new_variable(cs, || Ok(public.chain_id), AllocationMode::Input)?;
+		let chain_id = FpVar::new_input(cs, || Ok(public.chain_id))?;
 		Ok(PublicVar::new(chain_id))
 	}
 }
@@ -185,7 +185,7 @@ impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
 	) -> Result<Self, SynthesisError> {
 		let output = f()?.borrow().clone();
 		let leaf = FpVar::new_witness(cs, || Ok(output.leaf))?;
-		let nullifier_hash = FpVar::new_witness(leaf.cs(), || Ok(output.nullifier_hash))?;
+		let nullifier_hash = FpVar::new_input(leaf.cs(), || Ok(output.nullifier_hash))?;
 		Ok(OutputVar::new(leaf, nullifier_hash))
 	}
 }

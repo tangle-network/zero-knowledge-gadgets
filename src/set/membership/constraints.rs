@@ -13,9 +13,9 @@ use crate::set::constraints::SetGadget;
 
 #[derive(Clone)]
 pub struct InputVar<F: PrimeField> {
-	diffs: Vec<FpVar<F>>,
-	target: FpVar<F>,
-	set: Vec<FpVar<F>>,
+	pub diffs: Vec<FpVar<F>>,
+	pub target: FpVar<F>,
+	pub set: Vec<FpVar<F>>,
 }
 
 impl<F: PrimeField> InputVar<F> {
@@ -24,22 +24,22 @@ impl<F: PrimeField> InputVar<F> {
 	}
 }
 
+#[derive(Clone)]
 pub struct SetMembershipGadget<F: PrimeField> {
 	field: PhantomData<F>,
 }
 
 impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
 	type InputVar = InputVar<F>;
-	type OutputVar = FpVar<F>;
 
-	fn product(input: &Self::InputVar) -> Result<Self::OutputVar, SynthesisError> {
+	fn check_membership(input: &Self::InputVar) -> Result<Boolean<F>, SynthesisError> {
 		let mut product = FpVar::<F>::zero();
 		for (diff, real) in input.diffs.iter().zip(input.set.iter()) {
 			real.enforce_equal(&(diff + &input.target))?;
 			product *= diff;
 		}
 
-		Ok(product)
+		Ok(product.is_eq(&FpVar::<F>::zero())?)
 	}
 }
 
@@ -84,18 +84,16 @@ mod test {
 		set.push(root);
 
 		// Native
-		let input = TestSetMembership::generate_inputs(root, set);
-		let product = TestSetMembership::product(&input).unwrap();
+		let input = TestSetMembership::generate_inputs(&root, set);
+		let product = TestSetMembership::check_membership(&input).unwrap();
 
 		// Constraint version
 		let cs = ConstraintSystem::<Fq>::new_ref();
 		let input_var = InputVar::new_variable(cs, || Ok(input), AllocationMode::Input).unwrap();
-		let product_var = TestSetMembershipGadget::product(&input_var).unwrap();
+		let is_member = TestSetMembershipGadget::check_membership(&input_var).unwrap();
 
-		let native_product_var =
-			FpVar::<Fq>::new_witness(product_var.cs(), || Ok(&product)).unwrap();
-		let res = product_var.is_eq(&native_product_var).unwrap();
-		assert!(res.value().unwrap());
-		assert!(res.cs().is_satisfied().unwrap());
+		let is_member_native = Boolean::<Fq>::Constant(product);
+		is_member_native.enforce_equal(&is_member).unwrap();
+		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 	}
 }
