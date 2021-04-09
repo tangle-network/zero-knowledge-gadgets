@@ -155,10 +155,10 @@ where
 		let params_var = HG::ParametersVar::new_input(cs.clone(), || Ok(hasher_params))?;
 		let tree_params_var = HGT::ParametersVar::new_input(cs.clone(), || Ok(tree_hasher_params))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
+		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let bridge_out = LG::create(&leaf_private_var, &leaf_public_var, &params_var)?;
-		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 		let is_member = path_var.check_membership(&tree_params_var, &root_var, &bridge_out)?;
 		// Check if target root is in set
 		let is_set_member = SG::check_membership(&set_input_var)?;
@@ -227,7 +227,7 @@ mod test {
 	impl MerkleConfig for MixerTreeConfig {
 		type H = PoseidonCRH3;
 
-		const HEIGHT: usize = 5;
+		const HEIGHT: usize = 10;
 	}
 
 	type MixerTree = MerkleTree<MixerTreeConfig>;
@@ -290,11 +290,7 @@ mod test {
 			root,
 		);
 
-		let srs =
-			Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::universal_setup(
-				65536, 65536, 65536, rng,
-			)
-			.unwrap();
+		let srs = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
 		let (pk, _) =
 			Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::index(
 				&srs,
