@@ -193,114 +193,132 @@ mod test {
 		merkle_tree::MerkleTree,
 	};
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
+	macro_rules! setup_and_prove {
+		($test_name:ident, $test_field:ty, $test_pairing_engine:ty) => {
+			#[derive(Default, Clone)]
+			struct PoseidonRounds5;
 
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
+			impl Rounds for PoseidonRounds5 {
+				const FULL_ROUNDS: usize = 8;
+				const PARTIAL_ROUNDS: usize = 57;
+				const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+				const WIDTH: usize = 5;
+			}
+
+			type PoseidonCRH5 = CRH<$test_field, PoseidonRounds5>;
+			type PoseidonCRH5Gadget = CRHGadget<$test_field, PoseidonRounds5>;
+
+			#[derive(Default, Clone)]
+			struct PoseidonRounds3;
+
+			impl Rounds for PoseidonRounds3 {
+				const FULL_ROUNDS: usize = 8;
+				const PARTIAL_ROUNDS: usize = 57;
+				const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+				const WIDTH: usize = 3;
+			}
+
+			type PoseidonCRH3 = CRH<$test_field, PoseidonRounds3>;
+			type PoseidonCRH3Gadget = CRHGadget<$test_field, PoseidonRounds3>;
+
+			type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
+			type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+
+			#[derive(Clone)]
+			struct MixerTreeConfig;
+			impl MerkleConfig for MixerTreeConfig {
+				type H = PoseidonCRH3;
+
+				const HEIGHT: usize = 10;
+			}
+
+			type MixerTree = MerkleTree<MixerTreeConfig>;
+
+			type TestSetMembership = SetMembership<$test_field>;
+			type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
+
+			type Circuit = MixerCircuit<
+				BlsFr,
+				MixerTreeConfig,
+				PoseidonCRH5,
+				PoseidonCRH5Gadget,
+				PoseidonCRH3Gadget,
+				Leaf,
+				LeafGadget,
+				TestSetMembership,
+				TestSetMembershipGadget,
+			>;
+			#[test]
+			fn $test_name() {
+				let rng = &mut test_rng();
+
+				// Secret inputs for the leaf
+				let leaf_private = Leaf::generate_secrets(rng).unwrap();
+				// Public inputs for the leaf
+				let chain_id = <$test_field>::one();
+				let leaf_public = LeafPublic::new(chain_id);
+
+				// Round params for the poseidon in leaf creation gadget
+				let rounds5 = get_rounds_5::<$test_field>();
+				let mds5 = get_mds_5::<$test_field>();
+				let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
+				// Creating the leaf
+				let res = Leaf::create(&leaf_private, &leaf_public, &params5).unwrap();
+
+				// Making params for poseidon in merkle tree
+				let rounds3 = get_rounds_3::<$test_field>();
+				let mds3 = get_mds_3::<$test_field>();
+				let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
+				let leaves = vec![
+					<$test_field>::rand(rng),
+					<$test_field>::rand(rng),
+					res.leaf,
+					<$test_field>::rand(rng),
+				];
+				// Making the merkle tree
+				let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
+				// Getting the proof path
+				let path = mt.generate_proof(2, &res.leaf).unwrap();
+				let root = mt.root();
+				let roots = vec![
+					<$test_field>::rand(rng),
+					<$test_field>::rand(rng),
+					<$test_field>::rand(rng),
+					root,
+				];
+				let set_inputs = TestSetMembership::generate_inputs(&root, roots);
+				let mc = Circuit::new(
+					leaf_private,
+					leaf_public,
+					set_inputs,
+					params5,
+					params3,
+					path,
+					root,
+				);
+
+				let srs = Marlin::<
+					$test_field,
+					MarlinKZG10<$test_pairing_engine, DensePolynomial<$test_field>>,
+					Blake2s,
+				>::universal_setup(33_000, 33_000, 33_000, rng)
+				.unwrap();
+				let (pk, _) = Marlin::<
+					$test_field,
+					MarlinKZG10<$test_pairing_engine, DensePolynomial<$test_field>>,
+					Blake2s,
+				>::index(&srs, mc.clone())
+				.unwrap();
+
+				let _ = Marlin::<
+					$test_field,
+					MarlinKZG10<$test_pairing_engine, DensePolynomial<$test_field>>,
+					Blake2s,
+				>::prove(&pk, mc, rng)
+				.unwrap();
+			}
+		};
 	}
 
-	type PoseidonCRH5 = CRH<BlsFr, PoseidonRounds5>;
-	type PoseidonCRH5Gadget = CRHGadget<BlsFr, PoseidonRounds5>;
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
-
-	impl Rounds for PoseidonRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type PoseidonCRH3 = CRH<BlsFr, PoseidonRounds3>;
-	type PoseidonCRH3Gadget = CRHGadget<BlsFr, PoseidonRounds3>;
-
-	type Leaf = BridgeLeaf<BlsFr, PoseidonCRH5>;
-	type LeafGadget = BridgeLeafGadget<BlsFr, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
-
-	#[derive(Clone)]
-	struct MixerTreeConfig;
-	impl MerkleConfig for MixerTreeConfig {
-		type H = PoseidonCRH3;
-
-		const HEIGHT: usize = 10;
-	}
-
-	type MixerTree = MerkleTree<MixerTreeConfig>;
-
-	type TestSetMembership = SetMembership<BlsFr>;
-	type TestSetMembershipGadget = SetMembershipGadget<BlsFr>;
-
-	type Circuit = MixerCircuit<
-		BlsFr,
-		MixerTreeConfig,
-		PoseidonCRH5,
-		PoseidonCRH5Gadget,
-		PoseidonCRH3Gadget,
-		Leaf,
-		LeafGadget,
-		TestSetMembership,
-		TestSetMembershipGadget,
-	>;
-	#[test]
-	fn setup_and_prove() {
-		let rng = &mut test_rng();
-
-		// Secret inputs for the leaf
-		let leaf_private = Leaf::generate_secrets(rng).unwrap();
-		// Public inputs for the leaf
-		let chain_id = BlsFr::one();
-		let leaf_public = LeafPublic::new(chain_id);
-
-		// Round params for the poseidon in leaf creation gadget
-		let rounds5 = get_rounds_5::<BlsFr>();
-		let mds5 = get_mds_5::<BlsFr>();
-		let params5 = PoseidonParameters::<BlsFr>::new(rounds5, mds5);
-		// Creating the leaf
-		let res = Leaf::create(&leaf_private, &leaf_public, &params5).unwrap();
-
-		// Making params for poseidon in merkle tree
-		let rounds3 = get_rounds_3::<BlsFr>();
-		let mds3 = get_mds_3::<BlsFr>();
-		let params3 = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
-		let leaves = vec![
-			BlsFr::rand(rng),
-			BlsFr::rand(rng),
-			res.leaf,
-			BlsFr::rand(rng),
-		];
-		// Making the merkle tree
-		let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
-		// Getting the proof path
-		let path = mt.generate_proof(2, &res.leaf).unwrap();
-		let root = mt.root();
-		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng), root];
-		let set_inputs = TestSetMembership::generate_inputs(&root, roots);
-		let mc = Circuit::new(
-			leaf_private,
-			leaf_public,
-			set_inputs,
-			params5,
-			params3,
-			path,
-			root,
-		);
-
-		let srs = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
-		let (pk, _) =
-			Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::index(
-				&srs,
-				mc.clone(),
-			)
-			.unwrap();
-
-		let _ = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::prove(
-			&pk, mc, rng,
-		)
-		.unwrap();
-	}
+	setup_and_prove!(setup_and_prove_bls, BlsFr, Bls12_381);
 }
