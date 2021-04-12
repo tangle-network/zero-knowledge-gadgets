@@ -149,7 +149,7 @@ where
 		let tree_hasher_params = self.tree_hasher_params;
 
 		// Generating vars
-		let leaf_private_var = LG::PrivateVar::new_input(cs.clone(), || Ok(leaf_private))?;
+		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let set_input_var = SG::InputVar::new_input(cs.clone(), || Ok(set_inputs))?;
 		let params_var = HG::ParametersVar::new_input(cs.clone(), || Ok(hasher_params))?;
@@ -193,8 +193,8 @@ mod test {
 		merkle_tree::MerkleTree,
 	};
 
-	macro_rules! setup_and_prove {
-		($test_name:ident, $test_field:ty, $test_pairing_engine:ty) => {
+	macro_rules! marlin_setup_and_prove {
+		($test_name:ident, $test_field:ty, $test_poly_comm_scheme:ty) => {
 			#[derive(Default, Clone)]
 			struct PoseidonRounds5;
 
@@ -297,28 +297,19 @@ mod test {
 					root,
 				);
 
-				let srs = Marlin::<
-					$test_field,
-					MarlinKZG10<$test_pairing_engine, DensePolynomial<$test_field>>,
-					Blake2s,
-				>::universal_setup(33_000, 33_000, 33_000, rng)
+				let srs = Marlin::<$test_field, $test_poly_comm_scheme, Blake2s>::universal_setup(
+					33_000, 33_000, 33_000, rng,
+				)
 				.unwrap();
-				let (pk, _) = Marlin::<
-					$test_field,
-					MarlinKZG10<$test_pairing_engine, DensePolynomial<$test_field>>,
-					Blake2s,
-				>::index(&srs, mc.clone())
-				.unwrap();
+				let (pk, _) =
+					Marlin::<$test_field, $test_poly_comm_scheme, Blake2s>::index(&srs, mc.clone())
+						.unwrap();
 
-				let _ = Marlin::<
-					$test_field,
-					MarlinKZG10<$test_pairing_engine, DensePolynomial<$test_field>>,
-					Blake2s,
-				>::prove(&pk, mc, rng)
-				.unwrap();
+				let _ = Marlin::<$test_field, $test_poly_comm_scheme, Blake2s>::prove(&pk, mc, rng)
+					.unwrap();
 			}
 		};
 	}
 
-	setup_and_prove!(setup_and_prove_bls, BlsFr, Bls12_381);
+	marlin_setup_and_prove!(setup_and_prove_bls, BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>);
 }
