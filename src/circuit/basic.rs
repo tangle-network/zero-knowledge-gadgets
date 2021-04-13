@@ -34,7 +34,9 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {
 			Ok(a * b)
 		})?;
 
-		cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+		for _ in 0..self.num_constraints {
+			cs.enforce_constraint(lc!() + a, lc!() + b, lc!() + c)?;
+		}
 
 		Ok(())
 	}
@@ -46,26 +48,26 @@ mod test {
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
-	use ark_poly_commit::{marlin_pc::MarlinKZG10, PCUniversalParams};
+	use ark_poly_commit::marlin_pc::MarlinKZG10;
 	use ark_std::{ops::Mul, UniformRand};
 	use blake2::Blake2s;
 	#[test]
 	fn should_verify_basic_circuit() {
 		let rng = &mut ark_std::test_rng();
+
+		let nc = 3;
+		let nv = 3;
 		let c = DummyCircuit::<BlsFr> {
 			a: Some(BlsFr::rand(rng)),
 			b: Some(BlsFr::rand(rng)),
-			num_variables: 3,
-			num_constraints: 1,
+			num_variables: nv,
+			num_constraints: nc,
 		};
 
 		type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
 		type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
 
-		let nc = c.num_constraints;
-		let nv = c.num_variables;
-		let srs = MarlinSetup::universal_setup(3, 1, 3, rng).unwrap();
-		println!("{}", srs.max_degree());
+		let srs = MarlinSetup::universal_setup(nc, nc, nc, rng).unwrap();
 		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();
 		let proof = MarlinSetup::prove(&pk, c.clone(), rng).unwrap();
 
