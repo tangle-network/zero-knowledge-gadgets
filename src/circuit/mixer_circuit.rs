@@ -193,8 +193,8 @@ mod test {
 		merkle_tree::MerkleTree,
 	};
 
-	macro_rules! marlin_setup_and_prove {
-		($test_name:ident, $test_field:ty, $test_poly_comm_scheme:ty) => {
+	macro_rules! setup_circuit {
+		($test_field:ty) => {{
 			#[derive(Default, Clone)]
 			struct PoseidonRounds5;
 
@@ -248,68 +248,72 @@ mod test {
 				TestSetMembership,
 				TestSetMembershipGadget,
 			>;
-			#[test]
-			fn $test_name() {
-				let rng = &mut test_rng();
 
-				// Secret inputs for the leaf
-				let leaf_private = Leaf::generate_secrets(rng).unwrap();
-				// Public inputs for the leaf
-				let chain_id = <$test_field>::one();
-				let leaf_public = LeafPublic::new(chain_id);
+			let rng = &mut test_rng();
 
-				// Round params for the poseidon in leaf creation gadget
-				let rounds5 = get_rounds_5::<$test_field>();
-				let mds5 = get_mds_5::<$test_field>();
-				let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
-				// Creating the leaf
-				let res = Leaf::create(&leaf_private, &leaf_public, &params5).unwrap();
+			// Secret inputs for the leaf
+			let leaf_private = Leaf::generate_secrets(rng).unwrap();
+			// Public inputs for the leaf
+			let chain_id = <$test_field>::one();
+			let leaf_public = LeafPublic::new(chain_id);
 
-				// Making params for poseidon in merkle tree
-				let rounds3 = get_rounds_3::<$test_field>();
-				let mds3 = get_mds_3::<$test_field>();
-				let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
-				let leaves = vec![
-					<$test_field>::rand(rng),
-					<$test_field>::rand(rng),
-					res.leaf,
-					<$test_field>::rand(rng),
-				];
-				// Making the merkle tree
-				let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
-				// Getting the proof path
-				let path = mt.generate_proof(2, &res.leaf).unwrap();
-				let root = mt.root();
-				let roots = vec![
-					<$test_field>::rand(rng),
-					<$test_field>::rand(rng),
-					<$test_field>::rand(rng),
-					root,
-				];
-				let set_inputs = TestSetMembership::generate_inputs(&root, roots);
-				let mc = Circuit::new(
-					leaf_private,
-					leaf_public,
-					set_inputs,
-					params5,
-					params3,
-					path,
-					root,
-				);
+			// Round params for the poseidon in leaf creation gadget
+			let rounds5 = get_rounds_5::<$test_field>();
+			let mds5 = get_mds_5::<$test_field>();
+			let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
+			// Creating the leaf
+			let res = Leaf::create(&leaf_private, &leaf_public, &params5).unwrap();
 
-				let srs = Marlin::<$test_field, $test_poly_comm_scheme, Blake2s>::universal_setup(
-					33_000, 33_000, 33_000, rng,
-				)
-				.unwrap();
-				let (pk, _) =
-					Marlin::<$test_field, $test_poly_comm_scheme, Blake2s>::index(&srs, mc.clone())
-						.unwrap();
-
-				let _ = Marlin::<$test_field, $test_poly_comm_scheme, Blake2s>::prove(&pk, mc, rng)
-					.unwrap();
-			}
-		};
+			// Making params for poseidon in merkle tree
+			let rounds3 = get_rounds_3::<$test_field>();
+			let mds3 = get_mds_3::<$test_field>();
+			let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
+			let leaves = vec![
+				<$test_field>::rand(rng),
+				<$test_field>::rand(rng),
+				res.leaf,
+				<$test_field>::rand(rng),
+			];
+			// Making the merkle tree
+			let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
+			// Getting the proof path
+			let path = mt.generate_proof(2, &res.leaf).unwrap();
+			let root = mt.root();
+			let roots = vec![
+				<$test_field>::rand(rng),
+				<$test_field>::rand(rng),
+				<$test_field>::rand(rng),
+				root,
+			];
+			let set_inputs = TestSetMembership::generate_inputs(&root, roots);
+			let mc = Circuit::new(
+				leaf_private,
+				leaf_public,
+				set_inputs,
+				params5,
+				params3,
+				path,
+				root,
+			);
+			mc
+		}};
 	}
 
-	marlin_setup_and_prove!(setup_and_prove_bls, BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>);
+	#[test]
+	fn setup_and_prove_marlin_bls() {
+		let rng = &mut test_rng();
+		let mc = setup_circuit!(BlsFr);
+		let srs = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
+		let (pk, _) =
+			Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::index(
+				&srs,
+				mc.clone(),
+			)
+			.unwrap();
+
+		let _ = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::prove(
+			&pk, mc, rng,
+		)
+		.unwrap();
+	}
 }
