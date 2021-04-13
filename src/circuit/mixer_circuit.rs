@@ -106,7 +106,7 @@ where
 		let tree_hasher_params = self.tree_hasher_params.clone();
 		let path = self.path.clone();
 		let root = self.root.clone();
-		Self {
+		Self::new(
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_inputs,
@@ -114,15 +114,7 @@ where
 			tree_hasher_params,
 			path,
 			root,
-			_hasher: PhantomData,
-			_hasher_gadget: PhantomData,
-			_tree_hasher_gadget: PhantomData,
-			_leaf_creation: PhantomData,
-			_leaf_creation_gadget: PhantomData,
-			_set: PhantomData,
-			_set_gadget: PhantomData,
-			_merkle_config: PhantomData,
-		}
+		)
 	}
 }
 
@@ -152,14 +144,16 @@ where
 		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let set_input_var = SG::InputVar::new_input(cs.clone(), || Ok(set_inputs))?;
-		let params_var = HG::ParametersVar::new_input(cs.clone(), || Ok(hasher_params))?;
-		let tree_params_var = HGT::ParametersVar::new_input(cs.clone(), || Ok(tree_hasher_params))?;
+		let hasher_params_var = HG::ParametersVar::new_input(cs.clone(), || Ok(hasher_params))?;
+		let tree_hasher_params_var =
+			HGT::ParametersVar::new_input(cs.clone(), || Ok(tree_hasher_params))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
-		let bridge_out = LG::create(&leaf_private_var, &leaf_public_var, &params_var)?;
-		let is_member = path_var.check_membership(&tree_params_var, &root_var, &bridge_out)?;
+		let bridge_out = LG::create(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
+		let is_member =
+			path_var.check_membership(&tree_hasher_params_var, &root_var, &bridge_out)?;
 		// Check if target root is in set
 		let is_set_member = SG::check_membership(&set_input_var)?;
 
@@ -180,10 +174,11 @@ mod test {
 		test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
 	use ark_ff::{One, UniformRand};
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
-	use ark_poly_commit::marlin_pc::MarlinKZG10;
+	use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10};
 	use ark_std::test_rng;
 	use blake2::Blake2s;
 	use webb_crypto_primitives::{
@@ -238,7 +233,7 @@ mod test {
 			type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
 
 			type Circuit = MixerCircuit<
-				BlsFr,
+				$test_field,
 				MixerTreeConfig,
 				PoseidonCRH5,
 				PoseidonCRH5Gadget,
@@ -303,17 +298,27 @@ mod test {
 	fn setup_and_prove_marlin_bls() {
 		let rng = &mut test_rng();
 		let mc = setup_circuit!(BlsFr);
-		let srs = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
-		let (pk, _) =
-			Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::index(
-				&srs,
-				mc.clone(),
-			)
-			.unwrap();
 
-		let _ = Marlin::<BlsFr, MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>, Blake2s>::prove(
-			&pk, mc, rng,
-		)
-		.unwrap();
+		type UniPoly = DensePolynomial<BlsFr>;
+		type KZG10 = MarlinKZG10<Bls12_381, UniPoly>;
+		type MarlinBlsSetup = Marlin<BlsFr, KZG10, Blake2s>;
+
+		let srs = MarlinBlsSetup::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
+		let (pk, _) = MarlinBlsSetup::index(&srs, mc.clone()).unwrap();
+		let _ = MarlinBlsSetup::prove(&pk, mc, rng).unwrap();
+	}
+
+	#[test]
+	fn setup_and_prove_marlin_ipa_pc() {
+		let rng = &mut test_rng();
+		let mc = setup_circuit!(BabyJubJub);
+
+		type UniPoly = DensePolynomial<BabyJubJub>;
+		type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
+		type MarlinIpaSetup = Marlin<BabyJubJub, IPA, Blake2s>;
+
+		let srs = MarlinIpaSetup::universal_setup(10, 10, 300, rng).unwrap();
+		let (pk, _) = MarlinIpaSetup::index(&srs, mc.clone()).unwrap();
+		let _ = MarlinIpaSetup::prove(&pk, mc, rng).unwrap();
 	}
 }
