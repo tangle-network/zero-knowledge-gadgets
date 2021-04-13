@@ -49,7 +49,7 @@ mod test {
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::marlin_pc::MarlinKZG10;
-	use ark_std::{ops::Mul, UniformRand};
+	use ark_std::{ops::*, UniformRand};
 	use blake2::Blake2s;
 	#[test]
 	fn should_verify_basic_circuit() {
@@ -71,7 +71,7 @@ mod test {
 		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();
 		let proof = MarlinSetup::prove(&pk, c.clone(), rng).unwrap();
 
-		let v = c.a.unwrap().mul(c.b.unwrap());
+		let v = c.a.unwrap().sub(c.b.unwrap());
 
 		let _ = MarlinSetup::verify(&vk, &vec![v], &proof, rng).unwrap();
 	}
