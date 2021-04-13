@@ -71,8 +71,9 @@ mod test {
 		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();
 		let proof = MarlinSetup::prove(&pk, c.clone(), rng).unwrap();
 
-		let v = c.a.unwrap().sub(c.b.unwrap());
+		let v = c.a.unwrap().mul(c.b.unwrap());
 
-		let _ = MarlinSetup::verify(&vk, &vec![v], &proof, rng).unwrap();
+		let res = MarlinSetup::verify(&vk, &vec![v], &proof, rng).unwrap();
+		assert!(res);
 	}
 }
