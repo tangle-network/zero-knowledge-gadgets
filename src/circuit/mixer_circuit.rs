@@ -308,17 +308,17 @@ mod test {
 		let _ = MarlinBlsSetup::prove(&pk, mc, rng).unwrap();
 	}
 
-	#[test]
-	fn setup_and_prove_marlin_ipa_pc() {
-		let rng = &mut test_rng();
-		let mc = setup_circuit!(BabyJubJub);
+	// #[test]
+	// fn setup_and_prove_marlin_ipa_pc() {
+	// 	let rng = &mut test_rng();
+	// 	let mc = setup_circuit!(BabyJubJub);
 
-		type UniPoly = DensePolynomial<BabyJubJub>;
-		type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
-		type MarlinIpaSetup = Marlin<BabyJubJub, IPA, Blake2s>;
+	// 	type UniPoly = DensePolynomial<BabyJubJub>;
+	// 	type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
+	// 	type MarlinIpaSetup = Marlin<BabyJubJub, IPA, Blake2s>;
 
-		let srs = MarlinIpaSetup::universal_setup(10, 10, 300, rng).unwrap();
-		let (pk, _) = MarlinIpaSetup::index(&srs, mc.clone()).unwrap();
-		let _ = MarlinIpaSetup::prove(&pk, mc, rng).unwrap();
-	}
+	// 	let srs = MarlinIpaSetup::universal_setup(10, 10, 300, rng).unwrap();
+	// 	let (pk, _) = MarlinIpaSetup::index(&srs, mc.clone()).unwrap();
+	// 	let _ = MarlinIpaSetup::prove(&pk, mc, rng).unwrap();
+	// }
 }
