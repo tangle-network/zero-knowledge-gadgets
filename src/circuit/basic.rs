@@ -46,9 +46,10 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {
 mod test {
 	use super::*;
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
-	use ark_poly_commit::marlin_pc::MarlinKZG10;
+	use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10};
 	use ark_std::{ops::*, UniformRand};
 	use blake2::Blake2s;
 	#[test]
@@ -66,6 +67,33 @@ mod test {
 
 		type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
 		type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
+
+		let srs = MarlinSetup::universal_setup(nc, nc, nc, rng).unwrap();
+		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();
+		let proof = MarlinSetup::prove(&pk, c.clone(), rng).unwrap();
+
+		let v = c.a.unwrap().mul(c.b.unwrap());
+
+		let res = MarlinSetup::verify(&vk, &vec![v], &proof, rng).unwrap();
+		assert!(res);
+	}
+
+	#[test]
+	fn should_verify_basic_circuit_ipa() {
+		let rng = &mut ark_std::test_rng();
+
+		let nc = 3;
+		let nv = 3;
+		let c = DummyCircuit::<BabyJubJub> {
+			a: Some(BabyJubJub::rand(rng)),
+			b: Some(BabyJubJub::rand(rng)),
+			num_variables: nv,
+			num_constraints: nc,
+		};
+
+		type UniPoly = DensePolynomial<BabyJubJub>;
+		type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
+		type MarlinSetup = Marlin<BabyJubJub, IPA, Blake2s>;
 
 		let srs = MarlinSetup::universal_setup(nc, nc, nc, rng).unwrap();
 		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();

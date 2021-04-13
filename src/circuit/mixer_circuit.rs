@@ -304,8 +304,8 @@ mod test {
 		type MarlinBlsSetup = Marlin<BlsFr, KZG10, Blake2s>;
 
 		let srs = MarlinBlsSetup::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
-		let (pk, _) = MarlinBlsSetup::index(&srs, mc.clone()).unwrap();
-		let _ = MarlinBlsSetup::prove(&pk, mc, rng).unwrap();
+		let (pk, _sk) = MarlinBlsSetup::index(&srs, mc.clone()).unwrap();
+		let _proof = MarlinBlsSetup::prove(&pk, mc, rng).unwrap();
 	}
 
 	// #[test]
