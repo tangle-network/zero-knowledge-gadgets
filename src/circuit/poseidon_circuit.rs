@@ -66,6 +66,7 @@ mod test {
 	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
+	use ark_groth16::Groth16;
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10};
@@ -74,8 +75,12 @@ mod test {
 	};
 	use ark_std::{ops::*, UniformRand};
 	use blake2::Blake2s;
-	use webb_crypto_primitives::crh::poseidon::{
-		constraints::CRHGadget, sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds, CRH,
+	use webb_crypto_primitives::{
+		crh::poseidon::{
+			constraints::CRHGadget, sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds,
+			CRH,
+		},
+		SNARK,
 	};
 
 	#[derive(Default, Clone)]
@@ -115,6 +120,28 @@ mod test {
 		let proof = MarlinSetup::prove(&pk, circuit, rng).unwrap();
 
 		let res = MarlinSetup::verify(&vk, &vec![c], &proof, rng).unwrap();
+		assert!(res);
+	}
+
+	#[test]
+	fn should_verify_poseidon_circuit_groth16() {
+		let rng = &mut ark_std::test_rng();
+
+		let a = BlsFr::rand(rng);
+		let b = BlsFr::rand(rng);
+		let bytes = to_field_bytes(&[a, b]);
+		let rounds3 = get_rounds_3::<BlsFr>();
+		let mds3 = get_mds_3::<BlsFr>();
+		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
+		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
+		let circuit = PoseidonC::new(a, b, c, parameters);
+
+		type GrothSetup = Groth16<Bls12_381>;
+
+		let (pk, vk) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
+		let proof = GrothSetup::prove(&pk, circuit, rng).unwrap();
+
+		let res = GrothSetup::verify(&vk, &vec![c], &proof).unwrap();
 		assert!(res);
 	}
 }
