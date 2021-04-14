@@ -1,0 +1,120 @@
+use ark_ff::PrimeField;
+use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_std::marker::PhantomData;
+use webb_crypto_primitives::crh::{poseidon::to_field_bytes, FixedLengthCRH, FixedLengthCRHGadget};
+
+#[derive(Copy)]
+struct PoseidonCircuit<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> {
+	pub a: F,
+	pub b: F,
+	pub c: H::Output,
+	pub params: H::Parameters,
+	hasher: PhantomData<H>,
+	hasher_gadget: PhantomData<HG>,
+}
+
+impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> PoseidonCircuit<F, H, HG> {
+	pub fn new(a: F, b: F, c: H::Output, params: H::Parameters) -> Self {
+		Self {
+			a,
+			b,
+			c,
+			params,
+			hasher: PhantomData,
+			hasher_gadget: PhantomData,
+		}
+	}
+}
+
+impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> Clone
+	for PoseidonCircuit<F, H, HG>
+{
+	fn clone(&self) -> Self {
+		PoseidonCircuit {
+			a: self.a.clone(),
+			b: self.b.clone(),
+			c: self.c.clone(),
+			params: self.params.clone(),
+			hasher: PhantomData,
+			hasher_gadget: PhantomData,
+		}
+	}
+}
+
+impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> ConstraintSynthesizer<F>
+	for PoseidonCircuit<F, H, HG>
+{
+	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
+		let res_target = HG::OutputVar::new_input(cs.clone(), || Ok(&self.c))?;
+
+		let bytes = to_field_bytes::<F>(&[self.a, self.b]);
+		let input = Vec::<UInt8<F>>::new_input(cs.clone(), || Ok(bytes))?;
+
+		let params_var = HG::ParametersVar::new_input(cs.clone(), || Ok(self.params))?;
+		let res_var = HG::evaluate(&params_var, &input)?;
+
+		for _ in 0..3 {
+			res_var.enforce_equal(&res_target)?;
+		}
+
+		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use crate::test_data::{get_mds_3, get_rounds_3};
+	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
+	use ark_marlin::Marlin;
+	use ark_poly::univariate::DensePolynomial;
+	use ark_poly_commit::ipa_pc::InnerProductArgPC;
+	use ark_std::{ops::*, UniformRand};
+	use blake2::Blake2s;
+	use webb_crypto_primitives::crh::poseidon::{
+		constraints::CRHGadget, sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds, CRH,
+	};
+
+	#[derive(Default, Clone)]
+	struct PoseidonRounds3;
+
+	impl Rounds for PoseidonRounds3 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 3;
+	}
+
+	type PoseidonCRH3 = CRH<BabyJubJub, PoseidonRounds3>;
+	type PoseidonCRH3Gadget = CRHGadget<BabyJubJub, PoseidonRounds3>;
+	type PoseidonC = PoseidonCircuit<BabyJubJub, PoseidonCRH3, PoseidonCRH3Gadget>;
+
+	#[test]
+	fn should_verify_poseidon_circuit_ipa() {
+		let rng = &mut ark_std::test_rng();
+
+		let a = BabyJubJub::rand(rng);
+		let b = BabyJubJub::rand(rng);
+		let bytes = to_field_bytes(&[a, b]);
+		let rounds3 = get_rounds_3::<BabyJubJub>();
+		let mds3 = get_mds_3::<BabyJubJub>();
+		let parameters = PoseidonParameters::<BabyJubJub>::new(rounds3, mds3);
+		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
+		let nc = 3;
+		let nv = 3;
+		let circuit = PoseidonC::new(a, b, c, parameters);
+
+		type UniPoly = DensePolynomial<BabyJubJub>;
+		type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
+		type MarlinSetup = Marlin<BabyJubJub, IPA, Blake2s>;
+
+		let srs = MarlinSetup::universal_setup(nc, nc, nc, rng).unwrap();
+		let (pk, vk) = MarlinSetup::index(&srs, circuit.clone()).unwrap();
+		let proof = MarlinSetup::prove(&pk, circuit, rng).unwrap();
+
+		let res = MarlinSetup::verify(&vk, &vec![c], &proof, rng).unwrap();
+		assert!(res);
+	}
+}
