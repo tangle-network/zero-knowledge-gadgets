@@ -5,7 +5,10 @@ use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*, R1CSVar};
 use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
-use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
+use webb_crypto_primitives::{
+	crh::{poseidon::constraints::to_field_var_bytes, FixedLengthCRHGadget},
+	FixedLengthCRH,
+};
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
@@ -115,11 +118,12 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		p: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
-		let mut leaf_bytes = Vec::new();
-		leaf_bytes.extend(s.r.to_bytes()?);
-		leaf_bytes.extend(s.nullifier.to_bytes()?);
-		leaf_bytes.extend(s.rho.to_bytes()?);
-		leaf_bytes.extend(p.chain_id.to_bytes()?);
+		let leaf_bytes = to_field_var_bytes(&[
+			s.r.clone(),
+			s.nullifier.clone(),
+			s.rho.clone(),
+			p.chain_id.clone(),
+		])?;
 
 		let mut leaf_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
 
@@ -129,8 +133,7 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 			.for_each(|(b, l_b)| *b = l_b);
 		let leaf_res = HG::evaluate(h, &leaf_buffer)?;
 
-		let mut nullifier_hash_bytes = Vec::new();
-		nullifier_hash_bytes.extend(s.nullifier.to_bytes()?);
+		let nullifier_hash_bytes = to_field_var_bytes(&[s.nullifier.clone()])?;
 		let mut nullifier_hash_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
 		nullifier_hash_buffer
 			.iter_mut()

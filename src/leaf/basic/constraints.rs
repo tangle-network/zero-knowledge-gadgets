@@ -5,7 +5,10 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
-use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
+use webb_crypto_primitives::{
+	crh::{poseidon::constraints::to_field_var_bytes, FixedLengthCRHGadget},
+	FixedLengthCRH,
+};
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
@@ -48,15 +51,8 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		_: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
-		let mut bytes = Vec::new();
-		bytes.extend(s.r.to_bytes().unwrap());
-		bytes.extend(s.nullifier.to_bytes().unwrap());
-
-		let bits = vec![Boolean::new_input(bytes.cs(), || Ok(false)).unwrap(); 8];
-		let mut buffer = vec![UInt8::from_bits_le(&bits); H::INPUT_SIZE_BITS / 8];
-
-		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
-		HG::evaluate(h, &buffer)
+		let bytes = to_field_var_bytes(&[s.r.clone(), s.nullifier.clone()])?;
+		HG::evaluate(h, &bytes)
 	}
 }
 

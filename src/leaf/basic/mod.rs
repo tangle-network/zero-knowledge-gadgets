@@ -1,7 +1,10 @@
 use crate::leaf::LeafCreation;
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_std::{marker::PhantomData, rand::Rng};
-use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
+use webb_crypto_primitives::{
+	crh::{poseidon::to_field_bytes, FixedLengthCRH},
+	Error,
+};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -45,10 +48,8 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
 		_: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Output, Error> {
-		let mut buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
-		let bytes = to_bytes![s.r, s.nullifier].unwrap();
-		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
-		H::evaluate(h, &buffer)
+		let bytes = to_field_bytes(&[s.r, s.nullifier]);
+		H::evaluate(h, &bytes)
 	}
 }
 
@@ -60,7 +61,7 @@ mod test {
 	use ark_ff::{to_bytes, Zero};
 	use ark_std::test_rng;
 	use webb_crypto_primitives::crh::poseidon::{
-		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+		sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds, CRH,
 	};
 
 	#[derive(Default, Clone)]
@@ -82,7 +83,7 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 
-		let inputs = to_bytes![secrets.r, secrets.nullifier, Fq::zero()].unwrap();
+		let inputs = to_field_bytes(&[secrets.r, secrets.nullifier]);
 
 		let rounds = get_rounds_3::<Fq>();
 		let mds = get_mds_3::<Fq>();

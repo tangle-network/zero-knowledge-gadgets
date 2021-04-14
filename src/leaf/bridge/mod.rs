@@ -5,7 +5,10 @@ use ark_std::{
 	marker::PhantomData,
 	rand::Rng,
 };
-use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
+use webb_crypto_primitives::{
+	crh::{poseidon::to_field_bytes, FixedLengthCRH},
+	Error,
+};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -83,7 +86,7 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 	) -> Result<Self::Output, Error> {
 		// Leaf hash
 		let mut leaf_buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
-		let input_bytes = to_bytes![s.r, s.nullifier, s.rho, p.chain_id]?;
+		let input_bytes = to_field_bytes(&[s.r, s.nullifier, s.rho, p.chain_id]);
 		leaf_buffer
 			.iter_mut()
 			.zip(input_bytes)
@@ -94,7 +97,7 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 
 		// Nullifier hash
 		let mut nullifier_hash_buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
-		let nullifier_bytes = to_bytes![s.nullifier]?;
+		let nullifier_bytes = to_field_bytes(&[s.nullifier]);
 		nullifier_hash_buffer
 			.iter_mut()
 			.zip(nullifier_bytes)
@@ -116,7 +119,7 @@ mod test {
 	use ark_ff::{to_bytes, One, Zero};
 	use ark_std::test_rng;
 	use webb_crypto_primitives::crh::poseidon::{
-		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+		sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds, CRH,
 	};
 
 	#[derive(Default, Clone)]
@@ -140,23 +143,10 @@ mod test {
 		let chain_id = Fq::one();
 		let publics = Public::new(chain_id);
 
-		let leaf_inputs = to_bytes![
-			secrets.r,
-			secrets.nullifier,
-			secrets.rho,
-			publics.chain_id,
-			Fq::zero()
-		]
-		.unwrap();
+		let leaf_inputs =
+			to_field_bytes(&[secrets.r, secrets.nullifier, secrets.rho, publics.chain_id]);
 
-		let nullifier_inputs = to_bytes![
-			secrets.nullifier,
-			Fq::zero(),
-			Fq::zero(),
-			Fq::zero(),
-			Fq::zero()
-		]
-		.unwrap();
+		let nullifier_inputs = to_field_bytes(&[secrets.nullifier]);
 
 		let rounds = get_rounds_5::<Fq>();
 		let mds = get_mds_5::<Fq>();

@@ -68,7 +68,7 @@ mod test {
 		type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
 		type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
 
-		let srs = MarlinSetup::universal_setup(nc, nc, nc, rng).unwrap();
+		let srs = MarlinSetup::universal_setup(nc, nv, nv, rng).unwrap();
 		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();
 		let proof = MarlinSetup::prove(&pk, c.clone(), rng).unwrap();
 
@@ -79,7 +79,7 @@ mod test {
 	}
 
 	#[test]
-	fn should_verify_basic_circuit_ipa() {
+	fn should_verify_basic_ipa_circuit() {
 		let rng = &mut ark_std::test_rng();
 
 		let nc = 3;
@@ -97,7 +97,7 @@ mod test {
 
 		let srs = MarlinSetup::universal_setup(nc, nc, nc, rng).unwrap();
 		let (pk, vk) = MarlinSetup::index(&srs, c).unwrap();
-		let proof = MarlinSetup::prove(&pk, c.clone(), rng).unwrap();
+		let proof = MarlinSetup::prove(&pk, c, rng).unwrap();
 
 		let v = c.a.unwrap().mul(c.b.unwrap());
 
