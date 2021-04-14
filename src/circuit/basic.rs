@@ -47,11 +47,13 @@ mod test {
 	use super::*;
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
+	use ark_groth16::Groth16;
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10};
 	use ark_std::{ops::*, UniformRand};
 	use blake2::Blake2s;
+	use webb_crypto_primitives::SNARK;
 	#[test]
 	fn should_verify_basic_circuit() {
 		let rng = &mut ark_std::test_rng();
@@ -102,6 +104,25 @@ mod test {
 		let v = c.a.unwrap().mul(c.b.unwrap());
 
 		let res = MarlinSetup::verify(&vk, &vec![v], &proof, rng).unwrap();
+		assert!(res);
+	}
+
+	#[test]
+	fn should_verify_basic_circuit_groth16() {
+		let rng = &mut ark_std::test_rng();
+		let c = DummyCircuit::<BlsFr> {
+			a: Some(BlsFr::rand(rng)),
+			b: Some(BlsFr::rand(rng)),
+			num_variables: 0,
+			num_constraints: 3,
+		};
+
+		let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(c, rng).unwrap();
+		let proof = Groth16::<Bls12_381>::prove(&pk, c.clone(), rng).unwrap();
+
+		let v = c.a.unwrap().mul(c.b.unwrap());
+
+		let res = Groth16::<Bls12_381>::verify(&vk, &vec![v], &proof).unwrap();
 		assert!(res);
 	}
 }
