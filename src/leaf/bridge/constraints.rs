@@ -118,33 +118,22 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 		p: &Self::PublicVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::OutputVar, SynthesisError> {
+		// leaf
 		let leaf_bytes = to_field_var_bytes(&[
 			s.r.clone(),
 			s.nullifier.clone(),
 			s.rho.clone(),
 			p.chain_id.clone(),
 		])?;
-
-		let mut leaf_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
-
-		leaf_buffer
-			.iter_mut()
-			.zip(leaf_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let leaf_res = HG::evaluate(h, &leaf_buffer)?;
-
-		let nullifier_hash_bytes = to_field_var_bytes(&[s.nullifier.clone()])?;
-		let mut nullifier_hash_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
-		nullifier_hash_buffer
-			.iter_mut()
-			.zip(nullifier_hash_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let nullifier_hash_res = HG::evaluate(h, &nullifier_hash_buffer)?;
-
+		let leaf_res = HG::evaluate(h, &leaf_bytes)?;
 		let leaf_chunk = leaf_res.to_bytes()?;
+		let leaf = Boolean::le_bits_to_fp_var(&leaf_chunk.to_bits_le()?.as_slice())?;
+
+		// nullifier_hash
+		let nullifier_hash_bytes = to_field_var_bytes(&[s.nullifier.clone()])?;
+		let nullifier_hash_res = HG::evaluate(h, &nullifier_hash_bytes)?;
 		let nullifier_hash_chunk = nullifier_hash_res.to_bytes()?;
-		let leaf = Boolean::le_bits_to_fp_var(&leaf_chunk[..32].to_bits_le()?.as_slice())?;
-		let nullifier_hash = Boolean::le_bits_to_fp_var(&nullifier_hash_chunk[..32].to_bits_le()?)?;
+		let nullifier_hash = Boolean::le_bits_to_fp_var(&nullifier_hash_chunk.to_bits_le()?)?;
 
 		Ok(Self::OutputVar::new(leaf, nullifier_hash))
 	}

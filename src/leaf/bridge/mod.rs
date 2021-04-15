@@ -85,27 +85,18 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 		h: &H::Parameters,
 	) -> Result<Self::Output, Error> {
 		// Leaf hash
-		let mut leaf_buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
 		let input_bytes = to_field_bytes(&[s.r, s.nullifier, s.rho, p.chain_id]);
-		leaf_buffer
-			.iter_mut()
-			.zip(input_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let leaf_res = H::evaluate(h, &leaf_buffer)?;
+		let leaf_res = H::evaluate(h, &input_bytes)?;
+
 		let leaf_bytes = to_bytes![leaf_res]?;
-		let leaf = F::from_le_bytes_mod_order(&leaf_bytes[..32]);
+		let leaf = F::from_le_bytes_mod_order(&leaf_bytes);
 
 		// Nullifier hash
-		let mut nullifier_hash_buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
 		let nullifier_bytes = to_field_bytes(&[s.nullifier]);
-		nullifier_hash_buffer
-			.iter_mut()
-			.zip(nullifier_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let nullifier_hash_res = H::evaluate(h, &nullifier_hash_buffer)?;
+		let nullifier_hash_res = H::evaluate(h, &nullifier_bytes)?;
 
 		let nullifier_hash_bytes = to_bytes![nullifier_hash_res]?;
-		let nullifier_hash = F::from_le_bytes_mod_order(&nullifier_hash_bytes[..32]);
+		let nullifier_hash = F::from_le_bytes_mod_order(&nullifier_hash_bytes);
 
 		Ok(Self::Output::new(leaf, nullifier_hash))
 	}
