@@ -30,7 +30,8 @@ struct MixerCircuit<
 	// TODO: merge private and public together
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
-	set_inputs: S::Input,
+	set_private_inputs: S::Private,
+	set_public_inputs: S::Public,
 	hasher_params: H::Parameters,
 	tree_hasher_params: <C::H as FixedLengthCRH>::Parameters,
 	path: Path<C>,
@@ -60,7 +61,8 @@ where
 	pub fn new(
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
-		set_inputs: S::Input,
+		set_private_inputs: S::Private,
+		set_public_inputs: S::Public,
 		hasher_params: H::Parameters,
 		tree_hasher_params: <C::H as FixedLengthCRH>::Parameters,
 		path: Path<C>,
@@ -69,7 +71,8 @@ where
 		Self {
 			leaf_private_inputs,
 			leaf_public_inputs,
-			set_inputs,
+			set_private_inputs,
+			set_public_inputs,
 			hasher_params,
 			tree_hasher_params,
 			path,
@@ -101,7 +104,8 @@ where
 	fn clone(&self) -> Self {
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
-		let set_inputs = self.set_inputs.clone();
+		let set_private_inputs = self.set_private_inputs.clone();
+		let set_public_inputs = self.set_public_inputs.clone();
 		let hasher_params = self.hasher_params.clone();
 		let tree_hasher_params = self.tree_hasher_params.clone();
 		let path = self.path.clone();
@@ -109,7 +113,8 @@ where
 		Self::new(
 			leaf_private_inputs,
 			leaf_public_inputs,
-			set_inputs,
+			set_private_inputs,
+			set_public_inputs,
 			hasher_params,
 			tree_hasher_params,
 			path,
@@ -134,20 +139,25 @@ where
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let leaf_private = self.leaf_private_inputs;
 		let leaf_public = self.leaf_public_inputs;
-		let set_inputs = self.set_inputs;
+		let set_private = self.set_private_inputs;
+		let set_public = self.set_public_inputs;
 		let hasher_params = self.hasher_params;
 		let path = self.path;
 		let root = self.root;
 		let tree_hasher_params = self.tree_hasher_params;
 
 		// Generating vars
-		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
+		// Public inputs
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
-		let set_input_var = SG::InputVar::new_input(cs.clone(), || Ok(set_inputs))?;
-		let hasher_params_var = HG::ParametersVar::new_input(cs.clone(), || Ok(hasher_params))?;
-		let tree_hasher_params_var =
-			HGT::ParametersVar::new_input(cs.clone(), || Ok(tree_hasher_params))?;
+		let set_input_public_var = SG::PublicVar::new_input(cs.clone(), || Ok(set_public))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
+
+		// Private inputs
+		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
+		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
+		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
+		let tree_hasher_params_var =
+			HGT::ParametersVar::new_constant(cs.clone(), tree_hasher_params)?;
 		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
@@ -155,7 +165,7 @@ where
 		let is_member =
 			path_var.check_membership(&tree_hasher_params_var, &root_var, &bridge_out)?;
 		// Check if target root is in set
-		let is_set_member = SG::check_membership(&set_input_var)?;
+		let is_set_member = SG::check_membership(&set_input_public_var, &set_input_private_var)?;
 
 		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
@@ -170,7 +180,9 @@ mod test {
 	use super::*;
 	use crate::{
 		leaf::bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
-		set::membership::{constraints::SetMembershipGadget, SetMembership},
+		set::membership::{
+			constraints::SetMembershipGadget, Public as SetPublicInputs, SetMembership,
+		},
 		test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
@@ -280,11 +292,13 @@ mod test {
 				<$test_field>::rand(rng),
 				root,
 			];
-			let set_inputs = TestSetMembership::generate_inputs(&root, roots);
+			let set_public_inputs = SetPublicInputs::new(root, roots.clone());
+			let set_private_inputs = TestSetMembership::generate_secrets(&root, roots);
 			let mc = Circuit::new(
 				leaf_private,
 				leaf_public,
-				set_inputs,
+				set_private_inputs,
+				set_public_inputs,
 				params5,
 				params3,
 				path,
@@ -308,17 +322,16 @@ mod test {
 		let _proof = MarlinBlsSetup::prove(&pk, mc, rng).unwrap();
 	}
 
-	// #[test]
-	// fn setup_and_prove_marlin_ipa_pc() {
-	// 	let rng = &mut test_rng();
-	// 	let mc = setup_circuit!(BabyJubJub);
+	fn setup_and_prove_marlin_ipa_pc() {
+		let rng = &mut test_rng();
+		let mc = setup_circuit!(BabyJubJub);
 
-	// 	type UniPoly = DensePolynomial<BabyJubJub>;
-	// 	type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
-	// 	type MarlinIpaSetup = Marlin<BabyJubJub, IPA, Blake2s>;
+		type UniPoly = DensePolynomial<BabyJubJub>;
+		type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
+		type MarlinIpaSetup = Marlin<BabyJubJub, IPA, Blake2s>;
 
-	// 	let srs = MarlinIpaSetup::universal_setup(10, 10, 300, rng).unwrap();
-	// 	let (pk, _) = MarlinIpaSetup::index(&srs, mc.clone()).unwrap();
-	// 	let _ = MarlinIpaSetup::prove(&pk, mc, rng).unwrap();
-	// }
+		let srs = MarlinIpaSetup::universal_setup(10, 10, 300, rng).unwrap();
+		let (pk, _) = MarlinIpaSetup::index(&srs, mc.clone()).unwrap();
+		let _ = MarlinIpaSetup::prove(&pk, mc, rng).unwrap();
+	}
 }

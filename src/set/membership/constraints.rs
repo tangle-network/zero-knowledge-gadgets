@@ -1,4 +1,4 @@
-use super::{Input, SetMembership};
+use super::{Private, Public, SetMembership};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
 	eq::EqGadget,
@@ -12,15 +12,25 @@ use core::borrow::Borrow;
 use crate::set::constraints::SetGadget;
 
 #[derive(Clone)]
-pub struct InputVar<F: PrimeField> {
-	pub diffs: Vec<FpVar<F>>,
+pub struct PublicVar<F: PrimeField> {
 	pub target: FpVar<F>,
 	pub set: Vec<FpVar<F>>,
 }
 
-impl<F: PrimeField> InputVar<F> {
-	pub fn new(target: FpVar<F>, diffs: Vec<FpVar<F>>, set: Vec<FpVar<F>>) -> Self {
-		Self { target, diffs, set }
+impl<F: PrimeField> PublicVar<F> {
+	pub fn new(target: FpVar<F>, set: Vec<FpVar<F>>) -> Self {
+		Self { target, set }
+	}
+}
+
+#[derive(Clone)]
+pub struct PrivateVar<F: PrimeField> {
+	pub diffs: Vec<FpVar<F>>,
+}
+
+impl<F: PrimeField> PrivateVar<F> {
+	pub fn new(diffs: Vec<FpVar<F>>) -> Self {
+		Self { diffs }
 	}
 }
 
@@ -30,12 +40,16 @@ pub struct SetMembershipGadget<F: PrimeField> {
 }
 
 impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
-	type InputVar = InputVar<F>;
+	type PrivateVar = PrivateVar<F>;
+	type PublicVar = PublicVar<F>;
 
-	fn check_membership(input: &Self::InputVar) -> Result<Boolean<F>, SynthesisError> {
+	fn check_membership(
+		p: &Self::PublicVar,
+		s: &Self::PrivateVar,
+	) -> Result<Boolean<F>, SynthesisError> {
 		let mut product = FpVar::<F>::zero();
-		for (diff, real) in input.diffs.iter().zip(input.set.iter()) {
-			real.enforce_equal(&(diff + &input.target))?;
+		for (diff, real) in s.diffs.iter().zip(p.set.iter()) {
+			real.enforce_equal(&(diff + &p.target))?;
 			product *= diff;
 		}
 
@@ -43,25 +57,30 @@ impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
 	}
 }
 
-impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
-	fn new_variable<T: Borrow<Input<F>>>(
-		cs: impl Into<Namespace<F>>,
+impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
+	fn new_variable<T: Borrow<Public<F>>>(
+		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
+		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let inp = f()?.borrow().clone();
-		let target_var = FpVar::<F>::new_input(cs, || Ok(inp.target))?;
-		let set_var = inp
-			.set
-			.iter()
-			.map(|x| FpVar::<F>::new_input(target_var.cs(), || Ok(x)))
-			.collect::<Result<Vec<_>, _>>()?;
-		let diffs_var = inp
-			.diffs
-			.iter()
-			.map(|x| FpVar::<F>::new_witness(target_var.cs(), || Ok(x)))
-			.collect::<Result<Vec<_>, _>>()?;
-		Ok(InputVar::new(target_var, diffs_var, set_var))
+		let ns = into_ns.into();
+		let cs = ns.cs();
+		let target_var = FpVar::<F>::new_variable(cs.clone(), || Ok(inp.target), mode)?;
+		let set_var = Vec::<FpVar<F>>::new_variable(cs.clone(), || Ok(inp.set), mode)?;
+		Ok(PublicVar::new(target_var, set_var))
+	}
+}
+
+impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
+	fn new_variable<T: Borrow<Private<F>>>(
+		into_ns: impl Into<Namespace<F>>,
+		f: impl FnOnce() -> Result<T, SynthesisError>,
+		mode: AllocationMode,
+	) -> Result<Self, SynthesisError> {
+		let inp = f()?.borrow().clone();
+		let diffs_var = Vec::<FpVar<F>>::new_variable(into_ns, || Ok(inp.diffs), mode)?;
+		Ok(PrivateVar::new(diffs_var))
 	}
 }
 
@@ -84,13 +103,15 @@ mod test {
 		set.push(root);
 
 		// Native
-		let input = TestSetMembership::generate_inputs(&root, set);
-		let product = TestSetMembership::check_membership(&input).unwrap();
+		let p = Public::new(root, set.clone());
+		let s = TestSetMembership::generate_secrets(&root, set);
+		let product = TestSetMembership::check_membership(&p, &s).unwrap();
 
 		// Constraint version
 		let cs = ConstraintSystem::<Fq>::new_ref();
-		let input_var = InputVar::new_variable(cs, || Ok(input), AllocationMode::Input).unwrap();
-		let is_member = TestSetMembershipGadget::check_membership(&input_var).unwrap();
+		let p_var = PublicVar::new_input(cs.clone(), || Ok(p)).unwrap();
+		let s_var = PrivateVar::new_witness(cs, || Ok(s)).unwrap();
+		let is_member = TestSetMembershipGadget::check_membership(&p_var, &s_var).unwrap();
 
 		let is_member_native = Boolean::<Fq>::Constant(product);
 		is_member_native.enforce_equal(&is_member).unwrap();

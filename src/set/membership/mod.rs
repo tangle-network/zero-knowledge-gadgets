@@ -7,15 +7,25 @@ use webb_crypto_primitives::Error;
 pub mod constraints;
 
 #[derive(Default, Clone)]
-pub struct Input<F: PrimeField> {
-	pub diffs: Vec<F>,
+pub struct Public<F: PrimeField> {
 	pub target: F,
 	pub set: Vec<F>,
 }
 
-impl<F: PrimeField> Input<F> {
-	pub fn new(target: F, diffs: Vec<F>, set: Vec<F>) -> Self {
-		Self { target, diffs, set }
+impl<F: PrimeField> Public<F> {
+	pub fn new(target: F, set: Vec<F>) -> Self {
+		Self { target, set }
+	}
+}
+
+#[derive(Default, Clone)]
+pub struct Private<F: PrimeField> {
+	pub diffs: Vec<F>,
+}
+
+impl<F: PrimeField> Private<F> {
+	pub fn new(diffs: Vec<F>) -> Self {
+		Self { diffs }
 	}
 }
 
@@ -25,19 +35,23 @@ pub struct SetMembership<F: PrimeField> {
 }
 
 impl<F: PrimeField> Set<F> for SetMembership<F> {
-	type Input = Input<F>;
+	type Private = Private<F>;
+	type Public = Public<F>;
 
-	fn generate_inputs<T: ToBytes, I: IntoIterator<Item = F>>(target: &T, set: I) -> Self::Input {
+	fn generate_secrets<T: ToBytes, I: IntoIterator<Item = F>>(
+		target: &T,
+		set: I,
+	) -> Self::Private {
 		let target_bytes = to_bytes![target].unwrap();
 		let target = F::from_le_bytes_mod_order(&target_bytes);
 		let arr: Vec<F> = set.into_iter().collect();
 		let diffs = arr.iter().map(|x| *x - target).collect();
-		Self::Input::new(target, diffs, arr)
+		Private::new(diffs)
 	}
 
-	fn check_membership(input: &Self::Input) -> Result<bool, Error> {
-		let mut product = F::zero();
-		for item in &input.diffs {
+	fn check_membership(p: &Self::Public, s: &Self::Private) -> Result<bool, Error> {
+		let mut product = p.target;
+		for item in &s.diffs {
 			product *= item;
 		}
 
@@ -60,8 +74,9 @@ mod test {
 		let mut set = vec![Fq::rand(rng); 5];
 		set.push(root);
 
-		let input = TestSetMembership::generate_inputs(&root, set);
-		let is_member = TestSetMembership::check_membership(&input).unwrap();
+		let p = Public::new(root, set.clone());
+		let s = TestSetMembership::generate_secrets(&root, set);
+		let is_member = TestSetMembership::check_membership(&p, &s).unwrap();
 
 		assert!(is_member);
 	}

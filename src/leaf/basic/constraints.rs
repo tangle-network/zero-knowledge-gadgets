@@ -58,15 +58,18 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 
 impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 	fn new_variable<T: Borrow<Private<F>>>(
-		cs: impl Into<Namespace<F>>,
+		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let secrets = f()?.borrow().clone();
+		let ns = into_ns.into();
+		let cs = ns.cs();
+
 		let r = secrets.r;
 		let nullifier = secrets.nullifier;
-		let r_var = FpVar::new_variable(cs, || Ok(r), mode)?;
-		let nullifier_var = FpVar::new_variable(r_var.cs(), || Ok(nullifier), mode)?;
+		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
+		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
 		Ok(PrivateVar::new(r_var, nullifier_var))
 	}
 }

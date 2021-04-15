@@ -5,7 +5,6 @@ use ark_r1cs_std::{
 	eq::EqGadget,
 	fields::fp::FpVar,
 	prelude::{AllocVar, AllocationMode},
-	R1CSVar,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
@@ -45,19 +44,21 @@ impl<F: PrimeField> ArbitraryGadget<F, MixerData<F>> for MixerDataGadget<F> {
 
 impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 	fn new_variable<T: Borrow<Input<F>>>(
-		cs: impl Into<Namespace<F>>,
+		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let input = f()?.borrow().clone();
+		let ns = into_ns.into();
+		let cs = ns.cs();
 
 		let recipient = input.recipient;
 		let relayer = input.relayer;
 		let fee = input.fee;
 
-		let recipient_var = FpVar::new_variable(cs, || Ok(&recipient), mode)?;
-		let relayer_var = FpVar::new_variable(recipient_var.cs(), || Ok(&relayer), mode)?;
-		let fee_var = FpVar::new_variable(relayer_var.cs(), || Ok(&fee), mode)?;
+		let recipient_var = FpVar::new_variable(cs.clone(), || Ok(&recipient), mode)?;
+		let relayer_var = FpVar::new_variable(cs.clone(), || Ok(&relayer), mode)?;
+		let fee_var = FpVar::new_variable(cs, || Ok(&fee), mode)?;
 
 		Ok(InputVar::new(recipient_var, relayer_var, fee_var))
 	}

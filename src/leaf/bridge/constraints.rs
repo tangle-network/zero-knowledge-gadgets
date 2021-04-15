@@ -152,18 +152,22 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 
 impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 	fn new_variable<T: Borrow<Private<F>>>(
-		cs: impl Into<Namespace<F>>,
+		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
+		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let private = f()?.borrow().clone();
+		let ns = into_ns.into();
+		let cs = ns.cs();
+
 		let r = private.r;
 		let nullifier = private.nullifier;
 		let rho = private.rho;
-		let r_var = FpVar::new_variable(cs, || Ok(r), AllocationMode::Witness)?;
-		let nullifier_var =
-			FpVar::new_variable(r_var.cs(), || Ok(nullifier), AllocationMode::Witness)?;
-		let rho_var = FpVar::new_variable(nullifier_var.cs(), || Ok(rho), AllocationMode::Witness)?;
+
+		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
+		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
+		let rho_var = FpVar::new_variable(cs.clone(), || Ok(rho), mode)?;
+
 		Ok(PrivateVar::new(r_var, nullifier_var, rho_var))
 	}
 }
@@ -172,10 +176,10 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 	fn new_variable<T: Borrow<Public<F>>>(
 		cs: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
+		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let public = f()?.borrow().clone();
-		let chain_id = FpVar::new_input(cs, || Ok(public.chain_id))?;
+		let chain_id = FpVar::new_variable(cs, || Ok(public.chain_id), mode)?;
 		Ok(PublicVar::new(chain_id))
 	}
 }

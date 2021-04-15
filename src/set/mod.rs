@@ -1,5 +1,4 @@
 use ark_ff::{bytes::ToBytes, fields::PrimeField};
-use ark_std::hash::Hash;
 use webb_crypto_primitives::Error;
 
 pub mod membership;
@@ -10,8 +9,10 @@ pub mod constraints;
 pub use constraints::*;
 
 pub trait Set<F: PrimeField>: Sized {
-	type Input: Clone + Default;
+	type Public: Clone + Default;
+	type Private: Clone + Default;
 
-	fn generate_inputs<T: ToBytes, I: IntoIterator<Item = F>>(target: &T, set: I) -> Self::Input;
-	fn check_membership(inputs: &Self::Input) -> Result<bool, Error>;
+	fn generate_secrets<T: ToBytes, I: IntoIterator<Item = F>>(target: &T, set: I)
+		-> Self::Private;
+	fn check_membership(p: &Self::Public, s: &Self::Private) -> Result<bool, Error>;
 }
