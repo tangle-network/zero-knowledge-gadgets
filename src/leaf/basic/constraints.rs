@@ -5,10 +5,7 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
-use webb_crypto_primitives::{
-	crh::{poseidon::constraints::to_field_var_bytes, FixedLengthCRHGadget},
-	FixedLengthCRH,
-};
+use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
@@ -42,16 +39,29 @@ pub struct BasicLeafGadget<
 impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
-	type OutputVar = HG::OutputVar;
+	type LeafVar = HG::OutputVar;
+	type NullifierVar = HG::OutputVar;
 	type PrivateVar = PrivateVar<F>;
 	type PublicVar = PublicVar<F>;
 
-	fn create(
+	fn create_leaf(
 		s: &Self::PrivateVar,
 		_: &Self::PublicVar,
 		h: &HG::ParametersVar,
-	) -> Result<Self::OutputVar, SynthesisError> {
-		let bytes = to_field_var_bytes(&[s.r.clone(), s.nullifier.clone()])?;
+	) -> Result<Self::LeafVar, SynthesisError> {
+		let mut bytes = Vec::new();
+		bytes.extend(s.r.to_bytes()?);
+		bytes.extend(s.nullifier.to_bytes()?);
+		HG::evaluate(h, &bytes)
+	}
+
+	fn create_nullifier(
+		s: &Self::PrivateVar,
+		h: &HG::ParametersVar,
+	) -> Result<Self::NullifierVar, SynthesisError> {
+		let mut bytes = Vec::new();
+		bytes.extend(s.nullifier.to_bytes()?);
+		bytes.extend(s.nullifier.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
 }
@@ -125,7 +135,7 @@ mod test {
 		let public = Public::default();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
 
 		// Constraints version
 		let public_var = PublicVar::default();
@@ -134,7 +144,7 @@ mod test {
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 
-		let leaf_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
+		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();

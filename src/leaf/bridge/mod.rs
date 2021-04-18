@@ -5,10 +5,7 @@ use ark_std::{
 	marker::PhantomData,
 	rand::Rng,
 };
-use webb_crypto_primitives::{
-	crh::{poseidon::to_field_bytes, FixedLengthCRH},
-	Error,
-};
+use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -47,15 +44,6 @@ pub struct Output<F: PrimeField> {
 	pub nullifier_hash: F,
 }
 
-impl<F: PrimeField> Output<F> {
-	pub fn new(leaf: F, nullifier_hash: F) -> Self {
-		Self {
-			leaf,
-			nullifier_hash,
-		}
-	}
-}
-
 impl<F: PrimeField> ToBytes for Output<F> {
 	fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
 		writer.write(&to_bytes![self.leaf].unwrap())?;
@@ -71,7 +59,8 @@ pub struct BridgeLeaf<F: PrimeField, H: FixedLengthCRH> {
 }
 
 impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
-	type Output = Output<F>;
+	type Leaf = H::Output;
+	type Nullifier = H::Output;
 	type Private = Private<F>;
 	type Public = Public<F>;
 
@@ -79,26 +68,18 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 		Ok(Self::Private::generate(r))
 	}
 
-	fn create(
+	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
 		h: &H::Parameters,
-	) -> Result<Self::Output, Error> {
-		// Leaf hash
-		let input_bytes = to_field_bytes(&[s.r, s.nullifier, s.rho, p.chain_id]);
-		let leaf_res = H::evaluate(h, &input_bytes)?;
+	) -> Result<Self::Leaf, Error> {
+		let input_bytes = to_bytes![s.r, s.nullifier, s.rho, p.chain_id]?;
+		H::evaluate(h, &input_bytes)
+	}
 
-		let leaf_bytes = to_bytes![leaf_res]?;
-		let leaf = F::from_le_bytes_mod_order(&leaf_bytes);
-
-		// Nullifier hash
-		let nullifier_bytes = to_field_bytes(&[s.nullifier]);
-		let nullifier_hash_res = H::evaluate(h, &nullifier_bytes)?;
-
-		let nullifier_hash_bytes = to_bytes![nullifier_hash_res]?;
-		let nullifier_hash = F::from_le_bytes_mod_order(&nullifier_hash_bytes);
-
-		Ok(Self::Output::new(leaf, nullifier_hash))
+	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error> {
+		let nullifier_bytes = to_bytes![s.nullifier, s.nullifier]?;
+		H::evaluate(h, &nullifier_bytes)
 	}
 }
 
@@ -107,10 +88,10 @@ mod test {
 	use super::*;
 	use crate::test_data::{get_mds_5, get_rounds_5};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, One, Zero};
+	use ark_ff::One;
 	use ark_std::test_rng;
 	use webb_crypto_primitives::crh::poseidon::{
-		sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds, CRH,
+		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
 	};
 
 	#[derive(Default, Clone)]
@@ -135,9 +116,9 @@ mod test {
 		let publics = Public::new(chain_id);
 
 		let leaf_inputs =
-			to_field_bytes(&[secrets.r, secrets.nullifier, secrets.rho, publics.chain_id]);
+			to_bytes![secrets.r, secrets.nullifier, secrets.rho, publics.chain_id].unwrap();
 
-		let nullifier_inputs = to_field_bytes(&[secrets.nullifier]);
+		let nullifier_inputs = to_bytes![secrets.nullifier].unwrap();
 
 		let rounds = get_rounds_5::<Fq>();
 		let mds = get_mds_5::<Fq>();
@@ -145,8 +126,9 @@ mod test {
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 
-		let res = Leaf::create(&secrets, &publics, &params).unwrap();
-		assert_eq!(leaf_res, res.leaf);
-		assert_eq!(nullifier_res, res.nullifier_hash);
+		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&secrets, &params).unwrap();
+		assert_eq!(leaf_res, leaf);
+		assert_eq!(nullifier_res, nullifier_hash);
 	}
 }

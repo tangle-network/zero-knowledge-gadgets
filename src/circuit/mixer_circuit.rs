@@ -3,7 +3,7 @@ use crate::{
 	set::{Set, SetGadget},
 };
 use ark_ff::fields::PrimeField;
-use ark_r1cs_std::prelude::*;
+use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 use webb_crypto_primitives::{
@@ -31,11 +31,12 @@ struct MixerCircuit<
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
 	set_private_inputs: S::Private,
-	set_public_inputs: S::Public,
+	root_set: Vec<F>,
 	hasher_params: H::Parameters,
 	tree_hasher_params: <C::H as FixedLengthCRH>::Parameters,
 	path: Path<C>,
 	root: <C::H as FixedLengthCRH>::Output,
+	nullifier_hash: L::Nullifier,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
 	_tree_hasher_gadget: PhantomData<HGT>,
@@ -62,21 +63,23 @@ where
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
 		set_private_inputs: S::Private,
-		set_public_inputs: S::Public,
+		root_set: Vec<F>,
 		hasher_params: H::Parameters,
 		tree_hasher_params: <C::H as FixedLengthCRH>::Parameters,
 		path: Path<C>,
 		root: <C::H as FixedLengthCRH>::Output,
+		nullifier_hash: L::Nullifier,
 	) -> Self {
 		Self {
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_private_inputs,
-			set_public_inputs,
+			root_set,
 			hasher_params,
 			tree_hasher_params,
 			path,
 			root,
+			nullifier_hash,
 			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
@@ -105,20 +108,22 @@ where
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
 		let set_private_inputs = self.set_private_inputs.clone();
-		let set_public_inputs = self.set_public_inputs.clone();
+		let root_set = self.root_set.clone();
 		let hasher_params = self.hasher_params.clone();
 		let tree_hasher_params = self.tree_hasher_params.clone();
 		let path = self.path.clone();
 		let root = self.root.clone();
+		let nullifier_hash = self.nullifier_hash.clone();
 		Self::new(
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_private_inputs,
-			set_public_inputs,
+			root_set,
 			hasher_params,
 			tree_hasher_params,
 			path,
 			root,
+			nullifier_hash,
 		)
 	}
 }
@@ -140,16 +145,18 @@ where
 		let leaf_private = self.leaf_private_inputs;
 		let leaf_public = self.leaf_public_inputs;
 		let set_private = self.set_private_inputs;
-		let set_public = self.set_public_inputs;
+		let root_set = self.root_set;
 		let hasher_params = self.hasher_params;
 		let path = self.path;
 		let root = self.root;
 		let tree_hasher_params = self.tree_hasher_params;
+		let nullifier_hash = self.nullifier_hash;
 
 		// Generating vars
 		// Public inputs
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
-		let set_input_public_var = SG::PublicVar::new_input(cs.clone(), || Ok(set_public))?;
+		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
+		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 
 		// Private inputs
@@ -161,15 +168,17 @@ where
 		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
-		let bridge_out = LG::create(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
+		let bridge_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
+		let bridge_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let is_member =
-			path_var.check_membership(&tree_hasher_params_var, &root_var, &bridge_out)?;
+			path_var.check_membership(&tree_hasher_params_var, &root_var, &bridge_leaf)?;
 		// Check if target root is in set
-		let is_set_member = SG::check_membership(&set_input_public_var, &set_input_private_var)?;
+		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
 
-		// Enforcing constraints
+		// // Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
 		is_set_member.enforce_equal(&Boolean::TRUE)?;
+		bridge_nullifier.enforce_equal(&nullifier_hash_var)?;
 
 		Ok(())
 	}
@@ -180,24 +189,19 @@ mod test {
 	use super::*;
 	use crate::{
 		leaf::bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
-		set::membership::{
-			constraints::SetMembershipGadget, Public as SetPublicInputs, SetMembership,
-		},
+		set::membership::{constraints::SetMembershipGadget, SetMembership},
 		test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
 	use ark_ff::{One, UniformRand};
-	use ark_marlin::Marlin;
-	use ark_poly::univariate::DensePolynomial;
-	use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10};
+	use ark_groth16::Groth16;
 	use ark_std::test_rng;
-	use blake2::Blake2s;
 	use webb_crypto_primitives::{
 		crh::poseidon::{
 			constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
 		},
 		merkle_tree::MerkleTree,
+		SNARK,
 	};
 
 	macro_rules! setup_circuit {
@@ -269,7 +273,8 @@ mod test {
 			let mds5 = get_mds_5::<$test_field>();
 			let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 			// Creating the leaf
-			let res = Leaf::create(&leaf_private, &leaf_public, &params5).unwrap();
+			let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
+			let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
 
 			// Making params for poseidon in merkle tree
 			let rounds3 = get_rounds_3::<$test_field>();
@@ -278,13 +283,13 @@ mod test {
 			let leaves = vec![
 				<$test_field>::rand(rng),
 				<$test_field>::rand(rng),
-				res.leaf,
+				leaf,
 				<$test_field>::rand(rng),
 			];
 			// Making the merkle tree
 			let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
 			// Getting the proof path
-			let path = mt.generate_proof(2, &res.leaf).unwrap();
+			let path = mt.generate_proof(2, &leaf).unwrap();
 			let root = mt.root();
 			let roots = vec![
 				<$test_field>::rand(rng),
@@ -292,46 +297,38 @@ mod test {
 				<$test_field>::rand(rng),
 				root,
 			];
-			let set_public_inputs = SetPublicInputs::new(root, roots.clone());
-			let set_private_inputs = TestSetMembership::generate_secrets(&root, roots);
+			let set_private_inputs = TestSetMembership::generate_secrets(&root, &roots).unwrap();
 			let mc = Circuit::new(
 				leaf_private,
 				leaf_public,
 				set_private_inputs,
-				set_public_inputs,
+				roots.clone(),
 				params5,
 				params3,
 				path,
 				root,
+				nullifier_hash,
 			);
-			mc
+			(chain_id, root, roots, nullifier_hash, mc)
 		}};
 	}
 
 	#[test]
-	fn setup_and_prove_marlin_bls() {
+	fn setup_and_prove_mixer_groth16() {
 		let rng = &mut test_rng();
-		let mc = setup_circuit!(BlsFr);
+		let (chain_id, root, roots, nullifier_hash, circuit) = setup_circuit!(BlsFr);
 
-		type UniPoly = DensePolynomial<BlsFr>;
-		type KZG10 = MarlinKZG10<Bls12_381, UniPoly>;
-		type MarlinBlsSetup = Marlin<BlsFr, KZG10, Blake2s>;
+		type GrothSetup = Groth16<Bls12_381>;
 
-		let srs = MarlinBlsSetup::universal_setup(33_000, 33_000, 33_000, rng).unwrap();
-		let (pk, _sk) = MarlinBlsSetup::index(&srs, mc.clone()).unwrap();
-		let _proof = MarlinBlsSetup::prove(&pk, mc, rng).unwrap();
-	}
+		let (pk, vk) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
+		let proof = GrothSetup::prove(&pk, circuit, rng).unwrap();
 
-	fn setup_and_prove_marlin_ipa_pc() {
-		let rng = &mut test_rng();
-		let mc = setup_circuit!(BabyJubJub);
-
-		type UniPoly = DensePolynomial<BabyJubJub>;
-		type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, UniPoly>;
-		type MarlinIpaSetup = Marlin<BabyJubJub, IPA, Blake2s>;
-
-		let srs = MarlinIpaSetup::universal_setup(10, 10, 300, rng).unwrap();
-		let (pk, _) = MarlinIpaSetup::index(&srs, mc.clone()).unwrap();
-		let _ = MarlinIpaSetup::prove(&pk, mc, rng).unwrap();
+		let mut public_inputs = Vec::new();
+		public_inputs.push(chain_id);
+		public_inputs.push(nullifier_hash);
+		public_inputs.extend(roots);
+		public_inputs.push(root);
+		let res = GrothSetup::verify(&vk, &public_inputs, &proof).unwrap();
+		assert!(res);
 	}
 }

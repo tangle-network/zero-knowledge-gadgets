@@ -14,10 +14,19 @@ pub trait LeafCreationGadget<
 	L: LeafCreation<H>,
 >: Sized
 {
-	type OutputVar: EqGadget<F>
+	type LeafVar: EqGadget<F>
 		+ ToBytesGadget<F>
 		+ CondSelectGadget<F>
-		+ AllocVar<L::Output, F>
+		+ AllocVar<L::Leaf, F>
+		+ R1CSVar<F>
+		+ Debug
+		+ Clone
+		+ Sized;
+
+	type NullifierVar: EqGadget<F>
+		+ ToBytesGadget<F>
+		+ CondSelectGadget<F>
+		+ AllocVar<L::Nullifier, F>
 		+ R1CSVar<F>
 		+ Debug
 		+ Clone
@@ -26,9 +35,14 @@ pub trait LeafCreationGadget<
 	type PrivateVar: AllocVar<L::Private, F> + Clone;
 	type PublicVar: AllocVar<L::Public, F> + Clone;
 
-	fn create(
+	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
 		h: &HG::ParametersVar,
-	) -> Result<Self::OutputVar, SynthesisError>;
+	) -> Result<Self::LeafVar, SynthesisError>;
+
+	fn create_nullifier(
+		s: &Self::PrivateVar,
+		h: &HG::ParametersVar,
+	) -> Result<Self::NullifierVar, SynthesisError>;
 }

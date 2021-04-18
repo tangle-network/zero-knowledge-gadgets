@@ -9,10 +9,8 @@ pub mod constraints;
 pub use constraints::*;
 
 pub trait Set<F: PrimeField>: Sized {
-	type Public: Clone + Default;
 	type Private: Clone + Default;
 
-	fn generate_secrets<T: ToBytes, I: IntoIterator<Item = F>>(target: &T, set: I)
-		-> Self::Private;
-	fn check_membership(p: &Self::Public, s: &Self::Private) -> Result<bool, Error>;
+	fn generate_secrets<T: ToBytes>(target: &T, set: &Vec<F>) -> Result<Self::Private, Error>;
+	fn check<T: ToBytes>(target: &T, private: &Self::Private) -> Result<bool, Error>;
 }

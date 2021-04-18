@@ -1,4 +1,4 @@
-use super::{Private, Public, SetMembership};
+use super::{Private, SetMembership};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
 	eq::EqGadget,
@@ -12,18 +12,6 @@ use core::borrow::Borrow;
 use crate::set::constraints::SetGadget;
 
 #[derive(Clone)]
-pub struct PublicVar<F: PrimeField> {
-	pub target: FpVar<F>,
-	pub set: Vec<FpVar<F>>,
-}
-
-impl<F: PrimeField> PublicVar<F> {
-	pub fn new(target: FpVar<F>, set: Vec<FpVar<F>>) -> Self {
-		Self { target, set }
-	}
-}
-
-#[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
 	pub diffs: Vec<FpVar<F>>,
 }
@@ -33,7 +21,6 @@ impl<F: PrimeField> PrivateVar<F> {
 		Self { diffs }
 	}
 }
-
 #[derive(Clone)]
 pub struct SetMembershipGadget<F: PrimeField> {
 	field: PhantomData<F>,
@@ -41,34 +28,20 @@ pub struct SetMembershipGadget<F: PrimeField> {
 
 impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
 	type PrivateVar = PrivateVar<F>;
-	type PublicVar = PublicVar<F>;
 
-	fn check_membership(
-		p: &Self::PublicVar,
-		s: &Self::PrivateVar,
+	fn check<T: ToBytesGadget<F>>(
+		target: &T,
+		set: &Vec<FpVar<F>>,
+		private: &Self::PrivateVar,
 	) -> Result<Boolean<F>, SynthesisError> {
+		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
 		let mut product = FpVar::<F>::zero();
-		for (diff, real) in s.diffs.iter().zip(p.set.iter()) {
-			real.enforce_equal(&(diff + &p.target))?;
+		for (diff, real) in private.diffs.iter().zip(set.iter()) {
+			real.enforce_equal(&(diff + &target))?;
 			product *= diff;
 		}
 
 		Ok(product.is_eq(&FpVar::<F>::zero())?)
-	}
-}
-
-impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
-	fn new_variable<T: Borrow<Public<F>>>(
-		into_ns: impl Into<Namespace<F>>,
-		f: impl FnOnce() -> Result<T, SynthesisError>,
-		mode: AllocationMode,
-	) -> Result<Self, SynthesisError> {
-		let inp = f()?.borrow().clone();
-		let ns = into_ns.into();
-		let cs = ns.cs();
-		let target_var = FpVar::<F>::new_variable(cs.clone(), || Ok(inp.target), mode)?;
-		let set_var = Vec::<FpVar<F>>::new_variable(cs.clone(), || Ok(inp.set), mode)?;
-		Ok(PublicVar::new(target_var, set_var))
 	}
 }
 
@@ -103,15 +76,15 @@ mod test {
 		set.push(root);
 
 		// Native
-		let p = Public::new(root, set.clone());
-		let s = TestSetMembership::generate_secrets(&root, set);
-		let product = TestSetMembership::check_membership(&p, &s).unwrap();
+		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
+		let product = TestSetMembership::check(&root, &s).unwrap();
 
 		// Constraint version
 		let cs = ConstraintSystem::<Fq>::new_ref();
-		let p_var = PublicVar::new_input(cs.clone(), || Ok(p)).unwrap();
-		let s_var = PrivateVar::new_witness(cs, || Ok(s)).unwrap();
-		let is_member = TestSetMembershipGadget::check_membership(&p_var, &s_var).unwrap();
+		let private_var = PrivateVar::new_witness(cs.clone(), || Ok(s)).unwrap();
+		let root_var = FpVar::<Fq>::new_input(cs.clone(), || Ok(root)).unwrap();
+		let set_var = Vec::<FpVar<Fq>>::new_input(cs, || Ok(set)).unwrap();
+		let is_member = TestSetMembershipGadget::check(&root_var, &set_var, &private_var).unwrap();
 
 		let is_member_native = Boolean::<Fq>::Constant(product);
 		is_member_native.enforce_equal(&is_member).unwrap();

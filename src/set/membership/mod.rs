@@ -7,18 +7,6 @@ use webb_crypto_primitives::Error;
 pub mod constraints;
 
 #[derive(Default, Clone)]
-pub struct Public<F: PrimeField> {
-	pub target: F,
-	pub set: Vec<F>,
-}
-
-impl<F: PrimeField> Public<F> {
-	pub fn new(target: F, set: Vec<F>) -> Self {
-		Self { target, set }
-	}
-}
-
-#[derive(Default, Clone)]
 pub struct Private<F: PrimeField> {
 	pub diffs: Vec<F>,
 }
@@ -36,21 +24,17 @@ pub struct SetMembership<F: PrimeField> {
 
 impl<F: PrimeField> Set<F> for SetMembership<F> {
 	type Private = Private<F>;
-	type Public = Public<F>;
 
-	fn generate_secrets<T: ToBytes, I: IntoIterator<Item = F>>(
-		target: &T,
-		set: I,
-	) -> Self::Private {
-		let target_bytes = to_bytes![target].unwrap();
-		let target = F::from_le_bytes_mod_order(&target_bytes);
-		let arr: Vec<F> = set.into_iter().collect();
-		let diffs = arr.iter().map(|x| *x - target).collect();
-		Private::new(diffs)
+	fn generate_secrets<T: ToBytes>(target: &T, set: &Vec<F>) -> Result<Self::Private, Error> {
+		let target_bytes = to_bytes![target]?;
+		let t = F::read(target_bytes.as_slice())?;
+		let diffs = set.iter().map(|x| *x - t).collect();
+		Ok(Private::new(diffs))
 	}
 
-	fn check_membership(p: &Self::Public, s: &Self::Private) -> Result<bool, Error> {
-		let mut product = p.target;
+	fn check<T: ToBytes>(target: &T, s: &Self::Private) -> Result<bool, Error> {
+		let target_bytes = to_bytes![target]?;
+		let mut product = F::read(target_bytes.as_slice())?;
 		for item in &s.diffs {
 			product *= item;
 		}
@@ -74,9 +58,8 @@ mod test {
 		let mut set = vec![Fq::rand(rng); 5];
 		set.push(root);
 
-		let p = Public::new(root, set.clone());
-		let s = TestSetMembership::generate_secrets(&root, set);
-		let is_member = TestSetMembership::check_membership(&p, &s).unwrap();
+		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
+		let is_member = TestSetMembership::check(&root, &s).unwrap();
 
 		assert!(is_member);
 	}

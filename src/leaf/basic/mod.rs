@@ -1,10 +1,7 @@
 use crate::leaf::LeafCreation;
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_std::{marker::PhantomData, rand::Rng};
-use webb_crypto_primitives::{
-	crh::{poseidon::to_field_bytes, FixedLengthCRH},
-	Error,
-};
+use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -35,7 +32,8 @@ struct BasicLeaf<F: PrimeField, H: FixedLengthCRH> {
 }
 
 impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
-	type Output = H::Output;
+	type Leaf = H::Output;
+	type Nullifier = H::Output;
 	type Private = Private<F>;
 	type Public = Public<F>;
 
@@ -43,12 +41,17 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
 		Ok(Self::Private::generate(r))
 	}
 
-	fn create(
+	fn create_leaf(
 		s: &Self::Private,
 		_: &Self::Public,
 		h: &H::Parameters,
-	) -> Result<Self::Output, Error> {
-		let bytes = to_field_bytes(&[s.r, s.nullifier]);
+	) -> Result<Self::Leaf, Error> {
+		let bytes = to_bytes![s.r, s.nullifier]?;
+		H::evaluate(h, &bytes)
+	}
+
+	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error> {
+		let bytes = to_bytes![s.nullifier, s.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -58,10 +61,10 @@ mod test {
 	use super::*;
 	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, Zero};
+	use ark_ff::to_bytes;
 	use ark_std::test_rng;
 	use webb_crypto_primitives::crh::poseidon::{
-		sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds, CRH,
+		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
 	};
 
 	#[derive(Default, Clone)]
@@ -83,14 +86,14 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 
-		let inputs = to_field_bytes(&[secrets.r, secrets.nullifier]);
+		let inputs_leaf = to_bytes![secrets.r, secrets.nullifier].unwrap();
 
 		let rounds = get_rounds_3::<Fq>();
 		let mds = get_mds_3::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let ev_res = PoseidonCRH3::evaluate(&params, &inputs).unwrap();
+		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let res = Leaf::create(&secrets, &publics, &params).unwrap();
-		assert_eq!(ev_res, res);
+		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		assert_eq!(ev_res, leaf);
 	}
 }

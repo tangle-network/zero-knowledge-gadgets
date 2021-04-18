@@ -1,8 +1,8 @@
-use ark_ff::PrimeField;
+use ark_ff::{to_bytes, PrimeField};
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
-use webb_crypto_primitives::crh::{poseidon::to_field_bytes, FixedLengthCRH, FixedLengthCRHGadget};
+use webb_crypto_primitives::crh::{FixedLengthCRH, FixedLengthCRHGadget};
 
 #[derive(Copy)]
 struct PoseidonCircuit<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> {
@@ -48,7 +48,7 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> Constrain
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let res_target = HG::OutputVar::new_input(cs.clone(), || Ok(&self.c))?;
 
-		let bytes = to_field_bytes::<F>(&[self.a, self.b]);
+		let bytes = to_bytes![self.a, self.b].unwrap();
 		let input = Vec::<UInt8<F>>::new_witness(cs.clone(), || Ok(bytes))?;
 
 		let params_var = HG::ParametersVar::new_witness(cs.clone(), || Ok(self.params))?;
@@ -65,20 +65,15 @@ mod test {
 	use super::*;
 	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-	use ark_ed_on_bn254::{EdwardsAffine, Fr as BabyJubJub};
 	use ark_groth16::Groth16;
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
-	use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10};
-	use ark_relations::r1cs::{
-		ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError,
-	};
-	use ark_std::{ops::*, UniformRand};
+	use ark_poly_commit::marlin_pc::MarlinKZG10;
+	use ark_std::UniformRand;
 	use blake2::Blake2s;
 	use webb_crypto_primitives::{
 		crh::poseidon::{
-			constraints::CRHGadget, sbox::PoseidonSbox, to_field_bytes, PoseidonParameters, Rounds,
-			CRH,
+			constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
 		},
 		SNARK,
 	};
@@ -103,7 +98,7 @@ mod test {
 
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
-		let bytes = to_field_bytes(&[a, b]);
+		let bytes = to_bytes![a, b].unwrap();
 		let rounds3 = get_rounds_3::<BlsFr>();
 		let mds3 = get_mds_3::<BlsFr>();
 		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
@@ -129,7 +124,7 @@ mod test {
 
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
-		let bytes = to_field_bytes(&[a, b]);
+		let bytes = to_bytes![a, b].unwrap();
 		let rounds3 = get_rounds_3::<BlsFr>();
 		let mds3 = get_mds_3::<BlsFr>();
 		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
