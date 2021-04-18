@@ -118,7 +118,7 @@ mod test {
 		let leaf_inputs =
 			to_bytes![secrets.r, secrets.nullifier, secrets.rho, publics.chain_id].unwrap();
 
-		let nullifier_inputs = to_bytes![secrets.nullifier].unwrap();
+		let nullifier_inputs = to_bytes![secrets.nullifier, secrets.nullifier].unwrap();
 
 		let rounds = get_rounds_5::<Fq>();
 		let mds = get_mds_5::<Fq>();
