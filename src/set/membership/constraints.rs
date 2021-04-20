@@ -35,7 +35,7 @@ impl<F: PrimeField> SetGadget<F, SetMembership<F>> for SetMembershipGadget<F> {
 		private: &Self::PrivateVar,
 	) -> Result<Boolean<F>, SynthesisError> {
 		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
-		let mut product = FpVar::<F>::zero();
+		let mut product = target.clone();
 		for (diff, real) in private.diffs.iter().zip(set.iter()) {
 			real.enforce_equal(&(diff + &target))?;
 			product *= diff;
