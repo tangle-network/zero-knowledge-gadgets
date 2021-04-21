@@ -106,61 +106,54 @@ pub struct BridgeLeafGadget<
 impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BridgeLeaf<F, H>> for BridgeLeafGadget<F, H, HG, BridgeLeaf<F, H>>
 {
-	type OutputVar = OutputVar<F>;
+	type LeafVar = HG::OutputVar;
+	type NullifierVar = HG::OutputVar;
 	type PrivateVar = PrivateVar<F>;
 	type PublicVar = PublicVar<F>;
 
-	fn create(
+	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
 		h: &HG::ParametersVar,
-	) -> Result<Self::OutputVar, SynthesisError> {
+	) -> Result<Self::LeafVar, SynthesisError> {
+		// leaf
 		let mut leaf_bytes = Vec::new();
 		leaf_bytes.extend(s.r.to_bytes()?);
 		leaf_bytes.extend(s.nullifier.to_bytes()?);
 		leaf_bytes.extend(s.rho.to_bytes()?);
 		leaf_bytes.extend(p.chain_id.to_bytes()?);
+		HG::evaluate(h, &leaf_bytes)
+	}
 
-		let mut leaf_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
-
-		leaf_buffer
-			.iter_mut()
-			.zip(leaf_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let leaf_res = HG::evaluate(h, &leaf_buffer)?;
-
+	fn create_nullifier(
+		s: &Self::PrivateVar,
+		h: &HG::ParametersVar,
+	) -> Result<Self::NullifierVar, SynthesisError> {
 		let mut nullifier_hash_bytes = Vec::new();
 		nullifier_hash_bytes.extend(s.nullifier.to_bytes()?);
-		let mut nullifier_hash_buffer = vec![UInt8::constant(0); H::INPUT_SIZE_BITS / 8];
-		nullifier_hash_buffer
-			.iter_mut()
-			.zip(nullifier_hash_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let nullifier_hash_res = HG::evaluate(h, &nullifier_hash_buffer)?;
-
-		let leaf_chunk = leaf_res.to_bytes()?;
-		let nullifier_hash_chunk = nullifier_hash_res.to_bytes()?;
-		let leaf = Boolean::le_bits_to_fp_var(&leaf_chunk[..32].to_bits_le()?.as_slice())?;
-		let nullifier_hash = Boolean::le_bits_to_fp_var(&nullifier_hash_chunk[..32].to_bits_le()?)?;
-
-		Ok(Self::OutputVar::new(leaf, nullifier_hash))
+		nullifier_hash_bytes.extend(s.nullifier.to_bytes()?);
+		HG::evaluate(h, &nullifier_hash_bytes)
 	}
 }
 
 impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 	fn new_variable<T: Borrow<Private<F>>>(
-		cs: impl Into<Namespace<F>>,
+		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
+		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let private = f()?.borrow().clone();
+		let ns = into_ns.into();
+		let cs = ns.cs();
+
 		let r = private.r;
 		let nullifier = private.nullifier;
 		let rho = private.rho;
-		let r_var = FpVar::new_variable(cs, || Ok(r), AllocationMode::Witness)?;
-		let nullifier_var =
-			FpVar::new_variable(r_var.cs(), || Ok(nullifier), AllocationMode::Witness)?;
-		let rho_var = FpVar::new_variable(nullifier_var.cs(), || Ok(rho), AllocationMode::Witness)?;
+
+		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
+		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
+		let rho_var = FpVar::new_variable(cs.clone(), || Ok(rho), mode)?;
+
 		Ok(PrivateVar::new(r_var, nullifier_var, rho_var))
 	}
 }
@@ -169,10 +162,10 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 	fn new_variable<T: Borrow<Public<F>>>(
 		cs: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
+		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let public = f()?.borrow().clone();
-		let chain_id = FpVar::new_variable(cs, || Ok(public.chain_id), AllocationMode::Input)?;
+		let chain_id = FpVar::new_variable(cs, || Ok(public.chain_id), mode)?;
 		Ok(PublicVar::new(chain_id))
 	}
 }
@@ -185,7 +178,7 @@ impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
 	) -> Result<Self, SynthesisError> {
 		let output = f()?.borrow().clone();
 		let leaf = FpVar::new_witness(cs, || Ok(output.leaf))?;
-		let nullifier_hash = FpVar::new_witness(leaf.cs(), || Ok(output.nullifier_hash))?;
+		let nullifier_hash = FpVar::new_input(leaf.cs(), || Ok(output.nullifier_hash))?;
 		Ok(OutputVar::new(leaf, nullifier_hash))
 	}
 }
@@ -234,7 +227,8 @@ mod test {
 
 		let public = Public::new(chain_id);
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let bridge_res = Leaf::create(&secrets, &public, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
+		let nullifier = Leaf::create_nullifier(&secrets, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(
@@ -246,13 +240,17 @@ mod test {
 
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let bridge_res_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
+		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
+		let nullifier_var = LeafGadget::create_nullifier(&secrets_var, &params_var).unwrap();
 
 		// Checking equality
-		let bridge_new_var =
-			OutputVar::<Fq>::new_witness(bridge_res_var.cs(), || Ok(&bridge_res)).unwrap();
-		let res = bridge_res_var.is_eq(&bridge_new_var).unwrap();
-		assert!(res.value().unwrap());
-		assert!(res.cs().is_satisfied().unwrap());
+		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf)).unwrap();
+		let nullifier_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&nullifier)).unwrap();
+		let leaf_res = leaf_var.is_eq(&leaf_new_var).unwrap();
+		let nullifier_res = nullifier_var.is_eq(&nullifier_new_var).unwrap();
+		assert!(leaf_res.value().unwrap());
+		assert!(leaf_res.cs().is_satisfied().unwrap());
+		assert!(nullifier_res.value().unwrap());
+		assert!(nullifier_res.cs().is_satisfied().unwrap());
 	}
 }

@@ -29,7 +29,7 @@ impl<F: PrimeField> Private<F> {
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
-	chain_id: F,
+	pub chain_id: F,
 }
 
 impl<F: PrimeField> Public<F> {
@@ -40,17 +40,8 @@ impl<F: PrimeField> Public<F> {
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default)]
 pub struct Output<F: PrimeField> {
-	leaf: F,
-	nullifier_hash: F,
-}
-
-impl<F: PrimeField> Output<F> {
-	pub fn new(leaf: F, nullifier_hash: F) -> Self {
-		Self {
-			leaf,
-			nullifier_hash,
-		}
-	}
+	pub leaf: F,
+	pub nullifier_hash: F,
 }
 
 impl<F: PrimeField> ToBytes for Output<F> {
@@ -61,13 +52,15 @@ impl<F: PrimeField> ToBytes for Output<F> {
 	}
 }
 
-struct BridgeLeaf<F: PrimeField, H: FixedLengthCRH> {
+#[derive(Clone)]
+pub struct BridgeLeaf<F: PrimeField, H: FixedLengthCRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
-	type Output = Output<F>;
+	type Leaf = H::Output;
+	type Nullifier = H::Output;
 	type Private = Private<F>;
 	type Public = Public<F>;
 
@@ -75,35 +68,18 @@ impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
 		Ok(Self::Private::generate(r))
 	}
 
-	fn create(
+	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
 		h: &H::Parameters,
-	) -> Result<Self::Output, Error> {
-		// Leaf hash
-		let mut leaf_buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
+	) -> Result<Self::Leaf, Error> {
 		let input_bytes = to_bytes![s.r, s.nullifier, s.rho, p.chain_id]?;
-		leaf_buffer
-			.iter_mut()
-			.zip(input_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let leaf_res = H::evaluate(h, &leaf_buffer)?;
-		let leaf_bytes = to_bytes![leaf_res]?;
-		let leaf = F::from_le_bytes_mod_order(&leaf_bytes[..32]);
+		H::evaluate(h, &input_bytes)
+	}
 
-		// Nullifier hash
-		let mut nullifier_hash_buffer = vec![0u8; H::INPUT_SIZE_BITS / 8];
-		let nullifier_bytes = to_bytes![s.nullifier]?;
-		nullifier_hash_buffer
-			.iter_mut()
-			.zip(nullifier_bytes)
-			.for_each(|(b, l_b)| *b = l_b);
-		let nullifier_hash_res = H::evaluate(h, &nullifier_hash_buffer)?;
-
-		let nullifier_hash_bytes = to_bytes![nullifier_hash_res]?;
-		let nullifier_hash = F::from_le_bytes_mod_order(&nullifier_hash_bytes[..32]);
-
-		Ok(Self::Output::new(leaf, nullifier_hash))
+	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error> {
+		let nullifier_bytes = to_bytes![s.nullifier, s.nullifier]?;
+		H::evaluate(h, &nullifier_bytes)
 	}
 }
 
@@ -112,7 +88,7 @@ mod test {
 	use super::*;
 	use crate::test_data::{get_mds_5, get_rounds_5};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, One, Zero};
+	use ark_ff::One;
 	use ark_std::test_rng;
 	use webb_crypto_primitives::crh::poseidon::{
 		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
@@ -139,23 +115,10 @@ mod test {
 		let chain_id = Fq::one();
 		let publics = Public::new(chain_id);
 
-		let leaf_inputs = to_bytes![
-			secrets.r,
-			secrets.nullifier,
-			secrets.rho,
-			publics.chain_id,
-			Fq::zero()
-		]
-		.unwrap();
+		let leaf_inputs =
+			to_bytes![secrets.r, secrets.nullifier, secrets.rho, publics.chain_id].unwrap();
 
-		let nullifier_inputs = to_bytes![
-			secrets.nullifier,
-			Fq::zero(),
-			Fq::zero(),
-			Fq::zero(),
-			Fq::zero()
-		]
-		.unwrap();
+		let nullifier_inputs = to_bytes![secrets.nullifier, secrets.nullifier].unwrap();
 
 		let rounds = get_rounds_5::<Fq>();
 		let mds = get_mds_5::<Fq>();
@@ -163,8 +126,9 @@ mod test {
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 
-		let res = Leaf::create(&secrets, &publics, &params).unwrap();
-		assert_eq!(leaf_res, res.leaf);
-		assert_eq!(nullifier_res, res.nullifier_hash);
+		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&secrets, &params).unwrap();
+		assert_eq!(leaf_res, leaf);
+		assert_eq!(nullifier_res, nullifier_hash);
 	}
 }

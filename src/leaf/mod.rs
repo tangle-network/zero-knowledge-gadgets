@@ -10,15 +10,17 @@ pub mod constraints;
 #[cfg(feature = "r1cs")]
 pub use constraints::*;
 
-pub trait LeafCreation<H: FixedLengthCRH> {
-	type Output: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
+pub trait LeafCreation<H: FixedLengthCRH>: Sized {
+	type Leaf: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
+	type Nullifier: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Private: Clone + Default;
 	type Public: Clone + Default;
 
 	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error>;
-	fn create(
+	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
 		h: &H::Parameters,
-	) -> Result<Self::Output, Error>;
+	) -> Result<Self::Leaf, Error>;
+	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error>;
 }

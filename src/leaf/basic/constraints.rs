@@ -39,38 +39,47 @@ pub struct BasicLeafGadget<
 impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
-	type OutputVar = HG::OutputVar;
+	type LeafVar = HG::OutputVar;
+	type NullifierVar = HG::OutputVar;
 	type PrivateVar = PrivateVar<F>;
 	type PublicVar = PublicVar<F>;
 
-	fn create(
+	fn create_leaf(
 		s: &Self::PrivateVar,
 		_: &Self::PublicVar,
 		h: &HG::ParametersVar,
-	) -> Result<Self::OutputVar, SynthesisError> {
+	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(s.r.to_bytes().unwrap());
-		bytes.extend(s.nullifier.to_bytes().unwrap());
+		bytes.extend(s.r.to_bytes()?);
+		bytes.extend(s.nullifier.to_bytes()?);
+		HG::evaluate(h, &bytes)
+	}
 
-		let bits = vec![Boolean::new_input(bytes.cs(), || Ok(false)).unwrap(); 8];
-		let mut buffer = vec![UInt8::from_bits_le(&bits); H::INPUT_SIZE_BITS / 8];
-
-		buffer.iter_mut().zip(bytes).for_each(|(b, l_b)| *b = l_b);
-		HG::evaluate(h, &buffer)
+	fn create_nullifier(
+		s: &Self::PrivateVar,
+		h: &HG::ParametersVar,
+	) -> Result<Self::NullifierVar, SynthesisError> {
+		let mut bytes = Vec::new();
+		bytes.extend(s.nullifier.to_bytes()?);
+		bytes.extend(s.nullifier.to_bytes()?);
+		HG::evaluate(h, &bytes)
 	}
 }
 
 impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 	fn new_variable<T: Borrow<Private<F>>>(
-		cs: impl Into<Namespace<F>>,
+		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let secrets = f()?.borrow().clone();
+		let ns = into_ns.into();
+		let cs = ns.cs();
+
 		let r = secrets.r;
 		let nullifier = secrets.nullifier;
-		let r_var = FpVar::new_variable(cs, || Ok(r), mode)?;
-		let nullifier_var = FpVar::new_variable(r_var.cs(), || Ok(nullifier), mode)?;
+		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
+		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
 		Ok(PrivateVar::new(r_var, nullifier_var))
 	}
 }
@@ -126,7 +135,7 @@ mod test {
 		let public = Public::default();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let leaf = Leaf::create(&secrets, &public, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
 
 		// Constraints version
 		let public_var = PublicVar::default();
@@ -135,7 +144,7 @@ mod test {
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 
-		let leaf_var = LeafGadget::create(&secrets_var, &public_var, &params_var).unwrap();
+		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();

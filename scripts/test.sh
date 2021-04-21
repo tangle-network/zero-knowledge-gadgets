@@ -1,1 +1,1 @@
-cargo test --features r1cs
+cargo test --features r1cs --release

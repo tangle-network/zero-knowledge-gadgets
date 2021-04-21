@@ -1,5 +1,5 @@
 use super::Set;
-use ark_ff::fields::PrimeField;
+use ark_ff::{bytes::ToBytes, fields::PrimeField, to_bytes};
 use ark_std::marker::PhantomData;
 use webb_crypto_primitives::Error;
 
@@ -7,39 +7,39 @@ use webb_crypto_primitives::Error;
 pub mod constraints;
 
 #[derive(Default, Clone)]
-pub struct Input<F: PrimeField> {
-	diffs: Vec<F>,
-	target: F,
-	set: Vec<F>,
+pub struct Private<F: PrimeField> {
+	pub diffs: Vec<F>,
 }
 
-impl<F: PrimeField> Input<F> {
-	pub fn new(target: F, diffs: Vec<F>, set: Vec<F>) -> Self {
-		Self { target, diffs, set }
+impl<F: PrimeField> Private<F> {
+	pub fn new(diffs: Vec<F>) -> Self {
+		Self { diffs }
 	}
 }
 
-struct SetMembership<F: PrimeField> {
+#[derive(Clone)]
+pub struct SetMembership<F: PrimeField> {
 	field: PhantomData<F>,
 }
 
 impl<F: PrimeField> Set<F> for SetMembership<F> {
-	type Input = Input<F>;
-	type Output = F;
+	type Private = Private<F>;
 
-	fn generate_inputs<I: IntoIterator<Item = F>>(target: F, set: I) -> Self::Input {
-		let arr: Vec<F> = set.into_iter().collect();
-		let diffs = arr.iter().map(|x| *x - target).collect();
-		Self::Input::new(target, diffs, arr)
+	fn generate_secrets<T: ToBytes>(target: &T, set: &Vec<F>) -> Result<Self::Private, Error> {
+		let target_bytes = to_bytes![target]?;
+		let t = F::read(target_bytes.as_slice())?;
+		let diffs = set.iter().map(|x| *x - t).collect();
+		Ok(Private::new(diffs))
 	}
 
-	fn product(input: &Self::Input) -> Result<Self::Output, Error> {
-		let mut product = F::zero();
-		for item in &input.diffs {
+	fn check<T: ToBytes>(target: &T, s: &Self::Private) -> Result<bool, Error> {
+		let target_bytes = to_bytes![target]?;
+		let mut product = F::read(target_bytes.as_slice())?;
+		for item in &s.diffs {
 			product *= item;
 		}
 
-		Ok(product)
+		Ok(product == F::zero())
 	}
 }
 
@@ -47,7 +47,7 @@ impl<F: PrimeField> Set<F> for SetMembership<F> {
 mod test {
 	use super::*;
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{UniformRand, Zero};
+	use ark_ff::UniformRand;
 	use ark_std::test_rng;
 
 	type TestSetMembership = SetMembership<Fq>;
@@ -58,9 +58,9 @@ mod test {
 		let mut set = vec![Fq::rand(rng); 5];
 		set.push(root);
 
-		let input = TestSetMembership::generate_inputs(root, set);
-		let product = TestSetMembership::product(&input).unwrap();
+		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
+		let is_member = TestSetMembership::check(&root, &s).unwrap();
 
-		assert_eq!(product, Fq::zero());
+		assert!(is_member);
 	}
 }
