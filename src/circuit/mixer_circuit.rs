@@ -12,7 +12,7 @@ use webb_crypto_primitives::{
 	FixedLengthCRH,
 };
 
-struct MixerCircuit<
+pub struct MixerCircuit<
 	F: PrimeField,
 	C: MerkleConfig,
 	// Hasher for the leaf creation

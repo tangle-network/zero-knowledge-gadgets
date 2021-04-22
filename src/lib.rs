@@ -1,6 +1,6 @@
-mod arbitrary;
+pub mod arbitrary;
 #[cfg(feature = "r1cs")]
-mod circuit;
-mod leaf;
-mod set;
+pub mod circuit;
+pub mod leaf;
+pub mod set;
 pub mod test_data;
