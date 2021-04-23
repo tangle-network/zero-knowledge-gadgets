@@ -2,7 +2,6 @@ use super::MixerData;
 use crate::arbitrary::{constraints::ArbitraryGadget, mixer_data::Input};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
-	eq::EqGadget,
 	fields::fp::FpVar,
 	prelude::{AllocVar, AllocationMode},
 };
@@ -35,9 +34,9 @@ impl<F: PrimeField> ArbitraryGadget<F, MixerData<F>> for MixerDataGadget<F> {
 	type InputVar = InputVar<F>;
 
 	fn constrain(inputs: &Self::InputVar) -> Result<(), SynthesisError> {
-		inputs.recipient.enforce_equal(&inputs.recipient)?;
-		inputs.relayer.enforce_equal(&inputs.relayer)?;
-		inputs.fee.enforce_equal(&inputs.fee)?;
+		let _ = &inputs.recipient * &inputs.recipient;
+		let _ = &inputs.relayer * &inputs.relayer;
+		let _ = &inputs.fee * &inputs.fee;
 		Ok(())
 	}
 }
