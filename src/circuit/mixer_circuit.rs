@@ -158,12 +158,14 @@ where
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 
-		// Private inputs
-		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
+		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
 		let tree_hasher_params_var =
 			HGT::ParametersVar::new_constant(cs.clone(), tree_hasher_params)?;
+
+		// Private inputs
+		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
+		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
@@ -174,7 +176,7 @@ where
 		// Check if target root is in set
 		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
 
-		// // Enforcing constraints
+		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
 		is_set_member.enforce_equal(&Boolean::TRUE)?;
 		bridge_nullifier.enforce_equal(&nullifier_hash_var)?;
