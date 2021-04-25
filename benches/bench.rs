@@ -1,9 +1,12 @@
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+use ark_ed_on_bls12_381::{EdwardsAffine, Fr as EdBlsFr};
 use ark_ff::{One, UniformRand};
 use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
-use ark_poly_commit::marlin_pc::MarlinKZG10;
+use ark_poly_commit::{
+	ipa_pc::InnerProductArgPC, kzg10::KZG10, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10,
+};
 use ark_std::{test_rng, time::Instant};
 use arkworks_gadgets::{
 	circuit::mixer_circuit::MixerCircuit,
@@ -129,158 +132,139 @@ macro_rules! setup_circuit {
 			root,
 			nullifier_hash,
 		);
-		(chain_id, root, roots, nullifier_hash, mc)
+		let mut public_inputs = Vec::new();
+		public_inputs.push(chain_id);
+		public_inputs.push(nullifier_hash);
+		public_inputs.extend(roots);
+		public_inputs.push(root);
+		(public_inputs, mc)
 	}};
 }
 
-fn benchmark_groth16_setup() {
-	let rng = &mut test_rng();
-	let (_, _, _, _, circuit) = setup_circuit!(BlsFr);
+macro_rules! measure {
+	($task:block, $backend:expr, $task_name:expr, $num_iter:expr) => {{
+		let start = Instant::now();
+		for _ in 0..($num_iter - 1) {
+			$task;
+		}
+		let res = $task;
+		let end = start.elapsed();
+		println!(
+			"{}: Average {} time: {:?}",
+			$backend,
+			$task_name,
+			end / $num_iter
+		);
+		res
+	}};
+}
 
+macro_rules! benchmark_marlin {
+	($marlin:ty, $field:ty, $name:expr, $nc:expr, $nv:expr, $num_iter:expr) => {
+		let rng = &mut test_rng();
+		let (public_inputs, circuit) = setup_circuit!($field);
+
+		// Setup
+		let srs = measure!(
+			{ <$marlin>::universal_setup($nc, $nv, $nv, rng).unwrap() },
+			$name,
+			"setup",
+			$num_iter
+		);
+
+		// Index
+		let keys = measure!(
+			{ <$marlin>::index(&srs, circuit.clone()).unwrap() },
+			$name,
+			"index",
+			$num_iter
+		);
+
+		// Prove
+		let proof = measure!(
+			{ <$marlin>::prove(&keys.0, circuit.clone(), rng).unwrap() },
+			$name,
+			"prove",
+			$num_iter
+		);
+
+		// verify
+		let _ = measure!(
+			{ <$marlin>::verify(&keys.1, &public_inputs, &proof, rng).unwrap() },
+			$name,
+			"verify",
+			$num_iter
+		);
+	};
+}
+
+macro_rules! benchmark_groth {
+	($groth:ty, $field:ty, $num_iter:expr) => {
+		let rng = &mut test_rng();
+		let (public_inputs, circuit) = setup_circuit!($field);
+
+		// Setup
+		let keys = measure!(
+			{ <$groth>::circuit_specific_setup(circuit.clone(), rng).unwrap() },
+			"Groth16",
+			"setup",
+			$num_iter
+		);
+
+		// Prove
+		let proof = measure!(
+			{ <$groth>::prove(&keys.0, circuit.clone(), rng).unwrap() },
+			"Groth16",
+			"prove",
+			$num_iter
+		);
+
+		// verify
+		let _ = measure!(
+			{ <$groth>::verify(&keys.1, &public_inputs, &proof).unwrap() },
+			"Groth16",
+			"verify",
+			$num_iter
+		);
+	};
+}
+
+fn benchmark_groth16(num_iter: u32) {
 	type GrothSetup = Groth16<Bls12_381>;
-
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Groth16: Average setup time: {:?}", end / num_iter);
+	benchmark_groth!(GrothSetup, BlsFr, num_iter);
 }
 
-fn benchmark_groth16_prove() {
-	let rng = &mut test_rng();
-	let (_, _, _, _, circuit) = setup_circuit!(BlsFr);
-
-	type GrothSetup = Groth16<Bls12_381>;
-
-	let (pk, _) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
-
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = GrothSetup::prove(&pk, circuit.clone(), rng).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Groth16: Average proving time: {:?}", end / num_iter);
-}
-
-fn benchmark_groth16_verify() {
-	let rng = &mut test_rng();
-	let (chain_id, root, roots, nullifier_hash, circuit) = setup_circuit!(BlsFr);
-
-	type GrothSetup = Groth16<Bls12_381>;
-
-	let (pk, vk) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
-	let proof = GrothSetup::prove(&pk, circuit, rng).unwrap();
-
-	let mut public_inputs = Vec::new();
-	public_inputs.push(chain_id);
-	public_inputs.push(nullifier_hash);
-	public_inputs.extend(roots);
-	public_inputs.push(root);
-
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = GrothSetup::verify(&vk, &public_inputs, &proof).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Groth16: Average verify time: {:?}", end / num_iter);
-}
-
-fn benchmark_marlin_setup() {
-	let rng = &mut test_rng();
-
+fn benchmark_marlin_poly(nc: usize, nv: usize, num_iter: u32) {
 	type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
 	type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
-
-	let nc = 36000;
-	let nv = 36000;
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = MarlinSetup::universal_setup(nc, nv, nv, rng).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Marlin: Average setup time: {:?}", end / num_iter);
+	benchmark_marlin!(MarlinSetup, BlsFr, "Marlin_PolyKZG10", nc, nv, num_iter);
 }
 
-fn benchmark_marlin_index() {
-	let rng = &mut test_rng();
-	let (_, _, _, _, circuit) = setup_circuit!(BlsFr);
+fn benchmark_marlin_sonic(nc: usize, nv: usize, num_iter: u32) {
+	type Sonic = SonicKZG10<Bls12_381, DensePolynomial<BlsFr>>;
+	type MarlinSetup = Marlin<BlsFr, Sonic, Blake2s>;
 
-	type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
-	type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
-
-	let nc = 36000;
-	let nv = 36000;
-	let srs = MarlinSetup::universal_setup(nc, nv, nv, rng).unwrap();
-
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = MarlinSetup::index(&srs, circuit.clone()).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Marlin: Average index time: {:?}", end / num_iter);
+	benchmark_marlin!(MarlinSetup, BlsFr, "Marlin_Sonic", nc, nv, num_iter);
 }
 
-fn benchmark_marlin_prove() {
-	let rng = &mut test_rng();
-	let (_, _, _, _, circuit) = setup_circuit!(BlsFr);
+fn benchmark_marlin_ipa_pc(nc: usize, nv: usize, num_iter: u32) {
+	type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, DensePolynomial<EdBlsFr>>;
+	type MarlinSetup = Marlin<EdBlsFr, IPA, Blake2s>;
 
-	type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
-	type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
-
-	let nc = 36000;
-	let nv = 36000;
-	let srs = MarlinSetup::universal_setup(nc, nv, nv, rng).unwrap();
-	let (pk, _) = MarlinSetup::index(&srs, circuit.clone()).unwrap();
-
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = MarlinSetup::prove(&pk, circuit.clone(), rng).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Marlin: Average prove time: {:?}", end / num_iter);
-}
-
-fn benchmark_marlin_verify() {
-	let rng = &mut test_rng();
-	let (chain_id, root, roots, nullifier_hash, circuit) = setup_circuit!(BlsFr);
-
-	type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
-	type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
-
-	let nc = 36000;
-	let nv = 36000;
-	let srs = MarlinSetup::universal_setup(nc, nv, nv, rng).unwrap();
-	let (pk, vk) = MarlinSetup::index(&srs, circuit.clone()).unwrap();
-	let proof = MarlinSetup::prove(&pk, circuit, rng).unwrap();
-
-	let mut public_inputs = Vec::new();
-	public_inputs.push(chain_id);
-	public_inputs.push(nullifier_hash);
-	public_inputs.extend(roots);
-	public_inputs.push(root);
-
-	let start = Instant::now();
-	let num_iter = 10;
-	for _ in 0..num_iter {
-		let _ = MarlinSetup::verify(&vk, &public_inputs, &proof, rng).unwrap();
-	}
-	let end = start.elapsed();
-	println!("Marlin: Average verify time: {:?}", end / num_iter);
+	benchmark_marlin!(MarlinSetup, EdBlsFr, "Marlin_IPA_PC", nc, nv, num_iter);
 }
 
 fn main() {
-	benchmark_groth16_setup();
-	benchmark_groth16_prove();
-	benchmark_groth16_verify();
-	benchmark_marlin_setup();
-	benchmark_marlin_index();
-	benchmark_marlin_prove();
-	benchmark_marlin_verify();
+	let nc = 36000;
+	let nv = 36000;
+	let num_iter = 5;
+
+	// Groth16
+	benchmark_groth16(num_iter);
+	// MarlinKZG10
+	benchmark_marlin_poly(nc, nv, num_iter);
+	// Sonic
+	benchmark_marlin_sonic(nc, nv, num_iter);
+	// IPA
+	benchmark_marlin_ipa_pc(nc, nv, num_iter);
 }
