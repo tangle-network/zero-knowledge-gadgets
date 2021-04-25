@@ -63,7 +63,7 @@ macro_rules! setup_circuit {
 		impl MerkleConfig for MixerTreeConfig {
 			type H = PoseidonCRH3;
 
-			const HEIGHT: usize = 10;
+			const HEIGHT: usize = 30;
 		}
 
 		type MixerTree = MerkleTree<MixerTreeConfig>;
