@@ -13,7 +13,7 @@ use webb_crypto_primitives::{
 	FixedLengthCRH,
 };
 
-struct MixerCircuit<
+pub struct MixerCircuit<
 	F: PrimeField,
 	// Arbitrary data constraints
 	A: Arbitrary,
