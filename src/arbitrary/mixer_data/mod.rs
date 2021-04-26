@@ -3,13 +3,13 @@ use ark_ff::fields::PrimeField;
 use ark_std::marker::PhantomData;
 
 #[cfg(feature = "r1cs")]
-mod constraints;
+pub mod constraints;
 
 #[derive(Clone, Default)]
 pub struct Input<F: PrimeField> {
-	recipient: F,
-	relayer: F,
-	fee: F,
+	pub recipient: F,
+	pub relayer: F,
+	pub fee: F,
 }
 
 impl<F: PrimeField> Input<F> {

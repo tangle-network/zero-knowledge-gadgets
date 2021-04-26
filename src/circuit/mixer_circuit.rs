@@ -1,4 +1,5 @@
 use crate::{
+	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
 	leaf::{constraints::LeafCreationGadget, LeafCreation},
 	set::{Set, SetGadget},
 };
@@ -14,11 +15,14 @@ use webb_crypto_primitives::{
 
 struct MixerCircuit<
 	F: PrimeField,
-	C: MerkleConfig,
+	// Arbitrary data constraints
+	A: Arbitrary,
+	AG: ArbitraryGadget<F, A>,
 	// Hasher for the leaf creation
 	H: FixedLengthCRH,
 	HG: FixedLengthCRHGadget<H, F>,
-	// Different hasher gadget for the tree
+	// Merkle config and hasher gadget for the tree
+	C: MerkleConfig,
 	HGT: FixedLengthCRHGadget<C::H, F>,
 	// Type of leaf creation
 	L: LeafCreation<H>,
@@ -27,7 +31,7 @@ struct MixerCircuit<
 	S: Set<F>,
 	SG: SetGadget<F, S>,
 > {
-	// TODO: merge private and public together
+	arbitrary_input: A::Input,
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
 	set_private_inputs: S::Private,
@@ -37,6 +41,7 @@ struct MixerCircuit<
 	path: Path<C>,
 	root: <C::H as FixedLengthCRH>::Output,
 	nullifier_hash: L::Nullifier,
+	_arbitrary_gadget: PhantomData<AG>,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
 	_tree_hasher_gadget: PhantomData<HGT>,
@@ -47,12 +52,14 @@ struct MixerCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, C, H, HG, HGT, L, LG, S, SG> MixerCircuit<F, C, H, HG, HGT, L, LG, S, SG>
+impl<F, A, AG, H, HG, C, HGT, L, LG, S, SG> MixerCircuit<F, A, AG, H, HG, C, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
-	C: MerkleConfig,
+	A: Arbitrary,
+	AG: ArbitraryGadget<F, A>,
 	H: FixedLengthCRH,
 	HG: FixedLengthCRHGadget<H, F>,
+	C: MerkleConfig,
 	HGT: FixedLengthCRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
@@ -60,6 +67,7 @@ where
 	SG: SetGadget<F, S>,
 {
 	pub fn new(
+		arbitrary_input: A::Input,
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
 		set_private_inputs: S::Private,
@@ -71,6 +79,7 @@ where
 		nullifier_hash: L::Nullifier,
 	) -> Self {
 		Self {
+			arbitrary_input,
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_private_inputs,
@@ -80,6 +89,7 @@ where
 			path,
 			root,
 			nullifier_hash,
+			_arbitrary_gadget: PhantomData,
 			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
@@ -92,12 +102,15 @@ where
 	}
 }
 
-impl<F, C, H, HG, HGT, L, LG, S, SG> Clone for MixerCircuit<F, C, H, HG, HGT, L, LG, S, SG>
+impl<F, A, AG, H, HG, C, HGT, L, LG, S, SG> Clone
+	for MixerCircuit<F, A, AG, H, HG, C, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
-	C: MerkleConfig,
+	A: Arbitrary,
+	AG: ArbitraryGadget<F, A>,
 	H: FixedLengthCRH,
 	HG: FixedLengthCRHGadget<H, F>,
+	C: MerkleConfig,
 	HGT: FixedLengthCRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
@@ -105,6 +118,7 @@ where
 	SG: SetGadget<F, S>,
 {
 	fn clone(&self) -> Self {
+		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
 		let set_private_inputs = self.set_private_inputs.clone();
@@ -115,6 +129,7 @@ where
 		let root = self.root.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
 		Self::new(
+			arbitrary_input,
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_private_inputs,
@@ -128,13 +143,15 @@ where
 	}
 }
 
-impl<F, C, H, HG, HGT, L, LG, S, SG> ConstraintSynthesizer<F>
-	for MixerCircuit<F, C, H, HG, HGT, L, LG, S, SG>
+impl<F, A, AG, H, HG, C, HGT, L, LG, S, SG> ConstraintSynthesizer<F>
+	for MixerCircuit<F, A, AG, H, HG, C, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
-	C: MerkleConfig,
+	A: Arbitrary,
+	AG: ArbitraryGadget<F, A>,
 	H: FixedLengthCRH,
 	HG: FixedLengthCRHGadget<H, F>,
+	C: MerkleConfig,
 	HGT: FixedLengthCRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
@@ -142,6 +159,7 @@ where
 	SG: SetGadget<F, S>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
+		let arbitrary_input = self.arbitrary_input;
 		let leaf_private = self.leaf_private_inputs;
 		let leaf_public = self.leaf_public_inputs;
 		let set_private = self.set_private_inputs;
@@ -158,6 +176,7 @@ where
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
+		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Private inputs
 		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
@@ -174,6 +193,8 @@ where
 			path_var.check_membership(&tree_hasher_params_var, &root_var, &bridge_leaf)?;
 		// Check if target root is in set
 		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
+		// Constraining arbitrary inputs
+		AG::constrain(&arbitrary_input_var)?;
 
 		// // Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
@@ -188,6 +209,7 @@ where
 mod test {
 	use super::*;
 	use crate::{
+		arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
 		leaf::bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
 		set::membership::{constraints::SetMembershipGadget, SetMembership},
 		test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
@@ -206,6 +228,8 @@ mod test {
 
 	macro_rules! setup_circuit {
 		($test_field:ty) => {{
+			type MixerConstraintData = MixerData<$test_field>;
+			type MixerConstraintDataGadget = MixerDataGadget<$test_field>;
 			#[derive(Default, Clone)]
 			struct PoseidonRounds5;
 
@@ -250,9 +274,11 @@ mod test {
 
 			type Circuit = MixerCircuit<
 				$test_field,
-				MixerTreeConfig,
+				MixerConstraintData,
+				MixerConstraintDataGadget,
 				PoseidonCRH5,
 				PoseidonCRH5Gadget,
+				MixerTreeConfig,
 				PoseidonCRH3Gadget,
 				Leaf,
 				LeafGadget,
@@ -261,6 +287,12 @@ mod test {
 			>;
 
 			let rng = &mut test_rng();
+
+			let fee = <$test_field>::rand(rng);
+			let recipient = <$test_field>::rand(rng);
+			let relayer = <$test_field>::rand(rng);
+			// Arbitrary data
+			let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
 
 			// Secret inputs for the leaf
 			let leaf_private = Leaf::generate_secrets(rng).unwrap();
@@ -299,6 +331,7 @@ mod test {
 			];
 			let set_private_inputs = TestSetMembership::generate_secrets(&root, &roots).unwrap();
 			let mc = Circuit::new(
+				arbitrary_input.clone(),
 				leaf_private,
 				leaf_public,
 				set_private_inputs,
@@ -309,14 +342,15 @@ mod test {
 				root,
 				nullifier_hash,
 			);
-			(chain_id, root, roots, nullifier_hash, mc)
+			(chain_id, root, roots, nullifier_hash, arbitrary_input, mc)
 		}};
 	}
 
 	#[test]
 	fn setup_and_prove_mixer_groth16() {
 		let rng = &mut test_rng();
-		let (chain_id, root, roots, nullifier_hash, circuit) = setup_circuit!(BlsFr);
+		let (chain_id, root, roots, nullifier_hash, arbitrary_input, circuit) =
+			setup_circuit!(BlsFr);
 
 		type GrothSetup = Groth16<Bls12_381>;
 
@@ -328,6 +362,9 @@ mod test {
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
 		public_inputs.push(root);
+		public_inputs.push(arbitrary_input.recipient);
+		public_inputs.push(arbitrary_input.relayer);
+		public_inputs.push(arbitrary_input.fee);
 		let res = GrothSetup::verify(&vk, &public_inputs, &proof).unwrap();
 		assert!(res);
 	}
