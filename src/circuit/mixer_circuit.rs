@@ -178,12 +178,14 @@ where
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
-		// Private inputs
-		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
+		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
 		let tree_hasher_params_var =
 			HGT::ParametersVar::new_constant(cs.clone(), tree_hasher_params)?;
+
+		// Private inputs
+		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
+		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
@@ -196,7 +198,7 @@ where
 		// Constraining arbitrary inputs
 		AG::constrain(&arbitrary_input_var)?;
 
-		// // Enforcing constraints
+		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
 		is_set_member.enforce_equal(&Boolean::TRUE)?;
 		bridge_nullifier.enforce_equal(&nullifier_hash_var)?;
@@ -226,8 +228,8 @@ mod test {
 		SNARK,
 	};
 
-	macro_rules! setup_circuit {
-		($test_field:ty) => {{
+	macro_rules! setup_types {
+		($test_field:ty) => {
 			type MixerConstraintData = MixerData<$test_field>;
 			type MixerConstraintDataGadget = MixerDataGadget<$test_field>;
 			#[derive(Default, Clone)]
@@ -285,14 +287,32 @@ mod test {
 				TestSetMembership,
 				TestSetMembershipGadget,
 			>;
+		};
+	}
 
+	macro_rules! setup_params_3 {
+		($test_field:ty) => {{
+			// Making params for poseidon in merkle tree
+			let rounds3 = get_rounds_3::<$test_field>();
+			let mds3 = get_mds_3::<$test_field>();
+			let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
+			params3
+		}};
+	}
+
+	macro_rules! setup_params_5 {
+		($test_field:ty) => {{
+			// Round params for the poseidon in leaf creation gadget
+			let rounds5 = get_rounds_5::<$test_field>();
+			let mds5 = get_mds_5::<$test_field>();
+			let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
+			params5
+		}};
+	}
+
+	macro_rules! setup_leaf {
+		($test_field:ty, $params:expr) => {{
 			let rng = &mut test_rng();
-
-			let fee = <$test_field>::rand(rng);
-			let recipient = <$test_field>::rand(rng);
-			let relayer = <$test_field>::rand(rng);
-			// Arbitrary data
-			let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
 
 			// Secret inputs for the leaf
 			let leaf_private = Leaf::generate_secrets(rng).unwrap();
@@ -300,36 +320,68 @@ mod test {
 			let chain_id = <$test_field>::one();
 			let leaf_public = LeafPublic::new(chain_id);
 
-			// Round params for the poseidon in leaf creation gadget
-			let rounds5 = get_rounds_5::<$test_field>();
-			let mds5 = get_mds_5::<$test_field>();
-			let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 			// Creating the leaf
-			let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
-			let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
+			let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &$params).unwrap();
+			let nullifier_hash = Leaf::create_nullifier(&leaf_private, &$params).unwrap();
+			(leaf_private, leaf_public, leaf, nullifier_hash, chain_id)
+		}};
+	}
 
-			// Making params for poseidon in merkle tree
-			let rounds3 = get_rounds_3::<$test_field>();
-			let mds3 = get_mds_3::<$test_field>();
-			let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
+	macro_rules! setup_tree {
+		($test_field:ty, $leaf:expr, $params3:expr) => {{
+			let rng = &mut test_rng();
 			let leaves = vec![
 				<$test_field>::rand(rng),
 				<$test_field>::rand(rng),
-				leaf,
+				$leaf,
 				<$test_field>::rand(rng),
 			];
 			// Making the merkle tree
-			let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
+			let mt = MixerTree::new($params3.clone(), &leaves).unwrap();
 			// Getting the proof path
-			let path = mt.generate_proof(2, &leaf).unwrap();
+			let path = mt.generate_proof(2, &$leaf).unwrap();
 			let root = mt.root();
+			(root, path)
+		}};
+	}
+
+	macro_rules! setup_set {
+		($test_field:ty, $root:expr) => {{
+			let rng = &mut test_rng();
 			let roots = vec![
 				<$test_field>::rand(rng),
 				<$test_field>::rand(rng),
 				<$test_field>::rand(rng),
-				root,
+				$root,
 			];
-			let set_private_inputs = TestSetMembership::generate_secrets(&root, &roots).unwrap();
+			let set_private_inputs = TestSetMembership::generate_secrets(&$root, &roots).unwrap();
+			(set_private_inputs, roots)
+		}};
+	}
+
+	macro_rules! setup_arbitrary_data {
+		($test_field:ty) => {{
+			let rng = &mut test_rng();
+			let fee = <$test_field>::rand(rng);
+			let recipient = <$test_field>::rand(rng);
+			let relayer = <$test_field>::rand(rng);
+			// Arbitrary data
+			let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
+			arbitrary_input
+		}};
+	}
+
+	macro_rules! setup_circuit {
+		($test_field:ty) => {{
+			setup_types!($test_field);
+			let params5 = setup_params_5!($test_field);
+			let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
+				setup_leaf!($test_field, params5);
+			let arbitrary_input = setup_arbitrary_data!($test_field);
+			let params3 = setup_params_3!($test_field);
+			let (root, path) = setup_tree!($test_field, leaf, params3);
+			let (set_private_inputs, roots) = setup_set!($test_field, root);
+
 			let mc = Circuit::new(
 				arbitrary_input.clone(),
 				leaf_private,
@@ -342,20 +394,81 @@ mod test {
 				root,
 				nullifier_hash,
 			);
-			(chain_id, root, roots, nullifier_hash, arbitrary_input, mc)
+			let mut public_inputs = Vec::new();
+			public_inputs.push(chain_id);
+			public_inputs.push(nullifier_hash);
+			public_inputs.extend(roots);
+			public_inputs.push(root);
+			public_inputs.push(arbitrary_input.recipient);
+			public_inputs.push(arbitrary_input.relayer);
+			public_inputs.push(arbitrary_input.fee);
+			(public_inputs, mc)
+		}};
+	}
+
+	macro_rules! verify_groth16 {
+		($engine:ty, $circuit:expr, $public_inputs:expr) => {{
+			let rng = &mut test_rng();
+			let (pk, vk) =
+				Groth16::<$engine>::circuit_specific_setup($circuit.clone(), rng).unwrap();
+			let proof = Groth16::<$engine>::prove(&pk, $circuit, rng).unwrap();
+			let res = Groth16::<$engine>::verify(&vk, &$public_inputs, &proof).unwrap();
+			res
 		}};
 	}
 
 	#[test]
 	fn setup_and_prove_mixer_groth16() {
+		let (public_inputs, circuit) = setup_circuit!(BlsFr);
+
+		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		assert!(res);
+	}
+
+	#[should_panic]
+	#[test]
+	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
-		let (chain_id, root, roots, nullifier_hash, arbitrary_input, circuit) =
-			setup_circuit!(BlsFr);
+		let (public_inputs, circuit) = setup_circuit!(BlsFr);
 
 		type GrothSetup = Groth16<Bls12_381>;
 
 		let (pk, vk) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = GrothSetup::prove(&pk, circuit, rng).unwrap();
+
+		// Without chain_id and nullifier
+		let pi = public_inputs[2..].to_vec();
+		let res = GrothSetup::verify(&vk, &pi, &proof).unwrap();
+		assert!(res);
+	}
+
+	#[should_panic]
+	#[test]
+	fn should_fail_with_invalid_root() {
+		let rng = &mut test_rng();
+		setup_types!(BlsFr);
+		let params5 = setup_params_5!(BlsFr);
+		let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
+			setup_leaf!(BlsFr, params5);
+
+		let arbitrary_input = setup_arbitrary_data!(BlsFr);
+		let params3 = setup_params_3!(BlsFr);
+		let (_, path) = setup_tree!(BlsFr, leaf, params3);
+		let root = BlsFr::rand(rng);
+		let (set_private_inputs, roots) = setup_set!(BlsFr, root);
+
+		let circuit = Circuit::new(
+			arbitrary_input.clone(),
+			leaf_private,
+			leaf_public,
+			set_private_inputs,
+			roots.clone(),
+			params5,
+			params3,
+			path,
+			root,
+			nullifier_hash,
+		);
 
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
@@ -365,7 +478,124 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let res = GrothSetup::verify(&vk, &public_inputs, &proof).unwrap();
+		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		assert!(res);
+	}
+
+	#[should_panic]
+	#[test]
+	fn should_fail_with_invalid_set() {
+		let rng = &mut test_rng();
+		setup_types!(BlsFr);
+		let params5 = setup_params_5!(BlsFr);
+		let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
+			setup_leaf!(BlsFr, params5);
+
+		let arbitrary_input = setup_arbitrary_data!(BlsFr);
+		let params3 = setup_params_3!(BlsFr);
+		let (root, path) = setup_tree!(BlsFr, leaf, params3);
+		let (set_private_inputs, _) = setup_set!(BlsFr, root);
+		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
+
+		let circuit = Circuit::new(
+			arbitrary_input.clone(),
+			leaf_private,
+			leaf_public,
+			set_private_inputs,
+			roots.clone(),
+			params5,
+			params3,
+			path,
+			root,
+			nullifier_hash,
+		);
+
+		let mut public_inputs = Vec::new();
+		public_inputs.push(chain_id);
+		public_inputs.push(nullifier_hash);
+		public_inputs.extend(roots);
+		public_inputs.push(root);
+		public_inputs.push(arbitrary_input.recipient);
+		public_inputs.push(arbitrary_input.relayer);
+		public_inputs.push(arbitrary_input.fee);
+		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		assert!(res);
+	}
+
+	#[should_panic]
+	#[test]
+	fn should_fail_with_invalid_leaf() {
+		let rng = &mut test_rng();
+		setup_types!(BlsFr);
+		let params5 = setup_params_5!(BlsFr);
+		let (leaf_private, leaf_public, _, nullifier_hash, chain_id) = setup_leaf!(BlsFr, params5);
+
+		let leaf = BlsFr::rand(rng);
+		let arbitrary_input = setup_arbitrary_data!(BlsFr);
+		let params3 = setup_params_3!(BlsFr);
+		let (root, path) = setup_tree!(BlsFr, leaf, params3);
+		let (set_private_inputs, roots) = setup_set!(BlsFr, root);
+
+		let circuit = Circuit::new(
+			arbitrary_input.clone(),
+			leaf_private,
+			leaf_public,
+			set_private_inputs,
+			roots.clone(),
+			params5,
+			params3,
+			path,
+			root,
+			nullifier_hash,
+		);
+		let mut public_inputs = Vec::new();
+		public_inputs.push(chain_id);
+		public_inputs.push(nullifier_hash);
+		public_inputs.extend(roots);
+		public_inputs.push(root);
+		public_inputs.push(arbitrary_input.recipient);
+		public_inputs.push(arbitrary_input.relayer);
+		public_inputs.push(arbitrary_input.fee);
+		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		assert!(res);
+	}
+
+	#[should_panic]
+	#[test]
+	fn should_fail_with_invalid_nullifier() {
+		let rng = &mut test_rng();
+		setup_types!(BlsFr);
+		let params5 = setup_params_5!(BlsFr);
+		let (leaf_private, leaf_public, leaf, _, chain_id) = setup_leaf!(BlsFr, params5);
+
+		let nullifier_hash = BlsFr::rand(rng);
+		let arbitrary_input = setup_arbitrary_data!(BlsFr);
+		let params3 = setup_params_3!(BlsFr);
+		let (root, path) = setup_tree!(BlsFr, leaf, params3);
+		let (set_private_inputs, roots) = setup_set!(BlsFr, root);
+
+		let circuit = Circuit::new(
+			arbitrary_input.clone(),
+			leaf_private,
+			leaf_public,
+			set_private_inputs,
+			roots.clone(),
+			params5,
+			params3,
+			path,
+			root,
+			nullifier_hash,
+		);
+
+		let mut public_inputs = Vec::new();
+		public_inputs.push(chain_id);
+		public_inputs.push(nullifier_hash);
+		public_inputs.extend(roots);
+		public_inputs.push(root);
+		public_inputs.push(arbitrary_input.recipient);
+		public_inputs.push(arbitrary_input.relayer);
+		public_inputs.push(arbitrary_input.fee);
+		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
 		assert!(res);
 	}
 }

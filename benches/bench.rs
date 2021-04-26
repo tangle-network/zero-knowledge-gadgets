@@ -4,11 +4,10 @@ use ark_ff::{One, UniformRand};
 use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
-use ark_poly_commit::{
-	ipa_pc::InnerProductArgPC, kzg10::KZG10, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10,
-};
+use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{test_rng, time::Instant};
 use arkworks_gadgets::{
+	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
 	circuit::mixer_circuit::MixerCircuit,
 	leaf::{
 		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
@@ -29,6 +28,8 @@ use webb_crypto_primitives::{
 
 macro_rules! setup_circuit {
 	($test_field:ty) => {{
+		type MixerConstraintData = MixerData<$test_field>;
+		type MixerConstraintDataGadget = MixerDataGadget<$test_field>;
 		#[derive(Default, Clone)]
 		struct PoseidonRounds5;
 
@@ -73,9 +74,11 @@ macro_rules! setup_circuit {
 
 		type Circuit = MixerCircuit<
 			$test_field,
-			MixerTreeConfig,
+			MixerConstraintData,
+			MixerConstraintDataGadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
+			MixerTreeConfig,
 			PoseidonCRH3Gadget,
 			Leaf,
 			LeafGadget,
@@ -98,6 +101,12 @@ macro_rules! setup_circuit {
 		// Creating the leaf
 		let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
 		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
+
+		let fee = <$test_field>::rand(rng);
+		let recipient = <$test_field>::rand(rng);
+		let relayer = <$test_field>::rand(rng);
+		// Arbitrary data
+		let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
 
 		// Making params for poseidon in merkle tree
 		let rounds3 = get_rounds_3::<$test_field>();
@@ -122,6 +131,7 @@ macro_rules! setup_circuit {
 		];
 		let set_private_inputs = TestSetMembership::generate_secrets(&root, &roots).unwrap();
 		let mc = Circuit::new(
+			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
 			set_private_inputs,
@@ -137,6 +147,9 @@ macro_rules! setup_circuit {
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
 		public_inputs.push(root);
+		public_inputs.push(arbitrary_input.recipient);
+		public_inputs.push(arbitrary_input.relayer);
+		public_inputs.push(arbitrary_input.fee);
 		(public_inputs, mc)
 	}};
 }
