@@ -8,10 +8,6 @@ use ark_std::{
 };
 use webb_crypto_primitives::{Error, FixedLengthCRH};
 
-/// constraints for the Merkle sparse tree
-// #[cfg(feature = "r1cs")]
-// pub mod constraints;
-
 /// configuration of a Merkle tree
 pub trait Config {
 	/// Tree height
