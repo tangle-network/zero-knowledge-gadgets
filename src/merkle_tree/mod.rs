@@ -16,6 +16,51 @@ pub trait Config {
 	type H: FixedLengthCRH;
 }
 
+pub struct Path<P: Config> {
+	pub(crate) path: Vec<(
+		<P::H as FixedLengthCRH>::Output,
+		<P::H as FixedLengthCRH>::Output,
+	)>,
+}
+
+impl<P: Config> Path<P> {
+	/// verify the lookup proof, just checking the membership
+	pub fn verify<L: ToBytes>(
+		&self,
+		parameters: &<P::H as FixedLengthCRH>::Parameters,
+		root_hash: &<P::H as FixedLengthCRH>::Output,
+		leaf: &L,
+	) -> Result<bool, Error> {
+		if self.path.len() != P::HEIGHT as usize {
+			return Ok(false);
+		}
+		// Check that the given leaf matches the leaf in the membership proof.
+		if self.path.is_empty() {
+			return Ok(false);
+		}
+
+		let claimed_leaf_hash = hash_leaf::<P::H, L>(parameters, leaf)?;
+
+		// Check if claimed leaf hash is the same as one of
+		// the provided hashes on level 0
+		if claimed_leaf_hash != self.path[0].0 && claimed_leaf_hash != self.path[0].1 {
+			return Ok(false);
+		}
+
+		let mut prev = claimed_leaf_hash;
+		// Check levels between leaf level and root.
+		for &(ref left_hash, ref right_hash) in &self.path {
+			// Check if the previous hash matches the correct current hash.
+			if &prev != left_hash && &prev != right_hash {
+				return Ok(false);
+			}
+			prev = hash_inner_node::<P::H>(parameters, left_hash, right_hash)?;
+		}
+
+		Ok(root_hash == &prev)
+	}
+}
+
 type HOutput<P: Config> = <P::H as FixedLengthCRH>::Output;
 type HParameters<P: Config> = <P::H as FixedLengthCRH>::Parameters;
 
@@ -102,30 +147,45 @@ impl<P: Config> SparseMerkleTree<P> {
 	pub fn root(&self) -> HOutput<P> {
 		self.tree.get(&0).cloned().unwrap()
 	}
-}
 
-/// error for Merkle sparse tree
-#[derive(Debug)]
-pub enum SparseMerkleTreeError {
-	/// the path's length does not work for this tree
-	IncorrectPathLength(usize),
-	/// tree structure is incorrect, some nodes are missing
-	IncorrectTreeStructure,
-}
+	/// generate a membership proof (does not check the data point)
+	pub fn generate_membership_proof(&self, index: u64) -> Path<P> {
+		let mut path = Vec::new();
 
-impl core::fmt::Display for SparseMerkleTreeError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		let msg = match self {
-			SparseMerkleTreeError::IncorrectPathLength(len) => {
-				format!("incorrect path length: {}", len)
+		let tree_height = P::HEIGHT;
+		let tree_index = convert_index_to_last_level::<P>(index, tree_height as u64);
+
+		// Iterate from the leaf up to the root, storing all intermediate hash values.
+		let mut current_node = tree_index;
+		let mut level = 0;
+		while !is_root(current_node) {
+			let sibling_node = sibling(current_node).unwrap();
+
+			let empty_hash = &self.empty_hashes[level];
+
+			let current = self
+				.tree
+				.get(&current_node)
+				.cloned()
+				.unwrap_or(empty_hash.clone());
+			let sibling = self
+				.tree
+				.get(&sibling_node)
+				.cloned()
+				.unwrap_or(empty_hash.clone());
+
+			if is_left_child(current_node) {
+				path.push((current, sibling));
+			} else {
+				path.push((sibling, current));
 			}
-			SparseMerkleTreeError::IncorrectTreeStructure => "incorrect tree structure".to_string(),
-		};
-		write!(f, "{}", msg)
+			current_node = parent(current_node).unwrap();
+			level += 1;
+		}
+
+		Path { path }
 	}
 }
-
-impl ark_std::error::Error for SparseMerkleTreeError {}
 
 /// Returns the log2 value of the given number.
 #[inline]
@@ -186,8 +246,8 @@ fn parent(index: u64) -> Option<u64> {
 }
 
 #[inline]
-fn convert_index_to_last_level(index: u64, tree_height: u64) -> u64 {
-	index + (1 << (tree_height - 1)) - 1
+fn convert_index_to_last_level<P: Config>(index: u64, tree_height: u64) -> u64 {
+	index + (1u64 << P::HEIGHT) - 1
 }
 
 /// Returns the output hash, given a left and right hash value.
@@ -299,5 +359,21 @@ mod test {
 		let calc_root = hash_inner_node::<SMTCRH>(&params3, &hash1234, &empty_hashes[2]).unwrap();
 
 		assert_eq!(root, calc_root);
+	}
+
+	#[test]
+	fn should_generate_and_validate_proof() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_3::<Fq>();
+		let mds3 = get_mds_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = create_merkle_tree(&params3, &leaves);
+
+		let proof = smt.generate_membership_proof(0);
+
+		let res = proof.verify(&params3, &smt.root(), &leaves[0]).unwrap();
+		assert!(res);
 	}
 }
