@@ -1,9 +1,6 @@
 use ark_ff::{to_bytes, ToBytes};
 use ark_std::{
 	collections::{BTreeMap, BTreeSet},
-	fmt::Debug,
-	format,
-	string::ToString,
 	vec::Vec,
 };
 use webb_crypto_primitives::{Error, FixedLengthCRH};
@@ -61,8 +58,8 @@ impl<P: Config> Path<P> {
 	}
 }
 
-type HOutput<P: Config> = <P::H as FixedLengthCRH>::Output;
-type HParameters<P: Config> = <P::H as FixedLengthCRH>::Parameters;
+type HOutput<P> = <<P as Config>::H as FixedLengthCRH>::Output;
+type HParameters<P> = <<P as Config>::H as FixedLengthCRH>::Parameters;
 
 /// Merkle sparse tree
 pub struct SparseMerkleTree<P: Config> {
@@ -152,8 +149,7 @@ impl<P: Config> SparseMerkleTree<P> {
 	pub fn generate_membership_proof(&self, index: u64) -> Path<P> {
 		let mut path = Vec::new();
 
-		let tree_height = P::HEIGHT;
-		let tree_index = convert_index_to_last_level::<P>(index, tree_height as u64);
+		let tree_index = convert_index_to_last_level::<P>(index);
 
 		// Iterate from the leaf up to the root, storing all intermediate hash values.
 		let mut current_node = tree_index;
@@ -246,7 +242,7 @@ fn parent(index: u64) -> Option<u64> {
 }
 
 #[inline]
-fn convert_index_to_last_level<P: Config>(index: u64, tree_height: u64) -> u64 {
+fn convert_index_to_last_level<P: Config>(index: u64) -> u64 {
 	index + (1u64 << P::HEIGHT) - 1
 }
 
@@ -291,11 +287,8 @@ mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};
 	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, ToBytes, UniformRand, Zero};
-	use ark_std::{
-		collections::{BTreeMap, BTreeSet},
-		test_rng,
-	};
+	use ark_ff::{ToBytes, UniformRand};
+	use ark_std::{collections::BTreeMap, test_rng};
 	use webb_crypto_primitives::crh::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH as PoseidonCRH},
 		FixedLengthCRH,
