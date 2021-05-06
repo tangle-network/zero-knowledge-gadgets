@@ -3,4 +3,5 @@ pub mod arbitrary;
 pub mod circuit;
 pub mod leaf;
 pub mod set;
+pub mod setup;
 pub mod test_data;
