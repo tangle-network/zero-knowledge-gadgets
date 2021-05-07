@@ -8,6 +8,9 @@ use ark_std::{
 };
 use webb_crypto_primitives::{Error, FixedLengthCRH};
 
+#[cfg(feature = "r1cs")]
+pub mod constraints;
+
 /// configuration of a Merkle tree
 pub trait Config: Clone {
 	/// Tree height
@@ -22,7 +25,7 @@ type LeafNode<P> = <<P as Config>::LeafH as FixedLengthCRH>::Output;
 type InnerParameters<P> = <<P as Config>::H as FixedLengthCRH>::Parameters;
 type LeafParameters<P> = <<P as Config>::LeafH as FixedLengthCRH>::Parameters;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Node<P: Config> {
 	Leaf(LeafNode<P>),
 	Inner(InnerNode<P>),
@@ -332,7 +335,7 @@ mod test {
 	use crate::test_data::{get_mds_3, get_rounds_3};
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{ToBytes, UniformRand};
-	use ark_std::{collections::BTreeMap, test_rng};
+	use ark_std::{borrow::Borrow, collections::BTreeMap, rc::Rc, test_rng};
 	use webb_crypto_primitives::crh::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH as PoseidonCRH},
 		FixedLengthCRH,
@@ -350,7 +353,7 @@ mod test {
 
 	type SMTCRH = PoseidonCRH<Fq, PoseidonRounds3>;
 
-	#[derive(Clone)]
+	#[derive(Clone, Debug, Eq, PartialEq)]
 	struct SMTConfig;
 	impl Config for SMTConfig {
 		type H = SMTCRH;
@@ -361,60 +364,68 @@ mod test {
 
 	type SMT = SparseMerkleTree<SMTConfig>;
 
-	// fn create_merkle_tree<L: Default + ToBytes + Copy>(
-	// 	parameters: &<SMTCRH as FixedLengthCRH>::Parameters,
-	// 	leaves: &[L],
-	// ) -> SMT {
-	// 	let pairs: BTreeMap<u32, L> = leaves
-	// 		.iter()
-	// 		.enumerate()
-	// 		.map(|(i, l)| (i as u32, *l))
-	// 		.collect();
-	// 	let smt = SMT::new(Rc::new(parameters), &pairs).unwrap();
+	fn create_merkle_tree<L: Default + ToBytes + Copy>(
+		inner_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
+		leaf_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
+		leaves: &[L],
+	) -> SMT {
+		let pairs: BTreeMap<u32, L> = leaves
+			.iter()
+			.enumerate()
+			.map(|(i, l)| (i as u32, *l))
+			.collect();
+		let smt = SMT::new(inner_params, leaf_params, &pairs).unwrap();
 
-	// 	smt
-	// }
+		smt
+	}
 
-	// #[test]
-	// fn should_create_tree() {
-	// 	let rng = &mut test_rng();
-	// 	let rounds3 = get_rounds_3::<Fq>();
-	// 	let mds3 = get_mds_3::<Fq>();
-	// 	let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+	#[test]
+	fn should_create_tree() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_3::<Fq>();
+		let mds3 = get_mds_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
 
-	// 	let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
-	// 	let smt = create_merkle_tree(&params3, &leaves);
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = create_merkle_tree(inner_params.clone(), leaf_params.clone(), &leaves);
 
-	// 	let root = smt.root();
+		let root = smt.root();
 
-	// 	let empty_hashes = gen_empty_hashes::<SMTConfig>(&params3).unwrap();
-	// 	let hash1 = hash_leaf::<SMTCRH, _>(&params3, &leaves[0]).unwrap();
-	// 	let hash2 = hash_leaf::<SMTCRH, _>(&params3, &leaves[1]).unwrap();
-	// 	let hash3 = hash_leaf::<SMTCRH, _>(&params3, &leaves[2]).unwrap();
+		let empty_hashes =
+			gen_empty_hashes::<SMTConfig>(inner_params.borrow(), leaf_params.borrow()).unwrap();
+		let hash1 = hash_leaf::<SMTConfig, _>(leaf_params.borrow(), &leaves[0]).unwrap();
+		let hash2 = hash_leaf::<SMTConfig, _>(leaf_params.borrow(), &leaves[1]).unwrap();
+		let hash3 = hash_leaf::<SMTConfig, _>(leaf_params.borrow(), &leaves[2]).unwrap();
 
-	// 	let hash12 = hash_inner_node::<SMTCRH>(&params3, &hash1,
-	// &hash2).unwrap(); 	let hash34 = hash_inner_node::<SMTCRH>(&params3,
-	// &hash3, &empty_hashes[0]).unwrap(); 	let hash1234 =
-	// hash_inner_node::<SMTCRH>(&params3, &hash12, &hash34).unwrap();
-	// 	let calc_root = hash_inner_node::<SMTCRH>(&params3, &hash1234,
-	// &empty_hashes[2]).unwrap();
+		let hash12 = hash_inner_node::<SMTConfig>(inner_params.borrow(), &hash1, &hash2).unwrap();
+		let hash34 =
+			hash_inner_node::<SMTConfig>(inner_params.borrow(), &hash3, &empty_hashes[0]).unwrap();
+		let hash1234 =
+			hash_inner_node::<SMTConfig>(inner_params.borrow(), &hash12, &hash34).unwrap();
+		let calc_root =
+			hash_inner_node::<SMTConfig>(inner_params.borrow(), &hash1234, &empty_hashes[2])
+				.unwrap();
 
-	// 	assert_eq!(root, calc_root);
-	// }
+		assert_eq!(root, calc_root);
+	}
 
-	// #[test]
-	// fn should_generate_and_validate_proof() {
-	// 	let rng = &mut test_rng();
-	// 	let rounds3 = get_rounds_3::<Fq>();
-	// 	let mds3 = get_mds_3::<Fq>();
-	// 	let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+	#[test]
+	fn should_generate_and_validate_proof() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_3::<Fq>();
+		let mds3 = get_mds_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
 
-	// 	let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
-	// 	let smt = create_merkle_tree(&params3, &leaves);
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = create_merkle_tree(inner_params, leaf_params, &leaves);
 
-	// 	let proof = smt.generate_membership_proof(0);
+		let proof = smt.generate_membership_proof(0);
 
-	// 	let res = proof.verify(&params3, &smt.root(), &leaves[0]).unwrap();
-	// 	assert!(res);
-	// }
+		let res = proof.verify(&smt.root(), &leaves[0]).unwrap();
+		assert!(res);
+	}
 }
