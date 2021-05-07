@@ -48,7 +48,11 @@ pub struct Path<P: Config> {
 
 impl<P: Config + PartialEq> Path<P> {
 	/// verify the lookup proof, just checking the membership
-	pub fn verify<L: ToBytes>(&self, root_hash: &Node<P>, leaf: &L) -> Result<bool, Error> {
+	pub fn check_membership<L: ToBytes>(
+		&self,
+		root_hash: &Node<P>,
+		leaf: &L,
+	) -> Result<bool, Error> {
 		if self.path.len() != P::HEIGHT as usize {
 			return Ok(false);
 		}
@@ -425,7 +429,7 @@ mod test {
 
 		let proof = smt.generate_membership_proof(0);
 
-		let res = proof.verify(&smt.root(), &leaves[0]).unwrap();
+		let res = proof.check_membership(&smt.root(), &leaves[0]).unwrap();
 		assert!(res);
 	}
 }

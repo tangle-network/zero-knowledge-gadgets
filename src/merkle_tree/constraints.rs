@@ -1,10 +1,9 @@
 use super::{Config, Node, Path};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
-	alloc::AllocVar, boolean::AllocatedBit, eq::EqGadget, prelude::*, select::CondSelectGadget,
-	R1CSVar, ToBytesGadget,
+	alloc::AllocVar, eq::EqGadget, prelude::*, select::CondSelectGadget, ToBytesGadget,
 };
-use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
+use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{borrow::Borrow, rc::Rc};
 use webb_crypto_primitives::FixedLengthCRHGadget;
 
@@ -31,28 +30,6 @@ where
 		match self {
 			NodeVar::Inner(inner) => NodeVar::Inner(inner.clone()),
 			NodeVar::Leaf(leaf) => NodeVar::Leaf(leaf.clone()),
-		}
-	}
-}
-
-impl<F, P, HG, LHG> NodeVar<F, P, HG, LHG>
-where
-	F: PrimeField,
-	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
-{
-	fn leaf(&self) -> &LHG::OutputVar {
-		match self {
-			NodeVar::Leaf(leaf) => leaf,
-			_ => panic!("Node is not a leaf!"),
-		}
-	}
-
-	fn inner(&self) -> &HG::OutputVar {
-		match self {
-			NodeVar::Inner(inner) => inner,
-			_ => panic!("Node is not an inner!"),
 		}
 	}
 }
@@ -159,20 +136,16 @@ where
 	/// conditionally check a lookup proof (does not enforce index consistency)
 	pub fn check_membership<L: ToBytesGadget<F>>(
 		&self,
-		cs: ConstraintSystemRef<F>,
 		root: &NodeVar<F, P, HG, LHG>,
 		leaf: L,
 	) -> Result<Boolean<F>, SynthesisError> {
-		assert_eq!(self.path.len(), (P::HEIGHT - 1) as usize);
+		assert_eq!(self.path.len(), P::HEIGHT as usize);
 		// Check that the hash of the given leaf matches the leaf hash in the membership
 		// proof.
 		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), &leaf)?;
 
 		// Check if leaf is one of the bottom-most siblings.
-		let leaf_is_left = Boolean::Is(AllocatedBit::new_witness(
-			ark_relations::ns!(cs, "leaf_is_left"),
-			|| Ok(leaf_hash.leaf().value()? == self.path[0].0.leaf().value()?),
-		)?);
+		let leaf_is_left = leaf_hash.is_eq(&self.path[0].0)?;
 
 		leaf_hash.enforce_equal(&NodeVar::conditionally_select(
 			&leaf_is_left,
@@ -184,10 +157,7 @@ where
 		let mut previous_hash = leaf_hash;
 		for &(ref left_hash, ref right_hash) in self.path.iter() {
 			// Check if the previous_hash matches the correct current hash.
-			let previous_is_left = Boolean::Is(AllocatedBit::new_witness(
-				ark_relations::ns!(cs, "previous_is_left"),
-				|| Ok(previous_hash.inner().value()? == left_hash.inner().value()?),
-			)?);
+			let previous_is_left = previous_hash.is_eq(&left_hash)?;
 
 			previous_hash.enforce_equal(&NodeVar::conditionally_select(
 				&previous_is_left,
@@ -277,5 +247,92 @@ where
 			inner_params: Rc::new(inner_params_var),
 			leaf_params: Rc::new(leaf_params_var),
 		})
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::{NodeVar, PathVar};
+	use crate::{
+		merkle_tree::{Config, SparseMerkleTree},
+		test_data::{get_mds_3, get_rounds_3},
+	};
+	use ark_ed_on_bn254::Fq;
+	use ark_ff::{ToBytes, UniformRand};
+	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
+	use ark_relations::r1cs::ConstraintSystem;
+	use ark_std::{collections::BTreeMap, rc::Rc, test_rng};
+	use webb_crypto_primitives::crh::{
+		poseidon::{
+			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
+			Rounds, CRH as PoseidonCRH,
+		},
+		FixedLengthCRH,
+	};
+
+	type FieldVar = FpVar<Fq>;
+
+	#[derive(Default, Clone)]
+	struct PoseidonRounds3;
+
+	impl Rounds for PoseidonRounds3 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 3;
+	}
+
+	type SMTCRH = PoseidonCRH<Fq, PoseidonRounds3>;
+	type SMTCRHGadget = PoseidonCRHGadget<Fq, PoseidonRounds3>;
+
+	#[derive(Clone, Debug, Eq, PartialEq)]
+	struct SMTConfig;
+	impl Config for SMTConfig {
+		type H = SMTCRH;
+		type LeafH = SMTCRH;
+
+		const HEIGHT: u8 = 3;
+	}
+
+	type SMTNode = NodeVar<Fq, SMTConfig, SMTCRHGadget, SMTCRHGadget>;
+	type SMT = SparseMerkleTree<SMTConfig>;
+
+	fn create_merkle_tree<L: Default + ToBytes + Copy>(
+		inner_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
+		leaf_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
+		leaves: &[L],
+	) -> SMT {
+		let pairs: BTreeMap<u32, L> = leaves
+			.iter()
+			.enumerate()
+			.map(|(i, l)| (i as u32, *l))
+			.collect();
+		let smt = SMT::new(inner_params, leaf_params, &pairs).unwrap();
+
+		smt
+	}
+
+	#[test]
+	fn should_verify_path() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_3::<Fq>();
+		let mds3 = get_mds_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = create_merkle_tree(inner_params, leaf_params, &leaves);
+		let root = smt.root();
+		let path = smt.generate_membership_proof(0);
+
+		let path_var = PathVar::new_witness(cs.clone(), || Ok(path)).unwrap();
+		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+
+		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.value().unwrap());
 	}
 }
