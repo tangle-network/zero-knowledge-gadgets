@@ -5,7 +5,7 @@ use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
-use ark_std::{test_rng, time::Instant};
+use ark_std::{rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
 	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
 	circuit::mixer_circuit::MixerCircuit,
@@ -13,6 +13,7 @@ use arkworks_gadgets::{
 		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
 		LeafCreation,
 	},
+	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	set::{
 		membership::{constraints::SetMembershipGadget, SetMembership},
 		Set,
@@ -22,7 +23,6 @@ use arkworks_gadgets::{
 use blake2::Blake2s;
 use webb_crypto_primitives::{
 	crh::poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-	merkle_tree::{Config as MerkleConfig, MerkleTree},
 	SNARK,
 };
 
@@ -63,11 +63,12 @@ macro_rules! setup_circuit {
 		struct MixerTreeConfig;
 		impl MerkleConfig for MixerTreeConfig {
 			type H = PoseidonCRH3;
+			type LeafH = PoseidonCRH3;
 
-			const HEIGHT: usize = 30;
+			const HEIGHT: u8 = 30;
 		}
 
-		type MixerTree = MerkleTree<MixerTreeConfig>;
+		type MixerTree = SparseMerkleTree<MixerTreeConfig>;
 
 		type TestSetMembership = SetMembership<$test_field>;
 		type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
@@ -79,6 +80,7 @@ macro_rules! setup_circuit {
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
 			MixerTreeConfig,
+			PoseidonCRH3Gadget,
 			PoseidonCRH3Gadget,
 			Leaf,
 			LeafGadget,
@@ -118,18 +120,21 @@ macro_rules! setup_circuit {
 			leaf,
 			<$test_field>::rand(rng),
 		];
+		let inner_params = Rc::new(params3.clone());
+		let leaf_params = inner_params.clone();
 		// Making the merkle tree
-		let mt = MixerTree::new(params3.clone(), &leaves).unwrap();
+		let mt = MixerTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
 		// Getting the proof path
-		let path = mt.generate_proof(2, &leaf).unwrap();
+		let path = mt.generate_membership_proof(2);
 		let root = mt.root();
 		let roots = vec![
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
-			root,
+			root.clone().inner(),
 		];
-		let set_private_inputs = TestSetMembership::generate_secrets(&root, &roots).unwrap();
+		let set_private_inputs =
+			TestSetMembership::generate_secrets(&root.clone().inner(), &roots).unwrap();
 		let mc = Circuit::new(
 			arbitrary_input.clone(),
 			leaf_private,
@@ -137,16 +142,15 @@ macro_rules! setup_circuit {
 			set_private_inputs,
 			roots.clone(),
 			params5,
-			params3,
 			path,
-			root,
+			root.clone().inner(),
 			nullifier_hash,
 		);
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root);
+		public_inputs.push(root.inner());
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);

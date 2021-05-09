@@ -5,7 +5,7 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
-use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
+use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
@@ -26,8 +26,8 @@ impl<F: PrimeField> PrivateVar<F> {
 
 pub struct BasicLeafGadget<
 	F: PrimeField,
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 	L: LeafCreation<H>,
 > {
 	field: PhantomData<F>,
@@ -36,7 +36,7 @@ pub struct BasicLeafGadget<
 	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
 	type LeafVar = HG::OutputVar;

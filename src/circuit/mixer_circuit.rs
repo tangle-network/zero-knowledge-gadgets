@@ -1,17 +1,17 @@
 use crate::{
 	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
 	leaf::{constraints::LeafCreationGadget, LeafCreation},
+	merkle_tree::{
+		constraints::{NodeVar, PathVar},
+		Config as MerkleConfig, Path,
+	},
 	set::{Set, SetGadget},
 };
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
-use webb_crypto_primitives::{
-	crh::FixedLengthCRHGadget,
-	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
-	FixedLengthCRH,
-};
+use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
 pub struct MixerCircuit<
 	F: PrimeField,
@@ -19,11 +19,12 @@ pub struct MixerCircuit<
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
 	// Hasher for the leaf creation
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 	// Merkle config and hasher gadget for the tree
 	C: MerkleConfig,
-	HGT: FixedLengthCRHGadget<C::H, F>,
+	LHGT: CRHGadget<C::LeafH, F>,
+	HGT: CRHGadget<C::H, F>,
 	// Type of leaf creation
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
@@ -37,13 +38,13 @@ pub struct MixerCircuit<
 	set_private_inputs: S::Private,
 	root_set: Vec<F>,
 	hasher_params: H::Parameters,
-	tree_hasher_params: <C::H as FixedLengthCRH>::Parameters,
 	path: Path<C>,
-	root: <C::H as FixedLengthCRH>::Output,
+	root: <C::H as CRH>::Output,
 	nullifier_hash: L::Nullifier,
 	_arbitrary_gadget: PhantomData<AG>,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
+	_leaf_hasher_gadget: PhantomData<LHGT>,
 	_tree_hasher_gadget: PhantomData<HGT>,
 	_leaf_creation: PhantomData<L>,
 	_leaf_creation_gadget: PhantomData<LG>,
@@ -52,15 +53,17 @@ pub struct MixerCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H, HG, C, HGT, L, LG, S, SG> MixerCircuit<F, A, AG, H, HG, C, HGT, L, LG, S, SG>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
-	HGT: FixedLengthCRHGadget<C::H, F>,
+	LHGT: CRHGadget<C::LeafH, F>,
+	HGT: CRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
 	S: Set<F>,
@@ -73,9 +76,8 @@ where
 		set_private_inputs: S::Private,
 		root_set: Vec<F>,
 		hasher_params: H::Parameters,
-		tree_hasher_params: <C::H as FixedLengthCRH>::Parameters,
 		path: Path<C>,
-		root: <C::H as FixedLengthCRH>::Output,
+		root: <C::H as CRH>::Output,
 		nullifier_hash: L::Nullifier,
 	) -> Self {
 		Self {
@@ -85,13 +87,13 @@ where
 			set_private_inputs,
 			root_set,
 			hasher_params,
-			tree_hasher_params,
 			path,
 			root,
 			nullifier_hash,
 			_arbitrary_gadget: PhantomData,
 			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
+			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
 			_leaf_creation: PhantomData,
 			_leaf_creation_gadget: PhantomData,
@@ -102,16 +104,17 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, HGT, L, LG, S, SG> Clone
-	for MixerCircuit<F, A, AG, H, HG, C, HGT, L, LG, S, SG>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG> Clone
+	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
-	HGT: FixedLengthCRHGadget<C::H, F>,
+	LHGT: CRHGadget<C::LeafH, F>,
+	HGT: CRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
 	S: Set<F>,
@@ -124,7 +127,6 @@ where
 		let set_private_inputs = self.set_private_inputs.clone();
 		let root_set = self.root_set.clone();
 		let hasher_params = self.hasher_params.clone();
-		let tree_hasher_params = self.tree_hasher_params.clone();
 		let path = self.path.clone();
 		let root = self.root.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
@@ -135,7 +137,6 @@ where
 			set_private_inputs,
 			root_set,
 			hasher_params,
-			tree_hasher_params,
 			path,
 			root,
 			nullifier_hash,
@@ -143,16 +144,17 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, HGT, L, LG, S, SG> ConstraintSynthesizer<F>
-	for MixerCircuit<F, A, AG, H, HG, C, HGT, L, LG, S, SG>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG> ConstraintSynthesizer<F>
+	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
-	HGT: FixedLengthCRHGadget<C::H, F>,
+	LHGT: CRHGadget<C::LeafH, F>,
+	HGT: CRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
 	S: Set<F>,
@@ -167,7 +169,6 @@ where
 		let hasher_params = self.hasher_params;
 		let path = self.path;
 		let root = self.root;
-		let tree_hasher_params = self.tree_hasher_params;
 		let nullifier_hash = self.nullifier_hash;
 
 		// Generating vars
@@ -180,19 +181,17 @@ where
 
 		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
-		let tree_hasher_params_var =
-			HGT::ParametersVar::new_constant(cs.clone(), tree_hasher_params)?;
 
 		// Private inputs
 		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
-		let path_var = PathVar::<C, HGT, F>::new_witness(cs.clone(), || Ok(path))?;
+		let path_var = PathVar::<F, C, HGT, LHGT>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let bridge_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
 		let bridge_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let is_member =
-			path_var.check_membership(&tree_hasher_params_var, &root_var, &bridge_leaf)?;
+			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &bridge_leaf)?;
 		// Check if target root is in set
 		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
 		// Constraining arbitrary inputs
@@ -213,209 +212,23 @@ mod test {
 	use crate::{
 		arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
 		leaf::bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
+		merkle_tree::SparseMerkleTree,
 		set::membership::{constraints::SetMembershipGadget, SetMembership},
+		setup_arbitrary_data, setup_circuit, setup_leaf, setup_params_3, setup_params_5, setup_set,
+		setup_tree, setup_types,
 		test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
+		verify_groth16,
 	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_ff::{One, UniformRand};
 	use ark_groth16::Groth16;
-	use ark_std::test_rng;
+	use ark_std::{rc::Rc, test_rng};
 	use webb_crypto_primitives::{
 		crh::poseidon::{
 			constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
 		},
-		merkle_tree::MerkleTree,
 		SNARK,
 	};
-
-	macro_rules! setup_types {
-		($test_field:ty) => {
-			type MixerConstraintData = MixerData<$test_field>;
-			type MixerConstraintDataGadget = MixerDataGadget<$test_field>;
-			#[derive(Default, Clone)]
-			struct PoseidonRounds5;
-
-			impl Rounds for PoseidonRounds5 {
-				const FULL_ROUNDS: usize = 8;
-				const PARTIAL_ROUNDS: usize = 57;
-				const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-				const WIDTH: usize = 5;
-			}
-
-			type PoseidonCRH5 = CRH<$test_field, PoseidonRounds5>;
-			type PoseidonCRH5Gadget = CRHGadget<$test_field, PoseidonRounds5>;
-
-			#[derive(Default, Clone)]
-			struct PoseidonRounds3;
-
-			impl Rounds for PoseidonRounds3 {
-				const FULL_ROUNDS: usize = 8;
-				const PARTIAL_ROUNDS: usize = 57;
-				const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-				const WIDTH: usize = 3;
-			}
-
-			type PoseidonCRH3 = CRH<$test_field, PoseidonRounds3>;
-			type PoseidonCRH3Gadget = CRHGadget<$test_field, PoseidonRounds3>;
-
-			type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
-			type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
-
-			#[derive(Clone)]
-			struct MixerTreeConfig;
-			impl MerkleConfig for MixerTreeConfig {
-				type H = PoseidonCRH3;
-
-				const HEIGHT: usize = 10;
-			}
-
-			type MixerTree = MerkleTree<MixerTreeConfig>;
-
-			type TestSetMembership = SetMembership<$test_field>;
-			type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
-
-			type Circuit = MixerCircuit<
-				$test_field,
-				MixerConstraintData,
-				MixerConstraintDataGadget,
-				PoseidonCRH5,
-				PoseidonCRH5Gadget,
-				MixerTreeConfig,
-				PoseidonCRH3Gadget,
-				Leaf,
-				LeafGadget,
-				TestSetMembership,
-				TestSetMembershipGadget,
-			>;
-		};
-	}
-
-	macro_rules! setup_params_3 {
-		($test_field:ty) => {{
-			// Making params for poseidon in merkle tree
-			let rounds3 = get_rounds_3::<$test_field>();
-			let mds3 = get_mds_3::<$test_field>();
-			let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
-			params3
-		}};
-	}
-
-	macro_rules! setup_params_5 {
-		($test_field:ty) => {{
-			// Round params for the poseidon in leaf creation gadget
-			let rounds5 = get_rounds_5::<$test_field>();
-			let mds5 = get_mds_5::<$test_field>();
-			let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
-			params5
-		}};
-	}
-
-	macro_rules! setup_leaf {
-		($test_field:ty, $params:expr) => {{
-			let rng = &mut test_rng();
-
-			// Secret inputs for the leaf
-			let leaf_private = Leaf::generate_secrets(rng).unwrap();
-			// Public inputs for the leaf
-			let chain_id = <$test_field>::one();
-			let leaf_public = LeafPublic::new(chain_id);
-
-			// Creating the leaf
-			let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &$params).unwrap();
-			let nullifier_hash = Leaf::create_nullifier(&leaf_private, &$params).unwrap();
-			(leaf_private, leaf_public, leaf, nullifier_hash, chain_id)
-		}};
-	}
-
-	macro_rules! setup_tree {
-		($test_field:ty, $leaf:expr, $params3:expr) => {{
-			let rng = &mut test_rng();
-			let leaves = vec![
-				<$test_field>::rand(rng),
-				<$test_field>::rand(rng),
-				$leaf,
-				<$test_field>::rand(rng),
-			];
-			// Making the merkle tree
-			let mt = MixerTree::new($params3.clone(), &leaves).unwrap();
-			// Getting the proof path
-			let path = mt.generate_proof(2, &$leaf).unwrap();
-			let root = mt.root();
-			(root, path)
-		}};
-	}
-
-	macro_rules! setup_set {
-		($test_field:ty, $root:expr) => {{
-			let rng = &mut test_rng();
-			let roots = vec![
-				<$test_field>::rand(rng),
-				<$test_field>::rand(rng),
-				<$test_field>::rand(rng),
-				$root,
-			];
-			let set_private_inputs = TestSetMembership::generate_secrets(&$root, &roots).unwrap();
-			(set_private_inputs, roots)
-		}};
-	}
-
-	macro_rules! setup_arbitrary_data {
-		($test_field:ty) => {{
-			let rng = &mut test_rng();
-			let fee = <$test_field>::rand(rng);
-			let recipient = <$test_field>::rand(rng);
-			let relayer = <$test_field>::rand(rng);
-			// Arbitrary data
-			let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
-			arbitrary_input
-		}};
-	}
-
-	macro_rules! setup_circuit {
-		($test_field:ty) => {{
-			setup_types!($test_field);
-			let params5 = setup_params_5!($test_field);
-			let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
-				setup_leaf!($test_field, params5);
-			let arbitrary_input = setup_arbitrary_data!($test_field);
-			let params3 = setup_params_3!($test_field);
-			let (root, path) = setup_tree!($test_field, leaf, params3);
-			let (set_private_inputs, roots) = setup_set!($test_field, root);
-
-			let mc = Circuit::new(
-				arbitrary_input.clone(),
-				leaf_private,
-				leaf_public,
-				set_private_inputs,
-				roots.clone(),
-				params5,
-				params3,
-				path,
-				root,
-				nullifier_hash,
-			);
-			let mut public_inputs = Vec::new();
-			public_inputs.push(chain_id);
-			public_inputs.push(nullifier_hash);
-			public_inputs.extend(roots);
-			public_inputs.push(root);
-			public_inputs.push(arbitrary_input.recipient);
-			public_inputs.push(arbitrary_input.relayer);
-			public_inputs.push(arbitrary_input.fee);
-			(public_inputs, mc)
-		}};
-	}
-
-	macro_rules! verify_groth16 {
-		($engine:ty, $circuit:expr, $public_inputs:expr) => {{
-			let rng = &mut test_rng();
-			let (pk, vk) =
-				Groth16::<$engine>::circuit_specific_setup($circuit.clone(), rng).unwrap();
-			let proof = Groth16::<$engine>::prove(&pk, $circuit, rng).unwrap();
-			let res = Groth16::<$engine>::verify(&vk, &$public_inputs, &proof).unwrap();
-			res
-		}};
-	}
 
 	#[test]
 	fn setup_and_prove_mixer_groth16() {
@@ -464,7 +277,6 @@ mod test {
 			set_private_inputs,
 			roots.clone(),
 			params5,
-			params3,
 			path,
 			root,
 			nullifier_hash,
@@ -494,7 +306,7 @@ mod test {
 		let arbitrary_input = setup_arbitrary_data!(BlsFr);
 		let params3 = setup_params_3!(BlsFr);
 		let (root, path) = setup_tree!(BlsFr, leaf, params3);
-		let (set_private_inputs, _) = setup_set!(BlsFr, root);
+		let (set_private_inputs, _) = setup_set!(BlsFr, root.clone().inner());
 		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
 
 		let circuit = Circuit::new(
@@ -504,9 +316,8 @@ mod test {
 			set_private_inputs,
 			roots.clone(),
 			params5,
-			params3,
 			path,
-			root,
+			root.clone().inner(),
 			nullifier_hash,
 		);
 
@@ -514,7 +325,7 @@ mod test {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root);
+		public_inputs.push(root.inner());
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
@@ -534,7 +345,7 @@ mod test {
 		let arbitrary_input = setup_arbitrary_data!(BlsFr);
 		let params3 = setup_params_3!(BlsFr);
 		let (root, path) = setup_tree!(BlsFr, leaf, params3);
-		let (set_private_inputs, roots) = setup_set!(BlsFr, root);
+		let (set_private_inputs, roots) = setup_set!(BlsFr, root.clone().inner());
 
 		let circuit = Circuit::new(
 			arbitrary_input.clone(),
@@ -543,16 +354,15 @@ mod test {
 			set_private_inputs,
 			roots.clone(),
 			params5,
-			params3,
 			path,
-			root,
+			root.clone().inner(),
 			nullifier_hash,
 		);
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root);
+		public_inputs.push(root.inner());
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
@@ -572,7 +382,7 @@ mod test {
 		let arbitrary_input = setup_arbitrary_data!(BlsFr);
 		let params3 = setup_params_3!(BlsFr);
 		let (root, path) = setup_tree!(BlsFr, leaf, params3);
-		let (set_private_inputs, roots) = setup_set!(BlsFr, root);
+		let (set_private_inputs, roots) = setup_set!(BlsFr, root.clone().inner());
 
 		let circuit = Circuit::new(
 			arbitrary_input.clone(),
@@ -581,9 +391,8 @@ mod test {
 			set_private_inputs,
 			roots.clone(),
 			params5,
-			params3,
 			path,
-			root,
+			root.clone().inner(),
 			nullifier_hash,
 		);
 
@@ -591,7 +400,7 @@ mod test {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root);
+		public_inputs.push(root.inner());
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);

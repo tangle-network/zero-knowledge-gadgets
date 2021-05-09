@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-webb-crypto-primitives = { git = "https://github.com/webb-tools/crypto-primitives", package = "ark-crypto-primitives", rev = "3f0377d", features = ["r1cs"] }
+webb-crypto-primitives = { git = "https://github.com/webb-tools/crypto-primitives", package = "ark-crypto-primitives", rev = "40bc16f", features = ["r1cs"] }
 ark-ff = { version = "^0.2.0", default-features = false }
 ark-std = { version = "^0.2.0", default-features = false }
 ark-r1cs-std = { version = "^0.2.0", default-features = false }
