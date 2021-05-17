@@ -262,12 +262,9 @@ mod test {
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};
-	use webb_crypto_primitives::crh::{
-		poseidon::{
-			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
-			Rounds, CRH as PoseidonCRH,
-		},
-		CRH,
+	use webb_crypto_primitives::crh::poseidon::{
+		constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
+		Rounds, CRH as PoseidonCRH,
 	};
 
 	type FieldVar = FpVar<Fq>;
