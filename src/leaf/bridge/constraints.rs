@@ -1,5 +1,8 @@
 use super::{BridgeLeaf, Output, Private, Public};
-use crate::leaf::{LeafCreation, LeafCreationGadget};
+use crate::{
+	leaf::{LeafCreation, LeafCreationGadget},
+	Vec,
+};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*, R1CSVar};
 use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};

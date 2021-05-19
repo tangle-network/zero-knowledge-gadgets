@@ -1,3 +1,4 @@
+use crate::Vec;
 use ark_ff::{to_bytes, PrimeField};
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};

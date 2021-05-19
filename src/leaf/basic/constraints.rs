@@ -1,5 +1,8 @@
 use super::{BasicLeaf, Private, Public};
-use crate::leaf::{LeafCreation, LeafCreationGadget};
+use crate::{
+	leaf::{LeafCreation, LeafCreationGadget},
+	Vec,
+};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
@@ -24,20 +27,15 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct BasicLeafGadget<
-	F: PrimeField,
-	H: CRH,
-	HG: CRHGadget<H, F>,
-	L: LeafCreation<H>,
-> {
+pub struct BasicLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
-	LeafCreationGadget<F, H, HG, BasicLeaf<F, H>> for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> LeafCreationGadget<F, H, HG, BasicLeaf<F, H>>
+	for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
 {
 	type LeafVar = HG::OutputVar;
 	type NullifierVar = HG::OutputVar;

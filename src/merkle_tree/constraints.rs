@@ -1,4 +1,5 @@
 use super::{Config, Node, Path};
+use crate::Vec;
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, prelude::*, select::CondSelectGadget, ToBytesGadget,
@@ -254,11 +255,11 @@ where
 mod test {
 	use super::{NodeVar, PathVar};
 	use crate::{
+		ark_std::UniformRand,
 		merkle_tree::{Config, SparseMerkleTree},
 		test_data::{get_mds_3, get_rounds_3},
 	};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::UniformRand;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};

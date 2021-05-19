@@ -1,3 +1,10 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[macro_use]
+extern crate ark_std;
+
+pub(crate) use ark_std::vec::Vec;
+
 pub mod arbitrary;
 #[cfg(feature = "r1cs")]
 pub mod circuit;

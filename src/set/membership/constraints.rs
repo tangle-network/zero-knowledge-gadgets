@@ -1,4 +1,5 @@
 use super::{Private, SetMembership};
+use crate::Vec;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
 	eq::EqGadget,
