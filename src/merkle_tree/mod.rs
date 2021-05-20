@@ -345,7 +345,7 @@ fn hash_empty<P: Config>(parameters: &<P::LeafH as CRH>::Parameters) -> Result<N
 	Ok(Node::Leaf(res))
 }
 
-fn gen_empty_hashes<P: Config>(
+pub fn gen_empty_hashes<P: Config>(
 	leaf_params: &LeafParameters<P>,
 	inner_params: &InnerParameters<P>,
 ) -> Result<Vec<Node<P>>, Error> {

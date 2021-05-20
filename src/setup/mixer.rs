@@ -1,5 +1,5 @@
 use crate::{
-	arbitrary::mixer_data::{constraints::MixerDataGadget, MixerData},
+	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
 	circuit::mixer_circuit::MixerCircuit,
 	leaf::{
 		bridge::{
@@ -8,17 +8,21 @@ use crate::{
 		LeafCreation,
 	},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
-	set::membership::{constraints::SetMembershipGadget, SetMembership},
+	set::{
+		membership::{constraints::SetMembershipGadget, SetMembership},
+		Set,
+	},
 	test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 };
 use ark_bls12_381::Fr as BlsFr;
 use ark_ff::fields::PrimeField;
-use ark_std::{rand::Rng, rc::Rc};
+use ark_std::{rand::Rng, rc::Rc, vec::Vec, UniformRand};
 use webb_crypto_primitives::crh::poseidon::{
 	constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
 };
 
 pub type MixerConstraintData = MixerData<BlsFr>;
+pub type MixerConstraintDataInput = MixerDataInput<BlsFr>;
 pub type MixerConstraintDataGadget = MixerDataGadget<BlsFr>;
 #[derive(Default, Clone)]
 pub struct PoseidonRounds5;
@@ -115,19 +119,85 @@ pub fn setup_leaf<R: Rng>(
 	(leaf_private, leaf_public, leaf, nullifier_hash)
 }
 
+pub fn setup_tree(leaves: &[BlsFr], params: &PoseidonParameters<BlsFr>) -> MixerTree {
+	let inner_params = Rc::new(params.clone());
+	let leaf_params = inner_params.clone();
+	let mt = MixerTree::new_sequential(inner_params, leaf_params, leaves).unwrap();
+	mt
+}
+
 pub fn setup_tree_and_create_path(
 	leaves: &[BlsFr],
 	index: u64,
 	params: &PoseidonParameters<BlsFr>,
-) -> (BlsFr, Path<MixerTreeConfig>) {
+) -> (MixerTree, Path<MixerTreeConfig>) {
 	// Making the merkle tree
-	let inner_params = Rc::new(params.clone());
-	let leaf_params = inner_params.clone();
-	let mt = MixerTree::new_sequential(inner_params, leaf_params, leaves).unwrap();
+	let mt = setup_tree(leaves, params);
 	// Getting the proof path
 	let path = mt.generate_membership_proof(index);
-	let root = mt.root();
-	(root.inner(), path)
+	(mt, path)
+}
+
+pub fn setup_set(root: &BlsFr, roots: &Vec<BlsFr>) -> <TestSetMembership as Set<BlsFr>>::Private {
+	TestSetMembership::generate_secrets(root, roots).unwrap()
+}
+
+pub fn setup_arbitrary_data(
+	recipient: BlsFr,
+	relayer: BlsFr,
+	fee: BlsFr,
+) -> MixerConstraintDataInput {
+	let arbitrary_input = MixerConstraintDataInput::new(recipient, relayer, fee);
+	arbitrary_input
+}
+
+pub fn setup_circuit<R: Rng>(
+	chain_id: BlsFr,
+	root: &BlsFr,
+	leaves: &[BlsFr],
+	index: u64,
+	roots: &Vec<BlsFr>,
+	recipient: BlsFr,
+	relayer: BlsFr,
+	fee: BlsFr,
+	rng: &mut R,
+) -> Circuit {
+	let params3 = setup_params_3::<BlsFr>();
+	let params5 = setup_params_5::<BlsFr>();
+
+	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+	let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf(chain_id, &params3, rng);
+	let (_, path) = setup_tree_and_create_path(leaves, index, &params3);
+	let set_private_inputs = setup_set(root, roots);
+
+	let mc = Circuit::new(
+		arbitrary_input.clone(),
+		leaf_private,
+		leaf_public,
+		set_private_inputs,
+		roots.clone(),
+		params5,
+		path,
+		root.clone(),
+		nullifier_hash,
+	);
+
+	mc
+}
+
+pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> Circuit {
+	let chain_id = BlsFr::rand(rng);
+	let root = BlsFr::rand(rng);
+	let leaf = BlsFr::rand(rng);
+	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), leaf, BlsFr::rand(rng)];
+	let index = 2;
+	let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), root, BlsFr::rand(rng)];
+	let recipient = BlsFr::rand(rng);
+	let relayer = BlsFr::rand(rng);
+	let fee = BlsFr::rand(rng);
+	setup_circuit(
+		chain_id, &root, &leaves, index, &roots, recipient, relayer, fee, rng,
+	)
 }
 
 #[macro_export]
