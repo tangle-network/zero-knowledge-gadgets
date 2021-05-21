@@ -31,4 +31,4 @@ r1cs = []
 name = "mixer_bench"
 path = "benches/bench.rs"
 harness = false
-required-features = ["r1cs"]
+required-features = ["r1cs", "std"]

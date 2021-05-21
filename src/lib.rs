@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[macro_use]
-extern crate ark_std;
+pub extern crate ark_std;
 
 pub(crate) use ark_std::vec::Vec;
 
@@ -17,6 +17,7 @@ pub mod test_data;
 
 pub mod prelude {
 	pub use ark_bls12_381::Fr as Bls381;
-	pub use ark_ff::{fields::PrimeField, to_bytes};
+	pub use ark_ff::{self, fields::PrimeField, to_bytes};
+	pub use ark_std;
 	pub use webb_crypto_primitives;
 }

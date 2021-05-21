@@ -5,7 +5,7 @@ use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
-use ark_std::{rc::Rc, test_rng, time::Instant};
+use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
 	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
 	circuit::mixer_circuit::MixerCircuit,
