@@ -16,8 +16,13 @@ use crate::{
 };
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 use ark_ff::fields::PrimeField;
-use ark_groth16::{Groth16, Proof, VerifyingKey};
-use ark_std::{rand::Rng, rc::Rc, vec::Vec, UniformRand};
+use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
+use ark_std::{
+	rand::{CryptoRng, Rng, RngCore},
+	rc::Rc,
+	vec::Vec,
+	UniformRand,
+};
 use webb_crypto_primitives::{
 	crh::poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 	SNARK,
@@ -232,6 +237,14 @@ pub fn verify_groth16(
 		Ok(is_valid) => is_valid,
 		Err(_) => false,
 	}
+}
+
+pub fn setup_groth16<R: RngCore + CryptoRng>(
+	rng: &mut R,
+) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
+	let circuit = setup_random_circuit(rng);
+	let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), rng).unwrap();
+	(pk, vk)
 }
 
 #[macro_export]
