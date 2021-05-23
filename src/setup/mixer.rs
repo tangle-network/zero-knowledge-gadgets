@@ -228,11 +228,11 @@ pub fn get_public_inputs(
 }
 
 pub fn verify_groth16(
-	vk: VerifyingKey<Bls12_381>,
+	vk: &VerifyingKey<Bls12_381>,
 	public_inputs: &Vec<BlsFr>,
 	proof: &Proof<Bls12_381>,
 ) -> bool {
-	let res = Groth16::<Bls12_381>::verify(&vk, &public_inputs, &proof);
+	let res = Groth16::<Bls12_381>::verify(vk, public_inputs, proof);
 	match res {
 		Ok(is_valid) => is_valid,
 		Err(_) => false,
