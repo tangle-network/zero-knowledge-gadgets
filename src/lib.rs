@@ -16,7 +16,9 @@ pub mod setup;
 pub mod test_data;
 
 pub mod prelude {
-	pub use ark_bls12_381::Fr as Bls381;
+	pub use ark_bls12_381;
+	pub use ark_ed_on_bls12_381;
+	pub use ark_ed_on_bn254;
 	pub use ark_ff;
 	pub use ark_std;
 	pub use webb_crypto_primitives;
