@@ -14,11 +14,13 @@ use crate::{
 	},
 	test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 };
-use ark_bls12_381::Fr as BlsFr;
+use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 use ark_ff::fields::PrimeField;
+use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_std::{rand::Rng, rc::Rc, vec::Vec, UniformRand};
-use webb_crypto_primitives::crh::poseidon::{
-	constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+use webb_crypto_primitives::{
+	crh::poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+	SNARK,
 };
 
 pub type MixerConstraintData = MixerData<BlsFr>;
@@ -198,6 +200,38 @@ pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> Circuit {
 	setup_circuit(
 		chain_id, &root, &leaves, index, &roots, recipient, relayer, fee, rng,
 	)
+}
+
+pub fn get_public_inputs(
+	chain_id: BlsFr,
+	nullifier_hash: BlsFr,
+	roots: Vec<BlsFr>,
+	root: BlsFr,
+	recipient: BlsFr,
+	relayer: BlsFr,
+	fee: BlsFr,
+) -> Vec<BlsFr> {
+	let mut public_inputs = Vec::new();
+	public_inputs.push(chain_id);
+	public_inputs.push(nullifier_hash);
+	public_inputs.extend(roots);
+	public_inputs.push(root);
+	public_inputs.push(recipient);
+	public_inputs.push(relayer);
+	public_inputs.push(fee);
+	public_inputs
+}
+
+pub fn verify_groth16(
+	vk: VerifyingKey<Bls12_381>,
+	public_inputs: &Vec<BlsFr>,
+	proof: &Proof<Bls12_381>,
+) -> bool {
+	let res = Groth16::<Bls12_381>::verify(&vk, &public_inputs, &proof);
+	match res {
+		Ok(is_valid) => is_valid,
+		Err(_) => false,
+	}
 }
 
 #[macro_export]
