@@ -239,6 +239,14 @@ pub fn verify_groth16(
 	}
 }
 
+pub fn prove_groth16<R: RngCore + CryptoRng>(
+	pk: &ProvingKey<Bls12_381>,
+	c: Circuit,
+	rng: &mut R,
+) -> Proof<Bls12_381> {
+	Groth16::<Bls12_381>::prove(pk, c, rng).unwrap()
+}
+
 pub fn setup_groth16<R: RngCore + CryptoRng>(
 	rng: &mut R,
 ) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
