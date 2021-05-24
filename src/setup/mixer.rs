@@ -173,7 +173,7 @@ pub fn setup_circuit<R: Rng>(
 	let params5 = setup_params_5::<BlsFr>();
 
 	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
-	let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf(chain_id, &params3, rng);
+	let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
 	let (_, path) = setup_tree_and_create_path(leaves, index, &params3);
 	let set_private_inputs = setup_set(root, roots);
 
