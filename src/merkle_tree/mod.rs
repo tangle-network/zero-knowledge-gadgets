@@ -354,7 +354,7 @@ pub fn gen_empty_hashes<P: Config>(
 	let mut empty_hash = hash_empty::<P>(leaf_params)?;
 	empty_hashes.push(empty_hash.clone());
 
-	for _ in 1..P::HEIGHT {
+	for _ in 1..=P::HEIGHT {
 		empty_hash = hash_inner_node::<P>(&inner_params, &empty_hash, &empty_hash)?;
 		empty_hashes.push(empty_hash.clone());
 	}
