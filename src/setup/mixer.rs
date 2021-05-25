@@ -24,7 +24,10 @@ use ark_std::{
 	UniformRand,
 };
 use webb_crypto_primitives::{
-	crh::poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+	crh::{
+		identity::CRH as IdentityCRH,
+		poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+	},
 	SNARK,
 };
 
@@ -41,6 +44,7 @@ impl Rounds for PoseidonRounds5 {
 	const WIDTH: usize = 5;
 }
 
+pub type LeafCRH = IdentityCRH<BlsFr>;
 pub type PoseidonCRH5 = CRH<BlsFr, PoseidonRounds5>;
 pub type PoseidonCRH5Gadget = CRHGadget<BlsFr, PoseidonRounds5>;
 
@@ -64,7 +68,7 @@ pub type LeafGadget = BridgeLeafGadget<BlsFr, PoseidonCRH5, PoseidonCRH5Gadget, 
 pub struct MixerTreeConfig;
 impl MerkleConfig for MixerTreeConfig {
 	type H = PoseidonCRH3;
-	type LeafH = PoseidonCRH3;
+	type LeafH = LeafCRH;
 
 	const HEIGHT: u8 = 30;
 }
