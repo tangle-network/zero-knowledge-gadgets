@@ -168,13 +168,15 @@ pub fn setup_circuit<R: Rng>(
 	relayer: BlsFr,
 	fee: BlsFr,
 	rng: &mut R,
-) -> Circuit {
+) -> (Circuit, BlsFr) {
 	let params3 = setup_params_3::<BlsFr>();
 	let params5 = setup_params_5::<BlsFr>();
 
 	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
-	let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
-	let (_, path) = setup_tree_and_create_path(leaves, index, &params3);
+	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
+	let mut leaves_new = leaves.to_vec();
+	leaves_new.push(leaf);
+	let (_, path) = setup_tree_and_create_path(&leaves_new, index, &params3);
 	let set_private_inputs = setup_set(root, roots);
 
 	let mc = Circuit::new(
@@ -189,14 +191,14 @@ pub fn setup_circuit<R: Rng>(
 		nullifier_hash,
 	);
 
-	mc
+	(mc, leaf)
 }
 
-pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> Circuit {
+pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr) {
 	let chain_id = BlsFr::rand(rng);
 	let root = BlsFr::rand(rng);
 	let leaf = BlsFr::rand(rng);
-	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), leaf, BlsFr::rand(rng)];
+	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
 	let index = 2;
 	let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), root, BlsFr::rand(rng)];
 	let recipient = BlsFr::rand(rng);
@@ -250,7 +252,7 @@ pub fn prove_groth16<R: RngCore + CryptoRng>(
 pub fn setup_groth16<R: RngCore + CryptoRng>(
 	rng: &mut R,
 ) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
-	let circuit = setup_random_circuit(rng);
+	let (circuit, _) = setup_random_circuit(rng);
 	let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 	(pk, vk)
 }
