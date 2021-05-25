@@ -20,6 +20,8 @@ pub mod prelude {
 	pub use ark_ed_on_bls12_381;
 	pub use ark_ed_on_bn254;
 	pub use ark_ff;
+	pub use ark_groth16;
+	pub use ark_marlin;
 	pub use ark_std;
 	pub use webb_crypto_primitives;
 }
