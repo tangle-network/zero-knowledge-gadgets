@@ -25,7 +25,7 @@ use ark_std::{
 };
 use webb_crypto_primitives::{
 	crh::{
-		identity::CRH as IdentityCRH,
+		identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 		poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 	},
 	SNARK,
@@ -45,6 +45,8 @@ impl Rounds for PoseidonRounds5 {
 }
 
 pub type LeafCRH = IdentityCRH<BlsFr>;
+pub type LeafCRHGadget = IdentityCRHGadget<BlsFr>;
+
 pub type PoseidonCRH5 = CRH<BlsFr, PoseidonRounds5>;
 pub type PoseidonCRH5Gadget = CRHGadget<BlsFr, PoseidonRounds5>;
 
@@ -85,7 +87,7 @@ pub type Circuit = MixerCircuit<
 	PoseidonCRH5,
 	PoseidonCRH5Gadget,
 	MixerTreeConfig,
-	PoseidonCRH3Gadget,
+	LeafCRHGadget,
 	PoseidonCRH3Gadget,
 	Leaf,
 	LeafGadget,
@@ -132,8 +134,7 @@ pub fn setup_leaf<R: Rng>(
 
 pub fn setup_tree(leaves: &[BlsFr], params: &PoseidonParameters<BlsFr>) -> MixerTree {
 	let inner_params = Rc::new(params.clone());
-	let leaf_params = inner_params.clone();
-	let mt = MixerTree::new_sequential(inner_params, leaf_params, leaves).unwrap();
+	let mt = MixerTree::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
 	mt
 }
 
