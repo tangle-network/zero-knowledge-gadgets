@@ -168,7 +168,7 @@ pub fn setup_circuit<R: Rng>(
 	relayer: BlsFr,
 	fee: BlsFr,
 	rng: &mut R,
-) -> (Circuit, BlsFr, BlsFr) {
+) -> (Circuit, BlsFr, BlsFr, BlsFr) {
 	let params3 = setup_params_3::<BlsFr>();
 	let params5 = setup_params_5::<BlsFr>();
 
@@ -193,10 +193,10 @@ pub fn setup_circuit<R: Rng>(
 		nullifier_hash,
 	);
 
-	(mc, leaf, nullifier_hash)
+	(mc, leaf, nullifier_hash, root)
 }
 
-pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr, BlsFr) {
+pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr, BlsFr, BlsFr) {
 	let chain_id = BlsFr::rand(rng);
 	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
 	let index = 2;
