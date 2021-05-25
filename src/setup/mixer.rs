@@ -137,12 +137,13 @@ pub fn setup_tree_and_create_path(
 	leaves: &[BlsFr],
 	index: u64,
 	params: &PoseidonParameters<BlsFr>,
-) -> (MixerTree, Path<MixerTreeConfig>) {
+) -> (MixerTree, Path<MixerTreeConfig>, BlsFr) {
 	// Making the merkle tree
 	let mt = setup_tree(leaves, params);
 	// Getting the proof path
 	let path = mt.generate_membership_proof(index);
-	(mt, path)
+	let root = mt.root();
+	(mt, path, root.inner())
 }
 
 pub fn setup_set(root: &BlsFr, roots: &Vec<BlsFr>) -> <TestSetMembership as Set<BlsFr>>::Private {
@@ -160,10 +161,9 @@ pub fn setup_arbitrary_data(
 
 pub fn setup_circuit<R: Rng>(
 	chain_id: BlsFr,
-	root: &BlsFr,
 	leaves: &[BlsFr],
 	index: u64,
-	roots: &Vec<BlsFr>,
+	roots: &[BlsFr],
 	recipient: BlsFr,
 	relayer: BlsFr,
 	fee: BlsFr,
@@ -176,15 +176,17 @@ pub fn setup_circuit<R: Rng>(
 	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
-	let (_, path) = setup_tree_and_create_path(&leaves_new, index, &params3);
-	let set_private_inputs = setup_set(root, roots);
+	let (_, path, root) = setup_tree_and_create_path(&leaves_new, index, &params3);
+	let mut roots_new = roots.to_vec();
+	roots_new.push(root);
+	let set_private_inputs = setup_set(&root, &roots_new);
 
 	let mc = Circuit::new(
 		arbitrary_input.clone(),
 		leaf_private,
 		leaf_public,
 		set_private_inputs,
-		roots.clone(),
+		roots_new.clone(),
 		params5,
 		path,
 		root.clone(),
@@ -196,16 +198,14 @@ pub fn setup_circuit<R: Rng>(
 
 pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr) {
 	let chain_id = BlsFr::rand(rng);
-	let root = BlsFr::rand(rng);
-	let leaf = BlsFr::rand(rng);
 	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
 	let index = 2;
-	let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), root, BlsFr::rand(rng)];
+	let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
 	let recipient = BlsFr::rand(rng);
 	let relayer = BlsFr::rand(rng);
 	let fee = BlsFr::rand(rng);
 	setup_circuit(
-		chain_id, &root, &leaves, index, &roots, recipient, relayer, fee, rng,
+		chain_id, &leaves, index, &roots, recipient, relayer, fee, rng,
 	)
 }
 
