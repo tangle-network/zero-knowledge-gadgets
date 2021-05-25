@@ -168,7 +168,7 @@ pub fn setup_circuit<R: Rng>(
 	relayer: BlsFr,
 	fee: BlsFr,
 	rng: &mut R,
-) -> (Circuit, BlsFr) {
+) -> (Circuit, BlsFr, BlsFr) {
 	let params3 = setup_params_3::<BlsFr>();
 	let params5 = setup_params_5::<BlsFr>();
 
@@ -193,10 +193,10 @@ pub fn setup_circuit<R: Rng>(
 		nullifier_hash,
 	);
 
-	(mc, leaf)
+	(mc, leaf, nullifier_hash)
 }
 
-pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr) {
+pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr, BlsFr) {
 	let chain_id = BlsFr::rand(rng);
 	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
 	let index = 2;
@@ -252,7 +252,7 @@ pub fn prove_groth16<R: RngCore + CryptoRng>(
 pub fn setup_groth16<R: RngCore + CryptoRng>(
 	rng: &mut R,
 ) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
-	let (circuit, _) = setup_random_circuit(rng);
+	let (circuit, ..) = setup_random_circuit(rng);
 	let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 	(pk, vk)
 }
