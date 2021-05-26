@@ -14,7 +14,7 @@ use crate::{
 	},
 	test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 };
-use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+use ark_bls12_381::{Bls12_381, Fr as Bls381};
 use ark_ff::fields::PrimeField;
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_std::{
@@ -31,9 +31,9 @@ use webb_crypto_primitives::{
 	SNARK,
 };
 
-pub type MixerConstraintData = MixerData<BlsFr>;
-pub type MixerConstraintDataInput = MixerDataInput<BlsFr>;
-pub type MixerConstraintDataGadget = MixerDataGadget<BlsFr>;
+pub type MixerConstraintData = MixerData<Bls381>;
+pub type MixerConstraintDataInput = MixerDataInput<Bls381>;
+pub type MixerConstraintDataGadget = MixerDataGadget<Bls381>;
 #[derive(Default, Clone)]
 pub struct PoseidonRounds5;
 
@@ -44,11 +44,11 @@ impl Rounds for PoseidonRounds5 {
 	const WIDTH: usize = 5;
 }
 
-pub type LeafCRH = IdentityCRH<BlsFr>;
-pub type LeafCRHGadget = IdentityCRHGadget<BlsFr>;
+pub type LeafCRH = IdentityCRH<Bls381>;
+pub type LeafCRHGadget = IdentityCRHGadget<Bls381>;
 
-pub type PoseidonCRH5 = CRH<BlsFr, PoseidonRounds5>;
-pub type PoseidonCRH5Gadget = CRHGadget<BlsFr, PoseidonRounds5>;
+pub type PoseidonCRH5 = CRH<Bls381, PoseidonRounds5>;
+pub type PoseidonCRH5Gadget = CRHGadget<Bls381, PoseidonRounds5>;
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds3;
@@ -60,11 +60,11 @@ impl Rounds for PoseidonRounds3 {
 	const WIDTH: usize = 3;
 }
 
-pub type PoseidonCRH3 = CRH<BlsFr, PoseidonRounds3>;
-pub type PoseidonCRH3Gadget = CRHGadget<BlsFr, PoseidonRounds3>;
+pub type PoseidonCRH3 = CRH<Bls381, PoseidonRounds3>;
+pub type PoseidonCRH3Gadget = CRHGadget<Bls381, PoseidonRounds3>;
 
-pub type Leaf = BridgeLeaf<BlsFr, PoseidonCRH5>;
-pub type LeafGadget = BridgeLeafGadget<BlsFr, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+pub type Leaf = BridgeLeaf<Bls381, PoseidonCRH5>;
+pub type LeafGadget = BridgeLeafGadget<Bls381, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
 
 #[derive(Clone)]
 pub struct MixerTreeConfig;
@@ -77,11 +77,11 @@ impl MerkleConfig for MixerTreeConfig {
 
 pub type MixerTree = SparseMerkleTree<MixerTreeConfig>;
 
-pub type TestSetMembership = SetMembership<BlsFr>;
-pub type TestSetMembershipGadget = SetMembershipGadget<BlsFr>;
+pub type TestSetMembership = SetMembership<Bls381>;
+pub type TestSetMembershipGadget = SetMembershipGadget<Bls381>;
 
 pub type Circuit = MixerCircuit<
-	BlsFr,
+	Bls381,
 	MixerConstraintData,
 	MixerConstraintDataGadget,
 	PoseidonCRH5,
@@ -112,12 +112,12 @@ pub fn setup_params_5<F: PrimeField>() -> PoseidonParameters<F> {
 }
 
 pub fn setup_leaf<R: Rng>(
-	chain_id: BlsFr,
-	params: &PoseidonParameters<BlsFr>,
+	chain_id: Bls381,
+	params: &PoseidonParameters<Bls381>,
 	rng: &mut R,
 ) -> (
-	LeafPrivate<BlsFr>,
-	LeafPublic<BlsFr>,
+	LeafPrivate<Bls381>,
+	LeafPublic<Bls381>,
 	<Leaf as LeafCreation<PoseidonCRH5>>::Leaf,
 	<Leaf as LeafCreation<PoseidonCRH5>>::Nullifier,
 ) {
@@ -132,17 +132,17 @@ pub fn setup_leaf<R: Rng>(
 	(leaf_private, leaf_public, leaf, nullifier_hash)
 }
 
-pub fn setup_tree(leaves: &[BlsFr], params: &PoseidonParameters<BlsFr>) -> MixerTree {
+pub fn setup_tree(leaves: &[Bls381], params: &PoseidonParameters<Bls381>) -> MixerTree {
 	let inner_params = Rc::new(params.clone());
 	let mt = MixerTree::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
 	mt
 }
 
 pub fn setup_tree_and_create_path(
-	leaves: &[BlsFr],
+	leaves: &[Bls381],
 	index: u64,
-	params: &PoseidonParameters<BlsFr>,
-) -> (MixerTree, Path<MixerTreeConfig>, BlsFr) {
+	params: &PoseidonParameters<Bls381>,
+) -> (MixerTree, Path<MixerTreeConfig>, Bls381) {
 	// Making the merkle tree
 	let mt = setup_tree(leaves, params);
 	// Getting the proof path
@@ -151,31 +151,34 @@ pub fn setup_tree_and_create_path(
 	(mt, path, root.inner())
 }
 
-pub fn setup_set(root: &BlsFr, roots: &Vec<BlsFr>) -> <TestSetMembership as Set<BlsFr>>::Private {
+pub fn setup_set(
+	root: &Bls381,
+	roots: &Vec<Bls381>,
+) -> <TestSetMembership as Set<Bls381>>::Private {
 	TestSetMembership::generate_secrets(root, roots).unwrap()
 }
 
 pub fn setup_arbitrary_data(
-	recipient: BlsFr,
-	relayer: BlsFr,
-	fee: BlsFr,
+	recipient: Bls381,
+	relayer: Bls381,
+	fee: Bls381,
 ) -> MixerConstraintDataInput {
 	let arbitrary_input = MixerConstraintDataInput::new(recipient, relayer, fee);
 	arbitrary_input
 }
 
 pub fn setup_circuit<R: Rng>(
-	chain_id: BlsFr,
-	leaves: &[BlsFr],
+	chain_id: Bls381,
+	leaves: &[Bls381],
 	index: u64,
-	roots: &[BlsFr],
-	recipient: BlsFr,
-	relayer: BlsFr,
-	fee: BlsFr,
+	roots: &[Bls381],
+	recipient: Bls381,
+	relayer: Bls381,
+	fee: Bls381,
 	rng: &mut R,
-) -> (Circuit, BlsFr, BlsFr, BlsFr) {
-	let params3 = setup_params_3::<BlsFr>();
-	let params5 = setup_params_5::<BlsFr>();
+) -> (Circuit, Bls381, Bls381, Bls381) {
+	let params3 = setup_params_3::<Bls381>();
+	let params5 = setup_params_5::<Bls381>();
 
 	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
 	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
@@ -201,28 +204,28 @@ pub fn setup_circuit<R: Rng>(
 	(mc, leaf, nullifier_hash, root)
 }
 
-pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, BlsFr, BlsFr, BlsFr) {
-	let chain_id = BlsFr::rand(rng);
-	let leaves = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
+pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, Bls381, Bls381, Bls381) {
+	let chain_id = Bls381::rand(rng);
+	let leaves = vec![Bls381::rand(rng), Bls381::rand(rng), Bls381::rand(rng)];
 	let index = 2;
-	let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
-	let recipient = BlsFr::rand(rng);
-	let relayer = BlsFr::rand(rng);
-	let fee = BlsFr::rand(rng);
+	let roots = vec![Bls381::rand(rng), Bls381::rand(rng), Bls381::rand(rng)];
+	let recipient = Bls381::rand(rng);
+	let relayer = Bls381::rand(rng);
+	let fee = Bls381::rand(rng);
 	setup_circuit(
 		chain_id, &leaves, index, &roots, recipient, relayer, fee, rng,
 	)
 }
 
 pub fn get_public_inputs(
-	chain_id: BlsFr,
-	nullifier_hash: BlsFr,
-	roots: Vec<BlsFr>,
-	root: BlsFr,
-	recipient: BlsFr,
-	relayer: BlsFr,
-	fee: BlsFr,
-) -> Vec<BlsFr> {
+	chain_id: Bls381,
+	nullifier_hash: Bls381,
+	roots: Vec<Bls381>,
+	root: Bls381,
+	recipient: Bls381,
+	relayer: Bls381,
+	fee: Bls381,
+) -> Vec<Bls381> {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(chain_id);
 	public_inputs.push(nullifier_hash);
@@ -236,13 +239,13 @@ pub fn get_public_inputs(
 
 pub fn verify_groth16(
 	vk: &VerifyingKey<Bls12_381>,
-	public_inputs: &Vec<BlsFr>,
+	public_inputs: &Vec<Bls381>,
 	proof: &Proof<Bls12_381>,
 ) -> bool {
 	let res = Groth16::<Bls12_381>::verify(vk, public_inputs, proof);
 	match res {
 		Ok(is_valid) => is_valid,
-		Err(_) => false,
+		Err(e) => panic!("{}", e),
 	}
 }
 
@@ -252,6 +255,14 @@ pub fn prove_groth16<R: RngCore + CryptoRng>(
 	rng: &mut R,
 ) -> Proof<Bls12_381> {
 	Groth16::<Bls12_381>::prove(pk, c, rng).unwrap()
+}
+
+pub fn setup_circuit_groth16<R: RngCore + CryptoRng>(
+	rng: &mut R,
+	c: Circuit,
+) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
+	let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(c, rng).unwrap();
+	(pk, vk)
 }
 
 pub fn setup_groth16<R: RngCore + CryptoRng>(
@@ -460,4 +471,31 @@ macro_rules! verify_groth16 {
 		let res = Groth16::<$engine>::verify(&vk, &$public_inputs, &proof).unwrap();
 		res
 	}};
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use ark_std::test_rng;
+	#[test]
+	fn should_create_setup() {
+		let mut rng = test_rng();
+		let chain_id = Bls381::from(0u8);
+		let recipient = Bls381::from(0u8);
+		let relayer = Bls381::from(0u8);
+		let fee = Bls381::from(0u8);
+		let leaves = Vec::new();
+		let roots = Vec::new();
+		let (circuit, leaf, nullifier, root) = setup_circuit(
+			chain_id, &leaves, 0, &roots, recipient, relayer, fee, &mut rng,
+		);
+
+		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
+		let (pk, vk) = setup_groth16(&mut rng);
+		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
+		let public_inputs =
+			get_public_inputs(chain_id, nullifier, roots, root, recipient, relayer, fee);
+		let res = verify_groth16(&vk, &public_inputs, &proof);
+		assert!(res);
+	}
 }
