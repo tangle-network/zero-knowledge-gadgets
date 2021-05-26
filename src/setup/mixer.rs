@@ -142,13 +142,12 @@ pub fn setup_tree_and_create_path(
 	leaves: &[Bls381],
 	index: u64,
 	params: &PoseidonParameters<Bls381>,
-) -> (MixerTree, Path<MixerTreeConfig>, Bls381) {
+) -> (MixerTree, Path<MixerTreeConfig>) {
 	// Making the merkle tree
 	let mt = setup_tree(leaves, params);
 	// Getting the proof path
 	let path = mt.generate_membership_proof(index);
-	let root = mt.root();
-	(mt, path, root.inner())
+	(mt, path)
 }
 
 pub fn setup_set(
@@ -176,7 +175,7 @@ pub fn setup_circuit<R: Rng>(
 	relayer: Bls381,
 	fee: Bls381,
 	rng: &mut R,
-) -> (Circuit, Bls381, Bls381, Bls381) {
+) -> (Circuit, Bls381, Bls381, Bls381, Vec<Bls381>) {
 	let params3 = setup_params_3::<Bls381>();
 	let params5 = setup_params_5::<Bls381>();
 
@@ -184,7 +183,8 @@ pub fn setup_circuit<R: Rng>(
 	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
-	let (_, path, root) = setup_tree_and_create_path(&leaves_new, index, &params3);
+	let (tree, path) = setup_tree_and_create_path(&leaves_new, index, &params3);
+	let root = tree.root().inner();
 	let mut roots_new = roots.to_vec();
 	roots_new.push(root);
 	let set_private_inputs = setup_set(&root, &roots_new);
@@ -200,15 +200,23 @@ pub fn setup_circuit<R: Rng>(
 		root.clone(),
 		nullifier_hash,
 	);
-
-	(mc, leaf, nullifier_hash, root)
+	let public_inputs = get_public_inputs(
+		chain_id,
+		nullifier_hash,
+		roots_new,
+		root,
+		recipient,
+		relayer,
+		fee,
+	);
+	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
-pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, Bls381, Bls381, Bls381) {
+pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, Bls381, Bls381, Bls381, Vec<Bls381>) {
 	let chain_id = Bls381::rand(rng);
-	let leaves = vec![Bls381::rand(rng), Bls381::rand(rng), Bls381::rand(rng)];
-	let index = 2;
-	let roots = vec![Bls381::rand(rng), Bls381::rand(rng), Bls381::rand(rng)];
+	let leaves = vec![Bls381::rand(rng)];
+	let index = 0;
+	let roots = vec![Bls381::rand(rng)];
 	let recipient = Bls381::rand(rng);
 	let relayer = Bls381::rand(rng);
 	let fee = Bls381::rand(rng);
@@ -432,10 +440,11 @@ macro_rules! setup_circuit {
 	($test_field:ty) => {{
 		setup_types!($test_field);
 		let params5 = setup_params_5!($test_field);
+		let params3 = setup_params_3!($test_field);
+
 		let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
 			setup_leaf!($test_field, params5);
 		let arbitrary_input = setup_arbitrary_data!($test_field);
-		let params3 = setup_params_3!($test_field);
 		let (root, path) = setup_tree!($test_field, leaf, params3);
 		let (set_private_inputs, roots) = setup_set!($test_field, root.clone().inner());
 
@@ -477,6 +486,20 @@ macro_rules! verify_groth16 {
 mod test {
 	use super::*;
 	use ark_std::test_rng;
+
+	fn add_members_mock(leaves: Vec<Bls381>) {}
+
+	fn verify_zk_mock(
+		root: Bls381,
+		private_inputs: Vec<Bls381>,
+		nullifier_hash: Bls381,
+		proof_bytes: Vec<u8>,
+		path_index_commitments: Vec<Bls381>,
+		path_node_commitments: Vec<Bls381>,
+		recipient: Bls381,
+		relayer: Bls381,
+	) {
+	}
 	#[test]
 	fn should_create_setup() {
 		let mut rng = test_rng();
@@ -486,16 +509,28 @@ mod test {
 		let fee = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let roots = Vec::new();
-		let (circuit, leaf, nullifier, root) = setup_circuit(
+		let (circuit, leaf, nullifier, root, public_inputs) = setup_circuit(
 			chain_id, &leaves, 0, &roots, recipient, relayer, fee, &mut rng,
 		);
 
-		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_groth16(&mut rng);
+		add_members_mock(vec![leaf]);
+
+		let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
+		// let (pk, vk) = setup_groth16(&mut rng);
 		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
-		let public_inputs =
-			get_public_inputs(chain_id, nullifier, roots, root, recipient, relayer, fee);
 		let res = verify_groth16(&vk, &public_inputs, &proof);
+
+		verify_zk_mock(
+			root,
+			Vec::new(),
+			nullifier,
+			Vec::new(),
+			Vec::new(),
+			Vec::new(),
+			recipient,
+			relayer,
+		);
+
 		assert!(res);
 	}
 }
