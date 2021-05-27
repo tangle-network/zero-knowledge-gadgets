@@ -485,6 +485,8 @@ macro_rules! verify_groth16 {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use ark_ff::to_bytes;
+	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
 
 	fn add_members_mock(leaves: Vec<Bls381>) {}
@@ -590,6 +592,43 @@ mod test {
 			root,
 			Vec::new(),
 			nullifier_hash,
+			Vec::new(),
+			Vec::new(),
+			Vec::new(),
+			recipient,
+			relayer,
+		);
+
+		assert!(res);
+	}
+
+	#[test]
+	fn should_handle_proof_deserialization() {
+		let mut rng = test_rng();
+		let chain_id = Bls381::from(0u8);
+		let recipient = Bls381::from(0u8);
+		let relayer = Bls381::from(0u8);
+		let fee = Bls381::from(0u8);
+		let leaves = Vec::new();
+		let roots = Vec::new();
+		let (circuit, leaf, nullifier, root, public_inputs) = setup_circuit(
+			chain_id, &leaves, 0, &roots, recipient, relayer, fee, &mut rng,
+		);
+
+		add_members_mock(vec![leaf]);
+
+		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
+		let (pk, vk) = setup_groth16(&mut rng);
+		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
+		let mut proof_bytes = vec![0u8; proof.serialized_size()];
+		proof.serialize(&mut proof_bytes).unwrap();
+		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();
+		let res = verify_groth16(&vk, &public_inputs, &proof_anew);
+
+		verify_zk_mock(
+			root,
+			Vec::new(),
+			nullifier,
 			Vec::new(),
 			Vec::new(),
 			Vec::new(),
