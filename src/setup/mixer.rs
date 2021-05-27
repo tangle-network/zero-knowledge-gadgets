@@ -621,7 +621,7 @@ mod test {
 		let (pk, vk) = setup_groth16(&mut rng);
 		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
 		let mut proof_bytes = vec![0u8; proof.serialized_size()];
-		proof.serialize(&mut proof_bytes).unwrap();
+		proof.serialize(&mut proof_bytes[..]).unwrap();
 		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();
 		let res = verify_groth16(&vk, &public_inputs, &proof_anew);
 
