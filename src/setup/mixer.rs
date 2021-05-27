@@ -214,9 +214,9 @@ pub fn setup_circuit<R: Rng>(
 
 pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, Bls381, Bls381, Bls381, Vec<Bls381>) {
 	let chain_id = Bls381::rand(rng);
-	let leaves = vec![Bls381::rand(rng)];
+	let leaves = Vec::new();
 	let index = 0;
-	let roots = vec![Bls381::rand(rng)];
+	let roots = Vec::new();
 	let recipient = Bls381::rand(rng);
 	let relayer = Bls381::rand(rng);
 	let fee = Bls381::rand(rng);
@@ -515,8 +515,8 @@ mod test {
 
 		add_members_mock(vec![leaf]);
 
-		let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		// let (pk, vk) = setup_groth16(&mut rng);
+		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
+		let (pk, vk) = setup_groth16(&mut rng);
 		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
 		let res = verify_groth16(&vk, &public_inputs, &proof);
 
@@ -524,6 +524,72 @@ mod test {
 			root,
 			Vec::new(),
 			nullifier,
+			Vec::new(),
+			Vec::new(),
+			Vec::new(),
+			recipient,
+			relayer,
+		);
+
+		assert!(res);
+	}
+
+	#[test]
+	fn should_create_longer_setup() {
+		let mut rng = test_rng();
+		let chain_id = Bls381::from(0u8);
+		let recipient = Bls381::from(0u8);
+		let relayer = Bls381::from(0u8);
+		let fee = Bls381::from(0u8);
+		let leaves = Vec::new();
+		let roots = Vec::new();
+
+		let params3 = setup_params_3::<Bls381>();
+		let params5 = setup_params_5::<Bls381>();
+
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) =
+			setup_leaf(chain_id, &params5, &mut rng);
+		let mut leaves_new = leaves.to_vec();
+		leaves_new.push(leaf);
+		let (tree, path) = setup_tree_and_create_path(&leaves_new, 0, &params3);
+		let root = tree.root().inner();
+		let mut roots_new = roots.to_vec();
+		roots_new.push(root);
+		let set_private_inputs = setup_set(&root, &roots_new);
+
+		let mc = Circuit::new(
+			arbitrary_input.clone(),
+			leaf_private,
+			leaf_public,
+			set_private_inputs,
+			roots_new.clone(),
+			params5,
+			path,
+			root.clone(),
+			nullifier_hash,
+		);
+		let public_inputs = get_public_inputs(
+			chain_id,
+			nullifier_hash,
+			roots_new,
+			root,
+			recipient,
+			relayer,
+			fee,
+		);
+
+		add_members_mock(vec![leaf]);
+
+		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
+		let (pk, vk) = setup_groth16(&mut rng);
+		let proof = prove_groth16(&pk, mc.clone(), &mut rng);
+		let res = verify_groth16(&vk, &public_inputs, &proof);
+
+		verify_zk_mock(
+			root,
+			Vec::new(),
+			nullifier_hash,
 			Vec::new(),
 			Vec::new(),
 			Vec::new(),
