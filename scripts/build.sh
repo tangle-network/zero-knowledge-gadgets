@@ -1,1 +1,1 @@
-cargo build --release --all-features
+cargo build --release --no-default-features --features r1cs

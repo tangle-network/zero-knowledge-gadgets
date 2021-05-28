@@ -1,6 +1,6 @@
 use ark_ff::bytes::ToBytes;
 use ark_std::{hash::Hash, rand::Rng};
-use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
+use webb_crypto_primitives::{crh::CRH, Error};
 
 pub mod basic;
 pub mod bridge;
@@ -10,7 +10,7 @@ pub mod constraints;
 #[cfg(feature = "r1cs")]
 pub use constraints::*;
 
-pub trait LeafCreation<H: FixedLengthCRH>: Sized {
+pub trait LeafCreation<H: CRH>: Sized {
 	type Leaf: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Nullifier: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Private: Clone + Default;

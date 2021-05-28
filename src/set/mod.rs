@@ -1,3 +1,4 @@
+use crate::Vec;
 use ark_ff::{bytes::ToBytes, fields::PrimeField};
 use webb_crypto_primitives::Error;
 

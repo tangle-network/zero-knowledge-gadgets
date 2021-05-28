@@ -2,6 +2,7 @@ pub mod result_x5_254_3;
 pub mod result_x5_254_5;
 pub mod x5_254_3;
 pub mod x5_254_5;
+use crate::Vec;
 use ark_ff::fields::PrimeField;
 
 pub fn decode_hex(s: &str) -> Vec<u8> {

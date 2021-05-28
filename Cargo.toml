@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-webb-crypto-primitives = { git = "https://github.com/webb-tools/crypto-primitives", package = "ark-crypto-primitives", rev = "3f0377d", features = ["r1cs"] }
+webb-crypto-primitives = { git = "https://github.com/webb-tools/crypto-primitives", package = "ark-crypto-primitives", rev = "e8cd8bf", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.2.0", default-features = false }
 ark-std = { version = "^0.2.0", default-features = false }
 ark-r1cs-std = { version = "^0.2.0", default-features = false }
@@ -21,14 +21,16 @@ blake2 = { version = "0.9", default-features = false }
 ark-poly-commit = { version = "^0.2.0", default-features = false }
 ark-poly = { version = "^0.2.0", default-features = false }
 ark-ec = { version = "^0.2.0", default-features = false }
+ark-serialize = {version = "^0.2.0", default-features = false }
 digest = { version = "0.9" }
 
 [features]
-default = []
+default = ["std"]
 r1cs = []
+std = ["ark-std/std"]
 
 [[bench]]
 name = "mixer_bench"
 path = "benches/bench.rs"
 harness = false
-required-features = ["r1cs"]
+required-features = ["r1cs", "std"]

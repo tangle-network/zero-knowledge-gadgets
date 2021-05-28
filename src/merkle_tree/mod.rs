@@ -6,7 +6,7 @@ use ark_std::{
 	rc::Rc,
 	vec::Vec,
 };
-use webb_crypto_primitives::{Error, FixedLengthCRH};
+use webb_crypto_primitives::{Error, CRH};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -16,19 +16,35 @@ pub trait Config: Clone {
 	/// Tree height
 	const HEIGHT: u8;
 	/// The CRH
-	type H: FixedLengthCRH;
-	type LeafH: FixedLengthCRH;
+	type H: CRH;
+	type LeafH: CRH;
 }
 
-type InnerNode<P> = <<P as Config>::H as FixedLengthCRH>::Output;
-type LeafNode<P> = <<P as Config>::LeafH as FixedLengthCRH>::Output;
-type InnerParameters<P> = <<P as Config>::H as FixedLengthCRH>::Parameters;
-type LeafParameters<P> = <<P as Config>::LeafH as FixedLengthCRH>::Parameters;
+type InnerNode<P> = <<P as Config>::H as CRH>::Output;
+type LeafNode<P> = <<P as Config>::LeafH as CRH>::Output;
+type InnerParameters<P> = <<P as Config>::H as CRH>::Parameters;
+type LeafParameters<P> = <<P as Config>::LeafH as CRH>::Parameters;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Node<P: Config> {
 	Leaf(LeafNode<P>),
 	Inner(InnerNode<P>),
+}
+
+impl<P: Config> Node<P> {
+	pub fn inner(self) -> InnerNode<P> {
+		match self {
+			Node::Inner(inner) => inner,
+			_ => panic!("Not inner node!"),
+		}
+	}
+
+	pub fn leaf(self) -> LeafNode<P> {
+		match self {
+			Node::Leaf(leaf) => leaf,
+			_ => panic!("Not leaf node!"),
+		}
+	}
 }
 
 impl<P: Config> ToBytes for Node<P> {
@@ -40,6 +56,7 @@ impl<P: Config> ToBytes for Node<P> {
 	}
 }
 
+#[derive(Clone)]
 pub struct Path<P: Config> {
 	pub(crate) path: Vec<(Node<P>, Node<P>)>,
 	leaf_params: Rc<LeafParameters<P>>,
@@ -88,8 +105,8 @@ pub struct SparseMerkleTree<P: Config> {
 	/// data of the tree
 	pub tree: BTreeMap<u64, Node<P>>,
 	empty_hashes: Vec<Node<P>>,
-	leaf_params: Rc<<P::LeafH as FixedLengthCRH>::Parameters>,
-	inner_params: Rc<<P::H as FixedLengthCRH>::Parameters>,
+	leaf_params: Rc<<P::LeafH as CRH>::Parameters>,
+	inner_params: Rc<<P::H as CRH>::Parameters>,
 }
 
 impl<P: Config> SparseMerkleTree<P> {
@@ -169,6 +186,21 @@ impl<P: Config> SparseMerkleTree<P> {
 			leaf_params,
 		};
 		smt.insert_batch(leaves)?;
+
+		Ok(smt)
+	}
+
+	pub fn new_sequential<L: Default + ToBytes + Copy>(
+		inner_params: Rc<InnerParameters<P>>,
+		leaf_params: Rc<LeafParameters<P>>,
+		leaves: &[L],
+	) -> Result<Self, Error> {
+		let pairs: BTreeMap<u32, L> = leaves
+			.iter()
+			.enumerate()
+			.map(|(i, l)| (i as u32, *l))
+			.collect();
+		let smt = Self::new(inner_params, leaf_params, &pairs)?;
 
 		Ok(smt)
 	}
@@ -286,37 +318,34 @@ fn convert_index_to_last_level<P: Config>(index: u64) -> u64 {
 
 /// Returns the Node hash, given a left and right hash value.
 pub(crate) fn hash_inner_node<P: Config>(
-	parameters: &<P::H as FixedLengthCRH>::Parameters,
+	parameters: &<P::H as CRH>::Parameters,
 	left: &Node<P>,
 	right: &Node<P>,
 ) -> Result<Node<P>, Error> {
 	let bytes = to_bytes![left, right]?;
-	let inner = <P::H as FixedLengthCRH>::evaluate(parameters, &bytes)?;
+	let inner = <P::H as CRH>::evaluate(parameters, &bytes)?;
 	Ok(Node::Inner(inner))
 }
 
 /// Returns the hash of a leaf.
 fn hash_leaf<P: Config, L: ToBytes>(
-	parameters: &<P::LeafH as FixedLengthCRH>::Parameters,
+	parameters: &<P::LeafH as CRH>::Parameters,
 	leaf: &L,
 ) -> Result<Node<P>, Error> {
-	let leaf = <P::LeafH as FixedLengthCRH>::evaluate(parameters, &to_bytes![leaf]?)?;
+	let leaf = <P::LeafH as CRH>::evaluate(parameters, &to_bytes![leaf]?)?;
 	Ok(Node::Leaf(leaf))
 }
 
-fn hash_empty<P: Config>(
-	parameters: &<P::LeafH as FixedLengthCRH>::Parameters,
-) -> Result<Node<P>, Error> {
-	let res = <P::LeafH as FixedLengthCRH>::evaluate(parameters, &vec![
+fn hash_empty<P: Config>(parameters: &<P::LeafH as CRH>::Parameters) -> Result<Node<P>, Error> {
+	let res = <P::LeafH as CRH>::evaluate(parameters, &vec![
 		0u8;
-		<P::LeafH as FixedLengthCRH>::INPUT_SIZE_BITS
-			/ 8
+		<P::LeafH as CRH>::INPUT_SIZE_BITS / 8
 	])?;
 
 	Ok(Node::Leaf(res))
 }
 
-fn gen_empty_hashes<P: Config>(
+pub fn gen_empty_hashes<P: Config>(
 	leaf_params: &LeafParameters<P>,
 	inner_params: &InnerParameters<P>,
 ) -> Result<Vec<Node<P>>, Error> {
@@ -325,7 +354,7 @@ fn gen_empty_hashes<P: Config>(
 	let mut empty_hash = hash_empty::<P>(leaf_params)?;
 	empty_hashes.push(empty_hash.clone());
 
-	for _ in 1..P::HEIGHT {
+	for _ in 1..=P::HEIGHT {
 		empty_hash = hash_inner_node::<P>(&inner_params, &empty_hash, &empty_hash)?;
 		empty_hashes.push(empty_hash.clone());
 	}
@@ -342,7 +371,7 @@ mod test {
 	use ark_std::{borrow::Borrow, collections::BTreeMap, rc::Rc, test_rng};
 	use webb_crypto_primitives::crh::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH as PoseidonCRH},
-		FixedLengthCRH,
+		CRH,
 	};
 
 	#[derive(Default, Clone)]
@@ -366,19 +395,17 @@ mod test {
 		const HEIGHT: u8 = 3;
 	}
 
-	type SMT = SparseMerkleTree<SMTConfig>;
-
-	fn create_merkle_tree<L: Default + ToBytes + Copy>(
-		inner_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
-		leaf_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
+	fn create_merkle_tree<L: Default + ToBytes + Copy, C: Config>(
+		inner_params: Rc<<C::H as CRH>::Parameters>,
+		leaf_params: Rc<<C::LeafH as CRH>::Parameters>,
 		leaves: &[L],
-	) -> SMT {
+	) -> SparseMerkleTree<C> {
 		let pairs: BTreeMap<u32, L> = leaves
 			.iter()
 			.enumerate()
 			.map(|(i, l)| (i as u32, *l))
 			.collect();
-		let smt = SMT::new(inner_params, leaf_params, &pairs).unwrap();
+		let smt = SparseMerkleTree::<C>::new(inner_params, leaf_params, &pairs).unwrap();
 
 		smt
 	}
@@ -425,7 +452,7 @@ mod test {
 		let leaf_params = inner_params.clone();
 
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
-		let smt = create_merkle_tree(inner_params, leaf_params, &leaves);
+		let smt = create_merkle_tree::<_, SMTConfig>(inner_params, leaf_params, &leaves);
 
 		let proof = smt.generate_membership_proof(0);
 

@@ -1,7 +1,7 @@
 use crate::leaf::LeafCreation;
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_std::{marker::PhantomData, rand::Rng};
-use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
+use webb_crypto_primitives::{crh::CRH, Error};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -26,12 +26,12 @@ impl<F: PrimeField> Private<F> {
 	}
 }
 
-struct BasicLeaf<F: PrimeField, H: FixedLengthCRH> {
+struct BasicLeaf<F: PrimeField, H: CRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BasicLeaf<F, H> {
+impl<F: PrimeField, H: CRH> LeafCreation<H> for BasicLeaf<F, H> {
 	type Leaf = H::Output;
 	type Nullifier = H::Output;
 	type Private = Private<F>;
@@ -63,8 +63,9 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
 	use ark_std::test_rng;
-	use webb_crypto_primitives::crh::poseidon::{
-		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+	use webb_crypto_primitives::crh::{
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		CRH as CRHTrait,
 	};
 
 	#[derive(Default, Clone)]

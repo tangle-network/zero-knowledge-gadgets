@@ -1,11 +1,14 @@
 use super::{BridgeLeaf, Output, Private, Public};
-use crate::leaf::{LeafCreation, LeafCreationGadget};
+use crate::{
+	leaf::{LeafCreation, LeafCreationGadget},
+	Vec,
+};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*, R1CSVar};
 use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
-use webb_crypto_primitives::{crh::FixedLengthCRHGadget, FixedLengthCRH};
+use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
@@ -91,20 +94,15 @@ impl<F: PrimeField> ToBytesGadget<F> for OutputVar<F> {
 	}
 }
 
-pub struct BridgeLeafGadget<
-	F: PrimeField,
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
-	L: LeafCreation<H>,
-> {
+pub struct BridgeLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>>
-	LeafCreationGadget<F, H, HG, BridgeLeaf<F, H>> for BridgeLeafGadget<F, H, HG, BridgeLeaf<F, H>>
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> LeafCreationGadget<F, H, HG, BridgeLeaf<F, H>>
+	for BridgeLeafGadget<F, H, HG, BridgeLeaf<F, H>>
 {
 	type LeafVar = HG::OutputVar;
 	type NullifierVar = HG::OutputVar;

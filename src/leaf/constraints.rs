@@ -1,6 +1,6 @@
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::SynthesisError;
-use webb_crypto_primitives::crh::{constraints::FixedLengthCRHGadget, FixedLengthCRH};
+use webb_crypto_primitives::crh::{constraints::CRHGadget, CRH};
 
 use ark_ff::Field;
 use core::fmt::Debug;
@@ -9,8 +9,8 @@ use crate::leaf::LeafCreation;
 
 pub trait LeafCreationGadget<
 	F: Field,
-	H: FixedLengthCRH,
-	HG: FixedLengthCRHGadget<H, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 	L: LeafCreation<H>,
 >: Sized
 {

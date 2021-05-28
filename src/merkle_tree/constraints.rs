@@ -1,19 +1,20 @@
 use super::{Config, Node, Path};
+use crate::Vec;
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, prelude::*, select::CondSelectGadget, ToBytesGadget,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{borrow::Borrow, rc::Rc};
-use webb_crypto_primitives::FixedLengthCRHGadget;
+use webb_crypto_primitives::CRHGadget;
 
 #[derive(Debug)]
 pub enum NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	Leaf(LHG::OutputVar),
 	Inner(HG::OutputVar),
@@ -23,8 +24,8 @@ impl<F, P, HG, LHG> Clone for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	fn clone(&self) -> Self {
 		match self {
@@ -38,8 +39,8 @@ impl<F, P, HG, LHG> CondSelectGadget<F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	fn conditionally_select(
 		cond: &Boolean<F>,
@@ -62,8 +63,8 @@ impl<F, P, HG, LHG> EqGadget<F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	fn is_eq(&self, other: &Self) -> Result<Boolean<F>, SynthesisError> {
 		match (self, other) {
@@ -78,8 +79,8 @@ impl<F, P, HG, LHG> ToBytesGadget<F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	fn to_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
 		match self {
@@ -93,8 +94,8 @@ impl<F, P, HG, LHG> AllocVar<Node<P>, F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	fn new_variable<T: Borrow<Node<P>>>(
 		cs: impl Into<Namespace<F>>,
@@ -118,8 +119,8 @@ pub struct PathVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	path: Vec<(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>)>,
 	inner_params: Rc<HG::ParametersVar>,
@@ -130,8 +131,8 @@ impl<F, P, HG, LHG> PathVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	/// conditionally check a lookup proof (does not enforce index consistency)
 	pub fn check_membership<L: ToBytesGadget<F>>(
@@ -184,8 +185,8 @@ where
 	F: PrimeField,
 	P: Config,
 	L: ToBytesGadget<F>,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	Ok(NodeVar::Leaf(LHG::evaluate(
 		&leaf_params,
@@ -201,8 +202,8 @@ pub(crate) fn hash_inner_node_gadget<F, P, HG, LHG>(
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	let mut bytes = Vec::new();
 	bytes.extend(left_child.to_bytes()?);
@@ -215,8 +216,8 @@ impl<F, P, HG, LHG> AllocVar<Path<P>, F> for PathVar<F, P, HG, LHG>
 where
 	F: PrimeField,
 	P: Config,
-	HG: FixedLengthCRHGadget<P::H, F>,
-	LHG: FixedLengthCRHGadget<P::LeafH, F>,
+	HG: CRHGadget<P::H, F>,
+	LHG: CRHGadget<P::LeafH, F>,
 {
 	fn new_variable<T: Borrow<Path<P>>>(
 		cs: impl Into<Namespace<F>>,
@@ -254,20 +255,17 @@ where
 mod test {
 	use super::{NodeVar, PathVar};
 	use crate::{
+		ark_std::UniformRand,
 		merkle_tree::{Config, SparseMerkleTree},
 		test_data::{get_mds_3, get_rounds_3},
 	};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{ToBytes, UniformRand};
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
-	use ark_std::{collections::BTreeMap, rc::Rc, test_rng};
-	use webb_crypto_primitives::crh::{
-		poseidon::{
-			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
-			Rounds, CRH as PoseidonCRH,
-		},
-		FixedLengthCRH,
+	use ark_std::{rc::Rc, test_rng};
+	use webb_crypto_primitives::crh::poseidon::{
+		constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
+		Rounds, CRH as PoseidonCRH,
 	};
 
 	type FieldVar = FpVar<Fq>;
@@ -297,21 +295,6 @@ mod test {
 	type SMTNode = NodeVar<Fq, SMTConfig, SMTCRHGadget, SMTCRHGadget>;
 	type SMT = SparseMerkleTree<SMTConfig>;
 
-	fn create_merkle_tree<L: Default + ToBytes + Copy>(
-		inner_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
-		leaf_params: Rc<<SMTCRH as FixedLengthCRH>::Parameters>,
-		leaves: &[L],
-	) -> SMT {
-		let pairs: BTreeMap<u32, L> = leaves
-			.iter()
-			.enumerate()
-			.map(|(i, l)| (i as u32, *l))
-			.collect();
-		let smt = SMT::new(inner_params, leaf_params, &pairs).unwrap();
-
-		smt
-	}
-
 	#[test]
 	fn should_verify_path() {
 		let rng = &mut test_rng();
@@ -324,7 +307,7 @@ mod test {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
-		let smt = create_merkle_tree(inner_params, leaf_params, &leaves);
+		let smt = SMT::new_sequential(inner_params, leaf_params, &leaves).unwrap();
 		let root = smt.root();
 		let path = smt.generate_membership_proof(0);
 

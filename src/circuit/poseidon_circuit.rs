@@ -1,11 +1,12 @@
+use crate::Vec;
 use ark_ff::{to_bytes, PrimeField};
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
-use webb_crypto_primitives::crh::{FixedLengthCRH, FixedLengthCRHGadget};
+use webb_crypto_primitives::crh::{CRHGadget, CRH};
 
 #[derive(Copy)]
-struct PoseidonCircuit<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> {
+struct PoseidonCircuit<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 	pub a: F,
 	pub b: F,
 	pub c: H::Output,
@@ -14,7 +15,7 @@ struct PoseidonCircuit<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadge
 	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> PoseidonCircuit<F, H, HG> {
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> PoseidonCircuit<F, H, HG> {
 	pub fn new(a: F, b: F, c: H::Output, params: H::Parameters) -> Self {
 		Self {
 			a,
@@ -27,9 +28,7 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> PoseidonC
 	}
 }
 
-impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> Clone
-	for PoseidonCircuit<F, H, HG>
-{
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> Clone for PoseidonCircuit<F, H, HG> {
 	fn clone(&self) -> Self {
 		PoseidonCircuit {
 			a: self.a.clone(),
@@ -42,7 +41,7 @@ impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> Clone
 	}
 }
 
-impl<F: PrimeField, H: FixedLengthCRH, HG: FixedLengthCRHGadget<H, F>> ConstraintSynthesizer<F>
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> ConstraintSynthesizer<F>
 	for PoseidonCircuit<F, H, HG>
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
@@ -72,8 +71,11 @@ mod test {
 	use ark_std::UniformRand;
 	use blake2::Blake2s;
 	use webb_crypto_primitives::{
-		crh::poseidon::{
-			constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+		crh::{
+			poseidon::{
+				constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+			},
+			CRH as CRHTrait,
 		},
 		SNARK,
 	};

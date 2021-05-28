@@ -5,7 +5,7 @@ use ark_std::{
 	marker::PhantomData,
 	rand::Rng,
 };
-use webb_crypto_primitives::{crh::FixedLengthCRH, Error};
+use webb_crypto_primitives::{crh::CRH, Error};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -53,12 +53,12 @@ impl<F: PrimeField> ToBytes for Output<F> {
 }
 
 #[derive(Clone)]
-pub struct BridgeLeaf<F: PrimeField, H: FixedLengthCRH> {
+pub struct BridgeLeaf<F: PrimeField, H: CRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: FixedLengthCRH> LeafCreation<H> for BridgeLeaf<F, H> {
+impl<F: PrimeField, H: CRH> LeafCreation<H> for BridgeLeaf<F, H> {
 	type Leaf = H::Output;
 	type Nullifier = H::Output;
 	type Private = Private<F>;
@@ -90,8 +90,9 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::One;
 	use ark_std::test_rng;
-	use webb_crypto_primitives::crh::poseidon::{
-		sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
+	use webb_crypto_primitives::crh::{
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		CRH as CRHTrait,
 	};
 
 	#[derive(Default, Clone)]
