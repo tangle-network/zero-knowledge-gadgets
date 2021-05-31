@@ -30,7 +30,7 @@ r1cs = []
 std = ["ark-std/std"]
 
 [[bench]]
-name = "mixer_bench"
+name = "bridge_bench"
 path = "benches/bench.rs"
 harness = false
 required-features = ["r1cs", "std"]

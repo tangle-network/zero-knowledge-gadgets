@@ -1,6 +1,6 @@
 use crate::{
-	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
-	circuit::mixer_circuit::MixerCircuit,
+	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
+	circuit::bridge::BridgeCircuit,
 	leaf::{
 		bridge::{
 			constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
@@ -31,9 +31,9 @@ use webb_crypto_primitives::{
 	SNARK,
 };
 
-pub type MixerConstraintData = MixerData<Bls381>;
-pub type MixerConstraintDataInput = MixerDataInput<Bls381>;
-pub type MixerConstraintDataGadget = MixerDataGadget<Bls381>;
+pub type BridgeConstraintData = BridgeData<Bls381>;
+pub type BridgeConstraintDataInput = BridgeDataInput<Bls381>;
+pub type BridgeConstraintDataGadget = BridgeDataGadget<Bls381>;
 #[derive(Default, Clone)]
 pub struct PoseidonRounds5;
 
@@ -67,26 +67,26 @@ pub type Leaf = BridgeLeaf<Bls381, PoseidonCRH5>;
 pub type LeafGadget = BridgeLeafGadget<Bls381, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
 
 #[derive(Clone)]
-pub struct MixerTreeConfig;
-impl MerkleConfig for MixerTreeConfig {
+pub struct BridgeTreeConfig;
+impl MerkleConfig for BridgeTreeConfig {
 	type H = PoseidonCRH3;
 	type LeafH = LeafCRH;
 
 	const HEIGHT: u8 = 30;
 }
 
-pub type MixerTree = SparseMerkleTree<MixerTreeConfig>;
+pub type BridgeTree = SparseMerkleTree<BridgeTreeConfig>;
 
 pub type TestSetMembership = SetMembership<Bls381>;
 pub type TestSetMembershipGadget = SetMembershipGadget<Bls381>;
 
-pub type Circuit = MixerCircuit<
+pub type Circuit = BridgeCircuit<
 	Bls381,
-	MixerConstraintData,
-	MixerConstraintDataGadget,
+	BridgeConstraintData,
+	BridgeConstraintDataGadget,
 	PoseidonCRH5,
 	PoseidonCRH5Gadget,
-	MixerTreeConfig,
+	BridgeTreeConfig,
 	LeafCRHGadget,
 	PoseidonCRH3Gadget,
 	Leaf,
@@ -132,9 +132,9 @@ pub fn setup_leaf<R: Rng>(
 	(leaf_private, leaf_public, leaf, nullifier_hash)
 }
 
-pub fn setup_tree(leaves: &[Bls381], params: &PoseidonParameters<Bls381>) -> MixerTree {
+pub fn setup_tree(leaves: &[Bls381], params: &PoseidonParameters<Bls381>) -> BridgeTree {
 	let inner_params = Rc::new(params.clone());
-	let mt = MixerTree::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
+	let mt = BridgeTree::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
 	mt
 }
 
@@ -142,7 +142,7 @@ pub fn setup_tree_and_create_path(
 	leaves: &[Bls381],
 	index: u64,
 	params: &PoseidonParameters<Bls381>,
-) -> (MixerTree, Path<MixerTreeConfig>) {
+) -> (BridgeTree, Path<BridgeTreeConfig>) {
 	// Making the merkle tree
 	let mt = setup_tree(leaves, params);
 	// Getting the proof path
@@ -161,8 +161,8 @@ pub fn setup_arbitrary_data(
 	recipient: Bls381,
 	relayer: Bls381,
 	fee: Bls381,
-) -> MixerConstraintDataInput {
-	let arbitrary_input = MixerConstraintDataInput::new(recipient, relayer, fee);
+) -> BridgeConstraintDataInput {
+	let arbitrary_input = BridgeConstraintDataInput::new(recipient, relayer, fee);
 	arbitrary_input
 }
 
@@ -284,8 +284,8 @@ pub fn setup_groth16<R: RngCore + CryptoRng>(
 #[macro_export]
 macro_rules! setup_types {
 	($test_field:ty) => {
-		type MixerConstraintData = MixerData<$test_field>;
-		type MixerConstraintDataGadget = MixerDataGadget<$test_field>;
+		type BridgeConstraintData = BridgeData<$test_field>;
+		type BridgeConstraintDataGadget = BridgeDataGadget<$test_field>;
 		#[derive(Default, Clone)]
 		struct PoseidonRounds5;
 
@@ -316,26 +316,26 @@ macro_rules! setup_types {
 		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
 
 		#[derive(Clone)]
-		struct MixerTreeConfig;
-		impl MerkleConfig for MixerTreeConfig {
+		struct BridgeTreeConfig;
+		impl MerkleConfig for BridgeTreeConfig {
 			type H = PoseidonCRH3;
 			type LeafH = PoseidonCRH3;
 
 			const HEIGHT: u8 = 10;
 		}
 
-		type MixerTree = SparseMerkleTree<MixerTreeConfig>;
+		type BridgeTree = SparseMerkleTree<BridgeTreeConfig>;
 
 		type TestSetMembership = SetMembership<$test_field>;
 		type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
 
-		type Circuit = MixerCircuit<
+		type Circuit = BridgeCircuit<
 			$test_field,
-			MixerConstraintData,
-			MixerConstraintDataGadget,
+			BridgeConstraintData,
+			BridgeConstraintDataGadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
-			MixerTreeConfig,
+			BridgeTreeConfig,
 			PoseidonCRH3Gadget,
 			PoseidonCRH3Gadget,
 			Leaf,
@@ -399,7 +399,7 @@ macro_rules! setup_tree {
 		let inner_params = Rc::new($params3.clone());
 		let leaf_params = inner_params.clone();
 		// Making the merkle tree
-		let mt = MixerTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let mt = BridgeTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
 		// Getting the proof path
 		let path = mt.generate_membership_proof(2);
 		let root = mt.root();
@@ -430,7 +430,7 @@ macro_rules! setup_arbitrary_data {
 		let recipient = <$test_field>::rand(rng);
 		let relayer = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
+		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee);
 		arbitrary_input
 	}};
 }
@@ -485,7 +485,6 @@ macro_rules! verify_groth16 {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_ff::to_bytes;
 	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
 

@@ -1,4 +1,4 @@
-pub mod mixer_data;
+pub mod bridge_data;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;

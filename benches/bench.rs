@@ -7,8 +7,8 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
-	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
-	circuit::mixer_circuit::MixerCircuit,
+	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
+	circuit::bridge::BridgeCircuit,
 	leaf::{
 		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
 		LeafCreation,
@@ -28,8 +28,8 @@ use webb_crypto_primitives::{
 
 macro_rules! setup_circuit {
 	($test_field:ty) => {{
-		type MixerConstraintData = MixerData<$test_field>;
-		type MixerConstraintDataGadget = MixerDataGadget<$test_field>;
+		type BridgeConstraintData = BridgeData<$test_field>;
+		type BridgeConstraintDataGadget = BridgeDataGadget<$test_field>;
 		#[derive(Default, Clone)]
 		struct PoseidonRounds5;
 
@@ -60,26 +60,26 @@ macro_rules! setup_circuit {
 		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
 
 		#[derive(Clone)]
-		struct MixerTreeConfig;
-		impl MerkleConfig for MixerTreeConfig {
+		struct BridgeTreeConfig;
+		impl MerkleConfig for BridgeTreeConfig {
 			type H = PoseidonCRH3;
 			type LeafH = PoseidonCRH3;
 
 			const HEIGHT: u8 = 30;
 		}
 
-		type MixerTree = SparseMerkleTree<MixerTreeConfig>;
+		type BridgeTree = SparseMerkleTree<BridgeTreeConfig>;
 
 		type TestSetMembership = SetMembership<$test_field>;
 		type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
 
-		type Circuit = MixerCircuit<
+		type Circuit = BridgeCircuit<
 			$test_field,
-			MixerConstraintData,
-			MixerConstraintDataGadget,
+			BridgeConstraintData,
+			BridgeConstraintDataGadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
-			MixerTreeConfig,
+			BridgeTreeConfig,
 			PoseidonCRH3Gadget,
 			PoseidonCRH3Gadget,
 			Leaf,
@@ -108,7 +108,7 @@ macro_rules! setup_circuit {
 		let recipient = <$test_field>::rand(rng);
 		let relayer = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = MixerDataInput::new(recipient, relayer, fee);
+		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee);
 
 		// Making params for poseidon in merkle tree
 		let rounds3 = get_rounds_3::<$test_field>();
@@ -123,7 +123,7 @@ macro_rules! setup_circuit {
 		let inner_params = Rc::new(params3.clone());
 		let leaf_params = inner_params.clone();
 		// Making the merkle tree
-		let mt = MixerTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let mt = BridgeTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
 		// Getting the proof path
 		let path = mt.generate_membership_proof(2);
 		let root = mt.root();

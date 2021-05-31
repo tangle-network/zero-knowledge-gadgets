@@ -14,7 +14,7 @@ use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisE
 use ark_std::marker::PhantomData;
 use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
-pub struct MixerCircuit<
+pub struct BridgeCircuit<
 	F: PrimeField,
 	// Arbitrary data constraints
 	A: Arbitrary,
@@ -55,7 +55,7 @@ pub struct MixerCircuit<
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
-	MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -106,7 +106,7 @@ where
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG> Clone
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -146,7 +146,7 @@ where
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG> ConstraintSynthesizer<F>
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -211,7 +211,9 @@ where
 mod test {
 	use super::*;
 	use crate::{
-		arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
+		arbitrary::bridge_data::{
+			constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput,
+		},
 		leaf::bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
 		merkle_tree::SparseMerkleTree,
 		set::membership::{constraints::SetMembershipGadget, SetMembership},
@@ -232,7 +234,7 @@ mod test {
 	};
 
 	#[test]
-	fn setup_and_prove_mixer_groth16() {
+	fn setup_and_prove_bridge_groth16() {
 		let (public_inputs, circuit) = setup_circuit!(BlsFr);
 
 		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
