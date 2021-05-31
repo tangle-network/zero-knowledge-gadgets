@@ -22,10 +22,10 @@ impl<F: PrimeField> Input<F> {
 	}
 }
 
-pub struct MixerData<F: PrimeField> {
+pub struct BridgeData<F: PrimeField> {
 	field: PhantomData<F>,
 }
 
-impl<F: PrimeField> Arbitrary for MixerData<F> {
+impl<F: PrimeField> Arbitrary for BridgeData<F> {
 	type Input = Input<F>;
 }

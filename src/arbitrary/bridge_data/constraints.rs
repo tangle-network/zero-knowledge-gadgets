@@ -1,5 +1,5 @@
-use super::MixerData;
-use crate::arbitrary::{constraints::ArbitraryGadget, mixer_data::Input};
+use super::{BridgeData, Input};
+use crate::arbitrary::constraints::ArbitraryGadget;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
 	fields::fp::FpVar,
@@ -26,11 +26,11 @@ impl<F: PrimeField> InputVar<F> {
 	}
 }
 
-pub struct MixerDataGadget<F: PrimeField> {
+pub struct BridgeDataGadget<F: PrimeField> {
 	field: PhantomData<F>,
 }
 
-impl<F: PrimeField> ArbitraryGadget<F, MixerData<F>> for MixerDataGadget<F> {
+impl<F: PrimeField> ArbitraryGadget<F, BridgeData<F>> for BridgeDataGadget<F> {
 	type InputVar = InputVar<F>;
 
 	fn constrain(inputs: &Self::InputVar) -> Result<(), SynthesisError> {
@@ -71,7 +71,7 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	type TestMixerDataGadget = MixerDataGadget<Fq>;
+	type TestBridgeDataGadget = BridgeDataGadget<Fq>;
 	#[test]
 	fn should_enforce_constraints() {
 		let rng = &mut test_rng();
@@ -84,7 +84,7 @@ mod test {
 		let input = Input::new(recipient, relayer, fee);
 		let input_var = InputVar::new_input(cs.clone(), || Ok(&input)).unwrap();
 
-		TestMixerDataGadget::constrain(&input_var).unwrap();
+		TestBridgeDataGadget::constrain(&input_var).unwrap();
 
 		assert!(cs.is_satisfied().unwrap());
 	}
