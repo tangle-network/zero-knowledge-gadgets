@@ -1,4 +1,4 @@
-use super::{Input, MixerData};
+use super::{BridgeData, Input};
 use crate::arbitrary::constraints::ArbitraryGadget;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
@@ -13,24 +13,30 @@ use core::borrow::Borrow;
 pub struct InputVar<F: PrimeField> {
 	recipient: FpVar<F>,
 	relayer: FpVar<F>,
+	fee: FpVar<F>,
 }
 
 impl<F: PrimeField> InputVar<F> {
-	pub fn new(recipient: FpVar<F>, relayer: FpVar<F>) -> Self {
-		Self { recipient, relayer }
+	pub fn new(recipient: FpVar<F>, relayer: FpVar<F>, fee: FpVar<F>) -> Self {
+		Self {
+			recipient,
+			relayer,
+			fee,
+		}
 	}
 }
 
-pub struct MixerDataGadget<F: PrimeField> {
+pub struct BridgeDataGadget<F: PrimeField> {
 	field: PhantomData<F>,
 }
 
-impl<F: PrimeField> ArbitraryGadget<F, MixerData<F>> for MixerDataGadget<F> {
+impl<F: PrimeField> ArbitraryGadget<F, BridgeData<F>> for BridgeDataGadget<F> {
 	type InputVar = InputVar<F>;
 
 	fn constrain(inputs: &Self::InputVar) -> Result<(), SynthesisError> {
 		let _ = &inputs.recipient * &inputs.recipient;
 		let _ = &inputs.relayer * &inputs.relayer;
+		let _ = &inputs.fee * &inputs.fee;
 		Ok(())
 	}
 }
@@ -47,11 +53,13 @@ impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 
 		let recipient = input.recipient;
 		let relayer = input.relayer;
+		let fee = input.fee;
 
 		let recipient_var = FpVar::new_variable(cs.clone(), || Ok(&recipient), mode)?;
 		let relayer_var = FpVar::new_variable(cs.clone(), || Ok(&relayer), mode)?;
+		let fee_var = FpVar::new_variable(cs, || Ok(&fee), mode)?;
 
-		Ok(InputVar::new(recipient_var, relayer_var))
+		Ok(InputVar::new(recipient_var, relayer_var, fee_var))
 	}
 }
 
@@ -63,7 +71,7 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	type TestMixerDataGadget = MixerDataGadget<Fq>;
+	type TestBridgeDataGadget = BridgeDataGadget<Fq>;
 	#[test]
 	fn should_enforce_constraints() {
 		let rng = &mut test_rng();
@@ -71,11 +79,12 @@ mod test {
 
 		let recipient = Fq::rand(rng);
 		let relayer = Fq::rand(rng);
+		let fee = Fq::rand(rng);
 
-		let input = Input::new(recipient, relayer);
+		let input = Input::new(recipient, relayer, fee);
 		let input_var = InputVar::new_input(cs.clone(), || Ok(&input)).unwrap();
 
-		TestMixerDataGadget::constrain(&input_var).unwrap();
+		TestBridgeDataGadget::constrain(&input_var).unwrap();
 
 		assert!(cs.is_satisfied().unwrap());
 	}

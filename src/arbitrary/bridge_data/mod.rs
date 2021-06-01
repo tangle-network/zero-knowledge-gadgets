@@ -9,18 +9,23 @@ pub mod constraints;
 pub struct Input<F: PrimeField> {
 	pub recipient: F,
 	pub relayer: F,
+	pub fee: F,
 }
 
 impl<F: PrimeField> Input<F> {
-	pub fn new(recipient: F, relayer: F) -> Self {
-		Self { recipient, relayer }
+	pub fn new(recipient: F, relayer: F, fee: F) -> Self {
+		Self {
+			recipient,
+			relayer,
+			fee,
+		}
 	}
 }
 
-pub struct MixerData<F: PrimeField> {
+pub struct BridgeData<F: PrimeField> {
 	field: PhantomData<F>,
 }
 
-impl<F: PrimeField> Arbitrary for MixerData<F> {
+impl<F: PrimeField> Arbitrary for BridgeData<F> {
 	type Input = Input<F>;
 }

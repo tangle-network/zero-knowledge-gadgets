@@ -14,7 +14,7 @@ use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisE
 use ark_std::marker::PhantomData;
 use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
-pub struct MixerCircuit<
+pub struct BridgeCircuit<
 	F: PrimeField,
 	// Arbitrary data constraints
 	A: Arbitrary,
@@ -55,7 +55,7 @@ pub struct MixerCircuit<
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
-	MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -106,7 +106,7 @@ where
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG> Clone
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -146,7 +146,7 @@ where
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG> ConstraintSynthesizer<F>
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
+	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -210,32 +210,22 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
-		leaf::bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
-		merkle_tree::SparseMerkleTree,
-		set::membership::{constraints::SetMembershipGadget, SetMembership},
-		setup_arbitrary_data, setup_circuit, setup_leaf, setup_params_3, setup_params_5, setup_set,
-		setup_tree, setup_types,
-		test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
-		verify_groth16,
-	};
+	use crate::setup::{bridge::*, common::*};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-	use ark_ff::{One, UniformRand};
+	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
-	use ark_std::{rc::Rc, test_rng};
-	use webb_crypto_primitives::{
-		crh::poseidon::{
-			constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
-		},
-		SNARK,
-	};
+	use ark_std::test_rng;
+	use webb_crypto_primitives::SNARK;
 
 	#[test]
-	fn setup_and_prove_mixer_groth16() {
-		let (public_inputs, circuit) = setup_circuit!(BlsFr);
+	fn setup_and_prove_bridge_groth16() {
+		let rng = &mut test_rng();
+		let (circuit, .., public_inputs) = setup_random_circuit(rng);
 
-		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		let (pk, vk) = setup_groth16(rng, circuit.clone());
+		let proof = prove_groth16(&pk, circuit, rng);
+
+		let res = verify_groth16(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
 
@@ -243,7 +233,7 @@ mod test {
 	#[test]
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
-		let (public_inputs, circuit) = setup_circuit!(BlsFr);
+		let (circuit, .., public_inputs) = setup_random_circuit(rng);
 
 		type GrothSetup = Groth16<Bls12_381>;
 
@@ -260,16 +250,19 @@ mod test {
 	#[test]
 	fn should_fail_with_invalid_root() {
 		let rng = &mut test_rng();
-		setup_types!(BlsFr);
-		let params5 = setup_params_5!(BlsFr);
-		let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
-			setup_leaf!(BlsFr, params5);
+		let params5 = setup_params_5();
+		let chain_id = BlsFr::rand(rng);
+		let relayer = BlsFr::rand(rng);
+		let recipient = BlsFr::rand(rng);
+		let fee = BlsFr::rand(rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
 
-		let arbitrary_input = setup_arbitrary_data!(BlsFr);
-		let params3 = setup_params_3!(BlsFr);
-		let (_, path) = setup_tree!(BlsFr, leaf, params3);
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let params3 = setup_params_3();
+		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
-		let (set_private_inputs, roots) = setup_set!(BlsFr, root);
+		let roots = vec![root];
+		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit::new(
 			arbitrary_input.clone(),
@@ -291,7 +284,9 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		let (pk, vk) = setup_groth16(rng, circuit.clone());
+		let proof = prove_groth16(&pk, circuit, rng);
+		let res = verify_groth16(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
 
@@ -299,16 +294,19 @@ mod test {
 	#[test]
 	fn should_fail_with_invalid_set() {
 		let rng = &mut test_rng();
-		setup_types!(BlsFr);
-		let params5 = setup_params_5!(BlsFr);
-		let (leaf_private, leaf_public, leaf, nullifier_hash, chain_id) =
-			setup_leaf!(BlsFr, params5);
+		let params5 = setup_params_5();
+		let chain_id = BlsFr::rand(rng);
+		let relayer = BlsFr::rand(rng);
+		let recipient = BlsFr::rand(rng);
+		let fee = BlsFr::rand(rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
 
-		let arbitrary_input = setup_arbitrary_data!(BlsFr);
-		let params3 = setup_params_3!(BlsFr);
-		let (root, path) = setup_tree!(BlsFr, leaf, params3);
-		let (set_private_inputs, _) = setup_set!(BlsFr, root.clone().inner());
-		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng), BlsFr::rand(rng)];
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let params3 = setup_params_3();
+		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let root = BlsFr::rand(rng);
+		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
+		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit::new(
 			arbitrary_input.clone(),
@@ -318,7 +316,7 @@ mod test {
 			roots.clone(),
 			params5,
 			path,
-			root.clone().inner(),
+			root,
 			nullifier_hash,
 		);
 
@@ -326,11 +324,13 @@ mod test {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root.inner());
+		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		let (pk, vk) = setup_groth16(rng, circuit.clone());
+		let proof = prove_groth16(&pk, circuit, rng);
+		let res = verify_groth16(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
 
@@ -338,15 +338,19 @@ mod test {
 	#[test]
 	fn should_fail_with_invalid_leaf() {
 		let rng = &mut test_rng();
-		setup_types!(BlsFr);
-		let params5 = setup_params_5!(BlsFr);
-		let (leaf_private, leaf_public, _, nullifier_hash, chain_id) = setup_leaf!(BlsFr, params5);
-
+		let params5 = setup_params_5();
+		let chain_id = BlsFr::rand(rng);
+		let relayer = BlsFr::rand(rng);
+		let recipient = BlsFr::rand(rng);
+		let fee = BlsFr::rand(rng);
+		let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
 		let leaf = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data!(BlsFr);
-		let params3 = setup_params_3!(BlsFr);
-		let (root, path) = setup_tree!(BlsFr, leaf, params3);
-		let (set_private_inputs, roots) = setup_set!(BlsFr, root.clone().inner());
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let params3 = setup_params_3();
+		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let root = BlsFr::rand(rng);
+		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
+		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit::new(
 			arbitrary_input.clone(),
@@ -356,18 +360,21 @@ mod test {
 			roots.clone(),
 			params5,
 			path,
-			root.clone().inner(),
+			root,
 			nullifier_hash,
 		);
+
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root.inner());
+		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		let (pk, vk) = setup_groth16(rng, circuit.clone());
+		let proof = prove_groth16(&pk, circuit, rng);
+		let res = verify_groth16(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
 
@@ -375,15 +382,19 @@ mod test {
 	#[test]
 	fn should_fail_with_invalid_nullifier() {
 		let rng = &mut test_rng();
-		setup_types!(BlsFr);
-		let params5 = setup_params_5!(BlsFr);
-		let (leaf_private, leaf_public, leaf, _, chain_id) = setup_leaf!(BlsFr, params5);
-
+		let params5 = setup_params_5();
+		let chain_id = BlsFr::rand(rng);
+		let relayer = BlsFr::rand(rng);
+		let recipient = BlsFr::rand(rng);
+		let fee = BlsFr::rand(rng);
+		let (leaf_private, leaf_public, leaf, _) = setup_leaf(chain_id, &params5, rng);
 		let nullifier_hash = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data!(BlsFr);
-		let params3 = setup_params_3!(BlsFr);
-		let (root, path) = setup_tree!(BlsFr, leaf, params3);
-		let (set_private_inputs, roots) = setup_set!(BlsFr, root.clone().inner());
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let params3 = setup_params_3();
+		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let root = BlsFr::rand(rng);
+		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
+		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit::new(
 			arbitrary_input.clone(),
@@ -393,7 +404,7 @@ mod test {
 			roots.clone(),
 			params5,
 			path,
-			root.clone().inner(),
+			root,
 			nullifier_hash,
 		);
 
@@ -401,11 +412,13 @@ mod test {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots);
-		public_inputs.push(root.inner());
+		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let res = verify_groth16!(Bls12_381, circuit, public_inputs);
+		let (pk, vk) = setup_groth16(rng, circuit.clone());
+		let proof = prove_groth16(&pk, circuit, rng);
+		let res = verify_groth16(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
 }

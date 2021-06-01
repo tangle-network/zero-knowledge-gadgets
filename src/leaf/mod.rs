@@ -4,6 +4,7 @@ use webb_crypto_primitives::{crh::CRH, Error};
 
 pub mod basic;
 pub mod bridge;
+pub mod mixer;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
