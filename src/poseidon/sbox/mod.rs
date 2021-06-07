@@ -1,0 +1,54 @@
+use super::PoseidonError;
+use ark_ff::PrimeField;
+
+#[cfg(feature = "r1cs")]
+pub mod constraints;
+
+/// An S-Box that can be used with Poseidon.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum PoseidonSbox {
+	Exponentiation(usize),
+	Inverse,
+}
+
+impl PoseidonSbox {
+	pub fn apply_sbox<F: PrimeField>(&self, elem: F) -> Result<F, PoseidonError> {
+		match self {
+			PoseidonSbox::Exponentiation(val) => {
+				let res = match val {
+					2 => elem * elem,
+					3 => elem * elem * elem,
+					4 => {
+						let sqr = elem * elem;
+						sqr * sqr
+					}
+					5 => {
+						let sqr = elem * elem;
+						sqr * sqr * elem
+					}
+					6 => {
+						let sqr = elem * elem;
+						let quad = sqr * sqr;
+						sqr * quad
+					}
+					7 => {
+						let sqr = elem * elem;
+						let quad = sqr * sqr;
+						sqr * quad * elem
+					}
+					17 => {
+						let sqr = elem * elem;
+						let quad = sqr * sqr;
+						let eighth = quad * quad;
+						let sixteenth = eighth * eighth;
+						sixteenth * elem
+					}
+					// default to cubed
+					n => return Err(PoseidonError::InvalidSboxSize(*n)),
+				};
+				Ok(res)
+			}
+			PoseidonSbox::Inverse => elem.inverse().ok_or(PoseidonError::ApplySboxFailed),
+		}
+	}
+}

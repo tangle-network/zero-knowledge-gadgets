@@ -1,3 +1,4 @@
+use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{to_bytes, ToBytes};
 use ark_std::{
 	borrow::Borrow,
@@ -6,7 +7,6 @@ use ark_std::{
 	rc::Rc,
 	vec::Vec,
 };
-use webb_crypto_primitives::{Error, CRH};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -365,14 +365,14 @@ pub fn gen_empty_hashes<P: Config>(
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};
-	use crate::test_data::{get_mds_3, get_rounds_3};
+	use crate::{
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH as PoseidonCRH},
+		utils::{get_mds_3, get_rounds_3},
+	};
+	use ark_crypto_primitives::crh::CRH;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{ToBytes, UniformRand};
 	use ark_std::{borrow::Borrow, collections::BTreeMap, rc::Rc, test_rng};
-	use webb_crypto_primitives::crh::{
-		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH as PoseidonCRH},
-		CRH,
-	};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;

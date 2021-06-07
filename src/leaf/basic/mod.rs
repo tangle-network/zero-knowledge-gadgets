@@ -1,7 +1,7 @@
 use crate::leaf::LeafCreation;
+use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_std::{marker::PhantomData, rand::Rng};
-use webb_crypto_primitives::{crh::CRH, Error};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -59,14 +59,14 @@ impl<F: PrimeField, H: CRH> LeafCreation<H> for BasicLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::test_data::{get_mds_3, get_rounds_3};
+	use crate::{
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		utils::{get_mds_3, get_rounds_3},
+	};
+	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
 	use ark_std::test_rng;
-	use webb_crypto_primitives::crh::{
-		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		CRH as CRHTrait,
-	};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;

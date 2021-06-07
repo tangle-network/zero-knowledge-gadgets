@@ -1,6 +1,6 @@
 use crate::Vec;
+use ark_crypto_primitives::Error;
 use ark_ff::{bytes::ToBytes, fields::PrimeField};
-use webb_crypto_primitives::Error;
 
 pub mod membership;
 

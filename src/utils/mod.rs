@@ -3,7 +3,32 @@ pub mod result_x5_254_5;
 pub mod x5_254_3;
 pub mod x5_254_5;
 use crate::Vec;
-use ark_ff::fields::PrimeField;
+use ark_crypto_primitives::Error;
+use ark_ff::{fields::PrimeField, BigInteger};
+use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
+use ark_relations::r1cs::SynthesisError;
+
+pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
+	let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
+	let res = bytes
+		.chunks(max_size_bytes)
+		.map(|chunk| F::read(chunk))
+		.collect::<Result<Vec<_>, _>>()?;
+
+	Ok(res)
+}
+
+pub fn to_field_var_elements<F: PrimeField>(
+	bytes: &[UInt8<F>],
+) -> Result<Vec<FpVar<F>>, SynthesisError> {
+	let max_size = F::BigInt::NUM_LIMBS * 8;
+	let res = bytes
+		.chunks(max_size)
+		.map(|chunk| Boolean::le_bits_to_fp_var(chunk.to_bits_le()?.as_slice()))
+		.collect::<Result<Vec<_>, SynthesisError>>()?;
+
+	Ok(res)
+}
 
 pub fn decode_hex(s: &str) -> Vec<u8> {
 	let s = &s[2..];

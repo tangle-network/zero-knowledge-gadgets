@@ -1,4 +1,5 @@
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+use ark_crypto_primitives::SNARK;
 use ark_ed_on_bls12_381::{EdwardsAffine, Fr as EdBlsFr};
 use ark_ff::{One, UniformRand};
 use ark_groth16::Groth16;
@@ -7,24 +8,21 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
-	arbitrary::bridge_data::{constraints::BridgeDataGadget, Input as BridgeDataInput, BridgeData},
+	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
 	circuit::bridge::BridgeCircuit,
 	leaf::{
 		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
 		LeafCreation,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
+	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 	set::{
 		membership::{constraints::SetMembershipGadget, SetMembership},
 		Set,
 	},
-	test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
+	utils::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 };
 use blake2::Blake2s;
-use webb_crypto_primitives::{
-	crh::poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-	SNARK,
-};
 
 macro_rules! setup_circuit {
 	($test_field:ty) => {{

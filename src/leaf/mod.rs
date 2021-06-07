@@ -1,6 +1,6 @@
+use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::bytes::ToBytes;
 use ark_std::{hash::Hash, rand::Rng};
-use webb_crypto_primitives::{crh::CRH, Error};
 
 pub mod basic;
 pub mod bridge;
