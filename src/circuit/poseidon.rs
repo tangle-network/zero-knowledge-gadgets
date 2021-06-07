@@ -1,9 +1,9 @@
 use crate::Vec;
+use ark_crypto_primitives::crh::{CRHGadget, CRH};
 use ark_ff::{to_bytes, PrimeField};
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
-use webb_crypto_primitives::crh::{CRHGadget, CRH};
 
 #[derive(Copy)]
 struct PoseidonCircuit<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
@@ -62,23 +62,18 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> ConstraintSynthesizer<F>
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::test_data::{get_mds_3, get_rounds_3};
+	use crate::{
+		poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		utils::{get_mds_3, get_rounds_3},
+	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_crypto_primitives::{crh::CRH as CRHTrait, SNARK};
 	use ark_groth16::Groth16;
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::marlin_pc::MarlinKZG10;
 	use ark_std::UniformRand;
 	use blake2::Blake2s;
-	use webb_crypto_primitives::{
-		crh::{
-			poseidon::{
-				constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH,
-			},
-			CRH as CRHTrait,
-		},
-		SNARK,
-	};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;

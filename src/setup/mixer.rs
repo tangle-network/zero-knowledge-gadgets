@@ -6,15 +6,16 @@ use crate::{
 		mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
 		LeafCreation,
 	},
+	poseidon::PoseidonParameters,
 };
 use ark_bls12_381::{Bls12_381, Fr as Bls381};
+use ark_crypto_primitives::SNARK;
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
 	vec::Vec,
 	UniformRand,
 };
-use webb_crypto_primitives::{crh::poseidon::PoseidonParameters, SNARK};
 
 pub type MixerConstraintData = MixerData<Bls381>;
 pub type MixerConstraintDataInput = MixerDataInput<Bls381>;

@@ -1,12 +1,12 @@
 use super::{Config, Node, Path};
 use crate::Vec;
+use ark_crypto_primitives::CRHGadget;
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, prelude::*, select::CondSelectGadget, ToBytesGadget,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{borrow::Borrow, rc::Rc};
-use webb_crypto_primitives::CRHGadget;
 
 #[derive(Debug)]
 pub enum NodeVar<F, P, HG, LHG>
@@ -257,16 +257,16 @@ mod test {
 	use crate::{
 		ark_std::UniformRand,
 		merkle_tree::{Config, SparseMerkleTree},
-		test_data::{get_mds_3, get_rounds_3},
+		poseidon::{
+			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
+			Rounds, CRH as PoseidonCRH,
+		},
+		utils::{get_mds_3, get_rounds_3},
 	};
 	use ark_ed_on_bn254::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};
-	use webb_crypto_primitives::crh::poseidon::{
-		constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
-		Rounds, CRH as PoseidonCRH,
-	};
 
 	type FieldVar = FpVar<Fq>;
 

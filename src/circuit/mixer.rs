@@ -6,11 +6,11 @@ use crate::{
 		Config as MerkleConfig, Path,
 	},
 };
+use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
-use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
 pub struct MixerCircuit<
 	F: PrimeField,
@@ -180,10 +180,10 @@ where
 mod test {
 	use crate::setup::{common::*, mixer::*};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_crypto_primitives::SNARK;
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
 	use ark_std::test_rng;
-	use webb_crypto_primitives::SNARK;
 
 	#[test]
 	fn setup_and_prove_mixer_groth16() {

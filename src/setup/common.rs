@@ -1,18 +1,14 @@
 use crate::{
+	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
-	test_data::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
+	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+	utils::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
 };
 use ark_bls12_381::{Bls12_381, Fr as Bls381};
+use ark_crypto_primitives::SNARK;
 use ark_ff::fields::PrimeField;
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_std::{rc::Rc, vec::Vec};
-use webb_crypto_primitives::{
-	crh::{
-		identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
-		poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-	},
-	SNARK,
-};
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds5;

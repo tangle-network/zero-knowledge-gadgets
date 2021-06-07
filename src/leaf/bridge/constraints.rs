@@ -3,12 +3,12 @@ use crate::{
 	leaf::{LeafCreation, LeafCreationGadget},
 	Vec,
 };
+use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*, R1CSVar};
 use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
-use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
@@ -184,17 +184,19 @@ impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::test_data::{get_mds_5, get_rounds_5};
+	use crate::{
+		poseidon::{
+			constraints::{CRHGadget, PoseidonParametersVar},
+			sbox::PoseidonSbox,
+			PoseidonParameters, Rounds, CRH,
+		},
+		utils::{get_mds_5, get_rounds_5},
+	};
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::One;
 	use ark_r1cs_std::R1CSVar;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
-	use webb_crypto_primitives::crh::poseidon::{
-		constraints::{CRHGadget, PoseidonParametersVar},
-		sbox::PoseidonSbox,
-		PoseidonParameters, Rounds, CRH,
-	};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds5;

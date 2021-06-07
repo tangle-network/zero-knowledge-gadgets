@@ -8,11 +8,11 @@ use crate::{
 	set::{Set, SetGadget},
 	Vec,
 };
+use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
-use webb_crypto_primitives::{crh::CRHGadget, CRH};
 
 pub struct BridgeCircuit<
 	F: PrimeField,
@@ -214,8 +214,8 @@ mod test {
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
+	use ark_snark::SNARK;
 	use ark_std::test_rng;
-	use webb_crypto_primitives::SNARK;
 
 	#[test]
 	fn setup_and_prove_bridge_groth16() {

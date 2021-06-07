@@ -8,19 +8,20 @@ use crate::{
 		},
 		LeafCreation,
 	},
+	poseidon::PoseidonParameters,
 	set::{
 		membership::{constraints::SetMembershipGadget, SetMembership},
 		Set,
 	},
 };
 use ark_bls12_381::{Bls12_381, Fr as Bls381};
+use ark_crypto_primitives::SNARK;
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
 	vec::Vec,
 	UniformRand,
 };
-use webb_crypto_primitives::{crh::poseidon::PoseidonParameters, SNARK};
 
 pub type BridgeConstraintData = BridgeData<Bls381>;
 pub type BridgeConstraintDataInput = BridgeDataInput<Bls381>;
