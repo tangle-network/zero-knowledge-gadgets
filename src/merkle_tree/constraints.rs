@@ -251,6 +251,8 @@ where
 	}
 }
 
+#[cfg(feature = "poseidon_x5_bn254_5")]
+#[cfg(feature = "poseidon_x5_bn254_3")]
 #[cfg(test)]
 mod test {
 	use super::{NodeVar, PathVar};

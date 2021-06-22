@@ -171,6 +171,9 @@ impl<F: PrimeField> AllocVar<(), F> for PublicVar<F> {
 		Ok(PublicVar { field: PhantomData })
 	}
 }
+
+#[cfg(feature = "poseidon_x5_bn254_5")]
+#[cfg(feature = "poseidon_x5_bn254_3")]
 #[cfg(test)]
 mod test {
 	use super::*;
