@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Drew Stone <drewstone329@gmail.com>"]
 edition = "2018"
 
