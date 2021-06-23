@@ -26,7 +26,8 @@ ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
 [features]
-default = ["std", "poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]
+default = ["std", "default_poseidon"]
+default_poseidon = ["poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]
 r1cs = []
 std = ["ark-std/std"]
 

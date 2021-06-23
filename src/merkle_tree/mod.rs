@@ -362,8 +362,7 @@ pub fn gen_empty_hashes<P: Config>(
 	Ok(empty_hashes)
 }
 
-#[cfg(feature = "poseidon_x5_bn254_5")]
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};

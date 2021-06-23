@@ -1,9 +1,6 @@
-#[cfg(feature = "poseidon_x5_bn254_5")]
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "default_poseidon")]
 pub mod bridge;
-#[cfg(feature = "poseidon_x5_bn254_5")]
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "default_poseidon")]
 pub mod common;
-#[cfg(feature = "poseidon_x5_bn254_5")]
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "default_poseidon")]
 pub mod mixer;
