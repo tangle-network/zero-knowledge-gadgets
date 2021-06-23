@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Drew Stone <drewstone329@gmail.com>"]
 edition = "2018"
 
@@ -26,12 +26,16 @@ ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
 [features]
-default = ["std"]
+default = ["std", "default_poseidon"]
+default_poseidon = ["poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]
 r1cs = []
 std = ["ark-std/std"]
+
+poseidon_x5_bn254_5 = []
+poseidon_x5_bn254_3 = []
 
 [[bench]]
 name = "bridge_bench"
 path = "benches/bench.rs"
 harness = false
-required-features = ["r1cs", "std"]
+required-features = ["r1cs", "std", "poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]

@@ -1,6 +1,10 @@
+#[cfg(feature = "poseidon_x5_bn254_3")]
 pub mod result_x5_254_3;
+#[cfg(feature = "poseidon_x5_bn254_5")]
 pub mod result_x5_254_5;
+#[cfg(feature = "poseidon_x5_bn254_3")]
 pub mod x5_254_3;
+#[cfg(feature = "poseidon_x5_bn254_5")]
 pub mod x5_254_5;
 use crate::Vec;
 use ark_crypto_primitives::Error;
@@ -47,6 +51,7 @@ pub fn get_bytes_array_from_hex(hex_str: &str) -> [u8; 32] {
 	result
 }
 
+#[cfg(feature = "poseidon_x5_bn254_5")]
 pub fn get_results_5<F: PrimeField>() -> Vec<F> {
 	let mut res = vec![];
 	for r in result_x5_254_5::RESULT.iter() {
@@ -56,6 +61,7 @@ pub fn get_results_5<F: PrimeField>() -> Vec<F> {
 	res
 }
 
+#[cfg(feature = "poseidon_x5_bn254_3")]
 pub fn get_results_3<F: PrimeField>() -> Vec<F> {
 	let mut res = vec![];
 	for r in result_x5_254_3::RESULT.iter() {
@@ -65,6 +71,7 @@ pub fn get_results_3<F: PrimeField>() -> Vec<F> {
 	res
 }
 
+#[cfg(feature = "poseidon_x5_bn254_3")]
 pub fn get_rounds_3<F: PrimeField>() -> Vec<F> {
 	let mut rc = vec![];
 	for r in x5_254_3::ROUND_CONSTS.iter() {
@@ -74,6 +81,7 @@ pub fn get_rounds_3<F: PrimeField>() -> Vec<F> {
 	rc
 }
 
+#[cfg(feature = "poseidon_x5_bn254_3")]
 pub fn get_mds_3<F: PrimeField>() -> Vec<Vec<F>> {
 	let mds_entries = x5_254_3::MDS_ENTRIES;
 	let width = mds_entries.len();
@@ -87,6 +95,7 @@ pub fn get_mds_3<F: PrimeField>() -> Vec<Vec<F>> {
 	mds
 }
 
+#[cfg(feature = "poseidon_x5_bn254_5")]
 pub fn get_rounds_5<F: PrimeField>() -> Vec<F> {
 	let mut rc = vec![];
 	for r in x5_254_5::ROUND_CONSTS.iter() {
@@ -96,6 +105,7 @@ pub fn get_rounds_5<F: PrimeField>() -> Vec<F> {
 	rc
 }
 
+#[cfg(feature = "poseidon_x5_bn254_5")]
 pub fn get_mds_5<F: PrimeField>() -> Vec<Vec<F>> {
 	let mds_entries = x5_254_5::MDS_ENTRIES;
 	let width = mds_entries.len();

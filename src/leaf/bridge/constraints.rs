@@ -181,6 +181,7 @@ impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
 	}
 }
 
+#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;
