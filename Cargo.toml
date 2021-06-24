@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.1.1"
+version = "0.1.4"
 authors = ["Drew Stone <drewstone329@gmail.com>"]
 edition = "2018"
 
@@ -26,7 +26,7 @@ ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
 [features]
-default = ["std", "default_poseidon"]
+default = ["std", "default_poseidon", "r1cs"]
 default_poseidon = ["poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]
 r1cs = []
 std = ["ark-std/std"]
