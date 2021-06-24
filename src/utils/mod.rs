@@ -1,11 +1,11 @@
-#[cfg(feature = "poseidon_x5_bn254_3")]
-pub mod result_x5_254_3;
-#[cfg(feature = "poseidon_x5_bn254_5")]
-pub mod result_x5_254_5;
-#[cfg(feature = "poseidon_x5_bn254_3")]
-pub mod x5_254_3;
-#[cfg(feature = "poseidon_x5_bn254_5")]
-pub mod x5_254_5;
+#[cfg(feature = "poseidon_bn254_x5_3")]
+pub mod bn254_x5_3;
+#[cfg(feature = "poseidon_bn254_x5_3")]
+pub mod bn254_x5_3_result;
+#[cfg(feature = "poseidon_bn254_x5_5")]
+pub mod bn254_x5_5;
+#[cfg(feature = "poseidon_bn254_x5_5")]
+pub mod bn254_x5_5_result;
 use crate::Vec;
 use ark_crypto_primitives::Error;
 use ark_ff::{fields::PrimeField, BigInteger};
@@ -51,39 +51,39 @@ pub fn get_bytes_array_from_hex(hex_str: &str) -> [u8; 32] {
 	result
 }
 
-#[cfg(feature = "poseidon_x5_bn254_5")]
+#[cfg(feature = "poseidon_bn254_x5_5")]
 pub fn get_results_5<F: PrimeField>() -> Vec<F> {
 	let mut res = vec![];
-	for r in result_x5_254_5::RESULT.iter() {
+	for r in bn254_x5_5_result::RESULT.iter() {
 		let c = F::from_be_bytes_mod_order(&get_bytes_array_from_hex(r));
 		res.push(c);
 	}
 	res
 }
 
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "poseidon_bn254_x5_3")]
 pub fn get_results_3<F: PrimeField>() -> Vec<F> {
 	let mut res = vec![];
-	for r in result_x5_254_3::RESULT.iter() {
+	for r in bn254_x5_3_result::RESULT.iter() {
 		let c = F::from_be_bytes_mod_order(&get_bytes_array_from_hex(r));
 		res.push(c);
 	}
 	res
 }
 
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "poseidon_bn254_x5_3")]
 pub fn get_rounds_3<F: PrimeField>() -> Vec<F> {
 	let mut rc = vec![];
-	for r in x5_254_3::ROUND_CONSTS.iter() {
+	for r in bn254_x5_3::ROUND_CONSTS.iter() {
 		let c = F::from_be_bytes_mod_order(&get_bytes_array_from_hex(r));
 		rc.push(c);
 	}
 	rc
 }
 
-#[cfg(feature = "poseidon_x5_bn254_3")]
+#[cfg(feature = "poseidon_bn254_x5_3")]
 pub fn get_mds_3<F: PrimeField>() -> Vec<Vec<F>> {
-	let mds_entries = x5_254_3::MDS_ENTRIES;
+	let mds_entries = bn254_x5_3::MDS_ENTRIES;
 	let width = mds_entries.len();
 	let mut mds: Vec<Vec<F>> = vec![vec![F::zero(); width]; width];
 	for i in 0..width {
@@ -95,19 +95,19 @@ pub fn get_mds_3<F: PrimeField>() -> Vec<Vec<F>> {
 	mds
 }
 
-#[cfg(feature = "poseidon_x5_bn254_5")]
+#[cfg(feature = "poseidon_bn254_x5_5")]
 pub fn get_rounds_5<F: PrimeField>() -> Vec<F> {
 	let mut rc = vec![];
-	for r in x5_254_5::ROUND_CONSTS.iter() {
+	for r in bn254_x5_5::ROUND_CONSTS.iter() {
 		let c = F::from_be_bytes_mod_order(&get_bytes_array_from_hex(r));
 		rc.push(c);
 	}
 	rc
 }
 
-#[cfg(feature = "poseidon_x5_bn254_5")]
+#[cfg(feature = "poseidon_bn254_x5_5")]
 pub fn get_mds_5<F: PrimeField>() -> Vec<Vec<F>> {
-	let mds_entries = x5_254_5::MDS_ENTRIES;
+	let mds_entries = bn254_x5_5::MDS_ENTRIES;
 	let width = mds_entries.len();
 	let mut mds: Vec<Vec<F>> = vec![vec![F::zero(); width]; width];
 	for i in 0..width {

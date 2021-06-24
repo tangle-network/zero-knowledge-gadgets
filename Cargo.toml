@@ -27,15 +27,15 @@ digest = { version = "0.9" }
 
 [features]
 default = ["std", "default_poseidon"]
-default_poseidon = ["poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]
+default_poseidon = ["poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
 r1cs = []
 std = ["ark-std/std"]
 
-poseidon_x5_bn254_5 = []
-poseidon_x5_bn254_3 = []
+poseidon_bn254_x5_5 = []
+poseidon_bn254_x5_3 = []
 
 [[bench]]
 name = "bridge_bench"
 path = "benches/bench.rs"
 harness = false
-required-features = ["r1cs", "std", "poseidon_x5_bn254_5", "poseidon_x5_bn254_3"]
+required-features = ["r1cs", "std", "poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
