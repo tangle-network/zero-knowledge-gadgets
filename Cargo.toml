@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Webb Developers"]
 edition = "2018"
 
