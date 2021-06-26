@@ -34,6 +34,17 @@ pub fn to_field_var_elements<F: PrimeField>(
 	Ok(res)
 }
 
+pub fn from_field_elements<F: PrimeField>(elts: &[F]) -> Result<Vec<u8>, Error> {
+	let res = elts
+		.iter()
+		.fold(vec![], |mut acc, prev| {
+			acc.extend_from_slice(&prev.into_repr().to_bytes_le());
+			acc
+		});
+
+	Ok(res)
+}
+
 pub fn decode_hex(s: &str) -> Vec<u8> {
 	let s = &s[2..];
 	let vec: Vec<u8> = (0..s.len())
