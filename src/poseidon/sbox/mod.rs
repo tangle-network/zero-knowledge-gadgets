@@ -16,25 +16,10 @@ impl PoseidonSbox {
 		match self {
 			PoseidonSbox::Exponentiation(val) => {
 				let res = match val {
-					2 => elem * elem,
 					3 => elem * elem * elem,
-					4 => {
-						let sqr = elem * elem;
-						sqr * sqr
-					}
 					5 => {
 						let sqr = elem * elem;
 						sqr * sqr * elem
-					}
-					6 => {
-						let sqr = elem * elem;
-						let quad = sqr * sqr;
-						sqr * quad
-					}
-					7 => {
-						let sqr = elem * elem;
-						let quad = sqr * sqr;
-						sqr * quad * elem
 					}
 					17 => {
 						let sqr = elem * elem;

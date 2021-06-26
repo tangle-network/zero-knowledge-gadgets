@@ -1,7 +1,7 @@
 [package]
 name = "arkworks-gadgets"
 version = "0.2.0"
-authors = ["Drew Stone <drewstone329@gmail.com>"]
+authors = ["Webb Developers"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,6 +14,7 @@ ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
+ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-marlin = {version = "^0.3.0", default-features = false }
 ark-groth16 = {version = "^0.3.0", default-features = false }
