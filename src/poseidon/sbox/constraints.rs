@@ -16,6 +16,7 @@ impl SboxConstraints for PoseidonSbox {
 			PoseidonSbox::Exponentiation(val) => match val {
 				3 => synthesize_exp3_sbox::<F>(input_var),
 				5 => synthesize_exp5_sbox::<F>(input_var),
+				17 => synthesize_exp17_sbox::<F>(input_var),
 				_ => synthesize_exp3_sbox::<F>(input_var),
 			},
 			PoseidonSbox::Inverse => synthesize_inverse_sbox::<F>(input_var),
@@ -36,6 +37,15 @@ fn synthesize_exp5_sbox<F: PrimeField>(input_var: &FpVar<F>) -> Result<FpVar<F>,
 	let fourth = &sqr * &sqr;
 	let fifth = input_var * fourth;
 	Ok(fifth)
+}
+
+// Allocate variables in circuit and enforce constraints when Sbox as cube
+fn synthesize_exp17_sbox<F: PrimeField>(input_var: &FpVar<F>) -> Result<FpVar<F>, SynthesisError> {
+	let sqr = input_var * input_var;
+	let fourth = &sqr * &sqr;
+	let sixteenth = &fourth * &fourth;
+	let seventeenth = &sixteenth * input_var;
+	Ok(seventeenth)
 }
 
 // Allocate variables in circuit and enforce constraints when Sbox as
