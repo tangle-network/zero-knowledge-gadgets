@@ -47,7 +47,7 @@ impl<F: PrimeField> Set<F> for SetMembership<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_ed_on_bn254::Fq;
+	use ark_bls12_381::Fq;
 	use ark_ff::UniformRand;
 	use ark_std::test_rng;
 

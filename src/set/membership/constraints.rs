@@ -62,7 +62,7 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 mod test {
 	use super::*;
 	use crate::set::Set;
-	use ark_ed_on_bn254::Fq;
+	use ark_bls12_381::Fq;
 	use ark_ff::UniformRand;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;

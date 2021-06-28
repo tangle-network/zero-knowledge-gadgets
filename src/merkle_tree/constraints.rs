@@ -262,9 +262,9 @@ mod test {
 			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
 			Rounds, CRH as PoseidonCRH,
 		},
-		utils::{get_mds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_3},
+		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
 	};
-	use ark_ed_on_bn254::Fq;
+	use ark_bls12_381::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};
@@ -299,8 +299,8 @@ mod test {
 	#[test]
 	fn should_verify_path() {
 		let rng = &mut test_rng();
-		let rounds3 = get_rounds_poseidon_bn254_x5_3::<Fq>();
-		let mds3 = get_mds_poseidon_bn254_x5_3::<Fq>();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
 		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();

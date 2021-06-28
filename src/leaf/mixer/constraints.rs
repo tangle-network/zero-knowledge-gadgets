@@ -182,9 +182,9 @@ mod test {
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
 		},
-		utils::{get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_5},
+		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
-	use ark_ed_on_bn254::Fq;
+	use ark_bls12_381::Fq;
 	use ark_r1cs_std::R1CSVar;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
@@ -211,8 +211,8 @@ mod test {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		// Native version
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
 		let secrets = Leaf::generate_secrets(rng).unwrap();

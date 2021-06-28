@@ -210,10 +210,11 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 	}
 }
 
+#[cfg(all(feature = "poseidon_bn254_x5_5", feature = "poseidon_bn254_x5_3"))]
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_ed_on_bn254::Fq;
+	use ark_bls12_381::Fq;
 	use ark_ff::{to_bytes, Zero};
 
 	use crate::utils::{
