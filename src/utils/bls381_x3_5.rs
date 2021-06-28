@@ -5,6 +5,8 @@
 // width = 5
 // full rounds = 8
 // partial rounds = 85
+// prime field =
+// 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 
 // Sage script command:
 // sage generate_parameters_grain.sage 1 0 255 5 8 85
