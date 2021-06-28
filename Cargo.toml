@@ -26,10 +26,13 @@ ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
 [features]
-default = ["std", "default_poseidon"]
-default_poseidon = ["poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
+default = ["std", "default_poseidon", "r1cs"]
+default_poseidon = ["poseidon_bls381_x5_5", "poseidon_bls381_x5_3"]
 r1cs = []
 std = ["ark-std/std"]
+
+poseidon_bls381_x5_5 = []
+poseidon_bls381_x5_3 = []
 
 poseidon_bn254_x5_5 = []
 poseidon_bn254_x5_3 = []
@@ -38,4 +41,4 @@ poseidon_bn254_x5_3 = []
 name = "bridge_bench"
 path = "benches/bench.rs"
 harness = false
-required-features = ["r1cs", "std", "poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
+required-features = ["r1cs", "std", "default_poseidon"]
