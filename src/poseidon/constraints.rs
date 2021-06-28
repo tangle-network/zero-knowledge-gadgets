@@ -175,7 +175,7 @@ mod test {
 
 	use crate::{
 		poseidon::sbox::PoseidonSbox,
-		utils::{get_mds_3, get_rounds_3},
+		utils::{get_mds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_3},
 	};
 
 	#[derive(Default, Clone)]
@@ -193,8 +193,8 @@ mod test {
 
 	#[test]
 	fn test_poseidon_native_equality() {
-		let rounds = get_rounds_3::<Fq>();
-		let mds = get_mds_3::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 

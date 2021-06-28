@@ -102,7 +102,7 @@ mod test {
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
 		},
-		utils::{get_mds_3, get_rounds_3},
+		utils::{get_mds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_3},
 	};
 	use ark_ed_on_bn254::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
@@ -129,8 +129,8 @@ mod test {
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let rounds = get_rounds_3::<Fq>();
-		let mds = get_mds_3::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
 
 		// Native version
 		let public = Public::default();

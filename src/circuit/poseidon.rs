@@ -65,7 +65,7 @@ mod test {
 	use super::*;
 	use crate::{
 		poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{get_mds_3, get_rounds_3},
+		utils::{get_mds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_3},
 	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_crypto_primitives::{crh::CRH as CRHTrait, SNARK};
@@ -97,8 +97,8 @@ mod test {
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
 		let bytes = to_bytes![a, b].unwrap();
-		let rounds3 = get_rounds_3::<BlsFr>();
-		let mds3 = get_mds_3::<BlsFr>();
+		let rounds3 = get_rounds_poseidon_bn254_x5_3::<BlsFr>();
+		let mds3 = get_mds_poseidon_bn254_x5_3::<BlsFr>();
 		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
 		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
 		let nc = 3000;
@@ -123,8 +123,8 @@ mod test {
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
 		let bytes = to_bytes![a, b].unwrap();
-		let rounds3 = get_rounds_3::<BlsFr>();
-		let mds3 = get_mds_3::<BlsFr>();
+		let rounds3 = get_rounds_poseidon_bn254_x5_3::<BlsFr>();
+		let mds3 = get_mds_poseidon_bn254_x5_3::<BlsFr>();
 		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
 		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
 		let circuit = PoseidonC::new(a, b, c, parameters);

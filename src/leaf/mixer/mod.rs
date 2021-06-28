@@ -78,7 +78,7 @@ mod test {
 	use super::*;
 	use crate::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{get_mds_5, get_rounds_5},
+		utils::{get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_5},
 	};
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
@@ -106,8 +106,8 @@ mod test {
 
 		let nullifier_inputs = to_bytes![secrets.nullifier, secrets.nullifier].unwrap();
 
-		let rounds = get_rounds_5::<Fq>();
-		let mds = get_mds_5::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
