@@ -214,7 +214,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_bls12_381::Fq;
+	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
 	use crate::utils::{
