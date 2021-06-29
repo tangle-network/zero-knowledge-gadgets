@@ -204,7 +204,7 @@ mod test {
 
 	impl Rounds for PoseidonRounds5 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
+		const PARTIAL_ROUNDS: usize = 60;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 5;
 	}
