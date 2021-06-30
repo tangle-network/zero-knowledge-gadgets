@@ -62,10 +62,10 @@ mod test {
 	use super::*;
 	use crate::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{get_mds_3, get_rounds_3},
+		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
 	};
+	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
-	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
 	use ark_std::test_rng;
 
@@ -90,8 +90,8 @@ mod test {
 
 		let inputs_leaf = to_bytes![secrets.r, secrets.nullifier].unwrap();
 
-		let rounds = get_rounds_3::<Fq>();
-		let mds = get_mds_3::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 

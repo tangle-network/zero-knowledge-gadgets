@@ -20,7 +20,10 @@ use arkworks_gadgets::{
 		membership::{constraints::SetMembershipGadget, SetMembership},
 		Set,
 	},
-	utils::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
+	utils::{
+		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
+		get_rounds_poseidon_bn254_x5_5,
+	},
 };
 use blake2::Blake2s;
 
@@ -95,8 +98,8 @@ macro_rules! setup_circuit {
 		let leaf_public = LeafPublic::new(chain_id);
 
 		// Round params for the poseidon in leaf creation gadget
-		let rounds5 = get_rounds_5::<$test_field>();
-		let mds5 = get_mds_5::<$test_field>();
+		let rounds5 = get_rounds_poseidon_bn254_x5_5::<$test_field>();
+		let mds5 = get_mds_poseidon_bn254_x5_5::<$test_field>();
 		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 		// Creating the leaf
 		let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
@@ -109,8 +112,8 @@ macro_rules! setup_circuit {
 		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee);
 
 		// Making params for poseidon in merkle tree
-		let rounds3 = get_rounds_3::<$test_field>();
-		let mds3 = get_mds_3::<$test_field>();
+		let rounds3 = get_rounds_poseidon_bn254_x5_3::<$test_field>();
+		let mds3 = get_mds_poseidon_bn254_x5_3::<$test_field>();
 		let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
 		let leaves = vec![
 			<$test_field>::rand(rng),

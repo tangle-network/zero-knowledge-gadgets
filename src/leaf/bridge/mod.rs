@@ -89,10 +89,10 @@ mod test {
 	use super::*;
 	use crate::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{get_mds_5, get_rounds_5},
+		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
+	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
-	use ark_ed_on_bn254::Fq;
 	use ark_ff::One;
 	use ark_std::test_rng;
 
@@ -101,7 +101,7 @@ mod test {
 
 	impl Rounds for PoseidonRounds5 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
+		const PARTIAL_ROUNDS: usize = 60;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 5;
 	}
@@ -122,8 +122,8 @@ mod test {
 
 		let nullifier_inputs = to_bytes![secrets.nullifier, secrets.nullifier].unwrap();
 
-		let rounds = get_rounds_5::<Fq>();
-		let mds = get_mds_5::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
