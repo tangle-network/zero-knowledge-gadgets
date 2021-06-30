@@ -4,7 +4,10 @@ use crate::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-	utils::{get_mds_3, get_mds_5, get_rounds_3, get_rounds_5},
+	utils::{
+		get_mds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_5,
+		get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5,
+	},
 };
 use ark_crypto_primitives::SNARK;
 use ark_ff::fields::PrimeField;
@@ -17,7 +20,7 @@ pub struct PoseidonRounds5;
 
 impl Rounds for PoseidonRounds5 {
 	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 57;
+	const PARTIAL_ROUNDS: usize = 60;
 	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 	const WIDTH: usize = 5;
 }
@@ -71,16 +74,16 @@ pub fn setup_tree_and_create_path<F: PrimeField>(
 
 pub fn setup_params_3<F: PrimeField>() -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
-	let rounds3 = get_rounds_3::<F>();
-	let mds3 = get_mds_3::<F>();
+	let rounds3 = get_rounds_poseidon_bls381_x5_3::<F>();
+	let mds3 = get_mds_poseidon_bls381_x5_3::<F>();
 	let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
 	params3
 }
 
 pub fn setup_params_5<F: PrimeField>() -> PoseidonParameters<F> {
 	// Round params for the poseidon in leaf creation gadget
-	let rounds5 = get_rounds_5::<F>();
-	let mds5 = get_mds_5::<F>();
+	let rounds5 = get_rounds_poseidon_bls381_x5_5::<F>();
+	let mds5 = get_mds_poseidon_bls381_x5_5::<F>();
 	let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
 	params5
 }

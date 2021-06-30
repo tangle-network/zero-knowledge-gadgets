@@ -168,14 +168,14 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 #[cfg(test)]
 mod test {
 	use super::*;
+	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
-	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
 	use crate::{
 		poseidon::sbox::PoseidonSbox,
-		utils::{get_mds_3, get_rounds_3},
+		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
 	};
 
 	#[derive(Default, Clone)]
@@ -193,8 +193,8 @@ mod test {
 
 	#[test]
 	fn test_poseidon_native_equality() {
-		let rounds = get_rounds_3::<Fq>();
-		let mds = get_mds_3::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 

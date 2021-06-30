@@ -210,6 +210,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 	}
 }
 
+#[cfg(all(feature = "poseidon_bn254_x5_5", feature = "poseidon_bn254_x5_3"))]
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -217,7 +218,9 @@ mod test {
 	use ark_ff::{to_bytes, Zero};
 
 	use crate::utils::{
-		get_mds_3, get_mds_5, get_results_3, get_results_5, get_rounds_3, get_rounds_5,
+		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_results_poseidon_bn254_x5_3,
+		get_results_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
+		get_rounds_poseidon_bn254_x5_5,
 	};
 
 	#[derive(Default, Clone)]
@@ -244,9 +247,9 @@ mod test {
 
 	#[test]
 	fn test_width_3_bn_254() {
-		let rounds = get_rounds_3::<Fq>();
-		let mds = get_mds_3::<Fq>();
-		let res = get_results_3::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
+		let res = get_results_poseidon_bn254_x5_3::<Fq>();
 
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
@@ -258,9 +261,9 @@ mod test {
 
 	#[test]
 	fn test_width_5_bn_254() {
-		let rounds = get_rounds_5::<Fq>();
-		let mds = get_mds_5::<Fq>();
-		let res = get_results_5::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let res = get_results_poseidon_bn254_x5_5::<Fq>();
 
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
