@@ -13,7 +13,6 @@ ark-std = { version = "^0.3.0", default-features = false }
 ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
 
-ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-marlin = {version = "^0.3.0", default-features = false }
 ark-groth16 = {version = "^0.3.0", default-features = false }
 blake2 = { version = "0.9", default-features = false }
