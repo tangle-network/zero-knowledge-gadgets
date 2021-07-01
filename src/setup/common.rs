@@ -1,3 +1,5 @@
+use ark_ec::PairingEngine;
+use ark_std::marker::PhantomData;
 use crate::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
@@ -7,11 +9,11 @@ use crate::{
 		get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5,
 	},
 };
-use ark_bls12_381::{Bls12_381, Fr as Bls381};
 use ark_crypto_primitives::SNARK;
 use ark_ff::fields::PrimeField;
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_std::{rc::Rc, vec::Vec};
+
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds5;
@@ -23,15 +25,15 @@ impl Rounds for PoseidonRounds5 {
 	const WIDTH: usize = 5;
 }
 
-pub type PoseidonCRH3 = CRH<Bls381, PoseidonRounds3>;
-pub type PoseidonCRH3Gadget = CRHGadget<Bls381, PoseidonRounds3>;
+pub type PoseidonCRH3<F> = CRH<F, PoseidonRounds3>;
+pub type PoseidonCRH3Gadget<F> = CRHGadget<F, PoseidonRounds3>;
 
-pub type PoseidonCRH5 = CRH<Bls381, PoseidonRounds5>;
-pub type PoseidonCRH5Gadget = CRHGadget<Bls381, PoseidonRounds5>;
+pub type PoseidonCRH5<F> = CRH<F, PoseidonRounds5>;
+pub type PoseidonCRH5Gadget<F> = CRHGadget<F, PoseidonRounds5>;
 
-pub type LeafCRH = IdentityCRH<Bls381>;
-pub type LeafCRHGadget = IdentityCRHGadget<Bls381>;
-pub type Tree = SparseMerkleTree<TreeConfig>;
+pub type LeafCRH<F> = IdentityCRH<F>;
+pub type LeafCRHGadget<F>= IdentityCRHGadget<F>;
+pub type Tree<F> = SparseMerkleTree<TreeConfig<F>>;
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds3;
@@ -44,25 +46,25 @@ impl Rounds for PoseidonRounds3 {
 }
 
 #[derive(Clone)]
-pub struct TreeConfig;
-impl MerkleConfig for TreeConfig {
-	type H = PoseidonCRH3;
-	type LeafH = LeafCRH;
+pub struct TreeConfig<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig<F> {
+	type H = PoseidonCRH3<F>;
+	type LeafH = LeafCRH<F>;
 
 	const HEIGHT: u8 = 30;
 }
 
-pub fn setup_tree(leaves: &[Bls381], params: &PoseidonParameters<Bls381>) -> Tree {
+pub fn setup_tree<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>) -> Tree<F> {
 	let inner_params = Rc::new(params.clone());
 	let mt = Tree::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
 	mt
 }
 
-pub fn setup_tree_and_create_path(
-	leaves: &[Bls381],
+pub fn setup_tree_and_create_path<F: PrimeField>(
+	leaves: &[F],
 	index: u64,
-	params: &PoseidonParameters<Bls381>,
-) -> (Tree, Path<TreeConfig>) {
+	params: &PoseidonParameters<F>,
+) -> (Tree<F>, Path<TreeConfig<F>>) {
 	// Making the merkle tree
 	let mt = setup_tree(leaves, params);
 	// Getting the proof path
@@ -86,12 +88,12 @@ pub fn setup_params_5<F: PrimeField>() -> PoseidonParameters<F> {
 	params5
 }
 
-pub fn verify_groth16(
-	vk: &VerifyingKey<Bls12_381>,
-	public_inputs: &Vec<Bls381>,
-	proof: &Proof<Bls12_381>,
+pub fn verify_groth16<E: PairingEngine>(
+	vk: &VerifyingKey<E>,
+	public_inputs: &Vec<E::Fr>,
+	proof: &Proof<E>,
 ) -> bool {
-	let res = Groth16::<Bls12_381>::verify(vk, public_inputs, proof);
+	let res = Groth16::<E>::verify(vk, public_inputs, proof);
 	match res {
 		Ok(is_valid) => is_valid,
 		Err(e) => panic!("{}", e),

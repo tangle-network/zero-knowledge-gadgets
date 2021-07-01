@@ -1,3 +1,5 @@
+use ark_ec::PairingEngine;
+use ark_ff::PrimeField;
 use super::common::*;
 use crate::{
 	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
@@ -14,49 +16,47 @@ use crate::{
 		Set,
 	},
 };
-use ark_bls12_381::{Bls12_381, Fr as Bls381};
 use ark_crypto_primitives::SNARK;
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
 	vec::Vec,
-	UniformRand,
 };
 
-pub type BridgeConstraintData = BridgeData<Bls381>;
-pub type BridgeConstraintDataInput = BridgeDataInput<Bls381>;
-pub type BridgeConstraintDataGadget = BridgeDataGadget<Bls381>;
+pub type BridgeConstraintData<F> = BridgeData<F>;
+pub type BridgeConstraintDataInput<F> = BridgeDataInput<F>;
+pub type BridgeConstraintDataGadget<F> = BridgeDataGadget<F>;
 
-pub type Leaf = BridgeLeaf<Bls381, PoseidonCRH5>;
-pub type LeafGadget = BridgeLeafGadget<Bls381, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+pub type Leaf<F> = BridgeLeaf<F, PoseidonCRH5<F>>;
+pub type LeafGadget<F> = BridgeLeafGadget<F, PoseidonCRH5<F>, PoseidonCRH5Gadget<F>, Leaf<F>>;
 
-pub type TestSetMembership = SetMembership<Bls381>;
-pub type TestSetMembershipGadget = SetMembershipGadget<Bls381>;
+pub type TestSetMembership<F> = SetMembership<F>;
+pub type TestSetMembershipGadget<F> = SetMembershipGadget<F>;
 
-pub type Circuit = BridgeCircuit<
-	Bls381,
-	BridgeConstraintData,
-	BridgeConstraintDataGadget,
-	PoseidonCRH5,
-	PoseidonCRH5Gadget,
-	TreeConfig,
-	LeafCRHGadget,
-	PoseidonCRH3Gadget,
-	Leaf,
-	LeafGadget,
-	TestSetMembership,
-	TestSetMembershipGadget,
+pub type Circuit<F>= BridgeCircuit<
+	F,
+	BridgeConstraintData<F>,
+	BridgeConstraintDataGadget<F>,
+	PoseidonCRH5<F>,
+	PoseidonCRH5Gadget<F>,
+	TreeConfig<F>,
+	LeafCRHGadget<F>,
+	PoseidonCRH3Gadget<F>,
+	Leaf<F>,
+	LeafGadget<F>,
+	TestSetMembership<F>,
+	TestSetMembershipGadget<F>,
 >;
 
-pub fn setup_leaf<R: Rng>(
-	chain_id: Bls381,
-	params: &PoseidonParameters<Bls381>,
+pub fn setup_leaf<R: Rng, F: PrimeField>(
+	chain_id: F,
+	params: &PoseidonParameters<F>,
 	rng: &mut R,
 ) -> (
-	LeafPrivate<Bls381>,
-	LeafPublic<Bls381>,
-	<Leaf as LeafCreation<PoseidonCRH5>>::Leaf,
-	<Leaf as LeafCreation<PoseidonCRH5>>::Nullifier,
+	LeafPrivate<F>,
+	LeafPublic<F>,
+	<Leaf<F> as LeafCreation<PoseidonCRH5<F>>>::Leaf,
+	<Leaf<F> as LeafCreation<PoseidonCRH5<F>>>::Nullifier,
 ) {
 	// Secret inputs for the leaf
 	let leaf_private = Leaf::generate_secrets(rng).unwrap();
@@ -69,34 +69,34 @@ pub fn setup_leaf<R: Rng>(
 	(leaf_private, leaf_public, leaf, nullifier_hash)
 }
 
-pub fn setup_set(
-	root: &Bls381,
-	roots: &Vec<Bls381>,
-) -> <TestSetMembership as Set<Bls381>>::Private {
+pub fn setup_set<F: PrimeField>(
+	root: &F,
+	roots: &Vec<F>,
+) -> <TestSetMembership<F> as Set<F>>::Private {
 	TestSetMembership::generate_secrets(root, roots).unwrap()
 }
 
-pub fn setup_arbitrary_data(
-	recipient: Bls381,
-	relayer: Bls381,
-	fee: Bls381,
-) -> BridgeConstraintDataInput {
+pub fn setup_arbitrary_data<F: PrimeField>(
+	recipient: F,
+	relayer: F,
+	fee: F,
+) -> BridgeConstraintDataInput<F> {
 	let arbitrary_input = BridgeConstraintDataInput::new(recipient, relayer, fee);
 	arbitrary_input
 }
 
-pub fn setup_circuit<R: Rng>(
-	chain_id: Bls381,
-	leaves: &[Bls381],
+pub fn setup_circuit<R: Rng, F: PrimeField>(
+	chain_id: F,
+	leaves: &[F],
 	index: u64,
-	roots: &[Bls381],
-	recipient: Bls381,
-	relayer: Bls381,
-	fee: Bls381,
+	roots: &[F],
+	recipient: F,
+	relayer: F,
+	fee: F,
 	rng: &mut R,
-) -> (Circuit, Bls381, Bls381, Bls381, Vec<Bls381>) {
-	let params3 = setup_params_3::<Bls381>();
-	let params5 = setup_params_5::<Bls381>();
+) -> (Circuit<F>, F, F, F, Vec<F>) {
+	let params3 = setup_params_3::<F>();
+	let params5 = setup_params_5::<F>();
 
 	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
 	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
@@ -131,28 +131,28 @@ pub fn setup_circuit<R: Rng>(
 	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
-pub fn setup_random_circuit<R: Rng>(rng: &mut R) -> (Circuit, Bls381, Bls381, Bls381, Vec<Bls381>) {
-	let chain_id = Bls381::rand(rng);
+pub fn setup_random_circuit<R: Rng, F: PrimeField>(rng: &mut R) -> (Circuit<F>, F, F, F, Vec<F>) {
+	let chain_id = F::rand(rng);
 	let leaves = Vec::new();
 	let index = 0;
 	let roots = Vec::new();
-	let recipient = Bls381::rand(rng);
-	let relayer = Bls381::rand(rng);
-	let fee = Bls381::rand(rng);
-	setup_circuit(
+	let recipient = F::rand(rng);
+	let relayer = F::rand(rng);
+	let fee = F::rand(rng);
+	setup_circuit::<R, F>(
 		chain_id, &leaves, index, &roots, recipient, relayer, fee, rng,
 	)
 }
 
-pub fn get_public_inputs(
-	chain_id: Bls381,
-	nullifier_hash: Bls381,
-	roots: Vec<Bls381>,
-	root: Bls381,
-	recipient: Bls381,
-	relayer: Bls381,
-	fee: Bls381,
-) -> Vec<Bls381> {
+pub fn get_public_inputs<F: PrimeField>(
+	chain_id: F,
+	nullifier_hash: F,
+	roots: Vec<F>,
+	root: F,
+	recipient: F,
+	relayer: F,
+	fee: F,
+) -> Vec<F> {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(chain_id);
 	public_inputs.push(nullifier_hash);
@@ -164,27 +164,27 @@ pub fn get_public_inputs(
 	public_inputs
 }
 
-pub fn prove_groth16<R: RngCore + CryptoRng>(
-	pk: &ProvingKey<Bls12_381>,
-	c: Circuit,
+pub fn prove_groth16<R: RngCore + CryptoRng, E: PairingEngine>(
+	pk: &ProvingKey<E>,
+	c: Circuit<E::Fr>,
 	rng: &mut R,
-) -> Proof<Bls12_381> {
-	Groth16::<Bls12_381>::prove(pk, c, rng).unwrap()
+) -> Proof<E> {
+	Groth16::<E>::prove(pk, c, rng).unwrap()
 }
 
-pub fn setup_groth16<R: RngCore + CryptoRng>(
+pub fn setup_groth16<R: RngCore + CryptoRng, E: PairingEngine>(
 	rng: &mut R,
-	c: Circuit,
-) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
-	let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(c, rng).unwrap();
+	c: Circuit<E::Fr>,
+) -> (ProvingKey<E>, VerifyingKey<E>) {
+	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
 	(pk, vk)
 }
 
-pub fn setup_random_groth16<R: RngCore + CryptoRng>(
+pub fn setup_random_groth16<R: RngCore + CryptoRng, E: PairingEngine>(
 	rng: &mut R,
-) -> (ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>) {
+) -> (ProvingKey<E>, VerifyingKey<E>) {
 	let (circuit, ..) = setup_random_circuit(rng);
-	let (pk, vk) = Groth16::<Bls12_381>::circuit_specific_setup(circuit.clone(), rng).unwrap();
+	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 	(pk, vk)
 }
 
@@ -193,20 +193,22 @@ mod test {
 	use super::*;
 	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
+	use ark_bls12_381::{Bls12_381, Fr as Bls381};
 
-	fn add_members_mock(leaves: Vec<Bls381>) {}
+
+	fn add_members_mock(_leaves: Vec<Bls381>) {}
 
 	fn verify_zk_mock(
-		root: Bls381,
-		private_inputs: Vec<Bls381>,
-		nullifier_hash: Bls381,
-		proof_bytes: Vec<u8>,
-		path_index_commitments: Vec<Bls381>,
-		path_node_commitments: Vec<Bls381>,
-		recipient: Bls381,
-		relayer: Bls381,
-	) {
-	}
+		_root: Bls381,
+		_private_inputs: Vec<Bls381>,
+		_nullifier_hash: Bls381,
+		_proof_bytes: Vec<u8>,
+		_path_index_commitments: Vec<Bls381>,
+		_path_node_commitments: Vec<Bls381>,
+		_recipient: Bls381,
+		_relayer: Bls381,
+	) {}
+
 	#[test]
 	fn should_create_setup() {
 		let mut rng = test_rng();
@@ -216,14 +218,14 @@ mod test {
 		let fee = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let roots = Vec::new();
-		let (circuit, leaf, nullifier, root, public_inputs) = setup_circuit(
+		let (circuit, leaf, nullifier, root, public_inputs) = setup_circuit::<_, Bls381>(
 			chain_id, &leaves, 0, &roots, recipient, relayer, fee, &mut rng,
 		);
 
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16(&mut rng);
+		let (pk, vk) = setup_random_groth16::<_, Bls12_381>(&mut rng);
 		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
 		let res = verify_groth16(&vk, &public_inputs, &proof);
 
@@ -254,18 +256,18 @@ mod test {
 		let params3 = setup_params_3::<Bls381>();
 		let params5 = setup_params_5::<Bls381>();
 
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let arbitrary_input = setup_arbitrary_data::<Bls381>(recipient, relayer, fee);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
-			setup_leaf(chain_id, &params5, &mut rng);
+			setup_leaf::<_, Bls381>(chain_id, &params5, &mut rng);
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) = setup_tree_and_create_path(&leaves_new, 0, &params3);
+		let (tree, path) = setup_tree_and_create_path::<Bls381>(&leaves_new, 0, &params3);
 		let root = tree.root().inner();
 		let mut roots_new = roots.to_vec();
 		roots_new.push(root);
-		let set_private_inputs = setup_set(&root, &roots_new);
+		let set_private_inputs = setup_set::<Bls381>(&root, &roots_new);
 
-		let mc = Circuit::new(
+		let mc = Circuit::<Bls381>::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
@@ -276,7 +278,7 @@ mod test {
 			root.clone(),
 			nullifier_hash,
 		);
-		let public_inputs = get_public_inputs(
+		let public_inputs = get_public_inputs::<Bls381>(
 			chain_id,
 			nullifier_hash,
 			roots_new,
@@ -289,7 +291,7 @@ mod test {
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_random_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16(&mut rng);
+		let (pk, vk) = setup_random_groth16::<_, Bls12_381>(&mut rng);
 		let proof = prove_groth16(&pk, mc.clone(), &mut rng);
 		let res = verify_groth16(&vk, &public_inputs, &proof);
 
@@ -316,19 +318,19 @@ mod test {
 		let fee = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let roots = Vec::new();
-		let (circuit, leaf, nullifier, root, public_inputs) = setup_circuit(
+		let (circuit, leaf, nullifier, root, public_inputs) = setup_circuit::<_, Bls381>(
 			chain_id, &leaves, 0, &roots, recipient, relayer, fee, &mut rng,
 		);
 
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16(&mut rng);
-		let proof = prove_groth16(&pk, circuit.clone(), &mut rng);
+		let (pk, vk) = setup_random_groth16::<_, Bls12_381>(&mut rng);
+		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit.clone(), &mut rng);
 		let mut proof_bytes = vec![0u8; proof.serialized_size()];
 		proof.serialize(&mut proof_bytes[..]).unwrap();
 		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();
-		let res = verify_groth16(&vk, &public_inputs, &proof_anew);
+		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof_anew);
 
 		verify_zk_mock(
 			root,
