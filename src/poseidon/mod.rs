@@ -1,7 +1,8 @@
-use crate::{poseidon::sbox::PoseidonSbox, utils::to_field_elements};
+use crate::{poseidon::sbox::PoseidonSbox, utils::{to_field_elements, from_field_elements}};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
+use ark_serialize::Read;
 
 pub mod sbox;
 
@@ -74,6 +75,58 @@ impl<F: PrimeField> PoseidonParameters<F> {
 
 	pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
 		todo!();
+	}
+
+	pub fn to_bytes(&self) -> Vec<u8> {
+		let max_elt_size = F::BigInt::NUM_LIMBS * 8;
+		let mut buf: Vec<u8> = vec![];
+		// serialize length of round keys and round keys, packing them together
+		let round_key_len = self.round_keys.len() * max_elt_size;
+		buf.extend_from_slice(&(round_key_len as u32).to_be_bytes());
+		buf.extend_from_slice(&from_field_elements(&self.round_keys).unwrap());
+		// serialize all inner matrices and add to buffer, we assume the rest
+		// of the buffer is reserved for mds_matrix serialization. Since each
+		// inner mds_matrix is equally sized we only add the length once.
+		let mut stored = false;
+		for i in 0..self.mds_matrix.len() {
+			if !stored {
+				// the number of bytes to read for each inner mds matrix vec
+				let inner_vec_len = self.mds_matrix[i].len() * max_elt_size;
+				buf.extend_from_slice(&(inner_vec_len as u32).to_be_bytes());				
+				stored = true;
+			}
+
+			buf.extend_from_slice(&from_field_elements(&self.mds_matrix[i]).unwrap());
+		}
+		buf
+	}
+
+	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
+		let mut round_key_len = [0u8; 4];
+		bytes.read(&mut round_key_len)?;
+
+		let round_key_len_usize: usize = u32::from_be_bytes(round_key_len) as usize;
+		let mut round_keys_buf = vec![0u8; round_key_len_usize];
+		bytes.read(&mut round_keys_buf)?;
+
+		let round_keys = to_field_elements::<F>(&round_keys_buf)?;
+		let mut mds_matrix_inner_vec_len = [0u8; 4];
+		bytes.read(&mut mds_matrix_inner_vec_len)?;
+
+		let inner_vec_len_usize = u32::from_be_bytes(mds_matrix_inner_vec_len) as usize;
+		let mut mds_matrix: Vec<Vec<F>> = vec![];
+		while bytes.len() > 0 {
+			let mut inner_vec_buf = vec![0u8; inner_vec_len_usize];
+			bytes.read(&mut inner_vec_buf)?;
+
+			let inner_vec = to_field_elements::<F>(&inner_vec_buf)?;
+			mds_matrix.push(inner_vec);
+		}
+
+		Ok(Self {
+			round_keys,
+			mds_matrix,
+		})
 	}
 }
 
@@ -244,6 +297,17 @@ mod test {
 
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+
+	#[test]
+	fn test_parameter_to_and_from_bytes() {
+		let rounds = get_rounds_3::<Fq>();
+		let mds = get_mds_3::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+
+		let bytes = params.to_bytes();
+		let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
+		assert_eq!(bytes, new_params.to_bytes());
+	}
 
 	#[test]
 	fn test_width_3_bn_254() {
