@@ -32,7 +32,16 @@ use ark_relations::r1cs::SynthesisError;
 
 pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 	let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
-	let res = bytes
+
+	// Pad the input with zeros
+	let padding_len = (max_size_bytes - (bytes.len() % max_size_bytes)) % max_size_bytes;
+	let padded_input: Vec<u8> = bytes
+		.iter()
+		.cloned()
+		.chain(core::iter::repeat(0u8).take(padding_len))
+		.collect();
+
+	let res = padded_input
 		.chunks(max_size_bytes)
 		.map(|chunk| F::read(chunk))
 		.collect::<Result<Vec<_>, _>>()?;
@@ -44,7 +53,16 @@ pub fn to_field_var_elements<F: PrimeField>(
 	bytes: &[UInt8<F>],
 ) -> Result<Vec<FpVar<F>>, SynthesisError> {
 	let max_size = F::BigInt::NUM_LIMBS * 8;
-	let res = bytes
+
+	// Pad the input with zeros
+	let padding_len = (max_size - (bytes.len() % max_size)) % max_size;
+	let padded_input: Vec<UInt8<F>> = bytes
+		.iter()
+		.cloned()
+		.chain(core::iter::repeat(UInt8::constant(0u8)).take(padding_len))
+		.collect();
+
+	let res = padded_input
 		.chunks(max_size)
 		.map(|chunk| Boolean::le_bits_to_fp_var(chunk.to_bits_le()?.as_slice()))
 		.collect::<Result<Vec<_>, SynthesisError>>()?;
@@ -53,12 +71,10 @@ pub fn to_field_var_elements<F: PrimeField>(
 }
 
 pub fn from_field_elements<F: PrimeField>(elts: &[F]) -> Result<Vec<u8>, Error> {
-	let res = elts
-		.iter()
-		.fold(vec![], |mut acc, prev| {
-			acc.extend_from_slice(&prev.into_repr().to_bytes_le());
-			acc
-		});
+	let res = elts.iter().fold(vec![], |mut acc, prev| {
+		acc.extend_from_slice(&prev.into_repr().to_bytes_le());
+		acc
+	});
 
 	Ok(res)
 }
