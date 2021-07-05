@@ -193,26 +193,45 @@ mod test {
 
 	#[test]
 	fn test_poseidon_native_equality() {
-		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
-
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
-
-		let inp_u8 = Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(inp.clone())).unwrap();
+		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
 
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),
 			|| Ok(&params),
 			AllocationMode::Constant,
-		);
+		)
+		.unwrap();
 
-		let res = PoseidonCRH3::evaluate(&params, &inp).unwrap();
-		let res_var =
-			<PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(&params_var.unwrap(), &inp_u8)
-				.unwrap();
+		// Test Poseidon on an input of 3 field elements. This will not require padding,
+		// since the inputs are aligned to the expected input chunk size of 48.
+		let aligned_inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
+		let aligned_inp_var =
+			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
+
+		let res = PoseidonCRH3::evaluate(&params, &aligned_inp).unwrap();
+		let res_var = <PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(
+			&params_var.clone(),
+			&aligned_inp_var,
+		)
+		.unwrap();
+		assert_eq!(res, res_var.value().unwrap());
+
+		// Test Poseidon on an input of 6 bytes. This will require padding, since the
+		// inputs are not aligned to the expected input chunk size of 48.
+		let unaligned_inp: Vec<u8> = vec![1, 2, 3, 4, 5, 6];
+		let unaligned_inp_var =
+			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(unaligned_inp.clone())).unwrap();
+
+		let res = PoseidonCRH3::evaluate(&params, &unaligned_inp).unwrap();
+		let res_var = <PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(
+			&params_var.clone(),
+			&unaligned_inp_var,
+		)
+		.unwrap();
 		assert_eq!(res, res_var.value().unwrap());
 	}
 }
