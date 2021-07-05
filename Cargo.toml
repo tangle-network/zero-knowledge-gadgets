@@ -4,7 +4,7 @@ version = "0.2.1"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's zero-knowledge gadgets written using Arkworks"
-license = "GPLv3"
+license = "GPL-3.0-only"
 repository = "https://github.com/webb-tools/arkworks-gadgets"
 homepage = "https://webb.tools"
 
