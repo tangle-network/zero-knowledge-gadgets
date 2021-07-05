@@ -54,4 +54,4 @@ poseidon_bn254_x5_3 = []
 name = "bridge_bench"
 path = "benches/bench.rs"
 harness = false
-required-features = ["r1cs", "std", "default_poseidon"]
+required-features = ["r1cs", "std", "default_poseidon", "test"]
