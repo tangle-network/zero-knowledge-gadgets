@@ -168,8 +168,8 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
+	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
@@ -207,7 +207,7 @@ mod test {
 		.unwrap();
 
 		// Test Poseidon on an input of 3 field elements. This will not require padding,
-		// since the inputs are aligned to the expected input chunk size of 48.
+		// since the inputs are aligned to the expected input chunk size of 32.
 		let aligned_inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 		let aligned_inp_var =
 			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
@@ -221,7 +221,7 @@ mod test {
 		assert_eq!(res, res_var.value().unwrap());
 
 		// Test Poseidon on an input of 6 bytes. This will require padding, since the
-		// inputs are not aligned to the expected input chunk size of 48.
+		// inputs are not aligned to the expected input chunk size of 32.
 		let unaligned_inp: Vec<u8> = vec![1, 2, 3, 4, 5, 6];
 		let unaligned_inp_var =
 			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(unaligned_inp.clone())).unwrap();
