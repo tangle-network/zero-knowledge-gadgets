@@ -6,15 +6,23 @@ pub mod bn254_x5_3_result;
 pub mod bn254_x5_5;
 #[cfg(feature = "poseidon_bn254_x5_5")]
 pub mod bn254_x5_5_result;
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub mod bn254_x17_3;
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub mod bn254_x17_5;
 
-#[cfg(feature = "poseidon_bls381_x17_3")]
-pub mod bls381_x17_3;
-#[cfg(feature = "poseidon_bls381_x17_5")]
-pub mod bls381_x17_5;
+#[cfg(feature = "poseidon_bls381_x3_3")]
+pub mod bls381_x3_3;
+#[cfg(feature = "poseidon_bls381_x3_5")]
+pub mod bls381_x3_5;
 #[cfg(feature = "poseidon_bls381_x5_3")]
 pub mod bls381_x5_3;
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub mod bls381_x5_5;
+#[cfg(feature = "poseidon_bls381_x17_3")]
+pub mod bls381_x17_3;
+#[cfg(feature = "poseidon_bls381_x17_5")]
+pub mod bls381_x17_5;
 
 use crate::Vec;
 use ark_crypto_primitives::Error;
@@ -127,6 +135,36 @@ pub fn get_mds_poseidon_bn254_x5_5<F: PrimeField>() -> Vec<Vec<F>> {
 pub fn get_mds_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<Vec<F>> {
 	parse_matrix(
 		bn254_x5_3::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_rounds_poseidon_bn254_x17_5<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_x17_5::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub fn get_rounds_poseidon_bn254_x17_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_x17_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_mds_poseidon_bn254_x17_5<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_x17_5::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub fn get_mds_poseidon_bn254_x17_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_x17_3::MDS_ENTRIES
 			.iter()
 			.map(|x| x.to_vec())
 			.collect::<Vec<_>>(),

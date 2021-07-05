@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's zero-knowledge gadgets written using Arkworks"
@@ -39,7 +39,20 @@ default_poseidon = ["poseidon_bls381_x5_5", "poseidon_bls381_x5_3"]
 test = ["poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
 r1cs = []
 std = ["ark-std/std"]
-
+all = [
+    "poseidon_bls381_x3_5",
+    "poseidon_bls381_x3_3",
+    "poseidon_bls381_x5_5",
+    "poseidon_bls381_x5_3",
+    "poseidon_bls381_x17_5",
+    "poseidon_bls381_x17_3",
+    "poseidon_bn254_x3_5",
+    "poseidon_bn254_x3_3",
+    "poseidon_bn254_x5_5",
+    "poseidon_bn254_x5_3",
+    "poseidon_bn254_x17_5",
+    "poseidon_bn254_x17_3",
+]
 poseidon_bls381_x3_5 = []
 poseidon_bls381_x3_3 = []
 poseidon_bls381_x5_5 = []
@@ -47,8 +60,12 @@ poseidon_bls381_x5_3 = []
 poseidon_bls381_x17_5 = []
 poseidon_bls381_x17_3 = []
 
+poseidon_bn254_x3_5 = []
+poseidon_bn254_x3_3 = []
 poseidon_bn254_x5_5 = []
 poseidon_bn254_x5_3 = []
+poseidon_bn254_x17_5 = []
+poseidon_bn254_x17_3 = []
 
 [[bench]]
 name = "bridge_bench"
