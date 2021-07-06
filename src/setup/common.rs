@@ -6,7 +6,9 @@ use crate::{
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 	utils::{
 		get_mds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_5,
+		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5,
 		get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5,
+		get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_5,
 	},
 };
 use ark_crypto_primitives::SNARK;
@@ -37,6 +39,12 @@ pub type Tree<F> = SparseMerkleTree<TreeConfig<F>>;
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds3;
+
+#[derive(Copy, Clone)]
+pub enum Curve {
+	Bls381,
+	Bn254,
+}
 
 impl Rounds for PoseidonRounds3 {
 	const FULL_ROUNDS: usize = 8;
@@ -72,20 +80,40 @@ pub fn setup_tree_and_create_path<F: PrimeField>(
 	(mt, path)
 }
 
-pub fn setup_params_3<F: PrimeField>() -> PoseidonParameters<F> {
+pub fn setup_params_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
-	let rounds3 = get_rounds_poseidon_bls381_x5_3::<F>();
-	let mds3 = get_mds_poseidon_bls381_x5_3::<F>();
-	let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-	params3
+	match curve {
+		Bls381 => {
+			let rounds3 = get_rounds_poseidon_bls381_x5_3::<F>();
+			let mds3 = get_mds_poseidon_bls381_x5_3::<F>();
+			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
+			params3
+		},
+		Bn254 => {
+			let rounds3 = get_rounds_poseidon_bn254_x5_3::<F>();
+			let mds3 = get_mds_poseidon_bn254_x5_3::<F>();
+			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
+			params3
+		},
+	}
 }
 
-pub fn setup_params_5<F: PrimeField>() -> PoseidonParameters<F> {
-	// Round params for the poseidon in leaf creation gadget
-	let rounds5 = get_rounds_poseidon_bls381_x5_5::<F>();
-	let mds5 = get_mds_poseidon_bls381_x5_5::<F>();
-	let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
-	params5
+pub fn setup_params_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
+	// Making params for poseidon in merkle tree
+	match curve {
+		Bls381 => {
+			let rounds5 = get_rounds_poseidon_bls381_x5_5::<F>();
+			let mds5 = get_mds_poseidon_bls381_x5_5::<F>();
+			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
+			params5
+		},
+		Bn254 => {
+			let rounds5 = get_rounds_poseidon_bn254_x5_5::<F>();
+			let mds5 = get_mds_poseidon_bn254_x5_5::<F>();
+			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
+			params5
+		},
+	}
 }
 
 pub fn verify_groth16<E: PairingEngine>(

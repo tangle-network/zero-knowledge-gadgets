@@ -300,8 +300,8 @@ mod test {
 
 	#[test]
 	fn test_parameter_to_and_from_bytes() {
-		let rounds = get_rounds_3::<Fq>();
-		let mds = get_mds_3::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
 		let bytes = params.to_bytes();
