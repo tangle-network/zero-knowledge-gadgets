@@ -190,7 +190,7 @@ mod test {
 	fn setup_and_prove_mixer_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit::<_, BlsFr>(rng, curve);
+		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr>(rng, curve);
 
 		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
 		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
@@ -204,7 +204,7 @@ mod test {
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit(rng, curve);
+		let (circuit, .., public_inputs) = setup_random_circuit_x5(rng, curve);
 
 		type GrothSetup = Groth16<Bls12_381>;
 
@@ -222,13 +222,13 @@ mod test {
 	fn should_fail_with_invalid_root() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let params5 = setup_params_5(curve);
+		let params5 = setup_params_x5_5(curve);
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let (leaf_private, leaf, nullifier_hash) = setup_leaf(&params5, rng);
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer);
-		let params3 = setup_params_3(curve);
+		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
@@ -258,13 +258,13 @@ mod test {
 	fn should_fail_with_invalid_leaf() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let params5 = setup_params_5(curve);
+		let params5 = setup_params_x5_5(curve);
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let (leaf_private, _, nullifier_hash) = setup_leaf(&params5, rng);
 		let leaf = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer);
-		let params3 = setup_params_3(curve);
+		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
@@ -294,13 +294,13 @@ mod test {
 	fn should_fail_with_invalid_nullifier() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let params5 = setup_params_5(curve);
+		let params5 = setup_params_x5_5(curve);
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let (leaf_private, leaf, _) = setup_leaf(&params5, rng);
 		let nullifier_hash = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer);
-		let params3 = setup_params_3(curve);
+		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
