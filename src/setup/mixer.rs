@@ -21,36 +21,69 @@ pub type MixerConstraintData<F> = MixerData<F>;
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 pub type MixerConstraintDataGadget<F> = MixerDataGadget<F>;
 
-pub type Leaf<F> = MixerLeaf<F, PoseidonCRH5<F>>;
-pub type LeafGadget<F> = MixerLeafGadget<F, PoseidonCRH5<F>, PoseidonCRH5Gadget<F>, Leaf<F>>;
+pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
+pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>, Leaf_x5<F>>;
 
-pub type Circuit<F>= MixerCircuit<
+pub type Circuit_x5<F>= MixerCircuit<
 	F,
 	MixerConstraintData<F>,
 	MixerConstraintDataGadget<F>,
-	PoseidonCRH5<F>,
-	PoseidonCRH5Gadget<F>,
-	TreeConfig<F>,
+	PoseidonCRH_x5_5<F>,
+	PoseidonCRH_x5_5Gadget<F>,
+	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
-	PoseidonCRH3Gadget<F>,
-	Leaf<F>,
-	LeafGadget<F>,
+	PoseidonCRH_x5_3Gadget<F>,
+	Leaf_x5<F>,
+	LeafGadget_x5<F>,
 >;
 
-pub fn setup_leaf<R: Rng, F: PrimeField>(
+pub type Leaf_x17<F> = MixerLeaf<F, PoseidonCRH_x17_5<F>>;
+pub type LeafGadget_x17<F> = MixerLeafGadget<F, PoseidonCRH_x17_5<F>, PoseidonCRH_x17_5Gadget<F>, Leaf_x17<F>>;
+
+pub type Circuit_x17<F>= MixerCircuit<
+	F,
+	MixerConstraintData<F>,
+	MixerConstraintDataGadget<F>,
+	PoseidonCRH_x17_5<F>,
+	PoseidonCRH_x17_5Gadget<F>,
+	TreeConfig_x17<F>,
+	LeafCRHGadget<F>,
+	PoseidonCRH_x17_3Gadget<F>,
+	Leaf_x17<F>,
+	LeafGadget_x17<F>,
+>;
+
+pub fn setup_leaf_x5<R: Rng, F: PrimeField>(
 	params: &PoseidonParameters<F>,
 	rng: &mut R,
 ) -> (
 	LeafPrivate<F>,
-	<Leaf<F> as LeafCreation<PoseidonCRH5<F>>>::Leaf,
-	<Leaf<F> as LeafCreation<PoseidonCRH5<F>>>::Nullifier,
+	<Leaf_x5<F> as LeafCreation<PoseidonCRH_x5_5<F>>>::Leaf,
+	<Leaf_x5<F> as LeafCreation<PoseidonCRH_x5_5<F>>>::Nullifier,
 ) {
 	// Secret inputs for the leaf
-	let leaf_private = Leaf::generate_secrets(rng).unwrap();
+	let leaf_private = Leaf_x5::generate_secrets(rng).unwrap();
 
 	// Creating the leaf
-	let leaf = Leaf::create_leaf(&leaf_private, &(), params).unwrap();
-	let nullifier_hash = Leaf::create_nullifier(&leaf_private, params).unwrap();
+	let leaf = Leaf_x5::create_leaf(&leaf_private, &(), params).unwrap();
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, params).unwrap();
+	(leaf_private, leaf, nullifier_hash)
+}
+
+pub fn setup_leaf_x17<R: Rng, F: PrimeField>(
+	params: &PoseidonParameters<F>,
+	rng: &mut R,
+) -> (
+	LeafPrivate<F>,
+	<Leaf_x17<F> as LeafCreation<PoseidonCRH_x17_5<F>>>::Leaf,
+	<Leaf_x17<F> as LeafCreation<PoseidonCRH_x17_5<F>>>::Nullifier,
+) {
+	// Secret inputs for the leaf
+	let leaf_private = Leaf_x17::generate_secrets(rng).unwrap();
+
+	// Creating the leaf
+	let leaf = Leaf_x17::create_leaf(&leaf_private, &(), params).unwrap();
+	let nullifier_hash = Leaf_x17::create_nullifier(&leaf_private, params).unwrap();
 	(leaf_private, leaf, nullifier_hash)
 }
 
@@ -66,18 +99,18 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField>(
 	relayer: F,
 	rng: &mut R,
 	curve: Curve,
-) -> (Circuit<F>, F, F, F, Vec<F>) {
+) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
 	let params3 = setup_params_x5_3::<F>(curve);
 	let params5 = setup_params_x5_5::<F>(curve);
 
 	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer);
-	let (leaf_private, leaf, nullifier_hash) = setup_leaf::<R, F>(&params5, rng);
+	let (leaf_private, leaf, nullifier_hash) = setup_leaf_x5::<R, F>(&params5, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
-	let (tree, path) = setup_tree_and_create_path::<F>(&leaves_new, index, &params3);
+	let (tree, path) = setup_tree_and_create_path_x5::<F>(&leaves_new, index, &params3);
 	let root = tree.root().inner();
 
-	let mc = Circuit::<F>::new(
+	let mc = Circuit_x5::<F>::new(
 		arbitrary_input.clone(),
 		leaf_private,
 		// leaf public
@@ -98,18 +131,18 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField>(
 	relayer: F,
 	rng: &mut R,
 	curve: Curve,
-) -> (Circuit<F>, F, F, F, Vec<F>) {
+) -> (Circuit_x17<F>, F, F, F, Vec<F>) {
 	let params3 = setup_params_x17_3::<F>(curve);
 	let params5 = setup_params_x17_5::<F>(curve);
 
 	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer);
-	let (leaf_private, leaf, nullifier_hash) = setup_leaf::<R, F>(&params5, rng);
+	let (leaf_private, leaf, nullifier_hash) = setup_leaf_x17::<R, F>(&params5, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
-	let (tree, path) = setup_tree_and_create_path::<F>(&leaves_new, index, &params3);
+	let (tree, path) = setup_tree_and_create_path_x17::<F>(&leaves_new, index, &params3);
 	let root = tree.root().inner();
 
-	let mc = Circuit::<F>::new(
+	let mc = Circuit_x17::<F>::new(
 		arbitrary_input.clone(),
 		leaf_private,
 		// leaf public
@@ -123,7 +156,7 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField>(
 	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
-pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit<F>, F, F, F, Vec<F>) {
+pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
 	let leaves = Vec::new();
 	let index = 0;
 	let recipient = F::rand(rng);
@@ -131,7 +164,7 @@ pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve)
 	setup_circuit_x5(&leaves, index, recipient, relayer, rng, curve)
 }
 
-pub fn setup_random_circuit_x17<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit<F>, F, F, F, Vec<F>) {
+pub fn setup_random_circuit_x17<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit_x17<F>, F, F, F, Vec<F>) {
 	let leaves = Vec::new();
 	let index = 0;
 	let recipient = F::rand(rng);
@@ -153,17 +186,33 @@ pub fn get_public_inputs<F: PrimeField>(
 	public_inputs
 }
 
-pub fn prove_groth16<R: RngCore + CryptoRng, E: PairingEngine>(
+pub fn prove_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine>(
 	pk: &ProvingKey<E>,
-	c: Circuit<E::Fr>,
+	c: Circuit_x5<E::Fr>,
 	rng: &mut R,
 ) -> Proof<E> {
 	Groth16::<E>::prove(pk, c, rng).unwrap()
 }
 
-pub fn setup_groth16<R: RngCore + CryptoRng, E: PairingEngine>(
+pub fn setup_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine>(
 	rng: &mut R,
-	c: Circuit<E::Fr>,
+	c: Circuit_x5<E::Fr>,
+) -> (ProvingKey<E>, VerifyingKey<E>) {
+	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
+	(pk, vk)
+}
+
+pub fn prove_groth16_x17<R: RngCore + CryptoRng, E: PairingEngine>(
+	pk: &ProvingKey<E>,
+	c: Circuit_x17<E::Fr>,
+	rng: &mut R,
+) -> Proof<E> {
+	Groth16::<E>::prove(pk, c, rng).unwrap()
+}
+
+pub fn setup_groth16_x17<R: RngCore + CryptoRng, E: PairingEngine>(
+	rng: &mut R,
+	c: Circuit_x17<E::Fr>,
 ) -> (ProvingKey<E>, VerifyingKey<E>) {
 	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
 	(pk, vk)
@@ -221,7 +270,7 @@ mod test {
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
 		let (pk, vk) = setup_random_groth16_x5::<_, Bls12_381>(&mut rng, curve);
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit.clone(), &mut rng);
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit.clone(), &mut rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 
 		verify_zk_mock(
@@ -250,13 +299,13 @@ mod test {
 		let params5 = setup_params_x5_5::<Bls381>(curve);
 
 		let arbitrary_input = setup_arbitrary_data::<Bls381>(recipient, relayer);
-		let (leaf_private, leaf, nullifier_hash) = setup_leaf::<_, Bls381>(&params5, &mut rng);
+		let (leaf_private, leaf, nullifier_hash) = setup_leaf_x5::<_, Bls381>(&params5, &mut rng);
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) = setup_tree_and_create_path::<Bls381>(&leaves_new, 0, &params3);
+		let (tree, path) = setup_tree_and_create_path_x5::<Bls381>(&leaves_new, 0, &params3);
 		let root = tree.root().inner();
 
-		let mc = Circuit::<Bls381>::new(
+		let mc = Circuit_x5::<Bls381>::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			(),
@@ -271,7 +320,7 @@ mod test {
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
 		let (pk, vk) = setup_random_groth16_x5::<_, Bls12_381>(&mut rng, curve);
-		let proof = prove_groth16::<_, Bls12_381>(&pk, mc.clone(), &mut rng);
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, mc.clone(), &mut rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 
 		verify_zk_mock(
@@ -302,7 +351,7 @@ mod test {
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
 		let (pk, vk) = setup_random_groth16_x5::<_, Bls12_381>(&mut rng, curve);
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit.clone(), &mut rng);
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit.clone(), &mut rng);
 		let mut proof_bytes = vec![0u8; proof.serialized_size()];
 		proof.serialize(&mut proof_bytes[..]).unwrap();
 		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();

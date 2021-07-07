@@ -192,8 +192,8 @@ mod test {
 		let curve = Curve::Bls381;
 		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr>(rng, curve);
 
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
@@ -225,14 +225,14 @@ mod test {
 		let params5 = setup_params_x5_5(curve);
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
-		let (leaf_private, leaf, nullifier_hash) = setup_leaf(&params5, rng);
+		let (leaf_private, leaf, nullifier_hash) = setup_leaf_x5(&params5, rng);
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			(),
@@ -247,8 +247,8 @@ mod test {
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -261,14 +261,14 @@ mod test {
 		let params5 = setup_params_x5_5(curve);
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
-		let (leaf_private, _, nullifier_hash) = setup_leaf(&params5, rng);
+		let (leaf_private, _, nullifier_hash) = setup_leaf_x5(&params5, rng);
 		let leaf = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			(),
@@ -283,8 +283,8 @@ mod test {
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -297,14 +297,14 @@ mod test {
 		let params5 = setup_params_x5_5(curve);
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
-		let (leaf_private, leaf, _) = setup_leaf(&params5, rng);
+		let (leaf_private, leaf, _) = setup_leaf_x5(&params5, rng);
 		let nullifier_hash = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			(),
@@ -319,8 +319,8 @@ mod test {
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}

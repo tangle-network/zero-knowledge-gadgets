@@ -224,8 +224,8 @@ mod test {
 		let curve = Curve::Bls381;
 		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr>(rng, curve);
 
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
@@ -259,16 +259,16 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 		let roots = vec![root];
 		let set_private_inputs = setup_set(&root, &roots);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
@@ -288,8 +288,8 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -304,16 +304,16 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
 		let set_private_inputs = setup_set(&root, &roots);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
@@ -333,8 +333,8 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -349,16 +349,16 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf(chain_id, &params5, rng);
+		let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
 		let leaf = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
 		let set_private_inputs = setup_set(&root, &roots);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
@@ -378,8 +378,8 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -394,16 +394,16 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, _) = setup_leaf(chain_id, &params5, rng);
+		let (leaf_private, leaf_public, leaf, _) = setup_leaf_x5(chain_id, &params5, rng);
 		let nullifier_hash = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
 		let set_private_inputs = setup_set(&root, &roots);
 
-		let circuit = Circuit::new(
+		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
@@ -423,8 +423,8 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}

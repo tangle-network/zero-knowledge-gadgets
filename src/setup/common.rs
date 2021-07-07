@@ -24,27 +24,63 @@ use ark_std::{rc::Rc, vec::Vec};
 
 
 #[derive(Default, Clone)]
-pub struct PoseidonRounds5;
+pub struct PoseidonRounds_x5_5;
 
-impl Rounds for PoseidonRounds5 {
+impl Rounds for PoseidonRounds_x5_5 {
 	const FULL_ROUNDS: usize = 8;
 	const PARTIAL_ROUNDS: usize = 60;
 	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 	const WIDTH: usize = 5;
 }
 
-pub type PoseidonCRH3<F> = CRH<F, PoseidonRounds3>;
-pub type PoseidonCRH3Gadget<F> = CRHGadget<F, PoseidonRounds3>;
+#[derive(Default, Clone)]
+pub struct PoseidonRounds_x5_3;
 
-pub type PoseidonCRH5<F> = CRH<F, PoseidonRounds5>;
-pub type PoseidonCRH5Gadget<F> = CRHGadget<F, PoseidonRounds5>;
+impl Rounds for PoseidonRounds_x5_3 {
+	const FULL_ROUNDS: usize = 8;
+	const PARTIAL_ROUNDS: usize = 57;
+	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+	const WIDTH: usize = 3;
+}
+
+#[derive(Default, Clone)]
+pub struct PoseidonRounds_x17_5;
+
+impl Rounds for PoseidonRounds_x17_5 {
+	const FULL_ROUNDS: usize = 8;
+	const PARTIAL_ROUNDS: usize = 35;
+	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
+	const WIDTH: usize = 5;
+}
+
+#[derive(Default, Clone)]
+pub struct PoseidonRounds_x17_3;
+
+impl Rounds for PoseidonRounds_x17_3 {
+	const FULL_ROUNDS: usize = 8;
+	const PARTIAL_ROUNDS: usize = 33;
+	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
+	const WIDTH: usize = 3;
+}
+
+pub type PoseidonCRH_x5_3<F> = CRH<F, PoseidonRounds_x5_3>;
+pub type PoseidonCRH_x5_3Gadget<F> = CRHGadget<F, PoseidonRounds_x5_3>;
+
+pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
+pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
+
+pub type PoseidonCRH_x17_3<F> = CRH<F, PoseidonRounds_x17_3>;
+pub type PoseidonCRH_x17_3Gadget<F> = CRHGadget<F, PoseidonRounds_x17_3>;
+
+pub type PoseidonCRH_x17_5<F> = CRH<F, PoseidonRounds_x17_5>;
+pub type PoseidonCRH_x17_5Gadget<F> = CRHGadget<F, PoseidonRounds_x17_5>;
+
 
 pub type LeafCRH<F> = IdentityCRH<F>;
 pub type LeafCRHGadget<F>= IdentityCRHGadget<F>;
-pub type Tree<F> = SparseMerkleTree<TreeConfig<F>>;
+pub type Tree_x5<F> = SparseMerkleTree<TreeConfig_x5<F>>;
+pub type Tree_x17<F> = SparseMerkleTree<TreeConfig_x17<F>>;
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds3;
 
 #[derive(Copy, Clone)]
 pub enum Curve {
@@ -52,35 +88,55 @@ pub enum Curve {
 	Bn254,
 }
 
-impl Rounds for PoseidonRounds3 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 57;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 3;
-}
-
 #[derive(Clone)]
-pub struct TreeConfig<F: PrimeField>(PhantomData<F>);
-impl<F: PrimeField> MerkleConfig for TreeConfig<F> {
-	type H = PoseidonCRH3<F>;
+pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
+	type H = PoseidonCRH_x5_3<F>;
 	type LeafH = LeafCRH<F>;
 
 	const HEIGHT: u8 = 30;
 }
 
-pub fn setup_tree<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>) -> Tree<F> {
+#[derive(Clone)]
+pub struct TreeConfig_x17<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig_x17<F> {
+	type H = PoseidonCRH_x17_3<F>;
+	type LeafH = LeafCRH<F>;
+
+	const HEIGHT: u8 = 30;
+}
+
+pub fn setup_tree_x5<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>) -> Tree_x5<F> {
 	let inner_params = Rc::new(params.clone());
-	let mt = Tree::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
+	let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
 	mt
 }
 
-pub fn setup_tree_and_create_path<F: PrimeField>(
+pub fn setup_tree_and_create_path_x5<F: PrimeField>(
 	leaves: &[F],
 	index: u64,
 	params: &PoseidonParameters<F>,
-) -> (Tree<F>, Path<TreeConfig<F>>) {
+) -> (Tree_x5<F>, Path<TreeConfig_x5<F>>) {
 	// Making the merkle tree
-	let mt = setup_tree(leaves, params);
+	let mt = setup_tree_x5(leaves, params);
+	// Getting the proof path
+	let path = mt.generate_membership_proof(index);
+	(mt, path)
+}
+
+pub fn setup_tree_x17<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>) -> Tree_x17<F> {
+	let inner_params = Rc::new(params.clone());
+	let mt = Tree_x17::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
+	mt
+}
+
+pub fn setup_tree_and_create_path_x17<F: PrimeField>(
+	leaves: &[F],
+	index: u64,
+	params: &PoseidonParameters<F>,
+) -> (Tree_x17<F>, Path<TreeConfig_x17<F>>) {
+	// Making the merkle tree
+	let mt = setup_tree_x17(leaves, params);
 	// Getting the proof path
 	let path = mt.generate_membership_proof(index);
 	(mt, path)
