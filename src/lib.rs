@@ -12,6 +12,7 @@ pub mod circuit;
 pub mod identity;
 pub mod leaf;
 pub mod merkle_tree;
+pub mod mimc;
 pub mod poseidon;
 pub mod set;
 #[cfg(feature = "r1cs")]
