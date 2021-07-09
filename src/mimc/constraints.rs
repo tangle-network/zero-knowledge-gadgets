@@ -189,6 +189,7 @@ impl<F: PrimeField> AllocVar<MiMCParameters<F>, F> for MiMCParametersVar<F> {
 	}
 }
 
+#[cfg(all(feature = "mimc_220_ed_on_bn254"))]
 #[cfg(test)]
 mod test {
 	use super::*;
@@ -226,8 +227,37 @@ mod test {
 			MiMCParametersVar::new_variable(cs.clone(), || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 
-		// Test MiMC on an input of 3 field elements. This will not require padding,
-		// since the inputs are aligned to the expected input chunk size of 32.
+		// Test MiMC on an input of 3 field elements.
+		let aligned_inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
+		let aligned_inp_var =
+			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
+
+		let res = MiMC220::evaluate(&params, &aligned_inp).unwrap();
+		let res_var = <MiMC220Gadget as CRHGadgetTrait<_, _>>::evaluate(
+			&params_var.clone(),
+			&aligned_inp_var,
+		)
+		.unwrap();
+		assert_eq!(res, res_var.value().unwrap());
+	}
+
+	#[test]
+	fn test_mimc_against_circom_fixture() {
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let params = MiMCParameters::<Fq>::new(
+			Fq::from(3),
+			MiMCRounds220::ROUNDS,
+			MiMCRounds220::WIDTH,
+			MiMCRounds220::WIDTH,
+			CONSTANTS.to_vec(),
+		);
+
+		let params_var =
+			MiMCParametersVar::new_variable(cs.clone(), || Ok(&params), AllocationMode::Constant)
+				.unwrap();
+
+		// Test MiMC on an input of 3 field elements.
 		let aligned_inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 		let aligned_inp_var =
 			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();

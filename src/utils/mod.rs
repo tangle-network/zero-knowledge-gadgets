@@ -24,6 +24,7 @@ pub mod bls381_x5_3;
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub mod bls381_x5_5;
 
+#[cfg(feature = "mimc_220_ed_on_bn254")]
 pub mod mimc;
 
 use crate::Vec;
