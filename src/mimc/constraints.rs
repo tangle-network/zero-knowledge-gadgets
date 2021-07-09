@@ -226,7 +226,7 @@ mod test {
 			MiMCParametersVar::new_variable(cs.clone(), || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 
-		// Test Poseidon on an input of 3 field elements. This will not require padding,
+		// Test MiMC on an input of 3 field elements. This will not require padding,
 		// since the inputs are aligned to the expected input chunk size of 32.
 		let aligned_inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 		let aligned_inp_var =
@@ -236,20 +236,6 @@ mod test {
 		let res_var = <MiMC220Gadget as CRHGadgetTrait<_, _>>::evaluate(
 			&params_var.clone(),
 			&aligned_inp_var,
-		)
-		.unwrap();
-		assert_eq!(res, res_var.value().unwrap());
-
-		// Test Poseidon on an input of 6 bytes. This will require padding, since the
-		// inputs are not aligned to the expected input chunk size of 32.
-		let unaligned_inp: Vec<u8> = vec![1, 2, 3, 4, 5, 6];
-		let unaligned_inp_var =
-			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(unaligned_inp.clone())).unwrap();
-
-		let res = MiMC220::evaluate(&params, &unaligned_inp).unwrap();
-		let res_var = <MiMC220Gadget as CRHGadgetTrait<_, _>>::evaluate(
-			&params_var.clone(),
-			&unaligned_inp_var,
 		)
 		.unwrap();
 		assert_eq!(res, res_var.value().unwrap());
