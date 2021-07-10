@@ -1,7 +1,6 @@
-use crate::utils::{from_field_elements, to_field_elements};
+use crate::utils::{to_field_elements};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
-use ark_serialize::Read;
 use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
 
 #[cfg(feature = "r1cs")]
@@ -25,9 +24,9 @@ impl core::fmt::Display for MiMCError {
 impl ArkError for MiMCError {}
 
 pub trait Rounds: Default + Clone {
-	/// The size of the permutation, in field elements.
+	/// The size of the input vector
 	const WIDTH: usize;
-	/// Number of full SBox rounds
+	/// Number of mimc rounds
 	const ROUNDS: usize;
 }
 
@@ -137,11 +136,11 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 			let temp_x_r = x_r.clone();
 
 			if i < params.rounds - 1 {
-				x_l = if i == 0 { temp_x_r } else { temp_x_r + t4 * t };
+				x_l = if i == 0 { temp_x_r } else { temp_x_r + (t4 * t) };
 
 				x_r = temp_x_l;
 			} else {
-				x_r = temp_x_r + t4 * t;
+				x_r = temp_x_r + (t4 * t);
 				x_l = temp_x_l;
 			}
 		}
@@ -178,11 +177,8 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 
 		let mut buffer = vec![F::zero(); P::WIDTH];
 		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
-
 		let result = Self::mimc(&parameters, buffer)?;
-
 		end_timer!(eval_time);
-
 		Ok(result.get(0).cloned().ok_or(MiMCError::InvalidInputs)?)
 	}
 }
@@ -224,8 +220,6 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
-	use crate::utils::mimc::ed_on_bn254_mimc::CONSTANTS;
-
 	#[derive(Default, Clone)]
 	struct MiMCRounds220;
 
@@ -243,7 +237,7 @@ mod test {
 			MiMCRounds220::ROUNDS,
 			MiMCRounds220::WIDTH,
 			MiMCRounds220::WIDTH,
-			CONSTANTS.to_vec(),
+			crate::utils::get_rounds_mimc_220(),
 		);
 
 		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();

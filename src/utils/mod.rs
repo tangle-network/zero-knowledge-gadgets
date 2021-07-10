@@ -249,3 +249,8 @@ pub fn get_mds_poseidon_bls381_x17_3<F: PrimeField>() -> Vec<Vec<F>> {
 			.collect::<Vec<_>>(),
 	)
 }
+
+#[cfg(feature = "mimc_220_ed_on_bn254")]
+pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
+	parse_vec(crate::utils::mimc::CONSTANTS.to_vec())
+}

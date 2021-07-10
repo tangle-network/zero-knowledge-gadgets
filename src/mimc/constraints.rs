@@ -192,35 +192,47 @@ impl<F: PrimeField> AllocVar<MiMCParameters<F>, F> for MiMCParametersVar<F> {
 #[cfg(all(feature = "mimc_220_ed_on_bn254"))]
 #[cfg(test)]
 mod test {
+	#![allow(non_camel_case_types)]
+
 	use super::*;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, Zero};
+	use ark_ff::{to_bytes, Zero, field_new};
 	use ark_relations::r1cs::ConstraintSystem;
 
-	use crate::utils::mimc::ed_on_bn254_mimc::CONSTANTS;
+	#[derive(Default, Clone)]
+	struct MiMCRounds220_2;
+
+	impl Rounds for MiMCRounds220_2 {
+		const ROUNDS: usize = 220;
+		const WIDTH: usize = 2;
+	}
+
+	type MiMC220_2 = CRH<Fq, MiMCRounds220_2>;
+	type MiMC220Gadget_2 = CRHGadget<Fq, MiMCRounds220_2>;
+
 
 	#[derive(Default, Clone)]
-	struct MiMCRounds220;
+	struct MiMCRounds220_3;
 
-	impl Rounds for MiMCRounds220 {
+	impl Rounds for MiMCRounds220_3 {
 		const ROUNDS: usize = 220;
 		const WIDTH: usize = 3;
 	}
 
-	type MiMC220 = CRH<Fq, MiMCRounds220>;
-	type MiMC220Gadget = CRHGadget<Fq, MiMCRounds220>;
+	type MiMC220_3 = CRH<Fq, MiMCRounds220_3>;
+	type MiMC220Gadget_3 = CRHGadget<Fq, MiMCRounds220_3>;
 
 	#[test]
 	fn test_mimc_native_equality() {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		let params = MiMCParameters::<Fq>::new(
-			Fq::from(3),
-			MiMCRounds220::ROUNDS,
-			MiMCRounds220::WIDTH,
-			MiMCRounds220::WIDTH,
-			CONSTANTS.to_vec(),
+			Fq::from(0),
+			MiMCRounds220_3::ROUNDS,
+			MiMCRounds220_3::WIDTH,
+			MiMCRounds220_3::WIDTH,
+			crate::utils::get_rounds_mimc_220(),
 		);
 
 		let params_var =
@@ -232,8 +244,8 @@ mod test {
 		let aligned_inp_var =
 			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
 
-		let res = MiMC220::evaluate(&params, &aligned_inp).unwrap();
-		let res_var = <MiMC220Gadget as CRHGadgetTrait<_, _>>::evaluate(
+		let res = MiMC220_3::evaluate(&params, &aligned_inp).unwrap();
+		let res_var = <MiMC220Gadget_3 as CRHGadgetTrait<_, _>>::evaluate(
 			&params_var.clone(),
 			&aligned_inp_var,
 		)
@@ -243,14 +255,24 @@ mod test {
 
 	#[test]
 	fn test_mimc_against_circom_fixture() {
+		// > require('circomlib').mimcsponge.multiHash([1,2], 0, 0)
+		// [
+		//   19814528709687996974327303300007262407299502847885145507292406548098437687919n
+		// ]
+		let out = field_new!(
+			Fq,
+			"19814528709687996974327303300007262407299502847885145507292406548098437687919"
+		);
+		
+
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		let params = MiMCParameters::<Fq>::new(
 			Fq::from(3),
-			MiMCRounds220::ROUNDS,
-			MiMCRounds220::WIDTH,
-			MiMCRounds220::WIDTH,
-			CONSTANTS.to_vec(),
+			MiMCRounds220_2::ROUNDS,
+			MiMCRounds220_2::WIDTH,
+			MiMCRounds220_2::WIDTH,
+			crate::utils::get_rounds_mimc_220(),
 		);
 
 		let params_var =
@@ -258,16 +280,17 @@ mod test {
 				.unwrap();
 
 		// Test MiMC on an input of 3 field elements.
-		let aligned_inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
+		let aligned_inp = to_bytes![Fq::from(1u128), Fq::from(2u128)].unwrap();
 		let aligned_inp_var =
 			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
 
-		let res = MiMC220::evaluate(&params, &aligned_inp).unwrap();
-		let res_var = <MiMC220Gadget as CRHGadgetTrait<_, _>>::evaluate(
+		let res = MiMC220_2::evaluate(&params, &aligned_inp).unwrap();
+		let res_var = <MiMC220Gadget_2 as CRHGadgetTrait<_, _>>::evaluate(
 			&params_var.clone(),
 			&aligned_inp_var,
 		)
 		.unwrap();
 		assert_eq!(res, res_var.value().unwrap());
+		println!("{:?}\n{:?}\n", res, out);
 	}
 }
