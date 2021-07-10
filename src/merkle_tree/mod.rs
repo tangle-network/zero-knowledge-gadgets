@@ -362,7 +362,7 @@ pub fn gen_empty_hashes<P: Config>(
 	Ok(empty_hashes)
 }
 
-#[cfg(feature = "default_poseidon")]
+#[cfg(all(feature = "default_poseidon", feature = "default_mimc"))]
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};
@@ -412,7 +412,7 @@ mod test {
 	}
 
 	#[test]
-	fn should_create_tree() {
+	fn should_create_tree_poseidon() {
 		let rng = &mut test_rng();
 		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
 		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
@@ -444,7 +444,7 @@ mod test {
 	}
 
 	#[test]
-	fn should_generate_and_validate_proof() {
+	fn should_generate_and_validate_proof_poseidon() {
 		let rng = &mut test_rng();
 		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
 		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
@@ -454,6 +454,88 @@ mod test {
 
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
 		let smt = create_merkle_tree::<_, SMTConfig>(inner_params, leaf_params, &leaves);
+
+		let proof = smt.generate_membership_proof(0);
+
+		let res = proof.check_membership(&smt.root(), &leaves[0]).unwrap();
+		assert!(res);
+	}
+
+
+	use ark_ed_on_bn254::Fq as Bn254Fq;
+	use crate::mimc::Rounds as MiMCRounds;
+
+	#[derive(Default, Clone)]
+	struct MiMCRounds220_2;
+
+	impl crate::mimc::Rounds for MiMCRounds220_2 {
+		const ROUNDS: usize = 220;
+		const WIDTH: usize = 2;
+	}
+
+	type MiMC220_2 = crate::mimc::CRH<Bn254Fq, MiMCRounds220_2>;
+
+	#[derive(Clone, Debug, Eq, PartialEq)]
+	struct MiMCSMTConfig;
+	impl Config for MiMCSMTConfig {
+		type H = MiMC220_2;
+		type LeafH = MiMC220_2;
+
+		const HEIGHT: u8 = 3;
+	}
+
+	#[test]
+	fn should_create_tree_mimc() {
+		let rng = &mut test_rng();
+		let params = crate::mimc::MiMCParameters::<Bn254Fq>::new(
+			Bn254Fq::from(0),
+			MiMCRounds220_2::ROUNDS,
+			MiMCRounds220_2::WIDTH,
+			MiMCRounds220_2::WIDTH,
+			crate::utils::get_rounds_mimc_220(),
+		);
+
+		let inner_params = Rc::new(params);
+		let leaf_params = inner_params.clone();
+
+		let leaves = vec![Bn254Fq::rand(rng), Bn254Fq::rand(rng), Bn254Fq::rand(rng)];
+		let smt = create_merkle_tree(inner_params.clone(), leaf_params.clone(), &leaves);
+
+		let root = smt.root();
+
+		let empty_hashes =
+			gen_empty_hashes::<MiMCSMTConfig>(inner_params.borrow(), leaf_params.borrow()).unwrap();
+		let hash1 = hash_leaf::<MiMCSMTConfig, _>(leaf_params.borrow(), &leaves[0]).unwrap();
+		let hash2 = hash_leaf::<MiMCSMTConfig, _>(leaf_params.borrow(), &leaves[1]).unwrap();
+		let hash3 = hash_leaf::<MiMCSMTConfig, _>(leaf_params.borrow(), &leaves[2]).unwrap();
+
+		let hash12 = hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash1, &hash2).unwrap();
+		let hash34 =
+			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash3, &empty_hashes[0]).unwrap();
+		let hash1234 =
+			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash12, &hash34).unwrap();
+		let calc_root =
+			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash1234, &empty_hashes[2])
+				.unwrap();
+
+		assert_eq!(root, calc_root);
+	}
+
+	#[test]
+	fn should_generate_and_validate_proof_mimc() {
+		let rng = &mut test_rng();
+		let params = crate::mimc::MiMCParameters::<Bn254Fq>::new(
+			Bn254Fq::from(0),
+			MiMCRounds220_2::ROUNDS,
+			MiMCRounds220_2::WIDTH,
+			MiMCRounds220_2::WIDTH,
+			crate::utils::get_rounds_mimc_220(),
+		);
+		let inner_params = Rc::new(params);
+		let leaf_params = inner_params.clone();
+
+		let leaves = vec![Bn254Fq::rand(rng), Bn254Fq::rand(rng), Bn254Fq::rand(rng)];
+		let smt = create_merkle_tree::<_, MiMCSMTConfig>(inner_params, leaf_params, &leaves);
 
 		let proof = smt.generate_membership_proof(0);
 

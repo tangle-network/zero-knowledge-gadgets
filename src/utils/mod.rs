@@ -1,3 +1,7 @@
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub mod bn254_x17_3;
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub mod bn254_x17_5;
 #[cfg(feature = "poseidon_bn254_x5_3")]
 pub mod bn254_x5_3;
 #[cfg(feature = "poseidon_bn254_x5_3")]
@@ -6,11 +10,11 @@ pub mod bn254_x5_3_result;
 pub mod bn254_x5_5;
 #[cfg(feature = "poseidon_bn254_x5_5")]
 pub mod bn254_x5_5_result;
-#[cfg(feature = "poseidon_bn254_x17_3")]
-pub mod bn254_x17_3;
-#[cfg(feature = "poseidon_bn254_x17_5")]
-pub mod bn254_x17_5;
 
+#[cfg(feature = "poseidon_bls381_x17_3")]
+pub mod bls381_x17_3;
+#[cfg(feature = "poseidon_bls381_x17_5")]
+pub mod bls381_x17_5;
 #[cfg(feature = "poseidon_bls381_x3_3")]
 pub mod bls381_x3_3;
 #[cfg(feature = "poseidon_bls381_x3_5")]
@@ -19,10 +23,9 @@ pub mod bls381_x3_5;
 pub mod bls381_x5_3;
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub mod bls381_x5_5;
-#[cfg(feature = "poseidon_bls381_x17_3")]
-pub mod bls381_x17_3;
-#[cfg(feature = "poseidon_bls381_x17_5")]
-pub mod bls381_x17_5;
+
+#[cfg(feature = "mimc_220_ed_on_bn254")]
+pub mod mimc;
 
 use crate::Vec;
 use ark_crypto_primitives::Error;
@@ -245,4 +248,9 @@ pub fn get_mds_poseidon_bls381_x17_3<F: PrimeField>() -> Vec<Vec<F>> {
 			.map(|x| x.to_vec())
 			.collect::<Vec<_>>(),
 	)
+}
+
+#[cfg(feature = "mimc_220_ed_on_bn254")]
+pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
+	parse_vec(crate::utils::mimc::CONSTANTS.to_vec())
 }
