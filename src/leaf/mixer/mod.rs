@@ -25,6 +25,18 @@ impl<F: PrimeField> Private<F> {
 			rho: F::rand(rng),
 		}
 	}
+
+	pub fn r(&self) -> F {
+		self.r
+	}
+
+	pub fn nullifier(&self) -> F {
+		self.nullifier
+	}
+
+	pub fn rho(&self) -> F {
+		self.rho
+	}
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Default)]
