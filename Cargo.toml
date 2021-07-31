@@ -1,10 +1,10 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's zero-knowledge gadgets written using Arkworks"
-license = "GPL-3.0-only"
+license = "MIT/Apache-2.0"
 repository = "https://github.com/webb-tools/arkworks-gadgets"
 homepage = "https://webb.tools"
 
