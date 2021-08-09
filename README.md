@@ -70,3 +70,37 @@ Running:
 ```
 sage generate_parameters_grain.sage 1 0 255 5 8 60 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 ```
+
+### Params for `bls381_x17_3.rs`
+
+```
+exponentiation = 17
+width = 3
+full rounds = 8
+partial rounds = 33
+prime field = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+```
+
+Running:
+
+```
+echo "not implemented"
+```
+
+
+
+### Params for `bls381_x17_5.rs`
+
+```
+exponentiation = 17
+width = 5
+full rounds = 8
+partial rounds = 35
+prime field = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+```
+
+Running:
+
+```
+echo "not implemented"
+```
