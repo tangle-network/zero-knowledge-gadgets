@@ -37,6 +37,8 @@ ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve"
 default = ["std", "default_poseidon", "r1cs", "default_mimc"]
 default_mimc = ["mimc_220_ed_on_bn254"]
 default_poseidon = [
+	"poseidon_bls381_x3_3",
+	"poseidon_bls381_x3_5",
 	"poseidon_bls381_x5_5",
 	"poseidon_bls381_x5_3",
 	"poseidon_bn254_x5_5",
@@ -45,6 +47,8 @@ default_poseidon = [
     "poseidon_bls381_x17_3",
     "poseidon_bn254_x17_5",
     "poseidon_bn254_x17_3",
+    "poseidon_bn254_x3_3",
+    "poseidon_bn254_x3_5",
 ]
 
 test = ["poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
