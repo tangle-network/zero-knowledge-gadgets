@@ -1,3 +1,10 @@
+use ark_crypto_primitives::Error;
+use ark_ff::{fields::PrimeField, BigInteger};
+use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
+use ark_relations::r1cs::SynthesisError;
+
+use crate::Vec;
+
 #[cfg(feature = "poseidon_bn254_x17_3")]
 pub mod bn254_x17_3;
 #[cfg(feature = "poseidon_bn254_x17_5")]
@@ -24,14 +31,10 @@ pub mod bls381_x5_3;
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub mod bls381_x5_5;
 
+mod bn254_x3_3;
+mod bn254_x3_5;
 #[cfg(feature = "mimc_220_ed_on_bn254")]
 pub mod mimc;
-
-use crate::Vec;
-use ark_crypto_primitives::Error;
-use ark_ff::{fields::PrimeField, BigInteger};
-use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
-use ark_relations::r1cs::SynthesisError;
 
 pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 	let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
@@ -130,6 +133,16 @@ pub fn get_results_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_3_result::RESULT.to_vec())
 }
 
+#[cfg(feature = "poseidon_bn254_x3_3")]
+pub fn get_rounds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_x3_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bn254_x3_5")]
+pub fn get_rounds_poseidon_bn254_x3_5<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_x3_5::ROUND_CONSTS.to_vec())
+}
+
 #[cfg(feature = "poseidon_bn254_x5_5")]
 pub fn get_rounds_poseidon_bn254_x5_5<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_5::ROUND_CONSTS.to_vec())
@@ -138,6 +151,26 @@ pub fn get_rounds_poseidon_bn254_x5_5<F: PrimeField>() -> Vec<F> {
 #[cfg(feature = "poseidon_bn254_x5_3")]
 pub fn get_rounds_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bn254_x3_3")]
+pub fn get_mds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_x3_3::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_bn254_x3_5")]
+pub fn get_mds_poseidon_bn254_x3_5<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_x3_5::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
 }
 
 #[cfg(feature = "poseidon_bn254_x5_5")]
@@ -190,6 +223,16 @@ pub fn get_mds_poseidon_bn254_x17_3<F: PrimeField>() -> Vec<Vec<F>> {
 	)
 }
 
+#[cfg(feature = "poseidon_bls381_x3_3")]
+pub fn get_rounds_poseidon_bls381_x3_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(bls381_x3_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bls381_x3_5")]
+pub fn get_rounds_poseidon_bls381_x3_5<F: PrimeField>() -> Vec<F> {
+	parse_vec(bls381_x3_5::ROUND_CONSTS.to_vec())
+}
+
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub fn get_rounds_poseidon_bls381_x5_5<F: PrimeField>() -> Vec<F> {
 	parse_vec(bls381_x5_5::ROUND_CONSTS.to_vec())
@@ -198,6 +241,26 @@ pub fn get_rounds_poseidon_bls381_x5_5<F: PrimeField>() -> Vec<F> {
 #[cfg(feature = "poseidon_bls381_x5_3")]
 pub fn get_rounds_poseidon_bls381_x5_3<F: PrimeField>() -> Vec<F> {
 	parse_vec(bls381_x5_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bls381_x3_3")]
+pub fn get_mds_poseidon_bls381_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bls381_x3_3::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_bls381_x3_5")]
+pub fn get_mds_poseidon_bls381_x3_5<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bls381_x3_5::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
 }
 
 #[cfg(feature = "poseidon_bls381_x5_5")]
