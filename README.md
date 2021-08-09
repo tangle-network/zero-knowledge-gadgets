@@ -84,7 +84,8 @@ prime field = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 Running:
 
 ```
-echo "not implemented"
+sage generate_parameters_grain.sage 1 0 255 17 8 33 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+
 ```
 
 
@@ -102,5 +103,6 @@ prime field = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 Running:
 
 ```
-echo "not implemented"
+sage generate_parameters_grain.sage 1 0 255 17 8 35 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+
 ```
