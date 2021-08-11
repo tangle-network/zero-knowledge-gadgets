@@ -7,11 +7,12 @@ use crate::{
 		get_mds_poseidon_bls381_x17_3, get_mds_poseidon_bls381_x17_5, get_mds_poseidon_bls381_x3_3,
 		get_mds_poseidon_bls381_x3_5, get_mds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_5,
 		get_mds_poseidon_bn254_x17_3, get_mds_poseidon_bn254_x17_5, get_mds_poseidon_bn254_x3_3,
-		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bls381_x17_3,
-		get_rounds_poseidon_bls381_x17_5, get_rounds_poseidon_bls381_x3_3,
-		get_rounds_poseidon_bls381_x3_5, get_rounds_poseidon_bls381_x5_3,
-		get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x17_3,
-		get_rounds_poseidon_bn254_x17_5, get_rounds_poseidon_bn254_x3_3,
+		get_mds_poseidon_bn254_x3_5, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5,
+		get_rounds_poseidon_bls381_x17_3, get_rounds_poseidon_bls381_x17_5,
+		get_rounds_poseidon_bls381_x3_3, get_rounds_poseidon_bls381_x3_5,
+		get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5,
+		get_rounds_poseidon_bn254_x17_3, get_rounds_poseidon_bn254_x17_5,
+		get_rounds_poseidon_bn254_x3_3, get_rounds_poseidon_bn254_x3_5,
 		get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_5,
 	},
 };
@@ -82,6 +83,9 @@ impl Rounds for PoseidonRounds_x17_3 {
 }
 
 pub type PoseidonCRH_x3_3<F> = CRH<F, PoseidonRounds_x3_3>;
+pub type PoseidonCRH_x3_3Gadget<F> = CRHGadget<F, PoseidonRounds_x3_3>;
+
+pub type PoseidonCRH_x3_5<F> = CRH<F, PoseidonRounds_x3_5>;
 pub type PoseidonCRH_x3_5Gadget<F> = CRHGadget<F, PoseidonRounds_x3_5>;
 
 pub type PoseidonCRH_x5_3<F> = CRH<F, PoseidonRounds_x5_3>;
@@ -230,8 +234,8 @@ pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 			params3
 		}
 		Curve::Bn254 => {
-			let rounds3 = get_rounds_poseidon_bn254_x5_3::<F>();
-			let mds3 = get_mds_poseidon_bn254_x5_3::<F>();
+			let rounds3 = get_rounds_poseidon_bn254_x3_5::<F>();
+			let mds3 = get_mds_poseidon_bn254_x3_5::<F>();
 			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
 			params3
 		}
