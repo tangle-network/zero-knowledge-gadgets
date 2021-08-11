@@ -18,8 +18,8 @@ impl PoseidonSbox {
 				let res = match val {
 					3 => elem * elem * elem,
 					5 => {
-						let sqr = elem * elem;
-						sqr * sqr * elem
+						let sqr = elem.square();
+						sqr.square().mul(elem)
 					}
 					17 => {
 						let sqr = elem * elem;

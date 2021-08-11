@@ -30,10 +30,15 @@ pub mod bls381_x3_5;
 pub mod bls381_x5_3;
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub mod bls381_x5_5;
+#[cfg(feature = "poseidon_circom_bn254_x3_3")]
+pub mod bn254_circom_x3_3;
+#[cfg(feature = "poseidon_circom_bn254_x3_5")]
+pub mod bn254_circom_x3_5;
 #[cfg(feature = "poseidon_bls381_x3_3")]
-mod bn254_x3_3;
+pub mod bn254_x3_3;
 #[cfg(feature = "poseidon_bls381_x3_5")]
-mod bn254_x3_5;
+pub mod bn254_x3_5;
+
 #[cfg(feature = "mimc_220_ed_on_bn254")]
 pub mod mimc;
 
@@ -50,7 +55,7 @@ pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 
 	let res = padded_input
 		.chunks(max_size_bytes)
-		.map(|chunk| F::read(chunk))
+		.map(F::read)
 		.collect::<Result<Vec<_>, _>>()?;
 
 	Ok(res)
@@ -144,6 +149,16 @@ pub fn get_rounds_poseidon_bn254_x3_5<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x3_5::ROUND_CONSTS.to_vec())
 }
 
+#[cfg(feature = "poseidon_circom_bn254_x3_3")]
+pub fn get_rounds_poseidon_circom_bn254_x3_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_circom_x3_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_circom_bn254_x3_5")]
+pub fn get_rounds_poseidon_circom_bn254_x3_5<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_circom_x3_5::ROUND_CONSTS.to_vec())
+}
+
 #[cfg(feature = "poseidon_bn254_x5_5")]
 pub fn get_rounds_poseidon_bn254_x5_5<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_5::ROUND_CONSTS.to_vec())
@@ -168,6 +183,26 @@ pub fn get_mds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
 pub fn get_mds_poseidon_bn254_x3_5<F: PrimeField>() -> Vec<Vec<F>> {
 	parse_matrix(
 		bn254_x3_5::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_circom_bn254_x3_3")]
+pub fn get_mds_poseidon_circom_bn254_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_circom_x3_3::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_circom_bn254_x3_5")]
+pub fn get_mds_poseidon_circom_bn254_x3_5<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_circom_x3_5::MDS_ENTRIES
 			.iter()
 			.map(|x| x.to_vec())
 			.collect::<Vec<_>>(),

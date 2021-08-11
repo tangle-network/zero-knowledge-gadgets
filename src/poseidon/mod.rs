@@ -1,8 +1,11 @@
-use crate::{poseidon::sbox::PoseidonSbox, utils::{to_field_elements, from_field_elements}};
+use crate::{
+	poseidon::sbox::PoseidonSbox,
+	utils::{from_field_elements, to_field_elements},
+};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
-use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
 use ark_serialize::Read;
+use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
 
 pub mod sbox;
 
@@ -92,7 +95,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 			if !stored {
 				// the number of bytes to read for each inner mds matrix vec
 				let inner_vec_len = self.mds_matrix[i].len() * max_elt_size;
-				buf.extend_from_slice(&(inner_vec_len as u32).to_be_bytes());				
+				buf.extend_from_slice(&(inner_vec_len as u32).to_be_bytes());
 				stored = true;
 			}
 
@@ -103,21 +106,21 @@ impl<F: PrimeField> PoseidonParameters<F> {
 
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
 		let mut round_key_len = [0u8; 4];
-		bytes.read(&mut round_key_len)?;
+		bytes.read_exact(&mut round_key_len)?;
 
 		let round_key_len_usize: usize = u32::from_be_bytes(round_key_len) as usize;
 		let mut round_keys_buf = vec![0u8; round_key_len_usize];
-		bytes.read(&mut round_keys_buf)?;
+		bytes.read_exact(&mut round_keys_buf)?;
 
 		let round_keys = to_field_elements::<F>(&round_keys_buf)?;
 		let mut mds_matrix_inner_vec_len = [0u8; 4];
-		bytes.read(&mut mds_matrix_inner_vec_len)?;
+		bytes.read_exact(&mut mds_matrix_inner_vec_len)?;
 
 		let inner_vec_len_usize = u32::from_be_bytes(mds_matrix_inner_vec_len) as usize;
 		let mut mds_matrix: Vec<Vec<F>> = vec![];
-		while bytes.len() > 0 {
+		while !bytes.is_empty() {
 			let mut inner_vec_buf = vec![0u8; inner_vec_len_usize];
-			bytes.read(&mut inner_vec_buf)?;
+			bytes.read_exact(&mut inner_vec_buf)?;
 
 			let inner_vec = to_field_elements::<F>(&inner_vec_buf)?;
 			mds_matrix.push(inner_vec);
@@ -196,6 +199,41 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 	}
 }
 
+pub struct CircomCRH<F: PrimeField, P: Rounds>(PhantomData<F>, PhantomData<P>);
+
+impl<F: PrimeField, P: Rounds> CircomCRH<F, P> {
+	fn permute(params: &PoseidonParameters<F>, mut state: Vec<F>) -> Result<Vec<F>, PoseidonError> {
+		let nr = P::FULL_ROUNDS + P::PARTIAL_ROUNDS;
+		for r in 0..nr {
+			state.iter_mut().enumerate().for_each(|(i, a)| {
+				let c = params.round_keys[(r * P::WIDTH + i)];
+				a.add_assign(c);
+			});
+
+			let half_rounds = P::FULL_ROUNDS / 2;
+			if r < half_rounds || r >= half_rounds + P::PARTIAL_ROUNDS {
+				state
+					.iter_mut()
+					.try_for_each(|a| P::SBOX.apply_sbox(*a).map(|f| *a = f))?;
+			} else {
+				state[0] = P::SBOX.apply_sbox(state[0])?;
+			}
+
+			state = state
+				.iter()
+				.enumerate()
+				.map(|(i, _)| {
+					state.iter().enumerate().fold(F::zero(), |acc, (j, a)| {
+						let m = params.mds_matrix[i][j];
+						acc.add(m.mul(*a))
+					})
+				})
+				.collect();
+		}
+		Ok(state)
+	}
+}
+
 impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
@@ -256,30 +294,103 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 		let chained: Vec<_> = left_input
 			.iter()
 			.chain(right_input.iter())
-			.map(|x| *x)
+			.copied()
 			.collect();
 
 		<Self as CRHTrait>::evaluate(parameters, &chained)
 	}
 }
 
-#[cfg(all(feature = "poseidon_bn254_x5_5", feature = "poseidon_bn254_x5_3"))]
-#[cfg(test)]
+impl<F: PrimeField, P: Rounds> CRHTrait for CircomCRH<F, P> {
+	type Output = F;
+	type Parameters = PoseidonParameters<F>;
+
+	const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8;
+
+	fn setup<R: Rng>(_rng: &mut R) -> Result<Self::Parameters, Error> {
+		unreachable!("PoseidonParameters are already precomuted.");
+	}
+
+	fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
+		let eval_time = start_timer!(|| "PoseidonCircomCRH::Eval");
+
+		let f_inputs: Vec<F> = to_field_elements(input)?;
+
+		if f_inputs.len() > P::WIDTH {
+			panic!(
+				"incorrect input length {:?} for width {:?} -- input bits {:?}",
+				f_inputs.len(),
+				P::WIDTH,
+				input.len()
+			);
+		}
+
+		let mut buffer = vec![F::zero(); P::WIDTH];
+		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
+
+		let result = Self::permute(&parameters, buffer)?;
+
+		end_timer!(eval_time);
+
+		Ok(result.get(0).cloned().ok_or(PoseidonError::InvalidInputs)?)
+	}
+}
+
+impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
+	type Output = F;
+	type Parameters = PoseidonParameters<F>;
+
+	const LEFT_INPUT_SIZE_BITS: usize = Self::INPUT_SIZE_BITS / 2;
+	const RIGHT_INPUT_SIZE_BITS: usize = Self::INPUT_SIZE_BITS / 2;
+
+	fn setup<R: Rng>(rng: &mut R) -> Result<Self::Parameters, Error> {
+		<Self as CRHTrait>::setup(rng)
+	}
+
+	/// A simple implementation of TwoToOneCRH by asserting left and right input
+	/// has same length and chain them together.
+	fn evaluate(
+		parameters: &Self::Parameters,
+		left_input: &[u8],
+		right_input: &[u8],
+	) -> Result<Self::Output, Error> {
+		assert_eq!(left_input.len(), right_input.len());
+		assert!(left_input.len() * 8 <= Self::LEFT_INPUT_SIZE_BITS);
+		let chained: Vec<_> = left_input
+			.iter()
+			.chain(right_input.iter())
+			.copied()
+			.collect();
+
+		<Self as CRHTrait>::evaluate(parameters, &chained)
+	}
+}
+
+#[cfg(all(
+	test,
+	feature = "poseidon_bn254_x5_5",
+	feature = "poseidon_bn254_x5_3",
+	feature = "poseidon_circom_bn254_x3_3"
+))]
 mod test {
 	use super::*;
+	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
 	use crate::utils::{
-		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_results_poseidon_bn254_x5_3,
+		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5,
+		get_mds_poseidon_circom_bn254_x3_3, get_results_poseidon_bn254_x5_3,
 		get_results_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
-		get_rounds_poseidon_bn254_x5_5,
+		get_rounds_poseidon_bn254_x5_5, get_rounds_poseidon_circom_bn254_x3_3, parse_vec,
 	};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;
 	#[derive(Default, Clone)]
 	struct PoseidonRounds5;
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds3;
 
 	impl Rounds for PoseidonRounds3 {
 		const FULL_ROUNDS: usize = 8;
@@ -295,8 +406,16 @@ mod test {
 		const WIDTH: usize = 5;
 	}
 
+	impl Rounds for PoseidonCircomRounds3 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 3;
+	}
+
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCircomCRH3 = CircomCRH<Fq, PoseidonCircomRounds3>;
 
 	#[test]
 	fn test_parameter_to_and_from_bytes() {
@@ -321,6 +440,21 @@ mod test {
 
 		let poseidon_res = <PoseidonCRH3 as CRHTrait>::evaluate(&params, &inp).unwrap();
 		assert_eq!(res[0], poseidon_res);
+	}
+
+	#[test]
+	fn test_width_3_circom_bn_254() {
+		let rounds = get_rounds_poseidon_circom_bn254_x3_3::<Fq>();
+		let mds = get_mds_poseidon_circom_bn254_x3_3::<Fq>();
+		let res: Vec<Fq> = parse_vec(vec![
+			"0x1acd1ec9914d2b378db637af233324a068ea40e6f26ff34e191bd77816e9810c",
+		]);
+
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+
+		let poseidon_res =
+			<PoseidonCircomCRH3 as TwoToOneCRH>::evaluate(&params, &[1u8; 32], &[2u8; 32]).unwrap();
+		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
 
 	#[test]
