@@ -313,10 +313,13 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CircomCRH<F, P> {
 
 	fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
 		let eval_time = start_timer!(|| "PoseidonCircomCRH::Eval");
+		let chunk_size = F::BigInt::NUM_LIMBS * 8;
+		let f_inputs: Vec<_> = input
+			.chunks_exact(chunk_size)
+			.map(F::from_be_bytes_mod_order)
+			.collect();
 
-		let f_inputs: Vec<F> = to_field_elements(input)?;
-
-		if f_inputs.len() > P::WIDTH {
+		if f_inputs.len() >= P::WIDTH {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_inputs.len(),
@@ -325,9 +328,10 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CircomCRH<F, P> {
 			);
 		}
 
-		let mut buffer = vec![F::zero(); P::WIDTH];
-		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
-
+		let mut buffer = vec![F::zero()];
+		for f in f_inputs {
+			buffer.push(f);
+		}
 		let result = Self::permute(&parameters, buffer)?;
 
 		end_timer!(eval_time);
@@ -370,19 +374,20 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 	test,
 	feature = "poseidon_bn254_x5_5",
 	feature = "poseidon_bn254_x5_3",
-	feature = "poseidon_circom_bn254_x3_3"
+	feature = "poseidon_circom_bn254_x5_3"
 ))]
 mod test {
 	use super::*;
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, Zero};
+	use ark_ff::{to_bytes, Field, Zero};
+	use ark_std::One;
 
 	use crate::utils::{
 		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5,
-		get_mds_poseidon_circom_bn254_x3_3, get_results_poseidon_bn254_x5_3,
+		get_mds_poseidon_circom_bn254_x5_3, get_results_poseidon_bn254_x5_3,
 		get_results_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
-		get_rounds_poseidon_bn254_x5_5, get_rounds_poseidon_circom_bn254_x3_3, parse_vec,
+		get_rounds_poseidon_bn254_x5_5, get_rounds_poseidon_circom_bn254_x5_3, parse_vec,
 	};
 
 	#[derive(Default, Clone)]
@@ -444,16 +449,67 @@ mod test {
 
 	#[test]
 	fn test_width_3_circom_bn_254() {
-		let rounds = get_rounds_poseidon_circom_bn254_x3_3::<Fq>();
-		let mds = get_mds_poseidon_circom_bn254_x3_3::<Fq>();
+		let rounds = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
+		let mds = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		// output from circomlib, and here is the code.
+		// ```js
+		// const { poseidon } = require('circomlib');
+		// console.log(poseidon([1, 2]).toString(16));
+		// ```
 		let res: Vec<Fq> = parse_vec(vec![
-			"0x1acd1ec9914d2b378db637af233324a068ea40e6f26ff34e191bd77816e9810c",
+			"0x115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a",
 		]);
 
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-
+		let left_input = Fq::one().into_repr().to_bytes_be();
+		let right_input = Fq::one().double().into_repr().to_bytes_be();
 		let poseidon_res =
-			<PoseidonCircomCRH3 as TwoToOneCRH>::evaluate(&params, &[1u8; 32], &[2u8; 32]).unwrap();
+			<PoseidonCircomCRH3 as TwoToOneCRH>::evaluate(&params, &left_input, &right_input)
+				.unwrap();
+		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
+
+		// test two with 32 bytes.
+		// these bytes are randomly generated.
+		// and tested as the following:
+		// ```js
+		// const left = "0x" + Buffer.from([
+		// 		0x06, 0x9c, 0x63, 0x81, 0xac, 0x0b, 0x96, 0x8e, 0x88, 0x1c,
+		// 		0x91, 0x3c, 0x17, 0xd8, 0x36, 0x06, 0x7f, 0xd1, 0x5f, 0x2c,
+		// 		0xc7, 0x9f, 0x90, 0x2c, 0x80, 0x70, 0xb3, 0x6d, 0x28, 0x66,
+		// 		0x17, 0xdd
+		// ]).toString("hex");
+		// const right = "0x" + Buffer.from([
+		// 		0xc3, 0x3b, 0x60, 0x04, 0x2f, 0x76, 0xc7, 0xfb, 0xd0, 0x5d,
+		// 		0xb7, 0x76, 0x23, 0xcb, 0x17, 0xb8, 0x1d, 0x49, 0x41, 0x4b,
+		// 		0x82, 0xe5, 0x6a, 0x2e, 0xc0, 0x18, 0xf7, 0xa5, 0x5c, 0x3f,
+		// 		0x30, 0x0b
+		// ]).toString("hex");
+		// console.log({
+		// 		hash: "0x" + poseidon([left, right])
+		// 						.toString(16)
+		// 						.padStart(64, "0")
+		// 		});
+		// ```
+		let left_input = Fq::from_be_bytes_mod_order(&[
+			0x06, 0x9c, 0x63, 0x81, 0xac, 0x0b, 0x96, 0x8e, 0x88, 0x1c, 0x91, 0x3c, 0x17, 0xd8,
+			0x36, 0x06, 0x7f, 0xd1, 0x5f, 0x2c, 0xc7, 0x9f, 0x90, 0x2c, 0x80, 0x70, 0xb3, 0x6d,
+			0x28, 0x66, 0x17, 0xdd,
+		])
+		.into_repr()
+		.to_bytes_be();
+		let right_input = Fq::from_be_bytes_mod_order(&[
+			0xc3, 0x3b, 0x60, 0x04, 0x2f, 0x76, 0xc7, 0xfb, 0xd0, 0x5d, 0xb7, 0x76, 0x23, 0xcb,
+			0x17, 0xb8, 0x1d, 0x49, 0x41, 0x4b, 0x82, 0xe5, 0x6a, 0x2e, 0xc0, 0x18, 0xf7, 0xa5,
+			0x5c, 0x3f, 0x30, 0x0b,
+		])
+		.into_repr()
+		.to_bytes_be();
+		let res: Vec<Fq> = parse_vec(vec![
+			"0x0a13ad844d3487ad3dbaf3876760eb971283d48333fa5a9e97e6ee422af9554b",
+		]);
+		let poseidon_res =
+			<PoseidonCircomCRH3 as TwoToOneCRH>::evaluate(&params, &left_input, &right_input)
+				.unwrap();
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
 
