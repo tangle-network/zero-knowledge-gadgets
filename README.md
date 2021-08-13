@@ -18,6 +18,12 @@ Each application-specific file in `src/setup` encapsulates the full-setup of a z
 
 For tests and instantiations of the gadgets used to compose each of these larger scale application gadgets, refer to the individual directories and their tests. Most all of the tests and implementations in this repo use Groth16 proofs and setups for the zero-knowledge gadgets. Occasionally Marlin zkSNARKs are used for intermediate gadget tests. There are no application-specific instantiations of gadgets that use Marlin however, but pull requests are welcome to create them.
 
+### Provers
+Provers for these zero-knowledge gadgets are meant to be used by client or server applications. These are compute intensive and require access to random number generators.
+
+### Verifiers
+Verifiers for these zero-knowledge gadgets are meant to be used by client, server, or blockchain applications. These verifiers are WASM compatible and can be embedded in WASM friendly environments like blockchains that allow smart contracts which are written in Rust. The APIs are consistent across a particular proving system such as Groth16 and are straightforward to integrate into blockchain runtimes such as [Substrate](https://github.com/paritytech/substrate).
+
 ## Parameter generation
 
 Parameter for the sage [script](https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon).
