@@ -190,7 +190,7 @@ mod test {
 	fn setup_and_prove_mixer_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, _leaf, _nullifier, _root, public_inputs) = setup_random_circuit_x5::<_, BlsFr>(rng, curve);
+		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr>(rng, curve);
 
 		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
 		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
