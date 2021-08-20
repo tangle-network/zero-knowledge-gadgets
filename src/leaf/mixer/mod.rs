@@ -65,8 +65,8 @@ pub struct Output<F: PrimeField> {
 
 impl<F: PrimeField> ToBytes for Output<F> {
 	fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
-		writer.write(&to_bytes![self.leaf].unwrap())?;
-		writer.write(&to_bytes![self.nullifier_hash].unwrap())?;
+		writer.write_all(&to_bytes![self.leaf].unwrap())?;
+		writer.write_all(&to_bytes![self.nullifier_hash].unwrap())?;
 		Ok(())
 	}
 }
