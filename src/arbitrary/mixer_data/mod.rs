@@ -9,11 +9,23 @@ pub mod constraints;
 pub struct Input<F: PrimeField> {
 	pub recipient: F,
 	pub relayer: F,
+	pub fee: F,
+	pub refund: F,
 }
 
 impl<F: PrimeField> Input<F> {
-	pub fn new(recipient: F, relayer: F) -> Self {
-		Self { recipient, relayer }
+	pub fn new(
+		recipient: F,
+		relayer: F,
+		fee: F,
+		refund: F,
+	) -> Self {
+		Self {
+			recipient,
+			relayer,
+			fee,
+			refund,
+		}
 	}
 }
 

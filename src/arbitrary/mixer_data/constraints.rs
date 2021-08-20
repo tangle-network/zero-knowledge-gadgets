@@ -13,11 +13,18 @@ use core::borrow::Borrow;
 pub struct InputVar<F: PrimeField> {
 	recipient: FpVar<F>,
 	relayer: FpVar<F>,
+	fee: FpVar<F>,
+	refund: FpVar<F>,
 }
 
 impl<F: PrimeField> InputVar<F> {
-	pub fn new(recipient: FpVar<F>, relayer: FpVar<F>) -> Self {
-		Self { recipient, relayer }
+	pub fn new(
+		recipient: FpVar<F>,
+		relayer: FpVar<F>,
+		fee: FpVar<F>,
+		refund: FpVar<F>,
+	) -> Self {
+		Self { recipient, relayer, fee, refund }
 	}
 }
 
@@ -31,6 +38,8 @@ impl<F: PrimeField> ArbitraryGadget<F, MixerData<F>> for MixerDataGadget<F> {
 	fn constrain(inputs: &Self::InputVar) -> Result<(), SynthesisError> {
 		let _ = &inputs.recipient * &inputs.recipient;
 		let _ = &inputs.relayer * &inputs.relayer;
+		let _ = &inputs.fee * &inputs.fee;
+		let _ = &inputs.refund * &inputs.refund;
 		Ok(())
 	}
 }
@@ -47,11 +56,20 @@ impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 
 		let recipient = input.recipient;
 		let relayer = input.relayer;
+		let fee = input.fee;
+		let refund = input.refund;
 
 		let recipient_var = FpVar::new_variable(cs.clone(), || Ok(&recipient), mode)?;
 		let relayer_var = FpVar::new_variable(cs.clone(), || Ok(&relayer), mode)?;
+		let fee_var = FpVar::new_variable(cs.clone(), || Ok(&fee), mode)?;
+		let refund_var = FpVar::new_variable(cs.clone(), || Ok(&refund), mode)?;
 
-		Ok(InputVar::new(recipient_var, relayer_var))
+		Ok(InputVar::new(
+			recipient_var,
+			relayer_var,
+			fee_var,
+			refund_var,
+		))
 	}
 }
 
@@ -71,8 +89,10 @@ mod test {
 
 		let recipient = Fq::rand(rng);
 		let relayer = Fq::rand(rng);
+		let fee = Fq::from(0);
+		let refund = Fq::from(0);
 
-		let input = Input::new(recipient, relayer);
+		let input = Input::new(recipient, relayer, fee, refund);
 		let input_var = InputVar::new_input(cs.clone(), || Ok(&input)).unwrap();
 
 		TestMixerDataGadget::constrain(&input_var).unwrap();
