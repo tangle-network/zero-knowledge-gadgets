@@ -1,4 +1,3 @@
-use crate::leaf::LeafCreation;
 use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
 use ark_std::{
@@ -7,8 +6,27 @@ use ark_std::{
 	rand::Rng,
 };
 
+use crate::leaf::LeafCreation;
+
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+
+#[derive(Clone)]
+pub struct PrivateBuilder<F: PrimeField> {
+	pub r: F,
+	pub nullifier: F,
+	pub rho: F,
+}
+
+impl<F: PrimeField> PrivateBuilder<F> {
+	pub fn build(self) -> Private<F> {
+		Private {
+			r: self.r,
+			nullifier: self.nullifier,
+			rho: self.rho,
+		}
+	}
+}
 
 #[derive(Default, Clone)]
 pub struct Private<F: PrimeField> {
@@ -87,14 +105,16 @@ impl<F: PrimeField, H: CRH> LeafCreation<H> for MixerLeaf<F, H> {
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use super::*;
+	use ark_bls12_381::Fq;
+	use ark_crypto_primitives::crh::CRH as CRHTrait;
+	use ark_std::test_rng;
+
 	use crate::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
-	use ark_bls12_381::Fq;
-	use ark_crypto_primitives::crh::CRH as CRHTrait;
-	use ark_std::test_rng;
+
+	use super::*;
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds5;
