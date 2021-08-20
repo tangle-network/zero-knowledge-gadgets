@@ -121,8 +121,18 @@ pub fn setup_mimc_leaf_220<R: Rng, F: PrimeField>(
 	(leaf_private, leaf, nullifier_hash)
 }
 
-pub fn setup_arbitrary_data<F: PrimeField>(recipient: F, relayer: F) -> MixerConstraintDataInput<F> {
-	let arbitrary_input = MixerConstraintDataInput::new(recipient, relayer);
+pub fn setup_arbitrary_data<F: PrimeField>(
+	recipient: F,
+	relayer: F,
+	fee: F,
+	refund: F,
+) -> MixerConstraintDataInput<F> {
+	let arbitrary_input = MixerConstraintDataInput::new(
+		recipient,
+		relayer,
+		fee,
+		refund,
+	);
 	arbitrary_input
 }
 
@@ -131,13 +141,15 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField>(
 	index: u64,
 	recipient: F,
 	relayer: F,
+	fee: F,
+	refund: F,
 	rng: &mut R,
 	curve: Curve,
 ) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
 	let params3 = setup_params_x5_3::<F>(curve);
 	let params5 = setup_params_x5_5::<F>(curve);
 
-	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer);
+	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer, fee, refund);
 	let (leaf_private, leaf, nullifier_hash) = setup_leaf_x5::<R, F>(&params5, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
@@ -154,7 +166,7 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField>(
 		root.clone(),
 		nullifier_hash,
 	);
-	let public_inputs = get_public_inputs(nullifier_hash, root, recipient, relayer);
+	let public_inputs = get_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
 	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
@@ -163,13 +175,15 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField>(
 	index: u64,
 	recipient: F,
 	relayer: F,
+	fee: F,
+	refund: F,
 	rng: &mut R,
 	curve: Curve,
 ) -> (Circuit_x17<F>, F, F, F, Vec<F>) {
 	let params3 = setup_params_x17_3::<F>(curve);
 	let params5 = setup_params_x17_5::<F>(curve);
 
-	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer);
+	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer, fee, refund);
 	let (leaf_private, leaf, nullifier_hash) = setup_leaf_x17::<R, F>(&params5, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
@@ -186,7 +200,7 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField>(
 		root.clone(),
 		nullifier_hash,
 	);
-	let public_inputs = get_public_inputs(nullifier_hash, root, recipient, relayer);
+	let public_inputs = get_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
 	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
@@ -195,12 +209,14 @@ pub fn setup_circuit_mimc_220<R: Rng, F: PrimeField>(
 	index: u64,
 	recipient: F,
 	relayer: F,
+	fee: F,
+	refund: F,
 	rng: &mut R,
 	curve: Curve,
 ) -> (MiMCCircuit_220<F>, F, F, F, Vec<F>) {
 	let params = setup_mimc_220::<F>(curve);
 
-	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer);
+	let arbitrary_input = setup_arbitrary_data::<F>(recipient, relayer, fee, refund);
 	let (leaf_private, leaf, nullifier_hash) = setup_mimc_leaf_220::<R, F>(&params, rng);
 	let mut leaves_new = leaves.to_vec();
 	leaves_new.push(leaf);
@@ -217,7 +233,7 @@ pub fn setup_circuit_mimc_220<R: Rng, F: PrimeField>(
 		root.clone(),
 		nullifier_hash,
 	);
-	let public_inputs = get_public_inputs(nullifier_hash, root, recipient, relayer);
+	let public_inputs = get_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
 	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
@@ -226,7 +242,9 @@ pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve)
 	let index = 0;
 	let recipient = F::rand(rng);
 	let relayer = F::rand(rng);
-	setup_circuit_x5(&leaves, index, recipient, relayer, rng, curve)
+	let fee = F::rand(rng);
+	let refund = F::rand(rng);
+	setup_circuit_x5(&leaves, index, recipient, relayer, fee, refund, rng, curve)
 }
 
 pub fn setup_random_circuit_x17<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit_x17<F>, F, F, F, Vec<F>) {
@@ -234,7 +252,9 @@ pub fn setup_random_circuit_x17<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve
 	let index = 0;
 	let recipient = F::rand(rng);
 	let relayer = F::rand(rng);
-	setup_circuit_x17(&leaves, index, recipient, relayer, rng, curve)
+	let fee = F::rand(rng);
+	let refund = F::rand(rng);
+	setup_circuit_x17(&leaves, index, recipient, relayer, fee, refund, rng, curve)
 }
 
 pub fn setup_random_circuit_mimc_220<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (MiMCCircuit_220<F>, F, F, F, Vec<F>) {
@@ -242,7 +262,9 @@ pub fn setup_random_circuit_mimc_220<R: Rng, F: PrimeField>(rng: &mut R, curve: 
 	let index = 0;
 	let recipient = F::rand(rng);
 	let relayer = F::rand(rng);
-	setup_circuit_mimc_220(&leaves, index, recipient, relayer, rng, curve)
+	let fee = F::rand(rng);
+	let refund = F::rand(rng);
+	setup_circuit_mimc_220(&leaves, index, recipient, relayer, fee, refund, rng, curve)
 }
 
 pub fn get_public_inputs<F: PrimeField>(
@@ -250,12 +272,16 @@ pub fn get_public_inputs<F: PrimeField>(
 	root: F,
 	recipient: F,
 	relayer: F,
+	fee: F,
+	refund: F,
 ) -> Vec<F> {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(nullifier_hash);
 	public_inputs.push(root);
 	public_inputs.push(recipient);
 	public_inputs.push(relayer);
+	public_inputs.push(fee);
+	public_inputs.push(refund);
 	public_inputs
 }
 
@@ -361,9 +387,11 @@ mod test {
 		let curve = Curve::Bls381;
 		let recipient = Bls381::from(0u8);
 		let relayer = Bls381::from(0u8);
+		let fee = Bls381::from(0u8);
+		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let (circuit, leaf, nullifier, root, public_inputs) =
-			setup_circuit_x5::<_, Bls381>(&leaves, 0, recipient, relayer, &mut rng, curve);
+			setup_circuit_x5::<_, Bls381>(&leaves, 0, recipient, relayer, fee, refund, &mut rng, curve);
 
 		add_members_mock(vec![leaf]);
 
@@ -392,12 +420,14 @@ mod test {
 		let curve = Curve::Bls381;
 		let recipient = Bls381::from(0u8);
 		let relayer = Bls381::from(0u8);
+		let fee = Bls381::from(0u8);
+		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
 
 		let params3 = setup_params_x5_3::<Bls381>(curve);
 		let params5 = setup_params_x5_5::<Bls381>(curve);
 
-		let arbitrary_input = setup_arbitrary_data::<Bls381>(recipient, relayer);
+		let arbitrary_input = setup_arbitrary_data::<Bls381>(recipient, relayer, fee, refund);
 		let (leaf_private, leaf, nullifier_hash) = setup_leaf_x5::<_, Bls381>(&params5, &mut rng);
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
@@ -413,7 +443,7 @@ mod test {
 			root.clone(),
 			nullifier_hash,
 		);
-		let public_inputs = get_public_inputs::<Bls381>(nullifier_hash, root, recipient, relayer);
+		let public_inputs = get_public_inputs::<Bls381>(nullifier_hash, root, recipient, relayer, fee, refund);
 
 		add_members_mock(vec![leaf]);
 
@@ -442,9 +472,11 @@ mod test {
 		let curve = Curve::Bls381;
 		let recipient = Bls381::from(0u8);
 		let relayer = Bls381::from(0u8);
+		let fee = Bls381::from(0u8);
+		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let (circuit, leaf, nullifier, root, public_inputs) =
-			setup_circuit_x5(&leaves, 0, recipient, relayer, &mut rng, curve);
+			setup_circuit_x5(&leaves, 0, recipient, relayer, fee, refund, &mut rng, curve);
 
 		add_members_mock(vec![leaf]);
 
@@ -476,11 +508,13 @@ mod test {
 		let curve = Curve::Bn254;
 		let recipient = Bn254Fr::from(0u8);
 		let relayer = Bn254Fr::from(0u8);
+		let fee = Bn254Fr::from(0u8);
+		let refund = Bn254Fr::from(0u8);
 		let leaves = Vec::new();
 
 		let params = setup_mimc_220::<Bn254Fr>(curve);
 
-		let arbitrary_input = setup_arbitrary_data::<Bn254Fr>(recipient, relayer);
+		let arbitrary_input = setup_arbitrary_data::<Bn254Fr>(recipient, relayer, fee, refund);
 		let (leaf_private, leaf, nullifier_hash) = setup_mimc_leaf_220::<_, Bn254Fr>(&params, &mut rng);
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
@@ -496,7 +530,7 @@ mod test {
 			root.clone(),
 			nullifier_hash,
 		);
-		let public_inputs = get_public_inputs::<Bn254Fr>(nullifier_hash, root, recipient, relayer);
+		let public_inputs = get_public_inputs::<Bn254Fr>(nullifier_hash, root, recipient, relayer, fee, refund);
 
 		add_members_mock(vec![leaf]);
 
