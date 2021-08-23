@@ -259,9 +259,10 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
+		let refund = BlsFr::rand(rng);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
 
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
@@ -304,9 +305,10 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
+		let refund = BlsFr::rand(rng);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
 
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
@@ -349,9 +351,10 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
+		let refund = BlsFr::rand(rng);
 		let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
 		let leaf = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
@@ -394,9 +397,10 @@ mod test {
 		let relayer = BlsFr::rand(rng);
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
+		let refund = BlsFr::rand(rng);
 		let (leaf_private, leaf_public, leaf, _) = setup_leaf_x5(chain_id, &params5, rng);
 		let nullifier_hash = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee);
+		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
