@@ -6,7 +6,7 @@ use crate::{
 		Config as MerkleConfig, Path,
 	},
 };
-use ark_crypto_primitives::{crh::CRHGadget, CRH};
+use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -158,13 +158,12 @@ where
 
 		// Private inputs
 		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let path_var = PathVar::<F, C, HGT, LHGT>::new_witness(cs.clone(), || Ok(path))?;
+		let path_var = PathVar::<F, C, HGT, LHGT>::new_witness(cs, || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let mixer_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
 		let mixer_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
-		let is_member =
-			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &mixer_leaf)?;
+		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf)?;
 		// Constraining arbitrary inputs
 		AG::constrain(&arbitrary_input_var)?;
 
