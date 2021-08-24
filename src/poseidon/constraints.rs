@@ -10,8 +10,10 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
-use core::borrow::Borrow;
-use std::ops::{Add, AddAssign, Mul};
+use core::{
+	borrow::Borrow,
+	ops::{Add, AddAssign, Mul},
+};
 
 #[derive(Default, Clone)]
 pub struct PoseidonParametersVar<F: PrimeField> {
