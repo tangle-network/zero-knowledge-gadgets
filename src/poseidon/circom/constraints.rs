@@ -1,6 +1,6 @@
 use crate::poseidon::constraints::PoseidonParametersVar;
 use crate::poseidon::{sbox::constraints::SboxConstraints, Rounds};
-use crate::{poseidon::CircomCRH, utils::to_field_var_elements};
+use crate::{poseidon::circom::CircomCRH, utils::to_field_var_elements};
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{

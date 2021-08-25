@@ -4,9 +4,10 @@ use crate::{
 	mimc::Rounds as MiMCRounds,
 	poseidon::{
 		constraints::CRHGadget,
-		circom::constraints::CircomCRHGadget,
+		circom::constraints::{CircomCRHGadget},
+		circom::CircomCRH,
 		sbox::PoseidonSbox,
-		CircomCRH, PoseidonParameters, Rounds, CRH,
+		PoseidonParameters, Rounds, CRH,
 	},
 	utils::{
 		get_mds_poseidon_bls381_x17_3, get_mds_poseidon_bls381_x17_5, get_mds_poseidon_bls381_x3_3,

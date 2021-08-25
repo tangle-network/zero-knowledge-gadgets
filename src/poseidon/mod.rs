@@ -200,41 +200,6 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 	}
 }
 
-pub struct CircomCRH<F: PrimeField, P: Rounds>(PhantomData<F>, PhantomData<P>);
-
-impl<F: PrimeField, P: Rounds> CircomCRH<F, P> {
-	fn permute(params: &PoseidonParameters<F>, mut state: Vec<F>) -> Result<Vec<F>, PoseidonError> {
-		let nr = P::FULL_ROUNDS + P::PARTIAL_ROUNDS;
-		for r in 0..nr {
-			state.iter_mut().enumerate().for_each(|(i, a)| {
-				let c = params.round_keys[(r * P::WIDTH + i)];
-				a.add_assign(c);
-			});
-
-			let half_rounds = P::FULL_ROUNDS / 2;
-			if r < half_rounds || r >= half_rounds + P::PARTIAL_ROUNDS {
-				state
-					.iter_mut()
-					.try_for_each(|a| P::SBOX.apply_sbox(*a).map(|f| *a = f))?;
-			} else {
-				state[0] = P::SBOX.apply_sbox(state[0])?;
-			}
-
-			state = state
-				.iter()
-				.enumerate()
-				.map(|(i, _)| {
-					state.iter().enumerate().fold(F::zero(), |acc, (j, a)| {
-						let m = params.mds_matrix[i][j];
-						acc.add(m.mul(*a))
-					})
-				})
-				.collect();
-		}
-		Ok(state)
-	}
-}
-
 impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
@@ -302,75 +267,6 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 	}
 }
 
-impl<F: PrimeField, P: Rounds> CRHTrait for CircomCRH<F, P> {
-	type Output = F;
-	type Parameters = PoseidonParameters<F>;
-
-	const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8;
-
-	fn setup<R: Rng>(_rng: &mut R) -> Result<Self::Parameters, Error> {
-		unreachable!("PoseidonParameters are already precomuted.");
-	}
-
-	fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
-		let eval_time = start_timer!(|| "PoseidonCircomCRH::Eval");
-		let chunk_size = F::BigInt::NUM_LIMBS * 8;
-		let f_inputs: Vec<_> = input
-			.chunks_exact(chunk_size)
-			.map(F::from_be_bytes_mod_order)
-			.collect();
-
-		if f_inputs.len() >= P::WIDTH {
-			panic!(
-				"incorrect input length {:?} for width {:?} -- input bits {:?}",
-				f_inputs.len(),
-				P::WIDTH,
-				input.len()
-			);
-		}
-
-		let mut buffer = vec![F::zero()];
-		for f in f_inputs {
-			buffer.push(f);
-		}
-		let result = Self::permute(&parameters, buffer)?;
-
-		end_timer!(eval_time);
-
-		Ok(result.get(0).cloned().ok_or(PoseidonError::InvalidInputs)?)
-	}
-}
-
-impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
-	type Output = F;
-	type Parameters = PoseidonParameters<F>;
-
-	const LEFT_INPUT_SIZE_BITS: usize = Self::INPUT_SIZE_BITS / 2;
-	const RIGHT_INPUT_SIZE_BITS: usize = Self::INPUT_SIZE_BITS / 2;
-
-	fn setup<R: Rng>(rng: &mut R) -> Result<Self::Parameters, Error> {
-		<Self as CRHTrait>::setup(rng)
-	}
-
-	/// A simple implementation of TwoToOneCRH by asserting left and right input
-	/// has same length and chain them together.
-	fn evaluate(
-		parameters: &Self::Parameters,
-		left_input: &[u8],
-		right_input: &[u8],
-	) -> Result<Self::Output, Error> {
-		assert_eq!(left_input.len(), right_input.len());
-		assert!(left_input.len() * 8 <= Self::LEFT_INPUT_SIZE_BITS);
-		let chained: Vec<_> = left_input
-			.iter()
-			.chain(right_input.iter())
-			.copied()
-			.collect();
-
-		<Self as CRHTrait>::evaluate(parameters, &chained)
-	}
-}
-
 #[cfg(all(
 	test,
 	feature = "poseidon_bn254_x5_5",
@@ -379,7 +275,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 ))]
 mod test {
 	use super::*;
-	// use ark_bn254::Fq as Bn254Fq;
+	use crate::poseidon::circom::CircomCRH;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Field, Zero};
 	use ark_std::One;

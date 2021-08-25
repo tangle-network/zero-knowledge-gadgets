@@ -118,7 +118,8 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 	feature = "poseidon_circom_bn254_x5_3"
 ))]
 mod test {
-	use super::super::*;
+	use super::*;
+	use crate::poseidon::PoseidonSbox;
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{Field};
