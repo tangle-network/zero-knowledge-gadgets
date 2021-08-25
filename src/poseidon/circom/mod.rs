@@ -1,6 +1,4 @@
-use crate::poseidon::Rounds;
-use crate::poseidon::PoseidonParameters;
-use crate::poseidon::PoseidonError;
+use crate::poseidon::{PoseidonError, PoseidonParameters, Rounds};
 
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
@@ -113,16 +111,13 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 	}
 }
 
-#[cfg(all(
-	test,
-	feature = "poseidon_circom_bn254_x5_3"
-))]
+#[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
 	use crate::poseidon::PoseidonSbox;
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{Field};
+	use ark_ff::Field;
 	use ark_std::One;
 
 	use crate::utils::{
