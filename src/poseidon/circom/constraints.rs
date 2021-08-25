@@ -4,6 +4,8 @@ use crate::{poseidon::CircomCRH, utils::to_field_var_elements};
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
+	alloc::AllocVar,
+	prelude::*,
 	fields::{fp::FpVar, FieldVar},
 	uint8::UInt8,
 };
@@ -105,4 +107,70 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRHGadget<CircomCRH<F, P>, F> for CircomC
 
 #[cfg(test)]
 mod test {
+	use super::*;
+	use crate::poseidon::PoseidonParameters;
+	use crate::poseidon::PoseidonSbox;
+	use ark_relations::r1cs::ConstraintSystem;
+	use ark_crypto_primitives::crh::CRH as CRHTrait;
+	use ark_ed_on_bn254::Fq;
+	use ark_ff::{to_bytes};
+
+	use crate::utils::{
+		get_mds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_3,
+	};
+
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds3;
+
+	impl Rounds for PoseidonCircomRounds3 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 3;
+	}
+
+	type PoseidonCircomCRH3 = CircomCRH<Fq, PoseidonCircomRounds3>;
+	type PoseidonCircomCRH3Gadget = CircomCRHGadget<Fq, PoseidonCircomRounds3>;
+
+	#[test]
+	fn test_circom_poseidon_native_equality() {
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let rounds = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
+		let mds = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+
+		let params_var = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(&params),
+			AllocationMode::Constant,
+		)
+		.unwrap();
+
+		let aligned_inp = to_bytes![Fq::from(1u128), Fq::from(2u128)].unwrap();
+		let aligned_inp_var =
+			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
+
+		let res = PoseidonCircomCRH3::evaluate(&params, &aligned_inp).unwrap();
+		let res_var = <PoseidonCircomCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(
+			&params_var.clone(),
+			&aligned_inp_var,
+		)
+		.unwrap();
+		assert_eq!(res, res_var.value().unwrap());
+
+		// Test Poseidon on an input of 6 bytes. This will require padding, since the
+		// inputs are not aligned to the expected input chunk size of 32.
+		let unaligned_inp: Vec<u8> = vec![1, 2, 3, 4, 5, 6];
+		let unaligned_inp_var =
+			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(unaligned_inp.clone())).unwrap();
+
+		let res = PoseidonCircomCRH3::evaluate(&params, &unaligned_inp).unwrap();
+		let res_var = <PoseidonCircomCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(
+			&params_var.clone(),
+			&unaligned_inp_var,
+		)
+		.unwrap();
+		assert_eq!(res, res_var.value().unwrap());
+	}
 }
