@@ -3,7 +3,8 @@ use crate::{
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
 	mimc::Rounds as MiMCRounds,
 	poseidon::{
-		constraints::{CRHGadget, CircomCRHGadget},
+		constraints::CRHGadget,
+		circom::constraints::CircomCRHGadget,
 		sbox::PoseidonSbox,
 		CircomCRH, PoseidonParameters, Rounds, CRH,
 	},
@@ -26,7 +27,7 @@ use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
 use ark_groth16::{Groth16, Proof, VerifyingKey};
-use ark_std::{marker::PhantomData, rc::Rc, vec::Vec};
+use ark_std::{marker::PhantomData, rc::Rc};
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds_x3_3;

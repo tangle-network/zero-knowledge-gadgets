@@ -201,6 +201,20 @@ mod test {
 	}
 
 	#[test]
+	fn setup_and_prove_random_circom_mixer_groth16() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+		let (circuit, .., public_inputs) = setup_random_circom_circuit_x5::<_, Bn254Fr>(rng, curve);
+
+		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254>(rng, circuit.clone());
+		let proof = prove_circom_groth16_x5::<_, Bn254>(&pk, circuit, rng);
+
+		let res = verify_groth16::<Bn254>(&vk, &public_inputs, &proof);
+		println!("{}", res);
+		assert!(res);
+	}
+
+	#[test]
 	fn setup_and_prove_mixer_circom_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;

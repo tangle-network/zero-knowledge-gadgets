@@ -8,6 +8,7 @@ use ark_serialize::Read;
 use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
 
 pub mod sbox;
+pub mod circom;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
