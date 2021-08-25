@@ -256,14 +256,12 @@ pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let rounds3 = get_rounds_poseidon_bls381_x3_3::<F>();
 			let mds3 = get_mds_poseidon_bls381_x3_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 		Curve::Bn254 => {
 			let rounds3 = get_rounds_poseidon_bn254_x3_3::<F>();
 			let mds3 = get_mds_poseidon_bn254_x3_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 	}
 }
@@ -273,14 +271,12 @@ pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let rounds5 = get_rounds_poseidon_bls381_x3_5::<F>();
 			let mds5 = get_mds_poseidon_bls381_x3_5::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds5, mds5);
-			params3
+			PoseidonParameters::<F>::new(rounds5, mds5)
 		}
 		Curve::Bn254 => {
 			let rounds3 = get_rounds_poseidon_bn254_x3_5::<F>();
 			let mds3 = get_mds_poseidon_bn254_x3_5::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 	}
 }
@@ -291,14 +287,12 @@ pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let rounds3 = get_rounds_poseidon_bls381_x5_3::<F>();
 			let mds3 = get_mds_poseidon_bls381_x5_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 		Curve::Bn254 => {
 			let rounds3 = get_rounds_poseidon_bn254_x5_3::<F>();
 			let mds3 = get_mds_poseidon_bn254_x5_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 	}
 }
@@ -312,8 +306,7 @@ pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParamete
 		Curve::Bn254 => {
 			let rounds3 = get_rounds_poseidon_circom_bn254_x5_3::<F>();
 			let mds3 = get_mds_poseidon_circom_bn254_x5_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 	}
 }
@@ -324,14 +317,12 @@ pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let rounds5 = get_rounds_poseidon_bls381_x5_5::<F>();
 			let mds5 = get_mds_poseidon_bls381_x5_5::<F>();
-			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
-			params5
+			PoseidonParameters::<F>::new(rounds5, mds5)
 		}
 		Curve::Bn254 => {
 			let rounds5 = get_rounds_poseidon_bn254_x5_5::<F>();
 			let mds5 = get_mds_poseidon_bn254_x5_5::<F>();
-			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
-			params5
+			PoseidonParameters::<F>::new(rounds5, mds5)
 		}
 	}
 }
@@ -345,8 +336,7 @@ pub fn setup_circom_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParamete
 		Curve::Bn254 => {
 			let rounds5 = get_rounds_poseidon_circom_bn254_x5_5::<F>();
 			let mds5 = get_mds_poseidon_circom_bn254_x5_5::<F>();
-			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
-			params5
+			PoseidonParameters::<F>::new(rounds5, mds5)
 		}
 	}
 }
@@ -357,14 +347,12 @@ pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 		Curve::Bls381 => {
 			let rounds3 = get_rounds_poseidon_bls381_x17_3::<F>();
 			let mds3 = get_mds_poseidon_bls381_x17_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 		Curve::Bn254 => {
 			let rounds3 = get_rounds_poseidon_bn254_x17_3::<F>();
 			let mds3 = get_mds_poseidon_bn254_x17_3::<F>();
-			let params3 = PoseidonParameters::<F>::new(rounds3, mds3);
-			params3
+			PoseidonParameters::<F>::new(rounds3, mds3)
 		}
 	}
 }
@@ -375,14 +363,12 @@ pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 		Curve::Bls381 => {
 			let rounds5 = get_rounds_poseidon_bls381_x17_5::<F>();
 			let mds5 = get_mds_poseidon_bls381_x17_5::<F>();
-			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
-			params5
+			PoseidonParameters::<F>::new(rounds5, mds5)
 		}
 		Curve::Bn254 => {
 			let rounds5 = get_rounds_poseidon_bn254_x17_5::<F>();
 			let mds5 = get_mds_poseidon_bn254_x17_5::<F>();
-			let params5 = PoseidonParameters::<F>::new(rounds5, mds5);
-			params5
+			PoseidonParameters::<F>::new(rounds5, mds5)
 		}
 	}
 }
@@ -404,7 +390,7 @@ pub fn setup_mimc_220<F: PrimeField>(curve: Curve) -> crate::mimc::MiMCParameter
 
 pub fn verify_groth16<E: PairingEngine>(
 	vk: &VerifyingKey<E>,
-	public_inputs: &Vec<E::Fr>,
+	public_inputs: &[E::Fr],
 	proof: &Proof<E>,
 ) -> bool {
 	let res = Groth16::<E>::verify(vk, public_inputs, proof);
