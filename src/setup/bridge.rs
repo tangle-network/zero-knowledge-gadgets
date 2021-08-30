@@ -1,5 +1,3 @@
-use ark_ec::PairingEngine;
-use ark_ff::PrimeField;
 use super::common::*;
 use crate::{
 	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
@@ -17,6 +15,8 @@ use crate::{
 	},
 };
 use ark_crypto_primitives::SNARK;
+use ark_ec::PairingEngine;
+use ark_ff::PrimeField;
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
@@ -28,12 +28,13 @@ pub type BridgeConstraintDataInput<F> = BridgeDataInput<F>;
 pub type BridgeConstraintDataGadget<F> = BridgeDataGadget<F>;
 
 pub type Leaf_x5<F> = BridgeLeaf<F, PoseidonCRH_x5_5<F>>;
-pub type LeafGadget_x5<F> = BridgeLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>, Leaf_x5<F>>;
+pub type LeafGadget_x5<F> =
+	BridgeLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>, Leaf_x5<F>>;
 
 pub type TestSetMembership<F> = SetMembership<F>;
 pub type TestSetMembershipGadget<F> = SetMembershipGadget<F>;
 
-pub type Circuit_x5<F>= BridgeCircuit<
+pub type Circuit_x5<F> = BridgeCircuit<
 	F,
 	BridgeConstraintData<F>,
 	BridgeConstraintDataGadget<F>,
@@ -49,9 +50,10 @@ pub type Circuit_x5<F>= BridgeCircuit<
 >;
 
 pub type Leaf_x17<F> = BridgeLeaf<F, PoseidonCRH_x17_5<F>>;
-pub type LeafGadget_x17<F> = BridgeLeafGadget<F, PoseidonCRH_x17_5<F>, PoseidonCRH_x17_5Gadget<F>, Leaf_x17<F>>;
+pub type LeafGadget_x17<F> =
+	BridgeLeafGadget<F, PoseidonCRH_x17_5<F>, PoseidonCRH_x17_5Gadget<F>, Leaf_x17<F>>;
 
-pub type Circuit_x17<F>= BridgeCircuit<
+pub type Circuit_x17<F> = BridgeCircuit<
 	F,
 	BridgeConstraintData<F>,
 	BridgeConstraintDataGadget<F>,
@@ -202,7 +204,10 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField>(
 	(mc, leaf, nullifier_hash, root, public_inputs)
 }
 
-pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
+pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(
+	rng: &mut R,
+	curve: Curve,
+) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
 	let chain_id = F::rand(rng);
 	let leaves = Vec::new();
 	let index = 0;
@@ -216,7 +221,10 @@ pub fn setup_random_circuit_x5<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve)
 	)
 }
 
-pub fn setup_random_circuit_x17<R: Rng, F: PrimeField>(rng: &mut R, curve: Curve) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
+pub fn setup_random_circuit_x17<R: Rng, F: PrimeField>(
+	rng: &mut R,
+	curve: Curve,
+) -> (Circuit_x5<F>, F, F, F, Vec<F>) {
 	let chain_id = F::rand(rng);
 	let leaves = Vec::new();
 	let index = 0;
@@ -305,10 +313,9 @@ pub fn setup_random_groth16_x17<R: RngCore + CryptoRng, E: PairingEngine>(
 #[cfg(test)]
 mod test {
 	use super::*;
+	use ark_bls12_381::{Bls12_381, Fr as Bls381};
 	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
-	use ark_bls12_381::{Bls12_381, Fr as Bls381};
-
 
 	fn add_members_mock(_leaves: Vec<Bls381>) {}
 
@@ -321,7 +328,8 @@ mod test {
 		_path_node_commitments: Vec<Bls381>,
 		_recipient: Bls381,
 		_relayer: Bls381,
-	) {}
+	) {
+	}
 
 	#[test]
 	fn should_create_setup() {
@@ -371,7 +379,6 @@ mod test {
 		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let roots = Vec::new();
-
 
 		let params3 = setup_params_x5_3::<Bls381>(curve);
 		let params5 = setup_params_x5_5::<Bls381>(curve);

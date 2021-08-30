@@ -461,9 +461,8 @@ mod test {
 		assert!(res);
 	}
 
-
-	use ark_ed_on_bn254::Fq as Bn254Fq;
 	use crate::mimc::Rounds as MiMCRounds;
+	use ark_ed_on_bn254::Fq as Bn254Fq;
 
 	#[derive(Default, Clone)]
 	struct MiMCRounds220_2;
@@ -509,9 +508,11 @@ mod test {
 		let hash2 = hash_leaf::<MiMCSMTConfig, _>(leaf_params.borrow(), &leaves[1]).unwrap();
 		let hash3 = hash_leaf::<MiMCSMTConfig, _>(leaf_params.borrow(), &leaves[2]).unwrap();
 
-		let hash12 = hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash1, &hash2).unwrap();
+		let hash12 =
+			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash1, &hash2).unwrap();
 		let hash34 =
-			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash3, &empty_hashes[0]).unwrap();
+			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash3, &empty_hashes[0])
+				.unwrap();
 		let hash1234 =
 			hash_inner_node::<MiMCSMTConfig>(inner_params.borrow(), &hash12, &hash34).unwrap();
 		let calc_root =

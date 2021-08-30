@@ -1,4 +1,4 @@
-use crate::utils::{to_field_elements};
+use crate::utils::to_field_elements;
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
@@ -136,7 +136,11 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 			let temp_x_r = x_r.clone();
 
 			if i < params.rounds - 1 {
-				x_l = if i == 0 { temp_x_r } else { temp_x_r + (t4 * t) };
+				x_l = if i == 0 {
+					temp_x_r
+				} else {
+					temp_x_r + (t4 * t)
+				};
 
 				x_r = temp_x_l;
 			} else {

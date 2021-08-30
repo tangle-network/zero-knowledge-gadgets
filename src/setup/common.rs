@@ -3,9 +3,8 @@ use crate::{
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
 	mimc::Rounds as MiMCRounds,
 	poseidon::{
+		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
-		circom::constraints::{CircomCRHGadget},
-		circom::CircomCRH,
 		sbox::PoseidonSbox,
 		PoseidonParameters, Rounds, CRH,
 	},

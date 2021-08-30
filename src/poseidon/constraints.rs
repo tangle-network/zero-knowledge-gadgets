@@ -1,5 +1,5 @@
 use super::{sbox::constraints::SboxConstraints, PoseidonParameters, Rounds, CRH};
-use crate::{utils::to_field_var_elements};
+use crate::utils::to_field_var_elements;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -10,9 +10,7 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
-use core::{
-	borrow::Borrow,
-};
+use core::borrow::Borrow;
 
 #[derive(Default, Clone)]
 pub struct PoseidonParametersVar<F: PrimeField> {
