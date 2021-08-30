@@ -1,16 +1,12 @@
-use crate::{
-	poseidon::{
-		circom::CircomCRH, constraints::PoseidonParametersVar, sbox::constraints::SboxConstraints,
-		Rounds,
-	},
-	utils::to_field_var_elements,
+use crate::poseidon::{
+	circom::CircomCRH, constraints::PoseidonParametersVar, sbox::constraints::SboxConstraints,
+	Rounds,
 };
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	fields::{fp::FpVar, FieldVar},
 	uint8::UInt8,
-	R1CSVar,
 };
 use ark_relations::r1cs::SynthesisError;
 use ark_std::{marker::PhantomData, vec::Vec};
@@ -65,14 +61,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CircomCRH<F, P>, F> for CircomCRHG
 		parameters: &Self::ParametersVar,
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
-		let chunk_size = F::BigInt::NUM_LIMBS * 8;
-		let input_bytes: Vec<u8> = input.iter().map(|x| x.value()).flatten().collect();
-		let f_var_inputs: Vec<_> = input_bytes
-			.chunks_exact(chunk_size)
-			.map(F::from_be_bytes_mod_order)
-			.map(FpVar::Constant)
-			.collect();
-
+		let f_var_inputs = crate::utils::to_field_var_elements(input)?;
 		if f_var_inputs.len() >= P::WIDTH {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
@@ -119,7 +108,10 @@ mod test {
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
-	use ark_r1cs_std::alloc::{AllocVar, AllocationMode};
+	use ark_r1cs_std::{
+		alloc::{AllocVar, AllocationMode},
+		R1CSVar,
+	};
 	use ark_relations::r1cs::ConstraintSystem;
 
 	use crate::utils::{get_mds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_3};
