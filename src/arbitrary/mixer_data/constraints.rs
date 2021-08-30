@@ -18,13 +18,13 @@ pub struct InputVar<F: PrimeField> {
 }
 
 impl<F: PrimeField> InputVar<F> {
-	pub fn new(
-		recipient: FpVar<F>,
-		relayer: FpVar<F>,
-		fee: FpVar<F>,
-		refund: FpVar<F>,
-	) -> Self {
-		Self { recipient, relayer, fee, refund }
+	pub fn new(recipient: FpVar<F>, relayer: FpVar<F>, fee: FpVar<F>, refund: FpVar<F>) -> Self {
+		Self {
+			recipient,
+			relayer,
+			fee,
+			refund,
+		}
 	}
 }
 

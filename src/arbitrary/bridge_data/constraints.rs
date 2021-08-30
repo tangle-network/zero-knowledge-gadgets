@@ -64,7 +64,12 @@ impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 		let fee_var = FpVar::new_variable(cs.clone(), || Ok(&fee), mode)?;
 		let refund_var = FpVar::new_variable(cs, || Ok(&refund), mode)?;
 
-		Ok(InputVar::new(recipient_var, relayer_var, fee_var, refund_var))
+		Ok(InputVar::new(
+			recipient_var,
+			relayer_var,
+			fee_var,
+			refund_var,
+		))
 	}
 }
 

@@ -260,7 +260,8 @@ mod test {
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
 		let refund = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) =
+			setup_leaf_x5(chain_id, &params5, rng);
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
@@ -306,7 +307,8 @@ mod test {
 		let recipient = BlsFr::rand(rng);
 		let fee = BlsFr::rand(rng);
 		let refund = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) =
+			setup_leaf_x5(chain_id, &params5, rng);
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);

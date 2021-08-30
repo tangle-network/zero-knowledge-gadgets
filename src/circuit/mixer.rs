@@ -6,7 +6,7 @@ use crate::{
 		Config as MerkleConfig, Path,
 	},
 };
-use ark_crypto_primitives::{crh::CRHGadget, CRH};
+use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -158,13 +158,12 @@ where
 
 		// Private inputs
 		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let path_var = PathVar::<F, C, HGT, LHGT>::new_witness(cs.clone(), || Ok(path))?;
+		let path_var = PathVar::<F, C, HGT, LHGT>::new_witness(cs, || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let mixer_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
 		let mixer_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
-		let is_member =
-			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &mixer_leaf)?;
+		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf)?;
 		// Constraining arbitrary inputs
 		AG::constrain(&arbitrary_input_var)?;
 
@@ -181,10 +180,11 @@ where
 mod test {
 	use crate::setup::{common::*, mixer::*};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_crypto_primitives::SNARK;
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
-	use ark_std::test_rng;
+	use ark_std::{test_rng, One, Zero};
 
 	#[test]
 	fn setup_and_prove_mixer_groth16() {
@@ -198,6 +198,54 @@ mod test {
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		println!("{}", res);
 		assert!(res);
+	}
+
+	#[test]
+	fn setup_and_prove_random_circom_mixer_groth16() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+		let (circuit, .., public_inputs) = setup_random_circom_circuit_x5::<_, Bn254Fr>(rng, curve);
+
+		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254>(rng, circuit.clone());
+		let proof = prove_circom_groth16_x5::<_, Bn254>(&pk, circuit, rng);
+
+		let res = verify_groth16::<Bn254>(&vk, &public_inputs, &proof);
+		println!("{}", res);
+		assert!(res);
+	}
+
+	#[test]
+	fn setup_and_prove_mixer_circom_groth16() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let leaves = vec![];
+		let index = 0;
+		let recipient = Bn254Fr::one();
+		let relayer = Bn254Fr::zero();
+		let fee = Bn254Fr::zero();
+		let refund = Bn254Fr::zero();
+
+		let (circuit, .., public_inputs) = setup_circom_circuit_x5::<_, Bn254Fr>(
+			&leaves, index, recipient, relayer, fee, refund, rng, curve,
+		);
+
+		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254>(rng, circuit.clone());
+		let proof = prove_circom_groth16_x5(&pk, circuit, rng);
+
+		let res = verify_groth16(&vk, &public_inputs, &proof);
+		assert!(
+			res,
+			"Failed to verify Circom Proof, here is the inputs:
+			recipient = {},
+			relayer = {},
+			fee = {},
+			refund = {},
+			public_inputs = {:?},
+			proof = {:?},
+			",
+			recipient, relayer, fee, refund, public_inputs, proof
+		);
 	}
 
 	#[should_panic]

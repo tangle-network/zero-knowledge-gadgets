@@ -197,7 +197,7 @@ mod test {
 	use super::*;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{to_bytes, Zero, field_new};
+	use ark_ff::{field_new, to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
 	#[derive(Default, Clone)]
@@ -210,7 +210,6 @@ mod test {
 
 	type MiMC220_2 = CRH<Fq, MiMCRounds220_2>;
 	type MiMC220Gadget_2 = CRHGadget<Fq, MiMCRounds220_2>;
-
 
 	#[derive(Default, Clone)]
 	struct MiMCRounds220_3;
@@ -263,7 +262,6 @@ mod test {
 		// 	Fq,
 		// 	"19814528709687996974327303300007262407299502847885145507292406548098437687919"
 		// );
-
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
