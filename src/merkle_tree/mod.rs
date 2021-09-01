@@ -216,7 +216,7 @@ impl<P: Config> SparseMerkleTree<P> {
 
 	/// generate a membership proof (does not check the data point)
 	pub fn generate_membership_proof<const N: usize>(&self, index: u64) -> Path<P, N> {
-		let mut path = Vec::new();
+		let mut path = Vec::with_capacity(N);
 
 		let tree_index = convert_index_to_last_level::<P>(index);
 

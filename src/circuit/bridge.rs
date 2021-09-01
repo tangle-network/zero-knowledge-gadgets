@@ -220,7 +220,8 @@ mod test {
 	use ark_std::test_rng;
 
 	// merkle proof path legth
-	pub const LEN: usize = 3;
+	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
+	pub const LEN: usize = 30;
 
 	#[test]
 	fn setup_and_prove_bridge_groth16() {

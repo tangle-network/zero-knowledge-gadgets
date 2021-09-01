@@ -320,7 +320,8 @@ mod test {
 	use ark_std::test_rng;
 
 	// merkle proof path legth
-	pub const LEN: usize = 3;
+	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
+	pub const LEN: usize = 30;
 
 	fn add_members_mock(_leaves: Vec<Bls381>) {}
 
