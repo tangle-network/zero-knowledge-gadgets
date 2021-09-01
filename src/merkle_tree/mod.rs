@@ -9,7 +9,7 @@ use ark_std::{
 	rc::Rc,
 	vec::Vec,
 };
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;

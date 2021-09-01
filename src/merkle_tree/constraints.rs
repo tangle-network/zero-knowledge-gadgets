@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 use super::{Config, Node, Path};
 use crate::Vec;
