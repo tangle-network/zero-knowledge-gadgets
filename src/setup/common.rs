@@ -179,11 +179,11 @@ pub fn setup_tree_x5<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>
 	mt
 }
 
-pub fn setup_tree_and_create_path_x5<F: PrimeField>(
+pub fn setup_tree_and_create_path_x5<F: PrimeField, const N: usize>(
 	leaves: &[F],
 	index: u64,
 	params: &PoseidonParameters<F>,
-) -> (Tree_x5<F>, Path<TreeConfig_x5<F>>) {
+) -> (Tree_x5<F>, Path<TreeConfig_x5<F>, N>) {
 	// Making the merkle tree
 	let mt = setup_tree_x5(leaves, params);
 	// Getting the proof path
@@ -200,11 +200,11 @@ pub fn setup_circom_tree_x5<F: PrimeField>(
 	mt
 }
 
-pub fn setup_circom_tree_and_create_path_x5<F: PrimeField>(
+pub fn setup_circom_tree_and_create_path_x5<F: PrimeField, const N: usize>(
 	leaves: &[F],
 	index: u64,
 	params: &PoseidonParameters<F>,
-) -> (CircomTree_x5<F>, Path<CircomTreeConfig_x5<F>>) {
+) -> (CircomTree_x5<F>, Path<CircomTreeConfig_x5<F>, N>) {
 	// Making the merkle tree
 	let mt = setup_circom_tree_x5(leaves, params);
 	// Getting the proof path
@@ -218,11 +218,11 @@ pub fn setup_tree_x17<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F
 	mt
 }
 
-pub fn setup_tree_and_create_path_x17<F: PrimeField>(
+pub fn setup_tree_and_create_path_x17<F: PrimeField, const N: usize>(
 	leaves: &[F],
 	index: u64,
 	params: &PoseidonParameters<F>,
-) -> (Tree_x17<F>, Path<TreeConfig_x17<F>>) {
+) -> (Tree_x17<F>, Path<TreeConfig_x17<F>, N>) {
 	// Making the merkle tree
 	let mt = setup_tree_x17(leaves, params);
 	// Getting the proof path
@@ -239,11 +239,11 @@ pub fn setup_mimc_tree_220<F: PrimeField>(
 	mt
 }
 
-pub fn setup_tree_and_create_path_mimc_220<F: PrimeField>(
+pub fn setup_tree_and_create_path_mimc_220<F: PrimeField, const N: usize>(
 	leaves: &[F],
 	index: u64,
 	params: &crate::mimc::MiMCParameters<F>,
-) -> (MiMCTree_220<F>, Path<MiMCTreeConfig_220<F>>) {
+) -> (MiMCTree_220<F>, Path<MiMCTreeConfig_220<F>, N>) {
 	// Making the merkle tree
 	let mt = setup_mimc_tree_220(leaves, params);
 	// Getting the proof path

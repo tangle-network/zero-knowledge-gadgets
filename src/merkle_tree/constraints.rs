@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use super::{Config, Node, Path};
 use crate::Vec;
 use ark_crypto_primitives::CRHGadget;
@@ -115,19 +117,19 @@ where
 
 /// Gadgets for one Merkle tree path
 #[derive(Debug)]
-pub struct PathVar<F, P, HG, LHG>
+pub struct PathVar<F, P, HG, LHG, const N: usize>
 where
 	F: PrimeField,
 	P: Config,
 	HG: CRHGadget<P::H, F>,
 	LHG: CRHGadget<P::LeafH, F>,
 {
-	path: Vec<(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>)>,
+	path: [(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>); N],
 	inner_params: Rc<HG::ParametersVar>,
 	leaf_params: Rc<LHG::ParametersVar>,
 }
 
-impl<F, P, HG, LHG> PathVar<F, P, HG, LHG>
+impl<F, P, HG, LHG, const N: usize> PathVar<F, P, HG, LHG, N>
 where
 	F: PrimeField,
 	P: Config,
@@ -212,14 +214,14 @@ where
 	Ok(NodeVar::Inner(res))
 }
 
-impl<F, P, HG, LHG> AllocVar<Path<P>, F> for PathVar<F, P, HG, LHG>
+impl<F, P, HG, LHG, const N: usize> AllocVar<Path<P, N>, F> for PathVar<F, P, HG, LHG, N>
 where
 	F: PrimeField,
 	P: Config,
 	HG: CRHGadget<P::H, F>,
 	LHG: CRHGadget<P::LeafH, F>,
 {
-	fn new_variable<T: Borrow<Path<P>>>(
+	fn new_variable<T: Borrow<Path<P, N>>>(
 		cs: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
@@ -244,7 +246,11 @@ where
 			LHG::ParametersVar::new_input(cs, || Ok(path_obj.borrow().leaf_params.borrow()))?;
 
 		Ok(PathVar {
-			path,
+			path: path.try_into().unwrap_or_else(
+				|v: Vec<(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>)>| {
+					panic!("Expected a Vec of length {} but it was {}", N, v.len())
+				},
+			),
 			inner_params: Rc::new(inner_params_var),
 			leaf_params: Rc::new(leaf_params_var),
 		})
@@ -312,7 +318,11 @@ mod test {
 		let root = smt.root();
 		let path = smt.generate_membership_proof(0);
 
-		let path_var = PathVar::new_witness(cs.clone(), || Ok(path)).unwrap();
+		let path_var =
+			PathVar::<_, _, _, _, { SMTConfig::HEIGHT as usize }>::new_witness(cs.clone(), || {
+				Ok(path)
+			})
+			.unwrap();
 		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 
