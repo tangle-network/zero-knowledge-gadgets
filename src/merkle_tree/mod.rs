@@ -1,5 +1,3 @@
-#![feature(const_generics)]
-#![feature(const_evaluatable_checked)]
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{to_bytes, ToBytes};
 use ark_std::{

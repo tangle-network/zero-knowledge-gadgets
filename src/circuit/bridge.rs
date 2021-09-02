@@ -30,15 +30,16 @@ pub struct BridgeCircuit<
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
 	// Set of merkle roots
-	S: Set<F>,
-	SG: SetGadget<F, S>,
+	S: Set<F, M>,
+	SG: SetGadget<F, S, M>,
 	const N: usize,
+	const M: usize,
 > {
 	arbitrary_input: A::Input,
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
 	set_private_inputs: S::Private,
-	root_set: Vec<F>,
+	root_set: [F; M],
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
 	root: <C::H as CRH>::Output,
@@ -55,8 +56,8 @@ pub struct BridgeCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize>
-	BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
+	BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -68,15 +69,15 @@ where
 	HGT: CRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
-	S: Set<F>,
-	SG: SetGadget<F, S>,
+	S: Set<F, M>,
+	SG: SetGadget<F, S, M>,
 {
 	pub fn new(
 		arbitrary_input: A::Input,
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
 		set_private_inputs: S::Private,
-		root_set: Vec<F>,
+		root_set: [F; M],
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
 		root: <C::H as CRH>::Output,
@@ -106,8 +107,8 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize> Clone
-	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
+	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -119,8 +120,8 @@ where
 	HGT: CRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
-	S: Set<F>,
-	SG: SetGadget<F, S>,
+	S: Set<F, M>,
+	SG: SetGadget<F, S, M>,
 {
 	fn clone(&self) -> Self {
 		let arbitrary_input = self.arbitrary_input.clone();
@@ -146,8 +147,8 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize> ConstraintSynthesizer<F>
-	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
+	ConstraintSynthesizer<F> for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -159,8 +160,8 @@ where
 	HGT: CRHGadget<C::H, F>,
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
-	S: Set<F>,
-	SG: SetGadget<F, S>,
+	S: Set<F, M>,
+	SG: SetGadget<F, S, M>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let arbitrary_input = self.arbitrary_input;
@@ -178,6 +179,11 @@ where
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
+
+		/* 		let mut root_set_var: [FpVar<F>; M] = [FpVar::<F>::zero(); M];
+		for (i, elem) in root_set.iter().enumerate() {
+			root_set_var[i] = FpVar::<F>::new_input(cs.clone(), || Ok(elem)).unwrap();
+		} */
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
@@ -221,16 +227,18 @@ mod test {
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
-	pub const LEN: usize = 30;
+	pub const TEST_N: usize = 30;
+	pub const TEST_M: usize = 10;
 
 	#[test]
 	fn setup_and_prove_bridge_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr, LEN>(rng, curve);
+		let (circuit, .., public_inputs) =
+			setup_random_circuit_x5::<_, BlsFr, TEST_N, TEST_M>(rng, curve);
 
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
@@ -241,7 +249,8 @@ mod test {
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr, LEN>(rng, curve);
+		let (circuit, .., public_inputs) =
+			setup_random_circuit_x5::<_, BlsFr, TEST_N, TEST_M>(rng, curve);
 
 		type GrothSetup = Groth16<Bls12_381>;
 
@@ -272,7 +281,7 @@ mod test {
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
-		let roots = vec![root];
+		let roots = [root; TEST_M];
 		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit_x5::new(
@@ -290,13 +299,13 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(roots);
+		public_inputs.extend(&roots); //FIXME
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -319,7 +328,8 @@ mod test {
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
-		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
+		let mut roots = [BlsFr::rand(rng); TEST_M];
+		roots[0] = root;
 		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit_x5::new(
@@ -337,13 +347,13 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(roots);
+		public_inputs.extend(&roots); //FIXME
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -365,7 +375,8 @@ mod test {
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
-		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
+		let mut roots = [BlsFr::rand(rng); TEST_M];
+		roots[0] = root;
 		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit_x5::new(
@@ -383,13 +394,13 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(roots);
+		public_inputs.extend(&roots); //FIXME
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -411,7 +422,8 @@ mod test {
 		let params3 = setup_params_x5_3(curve);
 		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
-		let roots = vec![BlsFr::rand(rng), BlsFr::rand(rng)];
+		let mut roots = [BlsFr::rand(rng); TEST_M];
+		roots[0] = root;
 		let set_private_inputs = setup_set(&root, &roots);
 
 		let circuit = Circuit_x5::new(
@@ -429,13 +441,13 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(roots);
+		public_inputs.extend(&roots); //FIXME
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
