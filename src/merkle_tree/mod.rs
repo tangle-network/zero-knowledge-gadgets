@@ -7,6 +7,7 @@ use ark_std::{
 	rc::Rc,
 	vec::Vec,
 };
+use core::convert::TryInto;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -57,13 +58,13 @@ impl<P: Config> ToBytes for Node<P> {
 }
 
 #[derive(Clone)]
-pub struct Path<P: Config> {
-	pub(crate) path: Vec<(Node<P>, Node<P>)>,
+pub struct Path<P: Config, const N: usize> {
+	pub(crate) path: [(Node<P>, Node<P>); N],
 	leaf_params: Rc<LeafParameters<P>>,
 	inner_params: Rc<InnerParameters<P>>,
 }
 
-impl<P: Config + PartialEq> Path<P> {
+impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 	/// verify the lookup proof, just checking the membership
 	pub fn check_membership<L: ToBytes>(
 		&self,
@@ -212,8 +213,8 @@ impl<P: Config> SparseMerkleTree<P> {
 	}
 
 	/// generate a membership proof (does not check the data point)
-	pub fn generate_membership_proof(&self, index: u64) -> Path<P> {
-		let mut path = Vec::new();
+	pub fn generate_membership_proof<const N: usize>(&self, index: u64) -> Path<P, N> {
+		let mut path = Vec::with_capacity(N);
 
 		let tree_index = convert_index_to_last_level::<P>(index);
 
@@ -246,7 +247,11 @@ impl<P: Config> SparseMerkleTree<P> {
 		}
 
 		Path {
-			path,
+			path: path
+				.try_into()
+				.unwrap_or_else(|v: Vec<(Node<P>, Node<P>)>| {
+					panic!("Expected a Vec of length {} but it was {}", N, v.len())
+				}),
 			inner_params: Rc::clone(&self.inner_params),
 			leaf_params: Rc::clone(&self.leaf_params),
 		}
@@ -455,7 +460,7 @@ mod test {
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
 		let smt = create_merkle_tree::<_, SMTConfig>(inner_params, leaf_params, &leaves);
 
-		let proof = smt.generate_membership_proof(0);
+		let proof = smt.generate_membership_proof::<{ SMTConfig::HEIGHT as usize }>(0);
 
 		let res = proof.check_membership(&smt.root(), &leaves[0]).unwrap();
 		assert!(res);
@@ -538,7 +543,7 @@ mod test {
 		let leaves = vec![Bn254Fq::rand(rng), Bn254Fq::rand(rng), Bn254Fq::rand(rng)];
 		let smt = create_merkle_tree::<_, MiMCSMTConfig>(inner_params, leaf_params, &leaves);
 
-		let proof = smt.generate_membership_proof(0);
+		let proof = smt.generate_membership_proof::<{ MiMCSMTConfig::HEIGHT as usize }>(0);
 
 		let res = proof.check_membership(&smt.root(), &leaves[0]).unwrap();
 		assert!(res);

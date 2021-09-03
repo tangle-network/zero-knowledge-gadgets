@@ -1,3 +1,5 @@
+use core::convert::TryInto;
+
 use super::{Config, Node, Path};
 use crate::Vec;
 use ark_crypto_primitives::CRHGadget;
@@ -115,19 +117,19 @@ where
 
 /// Gadgets for one Merkle tree path
 #[derive(Debug)]
-pub struct PathVar<F, P, HG, LHG>
+pub struct PathVar<F, P, HG, LHG, const N: usize>
 where
 	F: PrimeField,
 	P: Config,
 	HG: CRHGadget<P::H, F>,
 	LHG: CRHGadget<P::LeafH, F>,
 {
-	path: Vec<(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>)>,
+	path: [(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>); N],
 	inner_params: Rc<HG::ParametersVar>,
 	leaf_params: Rc<LHG::ParametersVar>,
 }
 
-impl<F, P, HG, LHG> PathVar<F, P, HG, LHG>
+impl<F, P, HG, LHG, const N: usize> PathVar<F, P, HG, LHG, N>
 where
 	F: PrimeField,
 	P: Config,
@@ -212,14 +214,14 @@ where
 	Ok(NodeVar::Inner(res))
 }
 
-impl<F, P, HG, LHG> AllocVar<Path<P>, F> for PathVar<F, P, HG, LHG>
+impl<F, P, HG, LHG, const N: usize> AllocVar<Path<P, N>, F> for PathVar<F, P, HG, LHG, N>
 where
 	F: PrimeField,
 	P: Config,
 	HG: CRHGadget<P::H, F>,
 	LHG: CRHGadget<P::LeafH, F>,
 {
-	fn new_variable<T: Borrow<Path<P>>>(
+	fn new_variable<T: Borrow<Path<P, N>>>(
 		cs: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
@@ -244,7 +246,11 @@ where
 			LHG::ParametersVar::new_input(cs, || Ok(path_obj.borrow().leaf_params.borrow()))?;
 
 		Ok(PathVar {
-			path,
+			path: path.try_into().unwrap_or_else(
+				|v: Vec<(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>)>| {
+					panic!("Expected a Vec of length {} but it was {}", N, v.len())
+				},
+			),
 			inner_params: Rc::new(inner_params_var),
 			leaf_params: Rc::new(leaf_params_var),
 		})
@@ -268,6 +274,8 @@ mod test {
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};
+
+	use crate::merkle_tree::Path;
 
 	type FieldVar = FpVar<Fq>;
 
@@ -312,11 +320,87 @@ mod test {
 		let root = smt.root();
 		let path = smt.generate_membership_proof(0);
 
-		let path_var = PathVar::new_witness(cs.clone(), || Ok(path)).unwrap();
+		let path_var =
+			PathVar::<_, _, _, _, { SMTConfig::HEIGHT as usize }>::new_witness(cs.clone(), || {
+				Ok(path)
+			})
+			.unwrap();
 		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 
 		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.cs().is_satisfied().unwrap());
+		assert!(res.value().unwrap());
+	}
+
+	#[should_panic(expected = "Expected a Vec of length 2 but it was 3")]
+	#[test]
+	fn should_fail_path_creation_with_invalid_size() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = SMT::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let root = smt.root();
+		let path = smt.generate_membership_proof(0);
+
+		// pass a size one less than tree HEIGHT
+		// should panic here
+		let path_var = PathVar::<_, _, _, _, { (SMTConfig::HEIGHT - 1) as usize }>::new_witness(
+			cs.clone(),
+			|| Ok(path),
+		)
+		.unwrap();
+		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+
+		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.cs().is_satisfied().unwrap());
+		assert!(res.value().unwrap());
+	}
+
+	#[should_panic(expected = "assertion failed: `(left == right)`
+  left: `2`,
+ right: `3`")]
+	#[test]
+	fn should_fail_membership_with_invalid_size() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = SMT::new_sequential(inner_params.clone(), leaf_params.clone(), &leaves).unwrap();
+		let root = smt.root();
+		let path: Path<SMTConfig, { (SMTConfig::HEIGHT) as usize }> =
+			smt.generate_membership_proof(0);
+
+		let new_path = Path::<SMTConfig, { (SMTConfig::HEIGHT - 1) as usize }> {
+			path: [path.path[0].clone(), path.path[1].clone()],
+			inner_params: inner_params.clone(),
+			leaf_params,
+		};
+
+		let path_var = PathVar::<_, _, _, _, { (SMTConfig::HEIGHT - 1) as usize }>::new_witness(
+			cs.clone(),
+			|| Ok(new_path),
+		)
+		.unwrap();
+		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+
+		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.cs().is_satisfied().unwrap());
 		assert!(res.value().unwrap());
 	}
 }

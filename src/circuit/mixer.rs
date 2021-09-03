@@ -27,12 +27,13 @@ pub struct MixerCircuit<
 	// Type of leaf creation
 	L: LeafCreation<H>,
 	LG: LeafCreationGadget<F, H, HG, L>,
+	const N: usize,
 > {
 	arbitrary_input: A::Input,
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
 	hasher_params: H::Parameters,
-	path: Path<C>,
+	path: Path<C, N>,
 	root: <C::H as CRH>::Output,
 	nullifier_hash: L::Nullifier,
 	_field: PhantomData<F>,
@@ -46,7 +47,8 @@ pub struct MixerCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG> MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, const N: usize>
+	MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, N>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -64,7 +66,7 @@ where
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
 		hasher_params: H::Parameters,
-		path: Path<C>,
+		path: Path<C, N>,
 		root: <C::H as CRH>::Output,
 		nullifier_hash: L::Nullifier,
 	) -> Self {
@@ -89,8 +91,8 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG> Clone
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, const N: usize> Clone
+	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, N>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -123,8 +125,8 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG> ConstraintSynthesizer<F>
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, const N: usize> ConstraintSynthesizer<F>
+	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, N>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -158,7 +160,7 @@ where
 
 		// Private inputs
 		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let path_var = PathVar::<F, C, HGT, LHGT>::new_witness(cs, || Ok(path))?;
+		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs, || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let mixer_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
@@ -186,14 +188,18 @@ mod test {
 	use ark_groth16::Groth16;
 	use ark_std::{test_rng, One, Zero};
 
+	// merkle proof path legth
+	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
+	pub const LEN: usize = 30;
+
 	#[test]
 	fn setup_and_prove_mixer_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr>(rng, curve);
+		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr, LEN>(rng, curve);
 
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		println!("{}", res);
@@ -204,10 +210,11 @@ mod test {
 	fn setup_and_prove_random_circom_mixer_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let (circuit, .., public_inputs) = setup_random_circom_circuit_x5::<_, Bn254Fr>(rng, curve);
+		let (circuit, .., public_inputs) =
+			setup_random_circom_circuit_x5::<_, Bn254Fr, LEN>(rng, curve);
 
-		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254>(rng, circuit.clone());
-		let proof = prove_circom_groth16_x5::<_, Bn254>(&pk, circuit, rng);
+		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254, LEN>(rng, circuit.clone());
+		let proof = prove_circom_groth16_x5::<_, Bn254, LEN>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bn254>(&vk, &public_inputs, &proof);
 		println!("{}", res);
@@ -226,11 +233,11 @@ mod test {
 		let fee = Bn254Fr::zero();
 		let refund = Bn254Fr::zero();
 
-		let (circuit, .., public_inputs) = setup_circom_circuit_x5::<_, Bn254Fr>(
+		let (circuit, .., public_inputs) = setup_circom_circuit_x5::<_, Bn254Fr, LEN>(
 			&leaves, index, recipient, relayer, fee, refund, rng, curve,
 		);
 
-		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254>(rng, circuit.clone());
+		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254, LEN>(rng, circuit.clone());
 		let proof = prove_circom_groth16_x5(&pk, circuit, rng);
 
 		let res = verify_groth16(&vk, &public_inputs, &proof);
@@ -253,7 +260,7 @@ mod test {
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5(rng, curve);
+		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr, LEN>(rng, curve);
 
 		type GrothSetup = Groth16<Bls12_381>;
 
@@ -298,8 +305,8 @@ mod test {
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -336,8 +343,8 @@ mod test {
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -374,8 +381,8 @@ mod test {
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
+		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}

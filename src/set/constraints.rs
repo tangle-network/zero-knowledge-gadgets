@@ -7,7 +7,7 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::SynthesisError;
 
-pub trait SetGadget<F: PrimeField, S: Set<F>>: Sized {
+pub trait SetGadget<F: PrimeField, S: Set<F, M>, const M: usize>: Sized {
 	type PrivateVar: AllocVar<S::Private, F> + Clone;
 
 	fn check<T: ToBytesGadget<F>>(
