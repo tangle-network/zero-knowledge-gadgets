@@ -133,8 +133,13 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	let root = tree.root().inner();
 	let mut roots_new: [F; M] = [F::default(); M];
 	roots_new[0] = root;
-	for i in 1..M {
-		roots_new[i] = roots[i - 1];
+	let size_to_copy = if roots.len() > (M - 1) {
+		M - 1
+	} else {
+		roots.len()
+	};
+	for i in 0..size_to_copy {
+		roots_new[i + 1] = roots[i];
 	}
 	let set_private_inputs = setup_set(&root, &roots_new);
 
@@ -185,8 +190,13 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	let root = tree.root().inner();
 	let mut roots_new: [F; M] = [F::default(); M];
 	roots_new[0] = root;
-	for i in 1..M {
-		roots_new[i] = roots[i - 1];
+	let size_to_copy = if roots.len() > (M - 1) {
+		M - 1
+	} else {
+		roots.len()
+	};
+	for i in 0..size_to_copy {
+		roots_new[i + 1] = roots[i];
 	}
 	let set_private_inputs = setup_set(&root, &roots_new);
 
