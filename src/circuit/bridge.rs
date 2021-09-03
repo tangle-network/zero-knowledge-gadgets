@@ -179,11 +179,6 @@ where
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-
-		/* 		let mut root_set_var: [FpVar<F>; M] = [FpVar::<F>::zero(); M];
-		for (i, elem) in root_set.iter().enumerate() {
-			root_set_var[i] = FpVar::<F>::new_input(cs.clone(), || Ok(elem)).unwrap();
-		} */
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
@@ -299,7 +294,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots); //FIXME
+		public_inputs.extend(&roots);
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
@@ -347,7 +342,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots); //FIXME
+		public_inputs.extend(&roots);
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
@@ -394,7 +389,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots); //FIXME
+		public_inputs.extend(&roots);
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
@@ -441,7 +436,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots); //FIXME
+		public_inputs.extend(&roots);
 		public_inputs.push(root);
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);

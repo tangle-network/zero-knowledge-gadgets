@@ -1,5 +1,4 @@
 use super::Set;
-use crate::Vec;
 use ark_crypto_primitives::Error;
 use ark_ff::{bytes::ToBytes, fields::PrimeField, to_bytes};
 use ark_std::marker::PhantomData;

@@ -114,7 +114,7 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	chain_id: F,
 	leaves: &[F],
 	index: u64,
-	roots: &mut [F; M],
+	roots: &[F], // only first M - 1 member will be used
 	recipient: F,
 	relayer: F,
 	fee: F,
@@ -131,15 +131,19 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	leaves_new.push(leaf);
 	let (tree, path) = setup_tree_and_create_path_x5(&leaves_new, index, &params3);
 	let root = tree.root().inner();
-	roots[0] = root; //FIXME, should we get M-1 valid elments as input starting from index 1
-	let set_private_inputs = setup_set(&root, &roots);
+	let mut roots_new: [F; M] = [F::default(); M];
+	roots_new[0] = root;
+	for i in 1..M {
+		roots_new[i] = roots[i - 1];
+	}
+	let set_private_inputs = setup_set(&root, &roots_new);
 
 	let mc = Circuit_x5::new(
 		arbitrary_input.clone(),
 		leaf_private,
 		leaf_public,
 		set_private_inputs,
-		roots.clone(),
+		roots_new,
 		params5,
 		path,
 		root.clone(),
@@ -148,7 +152,7 @@ pub fn setup_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	let public_inputs = get_public_inputs(
 		chain_id,
 		nullifier_hash,
-		*roots,
+		roots_new,
 		root,
 		recipient,
 		relayer,
@@ -162,7 +166,7 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	chain_id: F,
 	leaves: &[F],
 	index: u64,
-	roots: &mut [F; M],
+	roots: &[F], // only first M - 1 member will be used
 	recipient: F,
 	relayer: F,
 	fee: F,
@@ -179,15 +183,19 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	leaves_new.push(leaf);
 	let (tree, path) = setup_tree_and_create_path_x5(&leaves_new, index, &params3);
 	let root = tree.root().inner();
-	roots[0] = root; //FIXME, should we get M-1 valid elments as input starting from index 1
-	let set_private_inputs = setup_set(&root, &roots);
+	let mut roots_new: [F; M] = [F::default(); M];
+	roots_new[0] = root;
+	for i in 1..M {
+		roots_new[i] = roots[i - 1];
+	}
+	let set_private_inputs = setup_set(&root, &roots_new);
 
 	let mc = Circuit_x5::new(
 		arbitrary_input.clone(),
 		leaf_private,
 		leaf_public,
 		set_private_inputs,
-		roots.clone(),
+		roots_new,
 		params5,
 		path,
 		root.clone(),
@@ -196,7 +204,7 @@ pub fn setup_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 	let public_inputs = get_public_inputs(
 		chain_id,
 		nullifier_hash,
-		*roots,
+		roots_new,
 		root,
 		recipient,
 		relayer,
@@ -213,13 +221,13 @@ pub fn setup_random_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: u
 	let chain_id = F::rand(rng);
 	let leaves = Vec::new();
 	let index = 0;
-	let mut roots = [F::default(); M];
+	let roots = Vec::new();
 	let recipient = F::rand(rng);
 	let relayer = F::rand(rng);
 	let fee = F::rand(rng);
 	let refund = F::rand(rng);
 	setup_circuit_x5::<R, F, N, M>(
-		chain_id, &leaves, index, &mut roots, recipient, relayer, fee, refund, rng, curve,
+		chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, rng, curve,
 	)
 }
 
@@ -230,13 +238,13 @@ pub fn setup_random_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: 
 	let chain_id = F::rand(rng);
 	let leaves = Vec::new();
 	let index = 0;
-	let mut roots = [F::default(); M];
+	let roots = Vec::new();
 	let recipient = F::rand(rng);
 	let relayer = F::rand(rng);
 	let fee = F::rand(rng);
 	let refund = F::rand(rng);
 	setup_circuit_x17::<R, F, N, M>(
-		chain_id, &leaves, index, &mut roots, recipient, relayer, fee, refund, rng, curve,
+		chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, rng, curve,
 	)
 }
 
@@ -253,7 +261,7 @@ pub fn get_public_inputs<F: PrimeField, const M: usize>(
 	let mut public_inputs = Vec::new();
 	public_inputs.push(chain_id);
 	public_inputs.push(nullifier_hash);
-	public_inputs.extend(&roots); //FIXME
+	public_inputs.extend(&roots);
 	public_inputs.push(root);
 	public_inputs.push(recipient);
 	public_inputs.push(relayer);
