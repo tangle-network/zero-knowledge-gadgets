@@ -275,6 +275,8 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};
 
+	use crate::merkle_tree::Path;
+
 	type FieldVar = FpVar<Fq>;
 
 	#[derive(Default, Clone)]
@@ -327,6 +329,78 @@ mod test {
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 
 		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.cs().is_satisfied().unwrap());
+		assert!(res.value().unwrap());
+	}
+
+	#[should_panic(expected = "Expected a Vec of length 2 but it was 3")]
+	#[test]
+	fn should_fail_path_creation_with_invalid_size() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = SMT::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let root = smt.root();
+		let path = smt.generate_membership_proof(0);
+
+		// pass a size one less than tree HEIGHT
+		// should panic here
+		let path_var = PathVar::<_, _, _, _, { (SMTConfig::HEIGHT - 1) as usize }>::new_witness(
+			cs.clone(),
+			|| Ok(path),
+		)
+		.unwrap();
+		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+
+		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.cs().is_satisfied().unwrap());
+		assert!(res.value().unwrap());
+	}
+
+	#[should_panic(expected = "assertion failed: `(left == right)`
+  left: `2`,
+ right: `3`")]
+	#[test]
+	fn should_fail_membership_with_invalid_size() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = SMT::new_sequential(inner_params.clone(), leaf_params.clone(), &leaves).unwrap();
+		let root = smt.root();
+		let path: Path<SMTConfig, { (SMTConfig::HEIGHT) as usize }> =
+			smt.generate_membership_proof(0);
+
+		let new_path = Path::<SMTConfig, { (SMTConfig::HEIGHT - 1) as usize }> {
+			path: [path.path[0].clone(), path.path[1].clone()],
+			inner_params: inner_params.clone(),
+			leaf_params,
+		};
+
+		let path_var = PathVar::<_, _, _, _, { (SMTConfig::HEIGHT - 1) as usize }>::new_witness(
+			cs.clone(),
+			|| Ok(new_path),
+		)
+		.unwrap();
+		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+
+		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
+		assert!(res.cs().is_satisfied().unwrap());
 		assert!(res.value().unwrap());
 	}
 }
