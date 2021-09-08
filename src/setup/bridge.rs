@@ -22,12 +22,14 @@ use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
 	vec::Vec,
 };
+use paste::paste;
 
 pub type BridgeConstraintData<F> = BridgeData<F>;
 pub type BridgeConstraintDataInput<F> = BridgeDataInput<F>;
 pub type BridgeConstraintDataGadget<F> = BridgeDataGadget<F>;
 
 pub type Leaf_x5<F> = BridgeLeaf<F, PoseidonCRH_x5_5<F>>;
+
 pub type LeafGadget_x5<F> =
 	BridgeLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>, Leaf_x5<F>>;
 
@@ -72,27 +74,6 @@ pub type Circuit_x17<F, const N: usize, const M: usize> = BridgeCircuit<
 	M,
 >;
 
-pub fn setup_leaf_x5<R: Rng, F: PrimeField>(
-	chain_id: F,
-	params: &PoseidonParameters<F>,
-	rng: &mut R,
-) -> (
-	LeafPrivate<F>,
-	LeafPublic<F>,
-	<Leaf_x5<F> as LeafCreation<PoseidonCRH_x5_5<F>>>::Leaf,
-	<Leaf_x5<F> as LeafCreation<PoseidonCRH_x5_5<F>>>::Nullifier,
-) {
-	// Secret inputs for the leaf
-	let leaf_private = Leaf_x5::generate_secrets(rng).unwrap();
-	// Public inputs for the leaf
-	let leaf_public = LeafPublic::new(chain_id);
-
-	// Creating the leaf
-	let leaf = Leaf_x5::create_leaf(&leaf_private, &leaf_public, params).unwrap();
-	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, params).unwrap();
-	(leaf_private, leaf_public, leaf, nullifier_hash)
-}
-
 pub fn setup_set<F: PrimeField, const M: usize>(
 	root: &F,
 	roots: &[F; M],
@@ -108,154 +89,6 @@ pub fn setup_arbitrary_data<F: PrimeField>(
 ) -> BridgeConstraintDataInput<F> {
 	let arbitrary_input = BridgeConstraintDataInput::new(recipient, relayer, fee, refund);
 	arbitrary_input
-}
-
-pub fn setup_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: usize>(
-	chain_id: F,
-	leaves: &[F],
-	index: u64,
-	roots: &[F], // only first M - 1 member will be used
-	recipient: F,
-	relayer: F,
-	fee: F,
-	refund: F,
-	rng: &mut R,
-	curve: Curve,
-) -> (Circuit_x5<F, N, M>, F, F, F, Vec<F>) {
-	let params3 = setup_params_x5_3::<F>(curve);
-	let params5 = setup_params_x5_5::<F>(curve);
-
-	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
-	let mut leaves_new = leaves.to_vec();
-	leaves_new.push(leaf);
-	let (tree, path) = setup_tree_and_create_path_x5(&leaves_new, index, &params3);
-	let root = tree.root().inner();
-	let mut roots_new: [F; M] = [F::default(); M];
-	roots_new[0] = root;
-	let size_to_copy = if roots.len() > (M - 1) {
-		M - 1
-	} else {
-		roots.len()
-	};
-	for i in 0..size_to_copy {
-		roots_new[i + 1] = roots[i];
-	}
-	let set_private_inputs = setup_set(&root, &roots_new);
-
-	let mc = Circuit_x5::new(
-		arbitrary_input.clone(),
-		leaf_private,
-		leaf_public,
-		set_private_inputs,
-		roots_new,
-		params5,
-		path,
-		root.clone(),
-		nullifier_hash,
-	);
-	let public_inputs = get_public_inputs(
-		chain_id,
-		nullifier_hash,
-		roots_new,
-		root,
-		recipient,
-		relayer,
-		fee,
-		refund,
-	);
-	(mc, leaf, nullifier_hash, root, public_inputs)
-}
-
-pub fn setup_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: usize>(
-	chain_id: F,
-	leaves: &[F],
-	index: u64,
-	roots: &[F], // only first M - 1 member will be used
-	recipient: F,
-	relayer: F,
-	fee: F,
-	refund: F,
-	rng: &mut R,
-	curve: Curve,
-) -> (Circuit_x5<F, N, M>, F, F, F, Vec<F>) {
-	let params3 = setup_params_x17_3::<F>(curve);
-	let params5 = setup_params_x17_5::<F>(curve);
-
-	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-	let (leaf_private, leaf_public, leaf, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
-	let mut leaves_new = leaves.to_vec();
-	leaves_new.push(leaf);
-	let (tree, path) = setup_tree_and_create_path_x5(&leaves_new, index, &params3);
-	let root = tree.root().inner();
-	let mut roots_new: [F; M] = [F::default(); M];
-	roots_new[0] = root;
-	let size_to_copy = if roots.len() > (M - 1) {
-		M - 1
-	} else {
-		roots.len()
-	};
-	for i in 0..size_to_copy {
-		roots_new[i + 1] = roots[i];
-	}
-	let set_private_inputs = setup_set(&root, &roots_new);
-
-	let mc = Circuit_x5::new(
-		arbitrary_input.clone(),
-		leaf_private,
-		leaf_public,
-		set_private_inputs,
-		roots_new,
-		params5,
-		path,
-		root.clone(),
-		nullifier_hash,
-	);
-	let public_inputs = get_public_inputs(
-		chain_id,
-		nullifier_hash,
-		roots_new,
-		root,
-		recipient,
-		relayer,
-		fee,
-		refund,
-	);
-	(mc, leaf, nullifier_hash, root, public_inputs)
-}
-
-pub fn setup_random_circuit_x5<R: Rng, F: PrimeField, const N: usize, const M: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (Circuit_x5<F, N, M>, F, F, F, Vec<F>) {
-	let chain_id = F::rand(rng);
-	let leaves = Vec::new();
-	let index = 0;
-	let roots = Vec::new();
-	let recipient = F::rand(rng);
-	let relayer = F::rand(rng);
-	let fee = F::rand(rng);
-	let refund = F::rand(rng);
-	setup_circuit_x5::<R, F, N, M>(
-		chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, rng, curve,
-	)
-}
-
-pub fn setup_random_circuit_x17<R: Rng, F: PrimeField, const N: usize, const M: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (Circuit_x5<F, N, M>, F, F, F, Vec<F>) {
-	let chain_id = F::rand(rng);
-	let leaves = Vec::new();
-	let index = 0;
-	let roots = Vec::new();
-	let recipient = F::rand(rng);
-	let relayer = F::rand(rng);
-	let fee = F::rand(rng);
-	let refund = F::rand(rng);
-	setup_circuit_x17::<R, F, N, M>(
-		chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, rng, curve,
-	)
 }
 
 pub fn get_public_inputs<F: PrimeField, const M: usize>(
@@ -279,6 +112,140 @@ pub fn get_public_inputs<F: PrimeField, const M: usize>(
 	public_inputs.push(refund);
 	public_inputs
 }
+
+macro_rules! impl_setup_bridge_leaf {
+	(
+		$leaf_ty:ident, $leaf_crh_ty:ident, $leaf_crh_param_ty:ident
+	) => {
+		paste! {
+			pub fn [<setup_ $leaf_ty:lower>]<R: Rng, F: PrimeField>(
+				chain_id: F,
+				params: &$leaf_crh_param_ty<F>,
+				rng: &mut R,
+			) -> (
+				LeafPrivate<F>,
+				LeafPublic<F>,
+				<$leaf_ty<F> as LeafCreation<$leaf_crh_ty<F>>>::Leaf,
+				<$leaf_ty<F> as LeafCreation<$leaf_crh_ty<F>>>::Nullifier,
+			) {
+				// Secret inputs for the leaf
+				let leaf_private = $leaf_ty::generate_secrets(rng).unwrap();
+				// Public inputs for the leaf
+				let leaf_public = LeafPublic::new(chain_id);
+
+				// Creating the leaf
+				let leaf = $leaf_ty::create_leaf(&leaf_private, &leaf_public, params).unwrap();
+				let nullifier_hash = $leaf_ty::create_nullifier(&leaf_private, params).unwrap();
+				(leaf_private, leaf_public, leaf, nullifier_hash)
+			}
+		}
+	};
+}
+
+impl_setup_bridge_leaf!(Leaf_x5, PoseidonCRH_x5_5, PoseidonParameters);
+impl_setup_bridge_leaf!(Leaf_x17, PoseidonCRH_x17_5, PoseidonParameters);
+
+macro_rules! impl_setup_bridge_circuit {
+	(
+		$circuit_ty:ident,
+		$param_3_fn:ident,
+		$param_5_fn:ident,
+		$setup_leaf_fn:ident,
+		$tree_setup_fn:ident
+	) => {
+		paste! {
+			pub fn [<setup_ $circuit_ty:lower>]<R: Rng, F: PrimeField, const N: usize, const M: usize>(
+				chain_id: F,
+				leaves: &[F],
+				index: u64,
+				roots: &[F], // only first M - 1 member will be used
+				recipient: F,
+				relayer: F,
+				fee: F,
+				refund: F,
+				rng: &mut R,
+				curve: Curve,
+			) -> ($circuit_ty<F, N, M>, F, F, F, Vec<F>) {
+				let params3 = $param_3_fn::<F>(curve);
+				let params5 = $param_5_fn::<F>(curve);
+
+				let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
+				let (leaf_private, leaf_public, leaf, nullifier_hash) = $setup_leaf_fn(chain_id, &params5, rng);
+				let mut leaves_new = leaves.to_vec();
+				leaves_new.push(leaf);
+				let (tree, path) = $tree_setup_fn(&leaves_new, index, &params3);
+				let root = tree.root().inner();
+				let mut roots_new: [F; M] = [F::default(); M];
+				roots_new[0] = root;
+				let size_to_copy = if roots.len() > (M - 1) {
+					M - 1
+				} else {
+					roots.len()
+				};
+				for i in 0..size_to_copy {
+					roots_new[i + 1] = roots[i];
+				}
+				let set_private_inputs = setup_set(&root, &roots_new);
+
+				let mc = $circuit_ty::new(
+					arbitrary_input.clone(),
+					leaf_private,
+					leaf_public,
+					set_private_inputs,
+					roots_new,
+					params5,
+					path,
+					root.clone(),
+					nullifier_hash,
+				);
+				let public_inputs = get_public_inputs(
+					chain_id,
+					nullifier_hash,
+					roots_new,
+					root,
+					recipient,
+					relayer,
+					fee,
+					refund,
+				);
+				(mc, leaf, nullifier_hash, root, public_inputs)
+			}
+
+			pub fn [<setup_random_ $circuit_ty:lower>]<R: Rng, F: PrimeField, const N: usize, const M: usize>(
+				rng: &mut R,
+				curve: Curve,
+			) -> ($circuit_ty<F, N, M>, F, F, F, Vec<F>) {
+				let chain_id = F::rand(rng);
+				let leaves = Vec::new();
+				let index = 0;
+				let roots = Vec::new();
+				let recipient = F::rand(rng);
+				let relayer = F::rand(rng);
+				let fee = F::rand(rng);
+				let refund = F::rand(rng);
+				[<setup_ $circuit_ty:lower>]::<R, F, N, M>(
+					chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, rng, curve,
+				)
+			}
+		}
+	};
+}
+
+impl_setup_bridge_circuit!(
+	Circuit_x5,
+	setup_params_x5_3,
+	setup_params_x5_5,
+	setup_leaf_x5,
+	setup_tree_and_create_path_tree_x5
+);
+
+impl_setup_bridge_circuit!(
+	Circuit_x17,
+	setup_params_x17_3,
+	setup_params_x17_5,
+	setup_leaf_x17,
+	setup_tree_and_create_path_tree_x17
+);
 
 pub fn prove_groth16_x5<
 	R: RngCore + CryptoRng,
@@ -446,7 +413,7 @@ mod test {
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
 		let (tree, path) =
-			setup_tree_and_create_path_x5::<Bls381, TEST_N>(&leaves_new, 0, &params3);
+			setup_tree_and_create_path_tree_x5::<Bls381, TEST_N>(&leaves_new, 0, &params3);
 		let root = tree.root().inner();
 		roots[0] = root;
 		let set_private_inputs = setup_set::<Bls381, TEST_M>(&root, &roots);
