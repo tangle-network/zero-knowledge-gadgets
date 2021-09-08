@@ -33,6 +33,8 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
+paste = { version = "1.0.5" }
+
 [features]
 default = ["std", "default_poseidon", "r1cs", "default_mimc"]
 default_mimc = ["mimc_220_ed_on_bn254"]
