@@ -128,9 +128,9 @@ pub type MiMCCRH_220Gadget<F> = crate::mimc::constraints::CRHGadget<F, MiMCRound
 pub type LeafCRH<F> = IdentityCRH<F>;
 pub type LeafCRHGadget<F> = IdentityCRHGadget<F>;
 pub type Tree_x5<F> = SparseMerkleTree<TreeConfig_x5<F>>;
-pub type CircomTree_x5<F> = SparseMerkleTree<CircomTreeConfig_x5<F>>;
+pub type Tree_Circomx5<F> = SparseMerkleTree<TreeConfig_Circomx5<F>>;
 pub type Tree_x17<F> = SparseMerkleTree<TreeConfig_x17<F>>;
-pub type MiMCTree_220<F> = SparseMerkleTree<MiMCTreeConfig_220<F>>;
+pub type Tree_MiMC220<F> = SparseMerkleTree<TreeConfig_MiMC220<F>>;
 
 #[derive(Copy, Clone)]
 pub enum Curve {
@@ -148,8 +148,8 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
 }
 
 #[derive(Clone)]
-pub struct CircomTreeConfig_x5<F: PrimeField>(PhantomData<F>);
-impl<F: PrimeField> MerkleConfig for CircomTreeConfig_x5<F> {
+pub struct TreeConfig_Circomx5<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig_Circomx5<F> {
 	type H = PoseidonCircomCRH_x5_3<F>;
 	type LeafH = LeafCRH<F>;
 
@@ -166,8 +166,8 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_x17<F> {
 }
 
 #[derive(Clone)]
-pub struct MiMCTreeConfig_220<F: PrimeField>(PhantomData<F>);
-impl<F: PrimeField> MerkleConfig for MiMCTreeConfig_220<F> {
+pub struct TreeConfig_MiMC220<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig_MiMC220<F> {
 	type H = MiMCCRH_220<F>;
 	type LeafH = LeafCRH<F>;
 
@@ -219,13 +219,13 @@ impl_setup_tree!(
 	params: PoseidonParameters
 );
 impl_setup_tree!(
-	tree: CircomTree_x5,
-	config: CircomTreeConfig_x5,
+	tree: Tree_Circomx5,
+	config: TreeConfig_Circomx5,
 	params: PoseidonParameters
 );
 impl_setup_tree!(
-	tree: MiMCTree_220,
-	config: MiMCTreeConfig_220,
+	tree: Tree_MiMC220,
+	config: TreeConfig_MiMC220,
 	params: MiMCParameters
 );
 

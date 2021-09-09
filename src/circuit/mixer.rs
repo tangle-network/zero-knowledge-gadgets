@@ -211,7 +211,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 		let (circuit, .., public_inputs) =
-			setup_random_circom_circuit_x5::<_, Bn254Fr, LEN>(rng, curve);
+			setup_random_circuit_circomx5::<_, Bn254Fr, LEN>(rng, curve);
 
 		let (pk, vk) = setup_circom_groth16_x5::<_, Bn254, LEN>(rng, circuit.clone());
 		let proof = prove_circom_groth16_x5::<_, Bn254, LEN>(&pk, circuit, rng);
@@ -233,7 +233,7 @@ mod test {
 		let fee = Bn254Fr::zero();
 		let refund = Bn254Fr::zero();
 
-		let (circuit, .., public_inputs) = setup_circom_circuit_x5::<_, Bn254Fr, LEN>(
+		let (circuit, .., public_inputs) = setup_circuit_circomx5::<_, Bn254Fr, LEN>(
 			&leaves, index, recipient, relayer, fee, refund, rng, curve,
 		);
 
@@ -287,7 +287,7 @@ mod test {
 
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
 		let circuit = Circuit_x5::new(
@@ -325,7 +325,7 @@ mod test {
 		let leaf = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
 		let circuit = Circuit_x5::new(
@@ -363,7 +363,7 @@ mod test {
 		let nullifier_hash = BlsFr::rand(rng);
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_x5(&[leaf], 0, &params3);
+		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
 		let root = BlsFr::rand(rng);
 
 		let circuit = Circuit_x5::new(
