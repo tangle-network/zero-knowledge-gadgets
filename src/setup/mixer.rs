@@ -256,118 +256,56 @@ impl_setup_mixer_circuit!(
 	leaf_setup_fn: setup_leaf_mimc220,
 	tree_setup_fn: setup_tree_and_create_path_tree_mimc220
 );
-pub fn setup_random_circuit_mimc_220<R: Rng, F: PrimeField, const N: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (Circuit_MiMC220<F, N>, F, F, F, Vec<F>) {
-	let leaves = Vec::new();
-	let index = 0;
-	let recipient = F::rand(rng);
-	let relayer = F::rand(rng);
-	let fee = F::rand(rng);
-	let refund = F::rand(rng);
-	setup_circuit_mimc220(&leaves, index, recipient, relayer, fee, refund, rng, curve)
+
+macro_rules! impl_groth16_api_wrappers {
+	(
+		circuit: $circuit_ty:ident // circuit type
+	) => {
+		paste! {
+			pub fn [<prove_groth16_ $circuit_ty:lower>]<
+				R: RngCore + CryptoRng,
+				E: PairingEngine,
+				const N: usize,
+			>(
+				pk: &ProvingKey<E>,
+				c: $circuit_ty<E::Fr, N>,
+				rng: &mut R,
+			) -> Proof<E> {
+				Groth16::<E>::prove(pk, c, rng).unwrap()
+				}
+
+			pub fn [<setup_groth16_ $circuit_ty:lower>]<
+				R: RngCore + CryptoRng,
+				E: PairingEngine,
+				const N: usize,
+			>(
+				rng: &mut R,
+				c: $circuit_ty<E::Fr, N>,
+			) -> (ProvingKey<E>, VerifyingKey<E>) {
+				let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
+				(pk, vk)
+				}
+
+
+			pub fn [<setup_groth16_random_ $circuit_ty:lower>]<
+				R: RngCore + CryptoRng,
+				E: PairingEngine,
+				const N: usize,			>(
+				rng: &mut R,
+				curve: Curve,
+			) -> (ProvingKey<E>, VerifyingKey<E>) {
+				let (circuit, ..) = [<setup_random_ $circuit_ty:lower>]::<R, E::Fr, N>(rng, curve);
+				let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit.clone(), rng).unwrap();
+				(pk, vk)
+			}
+		}
+	};
 }
 
-pub fn prove_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	pk: &ProvingKey<E>,
-	c: Circuit_x5<E::Fr, N>,
-	rng: &mut R,
-) -> Proof<E> {
-	Groth16::<E>::prove(pk, c, rng).unwrap()
-}
-
-pub fn setup_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	c: Circuit_x5<E::Fr, N>,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn prove_circom_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	pk: &ProvingKey<E>,
-	c: Circuit_Circomx5<E::Fr, N>,
-	rng: &mut R,
-) -> Proof<E> {
-	Groth16::<E>::prove(pk, c, rng).unwrap()
-}
-
-pub fn setup_circom_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	c: Circuit_Circomx5<E::Fr, N>,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn prove_groth16_x17<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	pk: &ProvingKey<E>,
-	c: Circuit_x17<E::Fr, N>,
-	rng: &mut R,
-) -> Proof<E> {
-	Groth16::<E>::prove(pk, c, rng).unwrap()
-}
-
-pub fn setup_groth16_x17<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	c: Circuit_x17<E::Fr, N>,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn prove_groth16_mimc220<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	pk: &ProvingKey<E>,
-	c: Circuit_MiMC220<E::Fr, N>,
-	rng: &mut R,
-) -> Proof<E> {
-	Groth16::<E>::prove(pk, c, rng).unwrap()
-}
-
-pub fn setup_groth16_mimc_220<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	c: Circuit_MiMC220<E::Fr, N>,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(c, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn setup_random_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (circuit, ..) = setup_random_circuit_x5::<R, E::Fr, N>(rng, curve);
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn setup_random_circom_groth16_x5<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (circuit, ..) = setup_random_circuit_circomx5::<R, E::Fr, N>(rng, curve);
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn setup_random_groth16_x17<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (circuit, ..) = setup_random_circuit_x17::<R, E::Fr, N>(rng, curve);
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-	(pk, vk)
-}
-
-pub fn setup_random_groth16_mimc_220<R: RngCore + CryptoRng, E: PairingEngine, const N: usize>(
-	rng: &mut R,
-	curve: Curve,
-) -> (ProvingKey<E>, VerifyingKey<E>) {
-	let (circuit, ..) = setup_random_circuit_mimc_220::<R, E::Fr, N>(rng, curve);
-	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-	(pk, vk)
-}
+impl_groth16_api_wrappers!(circuit: Circuit_x5);
+impl_groth16_api_wrappers!(circuit: Circuit_Circomx5);
+impl_groth16_api_wrappers!(circuit: Circuit_x17);
+impl_groth16_api_wrappers!(circuit: Circuit_MiMC220);
 
 #[cfg(test)]
 mod test {
@@ -411,8 +349,8 @@ mod test {
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16_x5::<_, Bls12_381, LEN>(&mut rng, curve);
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, &mut rng);
+		let (pk, vk) = setup_groth16_random_circuit_x5::<_, Bls12_381, LEN>(&mut rng, curve);
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit, &mut rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 
 		verify_zk_mock(
@@ -465,8 +403,8 @@ mod test {
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16_x5::<_, Bls12_381, LEN>(&mut rng, curve);
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, mc, &mut rng);
+		let (pk, vk) = setup_groth16_random_circuit_x5::<_, Bls12_381, LEN>(&mut rng, curve);
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, mc, &mut rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 
 		verify_zk_mock(
@@ -498,8 +436,8 @@ mod test {
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16_x5::<_, Bls12_381, LEN>(&mut rng, curve);
-		let proof = prove_groth16_x5::<_, Bls12_381, LEN>(&pk, circuit, &mut rng);
+		let (pk, vk) = setup_groth16_random_circuit_x5::<_, Bls12_381, LEN>(&mut rng, curve);
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit, &mut rng);
 		let mut proof_bytes = vec![0u8; proof.serialized_size()];
 		proof.serialize(&mut proof_bytes[..]).unwrap();
 		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();
@@ -555,8 +493,8 @@ mod test {
 		add_members_mock(vec![leaf]);
 
 		// let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
-		let (pk, vk) = setup_random_groth16_mimc_220::<_, Bn254, LEN>(&mut rng, curve);
-		let proof = prove_groth16_mimc220::<_, Bn254, LEN>(&pk, mc, &mut rng);
+		let (pk, vk) = setup_groth16_random_circuit_mimc220::<_, Bn254, LEN>(&mut rng, curve);
+		let proof = prove_groth16_circuit_mimc220::<_, Bn254, LEN>(&pk, mc, &mut rng);
 		let res = verify_groth16::<Bn254>(&vk, &public_inputs, &proof);
 
 		verify_zk_mock(

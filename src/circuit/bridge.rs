@@ -232,8 +232,9 @@ mod test {
 		let (circuit, .., public_inputs) =
 			setup_random_circuit_x5::<_, BlsFr, TEST_N, TEST_M>(rng, curve);
 
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
+		let (pk, vk) =
+			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
@@ -299,8 +300,9 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
+		let (pk, vk) =
+			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -347,8 +349,9 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
+		let (pk, vk) =
+			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -394,8 +397,9 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
+		let (pk, vk) =
+			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
@@ -441,8 +445,9 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
-		let (pk, vk) = setup_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
+		let (pk, vk) =
+			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 		assert!(res);
 	}
