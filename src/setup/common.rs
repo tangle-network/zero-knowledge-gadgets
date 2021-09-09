@@ -174,9 +174,14 @@ impl<F: PrimeField> MerkleConfig for MiMCTreeConfig_220<F> {
 	const HEIGHT: u8 = 30;
 }
 
+// Generate tree setup functions
+// 	1. `setup_<tree>`
+//	2. `setup_tree_and_create_path_<tree>`
 macro_rules! impl_setup_tree {
 	(
-		$tree_ty:ident, $tc_ty:ident, $param_ty:ident
+		tree: $tree_ty:ident, // tree type
+		config: $tc_ty:ident, // tree configuration type
+		params: $param_ty:ident // parameters type
 	) => {
 		paste! {
 			pub fn [<setup_ $tree_ty:lower>]<F: PrimeField>(
@@ -203,10 +208,26 @@ macro_rules! impl_setup_tree {
 	};
 }
 
-impl_setup_tree!(Tree_x5, TreeConfig_x5, PoseidonParameters);
-impl_setup_tree!(Tree_x17, TreeConfig_x17, PoseidonParameters);
-impl_setup_tree!(CircomTree_x5, CircomTreeConfig_x5, PoseidonParameters);
-impl_setup_tree!(MiMCTree_220, MiMCTreeConfig_220, MiMCParameters);
+impl_setup_tree!(
+	tree: Tree_x5,
+	config: TreeConfig_x5,
+	params: PoseidonParameters
+);
+impl_setup_tree!(
+	tree: Tree_x17,
+	config: TreeConfig_x17,
+	params: PoseidonParameters
+);
+impl_setup_tree!(
+	tree: CircomTree_x5,
+	config: CircomTreeConfig_x5,
+	params: PoseidonParameters
+);
+impl_setup_tree!(
+	tree: MiMCTree_220,
+	config: MiMCTreeConfig_220,
+	params: MiMCParameters
+);
 
 pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree

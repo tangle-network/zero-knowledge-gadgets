@@ -113,9 +113,12 @@ pub fn get_public_inputs<F: PrimeField, const M: usize>(
 	public_inputs
 }
 
+// Generate code for leaf setup function: `setup_<leaf>`
 macro_rules! impl_setup_bridge_leaf {
 	(
-		$leaf_ty:ident, $leaf_crh_ty:ident, $leaf_crh_param_ty:ident
+		leaf: $leaf_ty:ident, // leaf type
+		crh: $leaf_crh_ty:ident, // crh type
+		params: $leaf_crh_param_ty:ident // crh params type
 	) => {
 		paste! {
 			pub fn [<setup_ $leaf_ty:lower>]<R: Rng, F: PrimeField>(
@@ -142,16 +145,27 @@ macro_rules! impl_setup_bridge_leaf {
 	};
 }
 
-impl_setup_bridge_leaf!(Leaf_x5, PoseidonCRH_x5_5, PoseidonParameters);
-impl_setup_bridge_leaf!(Leaf_x17, PoseidonCRH_x17_5, PoseidonParameters);
+impl_setup_bridge_leaf!(
+	leaf: Leaf_x5,
+	crh: PoseidonCRH_x5_5,
+	params: PoseidonParameters
+);
+impl_setup_bridge_leaf!(
+	leaf: Leaf_x17,
+	crh: PoseidonCRH_x17_5,
+	params: PoseidonParameters
+);
 
+// Generate code for bridge circuit setup functions:
+//	1. `setup_<circuit>`
+//	2. `setup_random_<circuit>`
 macro_rules! impl_setup_bridge_circuit {
 	(
-		$circuit_ty:ident,
-		$param_3_fn:ident,
-		$param_5_fn:ident,
-		$setup_leaf_fn:ident,
-		$tree_setup_fn:ident
+		circuit: $circuit_ty:ident, // circuit type
+		params3_fn: $params3_fn:ident,
+		params5_fn: $params5_fn:ident,
+		leaf_setup_fn: $leaf_setup_fn:ident,
+		tree_setup_fn: $tree_setup_fn:ident
 	) => {
 		paste! {
 			pub fn [<setup_ $circuit_ty:lower>]<R: Rng, F: PrimeField, const N: usize, const M: usize>(
@@ -166,11 +180,11 @@ macro_rules! impl_setup_bridge_circuit {
 				rng: &mut R,
 				curve: Curve,
 			) -> ($circuit_ty<F, N, M>, F, F, F, Vec<F>) {
-				let params3 = $param_3_fn::<F>(curve);
-				let params5 = $param_5_fn::<F>(curve);
+				let params3 = $params3_fn::<F>(curve);
+				let params5 = $params5_fn::<F>(curve);
 
 				let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-				let (leaf_private, leaf_public, leaf, nullifier_hash) = $setup_leaf_fn(chain_id, &params5, rng);
+				let (leaf_private, leaf_public, leaf, nullifier_hash) = $leaf_setup_fn(chain_id, &params5, rng);
 				let mut leaves_new = leaves.to_vec();
 				leaves_new.push(leaf);
 				let (tree, path) = $tree_setup_fn(&leaves_new, index, &params3);
@@ -232,19 +246,18 @@ macro_rules! impl_setup_bridge_circuit {
 }
 
 impl_setup_bridge_circuit!(
-	Circuit_x5,
-	setup_params_x5_3,
-	setup_params_x5_5,
-	setup_leaf_x5,
-	setup_tree_and_create_path_tree_x5
+	circuit: Circuit_x5,
+	params3_fn: setup_params_x5_3,
+	params5_fn: setup_params_x5_5,
+	leaf_setup_fn: setup_leaf_x5,
+	tree_setup_fn: setup_tree_and_create_path_tree_x5
 );
-
 impl_setup_bridge_circuit!(
-	Circuit_x17,
-	setup_params_x17_3,
-	setup_params_x17_5,
-	setup_leaf_x17,
-	setup_tree_and_create_path_tree_x17
+	circuit: Circuit_x17,
+	params3_fn: setup_params_x17_3,
+	params5_fn: setup_params_x17_5,
+	leaf_setup_fn: setup_leaf_x17,
+	tree_setup_fn: setup_tree_and_create_path_tree_x17
 );
 
 pub fn prove_groth16_x5<
