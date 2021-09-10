@@ -1,7 +1,7 @@
 use crate::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
-	mimc::Rounds as MiMCRounds,
+	mimc::{MiMCParameters, Rounds as MiMCRounds},
 	poseidon::{
 		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
@@ -28,6 +28,7 @@ use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_std::{marker::PhantomData, rc::Rc};
+use paste::paste;
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds_x3_3;
@@ -127,9 +128,9 @@ pub type MiMCCRH_220Gadget<F> = crate::mimc::constraints::CRHGadget<F, MiMCRound
 pub type LeafCRH<F> = IdentityCRH<F>;
 pub type LeafCRHGadget<F> = IdentityCRHGadget<F>;
 pub type Tree_x5<F> = SparseMerkleTree<TreeConfig_x5<F>>;
-pub type CircomTree_x5<F> = SparseMerkleTree<CircomTreeConfig_x5<F>>;
+pub type Tree_Circomx5<F> = SparseMerkleTree<TreeConfig_Circomx5<F>>;
 pub type Tree_x17<F> = SparseMerkleTree<TreeConfig_x17<F>>;
-pub type MiMCTree_220<F> = SparseMerkleTree<MiMCTreeConfig_220<F>>;
+pub type Tree_MiMC220<F> = SparseMerkleTree<TreeConfig_MiMC220<F>>;
 
 #[derive(Copy, Clone)]
 pub enum Curve {
@@ -147,8 +148,8 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
 }
 
 #[derive(Clone)]
-pub struct CircomTreeConfig_x5<F: PrimeField>(PhantomData<F>);
-impl<F: PrimeField> MerkleConfig for CircomTreeConfig_x5<F> {
+pub struct TreeConfig_Circomx5<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig_Circomx5<F> {
 	type H = PoseidonCircomCRH_x5_3<F>;
 	type LeafH = LeafCRH<F>;
 
@@ -165,91 +166,68 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_x17<F> {
 }
 
 #[derive(Clone)]
-pub struct MiMCTreeConfig_220<F: PrimeField>(PhantomData<F>);
-impl<F: PrimeField> MerkleConfig for MiMCTreeConfig_220<F> {
+pub struct TreeConfig_MiMC220<F: PrimeField>(PhantomData<F>);
+impl<F: PrimeField> MerkleConfig for TreeConfig_MiMC220<F> {
 	type H = MiMCCRH_220<F>;
 	type LeafH = LeafCRH<F>;
 
 	const HEIGHT: u8 = 30;
 }
 
-pub fn setup_tree_x5<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>) -> Tree_x5<F> {
-	let inner_params = Rc::new(params.clone());
-	let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-	mt
+// Generate tree setup functions
+// 	1. `setup_<tree>`
+//	2. `setup_tree_and_create_path_<tree>`
+macro_rules! impl_setup_tree {
+	(
+		tree: $tree_ty:ident, // tree type
+		config: $tc_ty:ident, // tree configuration type
+		params: $param_ty:ident // parameters type
+	) => {
+		paste! {
+			pub fn [<setup_ $tree_ty:lower>]<F: PrimeField>(
+				leaves: &[F],
+				params: &$param_ty<F>,
+			) -> $tree_ty<F> {
+				let inner_params = Rc::new(params.clone());
+				let mt = $tree_ty::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
+				mt
+			}
+
+			pub fn [<setup_tree_and_create_path_ $tree_ty:lower>]<F: PrimeField, const N: usize>(
+				leaves: &[F],
+				index: u64,
+				params: &$param_ty<F>,
+			) -> ($tree_ty<F>, Path<$tc_ty<F>, N>) {
+				// Making the merkle tree
+				let mt = [<setup_ $tree_ty:lower>](leaves, params);
+				// Getting the proof path
+				let path = mt.generate_membership_proof(index);
+				(mt, path)
+			}
+		}
+	};
 }
 
-pub fn setup_tree_and_create_path_x5<F: PrimeField, const N: usize>(
-	leaves: &[F],
-	index: u64,
-	params: &PoseidonParameters<F>,
-) -> (Tree_x5<F>, Path<TreeConfig_x5<F>, N>) {
-	// Making the merkle tree
-	let mt = setup_tree_x5(leaves, params);
-	// Getting the proof path
-	let path = mt.generate_membership_proof(index);
-	(mt, path)
-}
-
-pub fn setup_circom_tree_x5<F: PrimeField>(
-	leaves: &[F],
-	params: &PoseidonParameters<F>,
-) -> CircomTree_x5<F> {
-	let inner_params = Rc::new(params.clone());
-	let mt = CircomTree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-	mt
-}
-
-pub fn setup_circom_tree_and_create_path_x5<F: PrimeField, const N: usize>(
-	leaves: &[F],
-	index: u64,
-	params: &PoseidonParameters<F>,
-) -> (CircomTree_x5<F>, Path<CircomTreeConfig_x5<F>, N>) {
-	// Making the merkle tree
-	let mt = setup_circom_tree_x5(leaves, params);
-	// Getting the proof path
-	let path = mt.generate_membership_proof(index);
-	(mt, path)
-}
-
-pub fn setup_tree_x17<F: PrimeField>(leaves: &[F], params: &PoseidonParameters<F>) -> Tree_x17<F> {
-	let inner_params = Rc::new(params.clone());
-	let mt = Tree_x17::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-	mt
-}
-
-pub fn setup_tree_and_create_path_x17<F: PrimeField, const N: usize>(
-	leaves: &[F],
-	index: u64,
-	params: &PoseidonParameters<F>,
-) -> (Tree_x17<F>, Path<TreeConfig_x17<F>, N>) {
-	// Making the merkle tree
-	let mt = setup_tree_x17(leaves, params);
-	// Getting the proof path
-	let path = mt.generate_membership_proof(index);
-	(mt, path)
-}
-
-pub fn setup_mimc_tree_220<F: PrimeField>(
-	leaves: &[F],
-	params: &crate::mimc::MiMCParameters<F>,
-) -> MiMCTree_220<F> {
-	let inner_params = Rc::new(params.clone());
-	let mt = MiMCTree_220::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-	mt
-}
-
-pub fn setup_tree_and_create_path_mimc_220<F: PrimeField, const N: usize>(
-	leaves: &[F],
-	index: u64,
-	params: &crate::mimc::MiMCParameters<F>,
-) -> (MiMCTree_220<F>, Path<MiMCTreeConfig_220<F>, N>) {
-	// Making the merkle tree
-	let mt = setup_mimc_tree_220(leaves, params);
-	// Getting the proof path
-	let path = mt.generate_membership_proof(index);
-	(mt, path)
-}
+impl_setup_tree!(
+	tree: Tree_x5,
+	config: TreeConfig_x5,
+	params: PoseidonParameters
+);
+impl_setup_tree!(
+	tree: Tree_x17,
+	config: TreeConfig_x17,
+	params: PoseidonParameters
+);
+impl_setup_tree!(
+	tree: Tree_Circomx5,
+	config: TreeConfig_Circomx5,
+	params: PoseidonParameters
+);
+impl_setup_tree!(
+	tree: Tree_MiMC220,
+	config: TreeConfig_MiMC220,
+	params: MiMCParameters
+);
 
 pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
