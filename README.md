@@ -39,6 +39,31 @@ Provers for these zero-knowledge gadgets are meant to be used by client or serve
 ### Verifiers
 Verifiers for these zero-knowledge gadgets are meant to be used by client, server, or blockchain applications. These verifiers are WASM compatible and can be embedded in WASM friendly environments like blockchains that allow smart contracts which are written in Rust. The APIs are consistent across a particular proving system such as Groth16 and are straightforward to integrate into blockchain runtimes such as [Substrate](https://github.com/paritytech/substrate).
 
+# Circuits
+## Mixer
+The mixer gadget is built to be deployed on Rust based blockchain protocols. The motivation is that there will be an on-chain merkle tree & escrow system where users must deposit assets into in order to insert a leaf into the merkle tree. This is considered a **deposit** into the mixer. Next, the user can generate a zero-knowledge proof of membership of a leaf in the merkle tree by instantiating a Mixer circuit, populating it with the leaves on-chain, providing private and public inputs locally to the helper utilities generated from our API, and subsequently generating a zero-knowledge proof. They can then submit this proof on-chain to an on-chain verifier. This is considered a **withdrawal** from the mixer. We provide an example instantiation of the mixer circuit setup, proof process, and proof verification process below. But first, we remark on the structure of the mixer in order to illuminate some of our design decisions.
+
+Any instantiation of a zero-knowledge mixer circuit requires that all data provided is formatted as expected. What this means is that there is a specific structure of data that must be provided to the prover. This extends as far down to the preimage of the leaves such that if data does not adhere to the expected format or protocol then it will be impossible to generate compatible zero-knowledge proofs for on-chain verification for such proofs.
+
+### Leaf structure
+The structure of our leaves must be the hash of 3 random field elements from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/leaf/mixer/constraints.rs)
+
+### Public input structure
+The structure of public inputs must be the ordered array of the following data taken from Tornado Cash's design & architecture.
+1. Recipient
+2. Relayer
+3. Fee
+4. Refund
+You can find more details about the arbitrary datta structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs)
+
+These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
+- For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipieint.
+- For an on-chain cryptocurrency mixer, we must provide a private transaction relaying service that the user decides a priori. This is the purpose of the relayer.
+- For a given relayer, a fee may be asked to be paid on behalf of relaying the private transaction. This is the purpose of the fee.
+- For now, the refund is not used in any context and is merely an artifact to maintain stability with Tornado Cash's public inputs structure.
+
+It's worth mentioning that all inputs provided to the zero-knowledge proof generation bind the proof to those inputs. This helps prevent tampering if for example a user wants to change the recipient after proof generation. If the public inputs change for a proof submitted on-chain, the proof will fail with the underlying security of the zkSNARK. We leverage this design to provide the right incentives for users and relayers of the end application, an on-chain cryptocurrency mixer.
+
 # Usage
 ## Creating a Mixer w/ Poseidon using exponentiation 5
 For example, we might be interested in creating a mixer circuit and generating zero-knowledge proofs of membership for leaves we've inserted into the mixer's underlying merkle tree. In order to do so we will have to instantiate the individual gadgets, supply them to a Mixer circuit, and generate the trusted setup parameters for a Groth16 style proof.
