@@ -55,7 +55,7 @@ The structure of public inputs must be the ordered array of the following data t
 3. Fee
 4. Refund
 
-You can find more details about the arbitrary datta structures by investigating the [`mixer_data`] (https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
+You can find more details about the arbitrary datta structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
 
 These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
 - For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipieint.
