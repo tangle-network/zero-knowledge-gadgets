@@ -22,12 +22,6 @@ In this repo you will find circuits for:
 - [x] [Mixer](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/mixer.rs) - using a hash gadget, mixer leaf commitment gadget, merkle tree membership gadget, and arbitrary computations.
 - [x] [Bridge](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/bridge.rs) - using a hash gadget, bridge leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
 
-The zero-knowledge gadgets contained in this repo are built with an eye towards composability. There are gadgets that:
-- Hash a set of elements for building preimage gadgets & proofs
-- Hash a leaf with a set of elements for building  merkle tree membership gadgets & proofs
-- Check membership of an element in a set for building set membership gadgets & proofs
-- Combine each of the above to build mixers & bridge gadgets and proofs for Webb applications.
-
 ## Setup
 In order to deploy zero-knowledge circuits in end applications, you have to set them up. Often times you may hear the term "trusted setup" thrown about. For the circuits implemented in this repo, we have Groth16 style setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/setup) directory. This folder contains circuit-specific setup helpers for creating your provers and verifiers for your circuits from the previous section.
 
