@@ -46,7 +46,7 @@ The mixer gadget is built to be deployed on Rust based blockchain protocols. The
 Any instantiation of a zero-knowledge mixer circuit requires that all data provided is formatted as expected. What this means is that there is a specific structure of data that must be provided to the prover. This extends as far down to the preimage of the leaves such that if data does not adhere to the expected format or protocol then it will be impossible to generate compatible zero-knowledge proofs for on-chain verification for such proofs.
 
 ### Leaf structure
-The structure of our leaves must be the hash of 3 random field elements from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/leaf/mixer/constraints.rs)
+The structure of our leaves must be the hash of 3 random field elements from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/leaf/mixer/constraints.rs).
 
 ### Public input structure
 The structure of public inputs must be the ordered array of the following data taken from Tornado Cash's design & architecture.
@@ -54,7 +54,8 @@ The structure of public inputs must be the ordered array of the following data t
 2. Relayer
 3. Fee
 4. Refund
-You can find more details about the arbitrary datta structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs)
+5. 
+You can find more details about the arbitrary datta structures by investigating the [`mixer_data`] (https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
 
 These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
 - For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipieint.
