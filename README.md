@@ -43,7 +43,7 @@ Verifiers for these zero-knowledge gadgets are meant to be used by client, serve
 ## Creating a Mixer w/ Poseidon using exponentiation 5
 For example, we might be interested in creating a mixer circuit and generating zero-knowledge proofs of membership for leaves we've inserted into the mixer's underlying merkle tree. In order to do so we will have to instantiate the individual gadgets, supply them to a Mixer circuit, and generate the trusted setup parameters for a Groth16 style proof.
 ### Defining our interfaces and structs
-```
+```rust
 /// import all dependencies...
 
 /// We first define the Poseidon instantiation, which requires
@@ -122,7 +122,7 @@ pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 >;
 ```
 ### Instantiating helpers and prover/verifiers
-```
+```rust
 /// This macro generates setup functions for creating leaf commitments
 /// compatible with the Poseidon w/ exponentiation 5 and width 5 hasher.
 /// We use this macro's generated functions to create leaves. These leaves
@@ -163,7 +163,7 @@ impl_setup_mixer_circuit!(
 impl_groth16_api_wrappers!(circuit: Circuit_x5);
 ```
 ### Putting it all together
-```
+```rust
 /// With the generated functionality we can now create example circuits and
 /// generate zero-knowledge proofs against them. We show an example below.
 /// Examples are also available as tests in the `src/setup/mixer.rs` files for this
