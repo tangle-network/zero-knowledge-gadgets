@@ -55,10 +55,10 @@ The structure of public inputs must be the ordered array of the following data t
 3. Fee
 4. Refund
 
-You can find more details about the arbitrary datta structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
+You can find more details about the arbitrary data structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
 
 These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
-- For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipieint.
+- For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipient.
 - For an on-chain cryptocurrency mixer, we must provide a private transaction relaying service that the user decides a priori. This is the purpose of the relayer.
 - For a given relayer, a fee may be asked to be paid on behalf of relaying the private transaction. This is the purpose of the fee.
 - For now, the refund is not used in any context and is merely an artifact to maintain stability with Tornado Cash's public inputs structure.
