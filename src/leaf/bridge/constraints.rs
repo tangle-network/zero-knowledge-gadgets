@@ -150,7 +150,7 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 
 		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
 		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
-		let rho_var = FpVar::new_variable(cs.clone(), || Ok(rho), mode)?;
+		let rho_var = FpVar::new_variable(cs, || Ok(rho), mode)?;
 
 		Ok(PrivateVar::new(r_var, nullifier_var, rho_var))
 	}

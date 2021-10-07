@@ -29,9 +29,16 @@ pub type BridgeConstraintDataInput<F> = BridgeDataInput<F>;
 pub type BridgeConstraintDataGadget<F> = BridgeDataGadget<F>;
 
 pub type Leaf_x5<F> = BridgeLeaf<F, PoseidonCRH_x5_5<F>>;
+pub type Leaf_Circomx5<F> = BridgeLeaf<F, PoseidonCircomCRH_x5_5<F>>;
 
 pub type LeafGadget_x5<F> =
 	BridgeLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>, Leaf_x5<F>>;
+pub type LeafGadget_Circomx5<F> = BridgeLeafGadget<
+	F,
+	PoseidonCircomCRH_x5_5<F>,
+	PoseidonCircomCRH_x5_5Gadget<F>,
+	Leaf_Circomx5<F>,
+>;
 
 pub type TestSetMembership<F, const M: usize> = SetMembership<F, M>;
 pub type TestSetMembershipGadget<F, const M: usize> = SetMembershipGadget<F, M>;
@@ -47,6 +54,23 @@ pub type Circuit_x5<F, const N: usize, const M: usize> = BridgeCircuit<
 	PoseidonCRH_x5_3Gadget<F>,
 	Leaf_x5<F>,
 	LeafGadget_x5<F>,
+	TestSetMembership<F, M>,
+	TestSetMembershipGadget<F, M>,
+	N,
+	M,
+>;
+
+pub type Circuit_Circomx5<F, const N: usize, const M: usize> = BridgeCircuit<
+	F,
+	BridgeConstraintData<F>,
+	BridgeConstraintDataGadget<F>,
+	PoseidonCircomCRH_x5_5<F>,
+	PoseidonCircomCRH_x5_5Gadget<F>,
+	TreeConfig_Circomx5<F>,
+	LeafCRHGadget<F>,
+	PoseidonCircomCRH_x5_3Gadget<F>,
+	Leaf_Circomx5<F>,
+	LeafGadget_Circomx5<F>,
 	TestSetMembership<F, M>,
 	TestSetMembershipGadget<F, M>,
 	N,
@@ -87,8 +111,7 @@ pub fn setup_arbitrary_data<F: PrimeField>(
 	fee: F,
 	refund: F,
 ) -> BridgeConstraintDataInput<F> {
-	let arbitrary_input = BridgeConstraintDataInput::new(recipient, relayer, fee, refund);
-	arbitrary_input
+	BridgeConstraintDataInput::new(recipient, relayer, fee, refund)
 }
 
 pub fn get_public_inputs<F: PrimeField, const M: usize>(
@@ -101,16 +124,17 @@ pub fn get_public_inputs<F: PrimeField, const M: usize>(
 	fee: F,
 	refund: F,
 ) -> Vec<F> {
-	let mut public_inputs = Vec::new();
-	public_inputs.push(chain_id);
-	public_inputs.push(nullifier_hash);
-	public_inputs.extend(&roots);
-	public_inputs.push(root);
-	public_inputs.push(recipient);
-	public_inputs.push(relayer);
-	public_inputs.push(fee);
-	public_inputs.push(refund);
-	public_inputs
+	vec![
+		chain_id,
+		nullifier_hash,
+		roots[M - 2],
+		roots[M - 1],
+		root,
+		recipient,
+		relayer,
+		fee,
+		refund,
+	]
 }
 
 // Generate code for leaf setup function: `setup_<leaf>`
@@ -151,6 +175,11 @@ impl_setup_bridge_leaf!(
 	params: PoseidonParameters
 );
 impl_setup_bridge_leaf!(
+	leaf: Leaf_Circomx5,
+	crh: PoseidonCircomCRH_x5_5,
+	params: PoseidonParameters
+);
+impl_setup_bridge_leaf!(
 	leaf: Leaf_x17,
 	crh: PoseidonCRH_x17_5,
 	params: PoseidonParameters
@@ -168,6 +197,7 @@ macro_rules! impl_setup_bridge_circuit {
 		tree_setup_fn: $tree_setup_fn:ident
 	) => {
 		paste! {
+			#[allow(clippy::too_many_arguments)]
 			pub fn [<setup_ $circuit_ty:lower>]<R: Rng, F: PrimeField, const N: usize, const M: usize>(
 				chain_id: F,
 				leaves: &[F],
@@ -253,6 +283,13 @@ impl_setup_bridge_circuit!(
 	tree_setup_fn: setup_tree_and_create_path_tree_x5
 );
 impl_setup_bridge_circuit!(
+	circuit: Circuit_Circomx5,
+	params3_fn: setup_circom_params_x5_3,
+	params5_fn: setup_circom_params_x5_5,
+	leaf_setup_fn: setup_leaf_circomx5,
+	tree_setup_fn: setup_tree_and_create_path_tree_circomx5
+);
+impl_setup_bridge_circuit!(
 	circuit: Circuit_x17,
 	params3_fn: setup_params_x17_3,
 	params5_fn: setup_params_x17_5,
@@ -310,6 +347,7 @@ macro_rules! impl_groth16_api_wrappers {
 }
 
 impl_groth16_api_wrappers!(circuit: Circuit_x5);
+impl_groth16_api_wrappers!(circuit: Circuit_Circomx5);
 impl_groth16_api_wrappers!(circuit: Circuit_x17);
 #[cfg(test)]
 mod test {

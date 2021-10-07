@@ -128,7 +128,7 @@ where
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
 		let set_private_inputs = self.set_private_inputs.clone();
-		let root_set = self.root_set.clone();
+		let root_set = self.root_set;
 		let hasher_params = self.hasher_params.clone();
 		let path = self.path.clone();
 		let root = self.root.clone();
