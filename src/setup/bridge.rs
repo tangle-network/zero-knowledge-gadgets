@@ -360,7 +360,7 @@ mod test {
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
 	pub const TEST_N: usize = 30;
 
-	pub const TEST_M: usize = 10;
+	pub const TEST_M: usize = 2;
 
 	fn add_members_mock(_leaves: Vec<Bls381>) {}
 
@@ -386,11 +386,11 @@ mod test {
 		let fee = Bls381::from(0u8);
 		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
-		let mut roots = [Bls381::default(); TEST_M];
+		let roots = [Bls381::default(); TEST_M];
 
 		let (circuit, leaf, nullifier, root, public_inputs) =
 			setup_circuit_x5::<_, Bls381, TEST_N, TEST_M>(
-				chain_id, &leaves, 0, &mut roots, recipient, relayer, fee, refund, &mut rng, curve,
+				chain_id, &leaves, 0, &roots, recipient, relayer, fee, refund, &mut rng, curve,
 			);
 
 		add_members_mock(vec![leaf]);
@@ -444,14 +444,14 @@ mod test {
 		let set_private_inputs = setup_set::<Bls381, TEST_M>(&root, &roots);
 
 		let mc = Circuit_x5::<Bls381, TEST_N, TEST_M>::new(
-			arbitrary_input.clone(),
+			arbitrary_input,
 			leaf_private,
 			leaf_public,
 			set_private_inputs,
-			roots.clone(),
+			roots,
 			params5,
 			path,
-			root.clone(),
+			root,
 			nullifier_hash,
 		);
 		let public_inputs = get_public_inputs::<Bls381, TEST_M>(
@@ -470,7 +470,7 @@ mod test {
 		// let (pk, vk) = setup_groth16_random(&mut rng, circuit.clone());
 		let (pk, vk) =
 			setup_groth16_random_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&mut rng, curve);
-		let proof = prove_groth16_circuit_x5(&pk, mc.clone(), &mut rng);
+		let proof = prove_groth16_circuit_x5(&pk, mc, &mut rng);
 		let res = verify_groth16(&vk, &public_inputs, &proof);
 
 		verify_zk_mock(
@@ -497,11 +497,11 @@ mod test {
 		let fee = Bls381::from(0u8);
 		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
-		let mut roots = [Bls381::default(); TEST_M];
+		let roots = [Bls381::default(); TEST_M];
 
 		let (circuit, leaf, nullifier, root, public_inputs) =
 			setup_circuit_x5::<_, Bls381, TEST_N, TEST_M>(
-				chain_id, &leaves, 0, &mut roots, recipient, relayer, fee, refund, &mut rng, curve,
+				chain_id, &leaves, 0, &roots, recipient, relayer, fee, refund, &mut rng, curve,
 			);
 
 		add_members_mock(vec![leaf]);
@@ -509,11 +509,8 @@ mod test {
 		// let (pk, vk) = setup_groth16(&mut rng, circuit.clone());
 		let (pk, vk) =
 			setup_groth16_random_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&mut rng, curve);
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(
-			&pk,
-			circuit.clone(),
-			&mut rng,
-		);
+		let proof =
+			prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, &mut rng);
 		let mut proof_bytes = vec![0u8; proof.serialized_size()];
 		proof.serialize(&mut proof_bytes[..]).unwrap();
 		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();
