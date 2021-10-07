@@ -223,7 +223,7 @@ mod test {
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
 	pub const TEST_N: usize = 30;
-	pub const TEST_M: usize = 10;
+	pub const TEST_M: usize = 2;
 
 	#[test]
 	fn setup_and_prove_bridge_groth16() {
@@ -285,7 +285,7 @@ mod test {
 			leaf_private,
 			leaf_public,
 			set_private_inputs,
-			roots.clone(),
+			roots,
 			params5,
 			path,
 			root,
