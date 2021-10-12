@@ -140,7 +140,7 @@ macro_rules! impl_setup_mixer_leaf {
 
 				// Creating the leaf
 				let leaf = $leaf_ty::create_leaf(&leaf_private, &(), params).unwrap();
-				let nullifier_hash = $leaf_ty::create_nullifier(&leaf_private, params).unwrap();
+				let nullifier_hash = $leaf_ty::create_nullifier_hash(&leaf_private, params).unwrap();
 				(leaf_private, leaf, nullifier_hash)
 			}
 		}

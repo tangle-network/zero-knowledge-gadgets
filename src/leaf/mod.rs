@@ -23,5 +23,8 @@ pub trait LeafCreation<H: CRH>: Sized {
 		p: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error>;
-	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error>;
+	fn create_nullifier_hash(
+		s: &Self::Private,
+		h: &H::Parameters,
+	) -> Result<Self::Nullifier, Error>;
 }

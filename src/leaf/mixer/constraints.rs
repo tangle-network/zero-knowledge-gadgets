@@ -12,14 +12,13 @@ use core::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
-	r: FpVar<F>,
+	secret: FpVar<F>,
 	nullifier: FpVar<F>,
-	rho: FpVar<F>,
 }
 
 impl<F: PrimeField> PrivateVar<F> {
-	pub fn new(r: FpVar<F>, nullifier: FpVar<F>, rho: FpVar<F>) -> Self {
-		Self { r, nullifier, rho }
+	pub fn new(secret: FpVar<F>, nullifier: FpVar<F>) -> Self {
+		Self { secret, nullifier }
 	}
 }
 
@@ -110,9 +109,8 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> LeafCreationGadget<F, H, HG, Mi
 	) -> Result<Self::LeafVar, SynthesisError> {
 		// leaf
 		let mut leaf_bytes = Vec::new();
-		leaf_bytes.extend(s.r.to_bytes()?);
+		leaf_bytes.extend(s.secret.to_bytes()?);
 		leaf_bytes.extend(s.nullifier.to_bytes()?);
-		leaf_bytes.extend(s.rho.to_bytes()?);
 		HG::evaluate(h, &leaf_bytes)
 	}
 
@@ -137,15 +135,13 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 		let ns = into_ns.into();
 		let cs = ns.cs();
 
-		let r = private.r;
+		let secret = private.secret;
 		let nullifier = private.nullifier;
-		let rho = private.rho;
 
-		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
+		let secret_var = FpVar::new_variable(cs.clone(), || Ok(secret), mode)?;
 		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
-		let rho_var = FpVar::new_variable(cs.clone(), || Ok(rho), mode)?;
 
-		Ok(PrivateVar::new(r_var, nullifier_var, rho_var))
+		Ok(PrivateVar::new(secret_var, nullifier_var))
 	}
 }
 
@@ -217,7 +213,7 @@ mod test {
 
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let leaf = Leaf::create_leaf(&secrets, &(), &params).unwrap();
-		let nullifier = Leaf::create_nullifier(&secrets, &params).unwrap();
+		let nullifier = Leaf::create_nullifier_hash(&secrets, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(

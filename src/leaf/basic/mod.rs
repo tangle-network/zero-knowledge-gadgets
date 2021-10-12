@@ -50,7 +50,10 @@ impl<F: PrimeField, H: CRH> LeafCreation<H> for BasicLeaf<F, H> {
 		H::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error> {
+	fn create_nullifier_hash(
+		s: &Self::Private,
+		h: &H::Parameters,
+	) -> Result<Self::Nullifier, Error> {
 		let bytes = to_bytes![s.nullifier, s.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
