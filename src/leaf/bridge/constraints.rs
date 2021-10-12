@@ -229,7 +229,7 @@ mod test {
 		let public = Public::new(chain_id);
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
-		let nullifier = Leaf::create_nullifier(&secrets, &params).unwrap();
+		let nullifier = Leaf::create_nullifier_hash(&secrets, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(

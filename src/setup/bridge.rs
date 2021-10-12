@@ -162,7 +162,7 @@ macro_rules! impl_setup_bridge_leaf {
 
 				// Creating the leaf
 				let leaf = $leaf_ty::create_leaf(&leaf_private, &leaf_public, params).unwrap();
-				let nullifier_hash = $leaf_ty::create_nullifier(&leaf_private, params).unwrap();
+				let nullifier_hash = $leaf_ty::create_nullifier_hash(&leaf_private, params).unwrap();
 				(leaf_private, leaf_public, leaf, nullifier_hash)
 			}
 		}

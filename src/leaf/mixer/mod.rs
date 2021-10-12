@@ -13,47 +13,39 @@ pub mod constraints;
 
 #[derive(Clone)]
 pub struct PrivateBuilder<F: PrimeField> {
-	pub r: F,
+	pub secret: F,
 	pub nullifier: F,
-	pub rho: F,
 }
 
 impl<F: PrimeField> PrivateBuilder<F> {
 	pub fn build(self) -> Private<F> {
 		Private {
-			r: self.r,
+			secret: self.secret,
 			nullifier: self.nullifier,
-			rho: self.rho,
 		}
 	}
 }
 
 #[derive(Default, Clone)]
 pub struct Private<F: PrimeField> {
-	r: F,
+	secret: F,
 	nullifier: F,
-	rho: F,
 }
 
 impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 		Self {
-			r: F::rand(rng),
+			secret: F::rand(rng),
 			nullifier: F::rand(rng),
-			rho: F::rand(rng),
 		}
 	}
 
-	pub fn r(&self) -> F {
-		self.r
+	pub fn secret(&self) -> F {
+		self.secret
 	}
 
 	pub fn nullifier(&self) -> F {
 		self.nullifier
-	}
-
-	pub fn rho(&self) -> F {
-		self.rho
 	}
 }
 
@@ -92,11 +84,14 @@ impl<F: PrimeField, H: CRH> LeafCreation<H> for MixerLeaf<F, H> {
 		_: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let input_bytes = to_bytes![s.r, s.nullifier, s.rho]?;
+		let input_bytes = to_bytes![s.secret, s.nullifier]?;
 		H::evaluate(h, &input_bytes)
 	}
 
-	fn create_nullifier(s: &Self::Private, h: &H::Parameters) -> Result<Self::Nullifier, Error> {
+	fn create_nullifier_hash(
+		s: &Self::Private,
+		h: &H::Parameters,
+	) -> Result<Self::Nullifier, Error> {
 		let nullifier_bytes = to_bytes![s.nullifier, s.nullifier]?;
 		H::evaluate(h, &nullifier_bytes)
 	}
@@ -134,7 +129,7 @@ mod test {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 
-		let leaf_inputs = to_bytes![secrets.r, secrets.nullifier, secrets.rho].unwrap();
+		let leaf_inputs = to_bytes![secrets.secret, secrets.nullifier].unwrap();
 
 		let nullifier_inputs = to_bytes![secrets.nullifier, secrets.nullifier].unwrap();
 
@@ -145,7 +140,7 @@ mod test {
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 
 		let leaf = Leaf::create_leaf(&secrets, &(), &params).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&secrets, &params).unwrap();
+		let nullifier_hash = Leaf::create_nullifier_hash(&secrets, &params).unwrap();
 		assert_eq!(leaf_res, leaf);
 		assert_eq!(nullifier_res, nullifier_hash);
 	}

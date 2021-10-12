@@ -29,6 +29,9 @@ use blake2::Blake2s;
 
 macro_rules! setup_circuit {
 	($test_field:ty) => {{
+		const M: usize = 4;
+		const N: usize = 30;
+
 		type BridgeConstraintData = BridgeData<$test_field>;
 		type BridgeConstraintDataGadget = BridgeDataGadget<$test_field>;
 		#[derive(Default, Clone)]
@@ -66,13 +69,13 @@ macro_rules! setup_circuit {
 			type H = PoseidonCRH3;
 			type LeafH = PoseidonCRH3;
 
-			const HEIGHT: u8 = 30;
+			const HEIGHT: u8 = N as _;
 		}
 
 		type BridgeTree = SparseMerkleTree<BridgeTreeConfig>;
 
-		type TestSetMembership = SetMembership<$test_field>;
-		type TestSetMembershipGadget = SetMembershipGadget<$test_field>;
+		type TestSetMembership = SetMembership<$test_field, M>;
+		type TestSetMembershipGadget = SetMembershipGadget<$test_field, M>;
 
 		type Circuit = BridgeCircuit<
 			$test_field,
@@ -87,6 +90,8 @@ macro_rules! setup_circuit {
 			LeafGadget,
 			TestSetMembership,
 			TestSetMembershipGadget,
+			M,
+			N,
 		>;
 
 		let rng = &mut test_rng();
@@ -103,13 +108,14 @@ macro_rules! setup_circuit {
 		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 		// Creating the leaf
 		let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
+		let nullifier_hash = Leaf::create_nullifier_hash(&leaf_private, &params5).unwrap();
 
 		let fee = <$test_field>::rand(rng);
+		let refund = <$test_field>::rand(rng);
 		let recipient = <$test_field>::rand(rng);
 		let relayer = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee);
+		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund);
 
 		// Making params for poseidon in merkle tree
 		let rounds3 = get_rounds_poseidon_bn254_x5_3::<$test_field>();
@@ -128,7 +134,7 @@ macro_rules! setup_circuit {
 		// Getting the proof path
 		let path = mt.generate_membership_proof(2);
 		let root = mt.root();
-		let roots = vec![
+		let roots = [
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
@@ -150,7 +156,7 @@ macro_rules! setup_circuit {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
-		public_inputs.extend(roots);
+		public_inputs.extend(roots.to_vec());
 		public_inputs.push(root.inner());
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
