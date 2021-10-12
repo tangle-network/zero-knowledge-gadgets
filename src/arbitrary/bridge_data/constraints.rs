@@ -15,15 +15,23 @@ pub struct InputVar<F: PrimeField> {
 	relayer: FpVar<F>,
 	fee: FpVar<F>,
 	refund: FpVar<F>,
+	commitment: FpVar<F>,
 }
 
 impl<F: PrimeField> InputVar<F> {
-	pub fn new(recipient: FpVar<F>, relayer: FpVar<F>, fee: FpVar<F>, refund: FpVar<F>) -> Self {
+	pub fn new(
+		recipient: FpVar<F>,
+		relayer: FpVar<F>,
+		fee: FpVar<F>,
+		refund: FpVar<F>,
+		commitment: FpVar<F>,
+	) -> Self {
 		Self {
 			recipient,
 			relayer,
 			fee,
 			refund,
+			commitment,
 		}
 	}
 }
@@ -40,6 +48,7 @@ impl<F: PrimeField> ArbitraryGadget<F, BridgeData<F>> for BridgeDataGadget<F> {
 		let _ = &inputs.relayer * &inputs.relayer;
 		let _ = &inputs.fee * &inputs.fee;
 		let _ = &inputs.refund * &inputs.refund;
+		let _ = &inputs.commitment * &inputs.commitment;
 		Ok(())
 	}
 }
@@ -58,17 +67,20 @@ impl<F: PrimeField> AllocVar<Input<F>, F> for InputVar<F> {
 		let relayer = input.relayer;
 		let fee = input.fee;
 		let refund = input.refund;
+		let commitment = input.commitment;
 
 		let recipient_var = FpVar::new_variable(cs.clone(), || Ok(&recipient), mode)?;
 		let relayer_var = FpVar::new_variable(cs.clone(), || Ok(&relayer), mode)?;
 		let fee_var = FpVar::new_variable(cs.clone(), || Ok(&fee), mode)?;
-		let refund_var = FpVar::new_variable(cs, || Ok(&refund), mode)?;
+		let refund_var = FpVar::new_variable(cs.clone(), || Ok(&refund), mode)?;
+		let commitment_var = FpVar::new_variable(cs, || Ok(&commitment), mode)?;
 
 		Ok(InputVar::new(
 			recipient_var,
 			relayer_var,
 			fee_var,
 			refund_var,
+			commitment_var,
 		))
 	}
 }
@@ -91,8 +103,9 @@ mod test {
 		let relayer = Fq::rand(rng);
 		let fee = Fq::rand(rng);
 		let refund = Fq::rand(rng);
+		let commitment = Fq::rand(rng);
 
-		let input = Input::new(recipient, relayer, fee, refund);
+		let input = Input::new(recipient, relayer, fee, refund, commitment);
 		let input_var = InputVar::new_input(cs.clone(), || Ok(&input)).unwrap();
 
 		TestBridgeDataGadget::constrain(&input_var).unwrap();

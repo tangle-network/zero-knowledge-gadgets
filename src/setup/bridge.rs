@@ -110,8 +110,9 @@ pub fn setup_arbitrary_data<F: PrimeField>(
 	relayer: F,
 	fee: F,
 	refund: F,
+	commitment: F,
 ) -> BridgeConstraintDataInput<F> {
-	BridgeConstraintDataInput::new(recipient, relayer, fee, refund)
+	BridgeConstraintDataInput::new(recipient, relayer, fee, refund, commitment)
 }
 
 pub fn get_public_inputs<F: PrimeField, const M: usize>(
@@ -123,6 +124,7 @@ pub fn get_public_inputs<F: PrimeField, const M: usize>(
 	relayer: F,
 	fee: F,
 	refund: F,
+	commitment: F,
 ) -> Vec<F> {
 	vec![
 		chain_id,
@@ -134,6 +136,7 @@ pub fn get_public_inputs<F: PrimeField, const M: usize>(
 		relayer,
 		fee,
 		refund,
+		commitment,
 	]
 }
 
@@ -207,13 +210,14 @@ macro_rules! impl_setup_bridge_circuit {
 				relayer: F,
 				fee: F,
 				refund: F,
+				commitment: F,
 				rng: &mut R,
 				curve: Curve,
 			) -> ($circuit_ty<F, N, M>, F, F, F, Vec<F>) {
 				let params3 = $params3_fn::<F>(curve);
 				let params5 = $params5_fn::<F>(curve);
 
-				let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
+				let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 				let (leaf_private, leaf_public, leaf, nullifier_hash) = $leaf_setup_fn(chain_id, &params5, rng);
 				let mut leaves_new = leaves.to_vec();
 				leaves_new.push(leaf);
@@ -251,6 +255,7 @@ macro_rules! impl_setup_bridge_circuit {
 					relayer,
 					fee,
 					refund,
+					commitment,
 				);
 				(mc, leaf, nullifier_hash, root, public_inputs)
 			}
@@ -267,8 +272,9 @@ macro_rules! impl_setup_bridge_circuit {
 				let relayer = F::rand(rng);
 				let fee = F::rand(rng);
 				let refund = F::rand(rng);
+				let commitment = F::rand(rng);
 				[<setup_ $circuit_ty:lower>]::<R, F, N, M>(
-					chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, rng, curve,
+					chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, commitment, rng, curve,
 				)
 			}
 		}
@@ -385,12 +391,15 @@ mod test {
 		let relayer = Bls381::from(0u8);
 		let fee = Bls381::from(0u8);
 		let refund = Bls381::from(0u8);
+		let commitment = Bls381::from(0u8);
+
 		let leaves = Vec::new();
 		let roots = [Bls381::default(); TEST_M];
 
 		let (circuit, leaf, nullifier, root, public_inputs) =
 			setup_circuit_x5::<_, Bls381, TEST_N, TEST_M>(
-				chain_id, &leaves, 0, &roots, recipient, relayer, fee, refund, &mut rng, curve,
+				chain_id, &leaves, 0, &roots, recipient, relayer, fee, refund, commitment,
+				&mut rng, curve,
 			);
 
 		add_members_mock(vec![leaf]);
@@ -426,13 +435,15 @@ mod test {
 		let relayer = Bls381::from(0u8);
 		let fee = Bls381::from(0u8);
 		let refund = Bls381::from(0u8);
+		let commitment = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let mut roots = [Bls381::default(); TEST_M];
 
 		let params3 = setup_params_x5_3::<Bls381>(curve);
 		let params5 = setup_params_x5_5::<Bls381>(curve);
 
-		let arbitrary_input = setup_arbitrary_data::<Bls381>(recipient, relayer, fee, refund);
+		let arbitrary_input =
+			setup_arbitrary_data::<Bls381>(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
 			setup_leaf_x5::<_, Bls381>(chain_id, &params5, &mut rng);
 		let mut leaves_new = leaves.to_vec();
@@ -463,6 +474,7 @@ mod test {
 			relayer,
 			fee,
 			refund,
+			commitment,
 		);
 
 		add_members_mock(vec![leaf]);
@@ -495,13 +507,15 @@ mod test {
 		let recipient = Bls381::from(0u8);
 		let relayer = Bls381::from(0u8);
 		let fee = Bls381::from(0u8);
+		let commitment = Bls381::from(0u8);
 		let refund = Bls381::from(0u8);
 		let leaves = Vec::new();
 		let roots = [Bls381::default(); TEST_M];
 
 		let (circuit, leaf, nullifier, root, public_inputs) =
 			setup_circuit_x5::<_, Bls381, TEST_N, TEST_M>(
-				chain_id, &leaves, 0, &roots, recipient, relayer, fee, refund, &mut rng, curve,
+				chain_id, &leaves, 0, &roots, recipient, relayer, fee, refund, commitment,
+				&mut rng, curve,
 			);
 
 		add_members_mock(vec![leaf]);

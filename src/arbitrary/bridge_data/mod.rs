@@ -11,15 +11,17 @@ pub struct Input<F: PrimeField> {
 	pub relayer: F,
 	pub fee: F,
 	pub refund: F,
+	pub commitment: F,
 }
 
 impl<F: PrimeField> Input<F> {
-	pub fn new(recipient: F, relayer: F, fee: F, refund: F) -> Self {
+	pub fn new(recipient: F, relayer: F, fee: F, refund: F, commitment: F) -> Self {
 		Self {
 			recipient,
 			relayer,
 			fee,
 			refund,
+			commitment,
 		}
 	}
 }
