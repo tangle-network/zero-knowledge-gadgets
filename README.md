@@ -2,6 +2,13 @@
 
 Gadgets and constraints written using the [arkworks](https://github.com/arkworks-rs) libraries for Webb and more.
 
+## Gratitude
+We are grateful to the arkworks community for their open-source first approach to zero-knowledge infrastructure. Many of the gadgets here leverage tools that are found in other repos and that are open source. Specifically, we leverage the sparse merkle tree data structures from the [ivls](https://github.com/arkworks-rs/ivls/tree/master/src/building_blocks/mt/merkle_sparse_tree) project on incrementally verifiable computation. This work would not have been possible without that.
+
+Many thanks to the following people for help and insights in both learning and implementing these gadgets & circuits:
+- @weikengchen
+- @Pratyush
+
 # Overview
 This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a bridge that can be integrated into compatible blockchain and smart contract protocols. The repo is split into two main parts: the intermediate modular gadgets and the circuits that consume these gadgets.
 
