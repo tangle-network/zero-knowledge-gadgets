@@ -5,6 +5,7 @@ use ark_std::{hash::Hash, rand::Rng};
 pub mod basic;
 pub mod bridge;
 pub mod mixer;
+pub mod newleaf;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -27,4 +28,18 @@ pub trait LeafCreation<H: CRH>: Sized {
 		s: &Self::Private,
 		h: &H::Parameters,
 	) -> Result<Self::Nullifier, Error>;
+}
+
+
+pub trait NewLeafCreation<H1: CRH>: Sized {
+	type Leaf: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
+	type Private: Clone ;
+	type Public: Clone + Default;
+
+	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error>;
+	fn create_leaf(
+		s: &Self::Private,
+		p: &Self::Public,
+		h: &H1::Parameters,
+	) -> Result<Self::Leaf, Error>;
 }

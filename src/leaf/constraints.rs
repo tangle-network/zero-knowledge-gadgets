@@ -6,6 +6,7 @@ use ark_ff::Field;
 use core::fmt::Debug;
 
 use crate::leaf::LeafCreation;
+use crate::leaf::NewLeafCreation;
 
 pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>>:
 	Sized
@@ -41,4 +42,30 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 		s: &Self::PrivateVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::NullifierVar, SynthesisError>;
+}
+
+
+
+pub trait NewLeafCreationGadget<F: Field, H1: CRH, HG1: CRHGadget<H1, F>, L: NewLeafCreation<H1>>:
+	Sized
+{
+	type LeafVar: EqGadget<F>
+		+ ToBytesGadget<F>
+		+ CondSelectGadget<F>
+		+ AllocVar<L::Leaf, F>
+		+ R1CSVar<F>
+		+ Debug
+		+ Clone
+		+ Sized;
+
+
+	type PrivateVar: AllocVar<L::Private, F> + Clone;
+	type PublicVar: AllocVar<L::Public, F> + Clone;
+
+	fn create_leaf(
+		s: &Self::PrivateVar,
+		p: &Self::PublicVar,
+		h: &HG1::ParametersVar,
+	) -> Result<Self::LeafVar, SynthesisError>;
+
 }
