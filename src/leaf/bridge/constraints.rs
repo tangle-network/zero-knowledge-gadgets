@@ -14,12 +14,11 @@ use core::borrow::Borrow;
 pub struct PrivateVar<F: PrimeField> {
 	r: FpVar<F>,
 	nullifier: FpVar<F>,
-	rho: FpVar<F>,
 }
 
 impl<F: PrimeField> PrivateVar<F> {
-	pub fn new(r: FpVar<F>, nullifier: FpVar<F>, rho: FpVar<F>) -> Self {
-		Self { r, nullifier, rho }
+	pub fn new(r: FpVar<F>, nullifier: FpVar<F>) -> Self {
+		Self { r, nullifier }
 	}
 }
 
@@ -118,7 +117,6 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> LeafCreationGadget<F, H, HG, Br
 		let mut leaf_bytes = Vec::new();
 		leaf_bytes.extend(s.r.to_bytes()?);
 		leaf_bytes.extend(s.nullifier.to_bytes()?);
-		leaf_bytes.extend(s.rho.to_bytes()?);
 		leaf_bytes.extend(p.chain_id.to_bytes()?);
 		HG::evaluate(h, &leaf_bytes)
 	}
@@ -144,15 +142,13 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 		let ns = into_ns.into();
 		let cs = ns.cs();
 
-		let r = private.r;
+		let secret = private.secret;
 		let nullifier = private.nullifier;
-		let rho = private.rho;
 
-		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
-		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
-		let rho_var = FpVar::new_variable(cs, || Ok(rho), mode)?;
+		let secret_var = FpVar::new_variable(cs.clone(), || Ok(secret), mode)?;
+		let nullifier_var = FpVar::new_variable(cs, || Ok(nullifier), mode)?;
 
-		Ok(PrivateVar::new(r_var, nullifier_var, rho_var))
+		Ok(PrivateVar::new(secret_var, nullifier_var))
 	}
 }
 
@@ -246,7 +242,7 @@ mod test {
 
 		// Checking equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf)).unwrap();
-		let nullifier_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&nullifier)).unwrap();
+		let nullifier_new_var = FpVar::<Fq>::new_witness(cs, || Ok(&nullifier)).unwrap();
 		let leaf_res = leaf_var.is_eq(&leaf_new_var).unwrap();
 		let nullifier_res = nullifier_var.is_eq(&nullifier_new_var).unwrap();
 		assert!(leaf_res.value().unwrap());

@@ -12,17 +12,15 @@ pub mod constraints;
 
 #[derive(Default, Clone)]
 pub struct Private<F: PrimeField> {
-	r: F,
+	secret: F,
 	nullifier: F,
-	rho: F,
 }
 
 impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 		Self {
-			r: F::rand(rng),
+			secret: F::rand(rng),
 			nullifier: F::rand(rng),
-			rho: F::rand(rng),
 		}
 	}
 }
@@ -73,7 +71,7 @@ impl<F: PrimeField, H: CRH> LeafCreation<H> for BridgeLeaf<F, H> {
 		p: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let input_bytes = to_bytes![s.r, s.nullifier, s.rho, p.chain_id]?;
+		let input_bytes = to_bytes![s.secret, s.nullifier, p.chain_id]?;
 		H::evaluate(h, &input_bytes)
 	}
 
@@ -120,8 +118,7 @@ mod test {
 		let chain_id = Fq::one();
 		let publics = Public::new(chain_id);
 
-		let leaf_inputs =
-			to_bytes![secrets.r, secrets.nullifier, secrets.rho, publics.chain_id].unwrap();
+		let leaf_inputs = to_bytes![secrets.secret, secrets.nullifier, publics.chain_id].unwrap();
 
 		let nullifier_inputs = to_bytes![secrets.nullifier, secrets.nullifier].unwrap();
 
