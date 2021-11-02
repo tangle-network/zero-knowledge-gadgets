@@ -67,7 +67,6 @@ impl<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>> NewLeafCreationGadget<F, H1,
 		h: &HG1::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		 // TODO: extend to all indices
 		bytes.extend(s.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
@@ -82,12 +81,12 @@ impl<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>> NewLeafCreationGadget<F, H1,
 		indices: &Vec<FpVar<F>>,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		 // TODO: extend to all indices
 		bytes.extend(c.to_bytes()?);
-		bytes.extend(s.priv_key.to_bytes()?);
 		for i in indices{
 			bytes.extend(i.to_bytes()?);
 		}
+		bytes.extend(s.priv_key.to_bytes()?);
+
 		HG1::evaluate(h, &bytes)
 	}
 }

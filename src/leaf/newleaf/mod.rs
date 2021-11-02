@@ -80,7 +80,7 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		h: &H::Parameters,
 		f: &Vec<F1>,
 	) -> Result<Self::Nullifier, Error> {
-		let bytes = to_bytes![c, s.priv_key,f]?;
+		let bytes = to_bytes![c,f, s.priv_key]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -112,8 +112,6 @@ mod test {
 
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
 	//type Leaf = NewLeaf<Fq, PoseidonCRH3>;
-
-//222
 
 #[derive(Default, Clone)]
 	struct PoseidonRounds3_1;
@@ -163,7 +161,7 @@ mod test {
 		let rounds1 = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds1 = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params1 = PoseidonParameters::<Fq>::new(rounds1, mds1);
-		let inputs_null = to_bytes![commitment, secrets.priv_key, secrets.indices].unwrap();
+		let inputs_null = to_bytes![commitment,  secrets.indices, secrets.priv_key].unwrap();
 
 		let ev_res = PoseidonCRH3::evaluate(&params1, &inputs_null).unwrap();
 		let nullifier = Leaf::create_nullifier_hash(&secrets, &commitment, 
