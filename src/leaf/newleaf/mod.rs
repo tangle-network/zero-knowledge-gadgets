@@ -15,7 +15,7 @@ pub struct Private<F: PrimeField> {
 	amount: F,
 	blinding: F,
 	priv_key: F,
-	indices: Vec<u8>,
+	indices: Vec<F>,
 }
 
 // #[derive(Clone)]
@@ -25,7 +25,6 @@ pub struct Private<F: PrimeField> {
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
-	f: PhantomData<F>,
 	pubkey: F,
 
 }
@@ -42,7 +41,7 @@ impl<F: PrimeField> Private<F> {
 			amount: F::rand(rng),
 			blinding: F::rand(rng),
 			priv_key: F::rand(rng),
-			indices: vec!{0}
+			indices: vec!{F::zero()}
 		}
 	}
 }
@@ -75,11 +74,11 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		let bytes = to_bytes![s.chain_id,s.amount,s.blinding,p.pubkey]?;
 		H::evaluate(h, &bytes)
 	}
-	fn create_nullifier_hash(
+	fn create_nullifier_hash<F1: PrimeField>(
 		s: &Self::Private,
 		c: &Self::Leaf,
 		h: &H::Parameters,
-		f: &Vec<u8>,
+		f: &Vec<F1>,
 	) -> Result<Self::Nullifier, Error> {
 		let bytes = to_bytes![c, s.priv_key,f]?;
 		H::evaluate(h, &bytes)

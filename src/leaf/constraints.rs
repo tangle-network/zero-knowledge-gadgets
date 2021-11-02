@@ -1,4 +1,6 @@
 use ark_crypto_primitives::crh::{constraints::CRHGadget, CRH};
+use ark_ff::PrimeField;
+use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::prelude::*;
 use ark_relations::r1cs::SynthesisError;
 
@@ -46,7 +48,7 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 
 
 
-pub trait NewLeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: NewLeafCreation<H>>:
+pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: NewLeafCreation<H>>:
 	Sized
 {
 	type LeafVar: EqGadget<F>
@@ -80,7 +82,7 @@ pub trait NewLeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: NewLea
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
 		h: &HG::ParametersVar,
-		indices: &Vec<UInt8<F>>,
+		indices: &Vec<FpVar<F>>,
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
 }

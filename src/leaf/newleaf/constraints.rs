@@ -16,7 +16,7 @@ pub struct PrivateVar<F: PrimeField> {
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
 	priv_key: FpVar<F>,
-	indices: Vec<UInt8<F>>,
+	indices: Vec<FpVar<F>>,
 }
 
 
@@ -41,7 +41,7 @@ impl<F: PrimeField> PublicVar<F>{
 
 impl<F: PrimeField> PrivateVar<F> {
 	pub fn new(chain_id:FpVar<F>, amount: FpVar<F>, blinding: FpVar<F>,
-		priv_key: FpVar<F>, indices: Vec<UInt8<F>>) -> Self {
+		priv_key: FpVar<F>, indices: Vec<FpVar<F>>) -> Self {
 		Self {chain_id,amount, blinding, priv_key, indices }
 	}
 }
@@ -79,13 +79,15 @@ impl<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>> NewLeafCreationGadget<F, H1,
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
 		h: &HG1::ParametersVar,
-		indices: &Vec<UInt8<F>>,
+		indices: &Vec<FpVar<F>>,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		 // TODO: extend to all indices
 		bytes.extend(c.to_bytes()?);
 		bytes.extend(s.priv_key.to_bytes()?);
-		bytes.extend(indices.to_bytes()?);
+		for i in indices{
+			bytes.extend(i.to_bytes()?);
+		}
 		HG1::evaluate(h, &bytes)
 	}
 }
@@ -110,7 +112,7 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> { // Todo: change 
 		let amount_var=FpVar::new_variable(cs.clone(), || Ok(amount), mode)?;
 		let blinding_var=FpVar::new_variable(cs.clone(), || Ok(blinding), mode)?;
 		let priv_key_var=FpVar::new_variable(cs.clone(), || Ok(priv_key), mode)?;
-		let indice_var=UInt8::new_witness(cs.clone(), || {	Ok(indices[0])
+		let indice_var=FpVar::new_witness(cs.clone(), || {	Ok(indices[0])
 		})?;
 		Ok(PrivateVar::new(chain_id_var, amount_var,blinding_var,priv_key_var,vec![indice_var]))
 	}
