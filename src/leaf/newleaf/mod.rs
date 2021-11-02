@@ -27,7 +27,11 @@ pub struct Public<F: PrimeField> {
 	pubkey: F,
 	chain_id: F,
 }
-
+impl<F: PrimeField> Public<F> {
+	pub fn new(chain_id: F, pubkey: F) -> Self {
+		Self { chain_id, pubkey }
+	}
+}
 impl<F: PrimeField> Private<F> {
 	
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {

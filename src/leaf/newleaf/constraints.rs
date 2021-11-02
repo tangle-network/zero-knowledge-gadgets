@@ -37,6 +37,12 @@ impl<F: PrimeField> PublicVar<F>{
 			chain_id: ark_r1cs_std::fields::fp::FpVar::Constant(chain_id), 
 		}
 	}
+	pub fn new(chain_id: FpVar<F>, pubkey: FpVar<F>)->Self{
+		Self{
+			pubkey: pubkey, 
+			chain_id: chain_id, 
+		}
+	}
 
 }
 
@@ -135,11 +141,16 @@ fn new_witness<T: Borrow<Private<F>>>(
 
 impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 	fn new_variable<T: Borrow<Public<F>>>(
-		_: impl Into<Namespace<F>>,
-		_: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
+		into_ns: impl Into<Namespace<F>>,
+		f: impl FnOnce() -> Result<T, SynthesisError>,
+		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
-		Ok(PublicVar::default())
+		let public = f()?.borrow().clone();
+		let ns = into_ns.into();
+		let cs = ns.cs();
+		let chain_id = FpVar::new_variable(cs.clone(), || Ok(public.chain_id), mode)?;
+		let pubkey = FpVar::new_variable(cs.clone(), || Ok(public.pubkey), mode)?;
+		Ok(PublicVar::new(chain_id,pubkey))
 	}
 }
 
@@ -174,22 +185,26 @@ mod test {
 
 	type Leaf = NewLeaf<Fq, PoseidonCRH3,>;
 	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
+	use crate::ark_std::One;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
+		// Native version
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
-
-		// Native version
-		let public = Public::default();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let chain_id = Fq::one();
+		let pubkey = Fq::one();
+
+		let public = Public::new(chain_id, pubkey);
+		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
 
+
 		// Constraints version
-		let public_var = PublicVar::default();
+		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
 		let params_var =
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
