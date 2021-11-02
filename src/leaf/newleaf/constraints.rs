@@ -12,21 +12,37 @@ use core::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
+	chain_id: FpVar<F>,
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
 	priv_key: FpVar<F>,
-	indices: Vec<FpVar<F>>,
+	indices: Vec<UInt8<F>>,
 }
 
-#[derive(Clone, Default)]
+
+#[derive(Clone)]
 pub struct PublicVar<F: PrimeField> {
-	f: PhantomData<F>,
+	pubkey: FpVar<F>,
+
+}
+
+impl<F: PrimeField> PublicVar<F>{
+	
+	pub fn default()->Self{
+		
+		let pubk = F::zero();
+
+		Self{
+			pubkey: ark_r1cs_std::fields::fp::FpVar::Constant(pubk), // Is public key constant?
+		}
+	}
+
 }
 
 impl<F: PrimeField> PrivateVar<F> {
-	pub fn new( amount: FpVar<F>, blinding: FpVar<F>,
-		priv_key: FpVar<F>, indices: Vec<FpVar<F>>) -> Self {
-		Self {amount, blinding, priv_key, indices }
+	pub fn new(chain_id:FpVar<F>, amount: FpVar<F>, blinding: FpVar<F>,
+		priv_key: FpVar<F>, indices: Vec<UInt8<F>>) -> Self {
+		Self {chain_id,amount, blinding, priv_key, indices }
 	}
 }
 
@@ -41,18 +57,35 @@ impl<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>> NewLeafCreationGadget<F, H1,
 	for NewLeafGadget<F, H1, HG1, NewLeaf<F, H1>>// TODO: Change
 {
 	type LeafVar = HG1::OutputVar;
+	type NullifierVar = HG1::OutputVar;
 	type PrivateVar = PrivateVar<F>;
 	type PublicVar = PublicVar<F>;
 
 	fn create_leaf(
 		s: &Self::PrivateVar,
-		_: &Self::PublicVar,
+		p: &Self::PublicVar,
 		h: &HG1::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
+		 // TODO: extend to all indices
+		bytes.extend(s.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
-		bytes.extend(s.indices[0].to_bytes()?); // TODO: extend to all indices
+		bytes.extend(p.pubkey.to_bytes()?);
+		HG1::evaluate(h, &bytes)
+	}
+
+	fn create_nullifier(
+		s: &Self::PrivateVar,
+		c: &Self::LeafVar,
+		h: &HG1::ParametersVar,
+		indices: &Vec<UInt8<F>>,
+	) -> Result<Self::LeafVar, SynthesisError> {
+		let mut bytes = Vec::new();
+		 // TODO: extend to all indices
+		bytes.extend(c.to_bytes()?);
+		bytes.extend(s.priv_key.to_bytes()?);
+		bytes.extend(indices.to_bytes()?);
 		HG1::evaluate(h, &bytes)
 	}
 }
@@ -67,17 +100,19 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> { // Todo: change 
 		let ns = into_ns.into();
 		let cs = ns.cs();
 
+		let chain_id = secrets.chain_id;
 		let amount = secrets.amount;
 		let blinding = secrets.blinding;
 		let priv_key = secrets.priv_key;
 		let indices = secrets.indices;
 		
+		let chain_id_var=FpVar::new_variable(cs.clone(), || Ok(chain_id), mode)?;
 		let amount_var=FpVar::new_variable(cs.clone(), || Ok(amount), mode)?;
 		let blinding_var=FpVar::new_variable(cs.clone(), || Ok(blinding), mode)?;
 		let priv_key_var=FpVar::new_variable(cs.clone(), || Ok(priv_key), mode)?;
-		let indice_var=FpVar::new_witness(cs.clone(), || {	Ok(indices[0])
+		let indice_var=UInt8::new_witness(cs.clone(), || {	Ok(indices[0])
 		})?;
-		Ok(PrivateVar::new(amount_var,blinding_var,priv_key_var,vec![indice_var]))
+		Ok(PrivateVar::new(chain_id_var, amount_var,blinding_var,priv_key_var,vec![indice_var]))
 	}
 
 fn new_constant(
@@ -122,7 +157,7 @@ mod test {
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
 		},
-		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
+		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
 	use ark_bls12_381::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
@@ -135,16 +170,6 @@ mod test {
 		const FULL_ROUNDS: usize = 8;
 		const PARTIAL_ROUNDS: usize = 57;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3_1;
-
-	impl Rounds for PoseidonRounds3_1 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 4;
 	}
 
@@ -154,13 +179,12 @@ mod test {
 	type Leaf = NewLeaf<Fq, PoseidonCRH3,>; // TODO: Change
 	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	#[test]
-	fn should_crate_basic_leaf_constraints() {
+	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
-
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 
 		// Native version
 		let public = Public::default();
@@ -182,5 +206,20 @@ mod test {
 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
 		assert!(res.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());
+
+		// Test Nullifier
+		let nullifier = Leaf::create_nullifier_hash(&secrets, &leaf, 
+			&params,&secrets.indices).unwrap();
+		let nullifier_var = LeafGadget::create_nullifier(&secrets_var, 
+			&leaf_var, &params_var, &secrets_var.indices).unwrap();
+		let nullifier_new_var =  FpVar::<Fq>::new_witness(nullifier_var.cs(), || Ok(nullifier)).unwrap();
+		let res_nul = nullifier_var.is_eq(&nullifier_new_var).unwrap();
+		assert!(res_nul.value().unwrap());
+		assert!(res_nul.cs().is_satisfied().unwrap());
+
+
+
+
+
 	}
 }

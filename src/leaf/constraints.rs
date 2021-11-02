@@ -46,7 +46,7 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 
 
 
-pub trait NewLeafCreationGadget<F: Field, H1: CRH, HG1: CRHGadget<H1, F>, L: NewLeafCreation<H1>>:
+pub trait NewLeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: NewLeafCreation<H>>:
 	Sized
 {
 	type LeafVar: EqGadget<F>
@@ -58,6 +58,14 @@ pub trait NewLeafCreationGadget<F: Field, H1: CRH, HG1: CRHGadget<H1, F>, L: New
 		+ Clone
 		+ Sized;
 
+		type NullifierVar: EqGadget<F>
+		+ ToBytesGadget<F>
+		+ CondSelectGadget<F>
+		+ AllocVar<L::Nullifier, F>
+		+ R1CSVar<F>
+		+ Debug
+		+ Clone
+		+ Sized;
 
 	type PrivateVar: AllocVar<L::Private, F> + Clone;
 	type PublicVar: AllocVar<L::Public, F> + Clone;
@@ -65,7 +73,14 @@ pub trait NewLeafCreationGadget<F: Field, H1: CRH, HG1: CRHGadget<H1, F>, L: New
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		h: &HG1::ParametersVar,
+		h: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError>;
+
+	fn create_nullifier(
+		s: &Self::PrivateVar,
+		c: &Self::LeafVar,
+		h: &HG::ParametersVar,
+		indices: &Vec<UInt8<F>>,
+	) -> Result<Self::NullifierVar, SynthesisError>;
 
 }

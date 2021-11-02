@@ -11,10 +11,11 @@ pub mod constraints;
 
 #[derive(Clone)]
 pub struct Private<F: PrimeField> {
+	chain_id: F,
 	amount: F,
 	blinding: F,
 	priv_key: F,
-	indices: Vec<F>,
+	indices: Vec<u8>,
 }
 
 // #[derive(Clone)]
@@ -37,10 +38,11 @@ impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 
 		Self {
+			chain_id: F::zero(),
 			amount: F::rand(rng),
 			blinding: F::rand(rng),
 			priv_key: F::rand(rng),
-			indices: vec!{F::zero()}
+			indices: vec!{0}
 		}
 	}
 }
@@ -53,8 +55,9 @@ struct NewLeaf<F: PrimeField, H: CRH> {
 
 }
 
-impl<F: PrimeField, H1: CRH> NewLeafCreation<H1> for NewLeaf<F, H1> {
-	type Leaf = H1::Output; // Commitment
+impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
+	type Leaf = H::Output; // Commitment = hash(amount, blinding, pubKey)
+	type Nullifier = H::Output; // Nullifier = hash(commitment, pathIndices, privKey)
 	type Private = Private<F>;
 	type Public = Public<F>;
 
@@ -67,12 +70,20 @@ impl<F: PrimeField, H1: CRH> NewLeafCreation<H1> for NewLeaf<F, H1> {
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
-		h: &H1::Parameters,
+		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![s.amount,s.blinding,p.pubkey]?;
-		H1::evaluate(h, &bytes)
+		let bytes = to_bytes![s.chain_id,s.amount,s.blinding,p.pubkey]?;
+		H::evaluate(h, &bytes)
 	}
-
+	fn create_nullifier_hash(
+		s: &Self::Private,
+		c: &Self::Leaf,
+		h: &H::Parameters,
+		f: &Vec<u8>,
+	) -> Result<Self::Nullifier, Error> {
+		let bytes = to_bytes![c, s.priv_key,f]?;
+		H::evaluate(h, &bytes)
+	}
 }
 
 
@@ -97,7 +108,7 @@ mod test {
 		const FULL_ROUNDS: usize = 8;
 		const PARTIAL_ROUNDS: usize = 57;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
+		const WIDTH: usize = 5;
 	}
 
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
@@ -124,10 +135,10 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 
-		let inputs_leaf = to_bytes![secrets.amount, secrets.blinding, publics.pubkey].unwrap();
+		let inputs_leaf = to_bytes![secrets.chain_id,secrets.amount, secrets.blinding, publics.pubkey].unwrap();
 
-		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
@@ -140,10 +151,10 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 
-		let inputs_leaf = to_bytes![secrets.amount, secrets.blinding, publics.pubkey].unwrap();
+		let inputs_leaf = to_bytes![secrets.chain_id,secrets.amount, secrets.blinding, publics.pubkey].unwrap();
 
-		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		
 		let commitment = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
@@ -155,8 +166,9 @@ mod test {
 		let params1 = PoseidonParameters::<Fq>::new(rounds1, mds1);
 		let inputs_null = to_bytes![commitment, secrets.priv_key, secrets.indices].unwrap();
 
-		let ev_res = PoseidonCRH3_1::evaluate(&params1, &inputs_null).unwrap();
-		//let nullifier = create_nullifier_hash(&secrets, &commitment, &params1).unwrap();
-		//assert_eq!(ev_res, nullifier);
+		let ev_res = PoseidonCRH3::evaluate(&params1, &inputs_null).unwrap();
+		let nullifier = Leaf::create_nullifier_hash(&secrets, &commitment, 
+			&params1,&secrets.indices).unwrap();
+		assert_eq!(ev_res, nullifier);
 	}
 }
