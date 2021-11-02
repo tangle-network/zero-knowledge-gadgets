@@ -11,6 +11,7 @@ pub mod constraints;
 
 #[derive(Clone)]
 pub struct Private<F: PrimeField> {
+	chain_id: F,
 	amount: F,
 	blinding: F,
 	priv_key: F,
@@ -33,6 +34,7 @@ impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 
 		Self {
+			chain_id: F::zero(),
 			amount: F::rand(rng),
 			blinding: F::rand(rng),
 			priv_key: F::rand(rng),
@@ -60,13 +62,13 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		Ok(Self::Private::generate(r))
 	}
 
-	// Commits to the values = hash(amount, blinding, pubKey)
+	// Commits to the values = hash(chain_id, amount, blinding, pubKey)
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![s.amount,s.blinding,p.pubkey]?;
+		let bytes = to_bytes![s.chain_id, s.amount,s.blinding,p.pubkey]?;
 		H::evaluate(h, &bytes)
 	}
 
@@ -114,8 +116,9 @@ mod test {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
-		// Commitment = hash(amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![secrets.amount, secrets.blinding, publics.pubkey].unwrap();
+		// Commitment = hash(chainID, amount, blinding, pubKey)
+		let inputs_leaf = to_bytes![secrets.chain_id, secrets.amount, 
+								secrets.blinding, publics.pubkey].unwrap();
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
@@ -131,8 +134,9 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 		
-		// Since Commitment = hash(amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![secrets.amount, secrets.blinding, publics.pubkey].unwrap();
+		// Since Commitment = hash(chainID, amount, blinding, pubKey)
+		let inputs_leaf = to_bytes![secrets.chain_id,secrets.amount, 
+								secrets.blinding, publics.pubkey].unwrap();
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();

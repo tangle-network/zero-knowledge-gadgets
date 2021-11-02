@@ -12,6 +12,7 @@ use core::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
+	chain_id: FpVar<F>,
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
 	priv_key: FpVar<F>,
@@ -39,9 +40,9 @@ impl<F: PrimeField> PublicVar<F>{
 }
 
 impl<F: PrimeField> PrivateVar<F> {
-	pub fn new( amount: FpVar<F>, blinding: FpVar<F>,
+	pub fn new( chain_id: FpVar<F>, amount: FpVar<F>, blinding: FpVar<F>,
 		priv_key: FpVar<F>, index: FpVar<F>) -> Self {
-		Self {amount, blinding, priv_key, index }
+		Self {chain_id, amount, blinding, priv_key, index }
 	}
 }
 
@@ -66,6 +67,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG 
 		h: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
+		bytes.extend(s.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
 		bytes.extend(p.pubkey.to_bytes()?);
@@ -96,16 +98,18 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 		let ns = into_ns.into();
 		let cs = ns.cs();
 
+		let chain_id = secrets.chain_id;
 		let amount = secrets.amount;
 		let blinding = secrets.blinding;
 		let priv_key = secrets.priv_key;
 		let index = secrets.index;
 		
+		let chain_id_var = FpVar::new_variable(cs.clone(), || Ok(chain_id), mode)?;
 		let amount_var=FpVar::new_variable(cs.clone(), || Ok(amount), mode)?;
 		let blinding_var=FpVar::new_variable(cs.clone(), || Ok(blinding), mode)?;
 		let priv_key_var=FpVar::new_variable(cs.clone(), || Ok(priv_key), mode)?;
 		let index_var=FpVar::new_variable(cs.clone(), || Ok(index), mode)?;
-		Ok(PrivateVar::new(amount_var, blinding_var, priv_key_var, index_var))
+		Ok(PrivateVar::new(chain_id_var, amount_var, blinding_var, priv_key_var, index_var))
 	}
 
 fn new_constant(
