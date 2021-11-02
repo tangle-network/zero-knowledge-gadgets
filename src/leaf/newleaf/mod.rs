@@ -15,7 +15,7 @@ pub struct Private<F: PrimeField> {
 	amount: F,
 	blinding: F,
 	priv_key: F,
-	indices: Vec<F>,
+	index: F,
 }
 
 // #[derive(Clone)]
@@ -41,7 +41,7 @@ impl<F: PrimeField> Private<F> {
 			amount: F::rand(rng),
 			blinding: F::rand(rng),
 			priv_key: F::rand(rng),
-			indices: vec!{F::zero()}
+			index: F::zero()
 		}
 	}
 }
@@ -78,9 +78,9 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		s: &Self::Private,
 		c: &Self::Leaf,
 		h: &H::Parameters,
-		f: &Vec<F1>,
+		f: &F1,
 	) -> Result<Self::Nullifier, Error> {
-		let bytes = to_bytes![c,f, s.priv_key]?;
+		let bytes = to_bytes![c, f, s.priv_key]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -161,11 +161,11 @@ mod test {
 		let rounds1 = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds1 = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params1 = PoseidonParameters::<Fq>::new(rounds1, mds1);
-		let inputs_null = to_bytes![commitment,  secrets.indices, secrets.priv_key].unwrap();
+		let inputs_null = to_bytes![commitment,  secrets.index, secrets.priv_key].unwrap();
 
 		let ev_res = PoseidonCRH3::evaluate(&params1, &inputs_null).unwrap();
 		let nullifier = Leaf::create_nullifier_hash(&secrets, &commitment, 
-			&params1,&secrets.indices).unwrap();
+			&params1,&secrets.index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 }

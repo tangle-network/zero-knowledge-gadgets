@@ -82,7 +82,7 @@ pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: N
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
 		h: &HG::ParametersVar,
-		indices: &Vec<FpVar<F>>,
+		indices: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
 }

@@ -48,7 +48,7 @@ pub trait NewLeafCreation<H: CRH>: Sized {
 		s: &Self::Private,
 		c: &Self::Leaf,
 		h: &H::Parameters,
-		f: &Vec<F>,
+		f: &F,
 	) -> Result<Self::Nullifier, Error>;
 
 }
