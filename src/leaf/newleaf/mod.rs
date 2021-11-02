@@ -127,11 +127,14 @@ mod test {
 		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
+	use crate::ark_std::Zero;
 	#[test]
 	fn should_create_nullifier() { 
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let publics = Public::default();
+		let chain_id = Fq::zero();
+		let pubkey = Fq::zero();
+		let publics = Public::new(chain_id,pubkey);
 		
 		// Since Commitment = hash(chainID, amount, blinding, pubKey)
 		let inputs_leaf = to_bytes![publics.chain_id,secrets.amount, 
