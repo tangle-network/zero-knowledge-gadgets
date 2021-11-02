@@ -11,7 +11,6 @@ pub mod constraints;
 
 #[derive(Clone)]
 pub struct Private<F: PrimeField> {
-	chain_id: F,
 	amount: F,
 	blinding: F,
 	priv_key: F,
@@ -26,7 +25,7 @@ pub struct Private<F: PrimeField> {
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
 	pubkey: F,
-
+	chain_id: F,
 }
 
 impl<F: PrimeField> Private<F> {
@@ -34,7 +33,6 @@ impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 
 		Self {
-			chain_id: F::zero(),
 			amount: F::rand(rng),
 			blinding: F::rand(rng),
 			priv_key: F::rand(rng),
@@ -46,9 +44,6 @@ impl<F: PrimeField> Private<F> {
 struct NewLeaf<F: PrimeField, H: CRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
-	//configs: PhantomData<P>,
-	//commitment: H::Output,
-
 }
 
 impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
@@ -68,7 +63,7 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		p: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![s.chain_id, s.amount,s.blinding,p.pubkey]?;
+		let bytes = to_bytes![p.chain_id, s.amount,s.blinding,p.pubkey]?;
 		H::evaluate(h, &bytes)
 	}
 
@@ -117,7 +112,7 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 		// Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![secrets.chain_id, secrets.amount, 
+		let inputs_leaf = to_bytes![publics.chain_id, secrets.amount, 
 								secrets.blinding, publics.pubkey].unwrap();
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
@@ -135,7 +130,7 @@ mod test {
 		let publics = Public::default();
 		
 		// Since Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![secrets.chain_id,secrets.amount, 
+		let inputs_leaf = to_bytes![publics.chain_id,secrets.amount, 
 								secrets.blinding, publics.pubkey].unwrap();
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
