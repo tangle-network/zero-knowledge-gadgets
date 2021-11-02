@@ -44,7 +44,7 @@ pub trait NewLeafCreation<H: CRH>: Sized {
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error>;
 
-	fn create_nullifier_hash<F: PrimeField>(
+	fn create_nullifier<F: PrimeField>(
 		s: &Self::Private,
 		c: &Self::Leaf,
 		h: &H::Parameters,

@@ -12,7 +12,6 @@ use core::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
-	chain_id: FpVar<F>,
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
 	priv_key: FpVar<F>,
@@ -40,9 +39,9 @@ impl<F: PrimeField> PublicVar<F>{
 }
 
 impl<F: PrimeField> PrivateVar<F> {
-	pub fn new(chain_id:FpVar<F>, amount: FpVar<F>, blinding: FpVar<F>,
+	pub fn new( amount: FpVar<F>, blinding: FpVar<F>,
 		priv_key: FpVar<F>, index: FpVar<F>) -> Self {
-		Self {chain_id,amount, blinding, priv_key, index }
+		Self {amount, blinding, priv_key, index }
 	}
 }
 
@@ -53,44 +52,41 @@ pub struct NewLeafGadget<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>, L: NewLe
 	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>> NewLeafCreationGadget<F, H1, HG1 , NewLeaf<F, H1>>// TODO: Change
-	for NewLeafGadget<F, H1, HG1, NewLeaf<F, H1>>// TODO: Change
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG , NewLeaf<F, H>>
+	for NewLeafGadget<F, H, HG, NewLeaf<F, H>>
 {
-	type LeafVar = HG1::OutputVar;
-	type NullifierVar = HG1::OutputVar;
+	type LeafVar = HG::OutputVar;
+	type NullifierVar = HG::OutputVar;
 	type PrivateVar = PrivateVar<F>;
 	type PublicVar = PublicVar<F>;
 
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		h: &HG1::ParametersVar,
+		h: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(s.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
 		bytes.extend(p.pubkey.to_bytes()?);
-		HG1::evaluate(h, &bytes)
+		HG::evaluate(h, &bytes)
 	}
 
 	fn create_nullifier(
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
-		h: &HG1::ParametersVar,
+		h: &HG::ParametersVar,
 		i: &FpVar<F>,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
-
 		bytes.extend(c.to_bytes()?);
 		bytes.extend(i.to_bytes()?);
 		bytes.extend(s.priv_key.to_bytes()?);
-
-		HG1::evaluate(h, &bytes)
+		HG::evaluate(h, &bytes)
 	}
 }
 
-impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> { // Todo: change to accept more than one 
+impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> { 
 	fn new_variable<T: Borrow<Private<F>>>(
 		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
@@ -100,19 +96,16 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> { // Todo: change 
 		let ns = into_ns.into();
 		let cs = ns.cs();
 
-		let chain_id = secrets.chain_id;
 		let amount = secrets.amount;
 		let blinding = secrets.blinding;
 		let priv_key = secrets.priv_key;
 		let index = secrets.index;
 		
-		let chain_id_var=FpVar::new_variable(cs.clone(), || Ok(chain_id), mode)?;
 		let amount_var=FpVar::new_variable(cs.clone(), || Ok(amount), mode)?;
 		let blinding_var=FpVar::new_variable(cs.clone(), || Ok(blinding), mode)?;
 		let priv_key_var=FpVar::new_variable(cs.clone(), || Ok(priv_key), mode)?;
-		let indice_var=FpVar::new_witness(cs.clone(), || {	Ok(index)
-		})?;
-		Ok(PrivateVar::new(chain_id_var, amount_var,blinding_var,priv_key_var,indice_var))
+		let index_var=FpVar::new_variable(cs.clone(), || Ok(index), mode)?;
+		Ok(PrivateVar::new(amount_var, blinding_var, priv_key_var, index_var))
 	}
 
 fn new_constant(
@@ -176,7 +169,7 @@ mod test {
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
 
-	type Leaf = NewLeaf<Fq, PoseidonCRH3,>; // TODO: Change
+	type Leaf = NewLeaf<Fq, PoseidonCRH3,>;
 	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
@@ -208,18 +201,18 @@ mod test {
 		assert!(res.cs().is_satisfied().unwrap());
 
 		// Test Nullifier
-		let nullifier = Leaf::create_nullifier_hash(&secrets, &leaf, 
+		// Native version
+		let nullifier = Leaf::create_nullifier(&secrets, &leaf, 
 			&params,&secrets.index).unwrap();
+
+		// Constraints version
 		let nullifier_var = LeafGadget::create_nullifier(&secrets_var, 
 			&leaf_var, &params_var, &secrets_var.index).unwrap();
+
+		// Check equality
 		let nullifier_new_var =  FpVar::<Fq>::new_witness(nullifier_var.cs(), || Ok(nullifier)).unwrap();
 		let res_nul = nullifier_var.is_eq(&nullifier_new_var).unwrap();
 		assert!(res_nul.value().unwrap());
 		assert!(res_nul.cs().is_satisfied().unwrap());
-
-
-
-
-
 	}
 }
