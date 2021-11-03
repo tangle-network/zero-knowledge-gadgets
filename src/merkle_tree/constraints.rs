@@ -190,8 +190,8 @@ where
 
 		let mut index = FpVar::<F>::zero();
 		let mut twopower = FpVar::<F>::one();
-		let mut rightvalue : FpVar::<F>;
-		
+		let mut rightvalue: FpVar<F>;
+
 		//Compute the hash of the provided leaf
 		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), &leaf)?;
 

@@ -506,7 +506,9 @@ mod test {
 
 		let proof = smt.generate_membership_proof::<{ MiMCSMTConfig::HEIGHT as usize }>(index);
 
-		let res: Fq = proof.get_index(&smt.root(), &leaves[index as usize]).unwrap();
+		let res: Fq = proof
+			.get_index(&smt.root(), &leaves[index as usize])
+			.unwrap();
 		let desired_res = Fq::from(index);
 
 		assert_eq!(res, desired_res)
@@ -613,9 +615,11 @@ mod test {
 
 		let proof = smt.generate_membership_proof::<{ MiMCSMTConfig::HEIGHT as usize }>(index);
 
-		let res: Fq = proof.get_index(&smt.root(), &leaves[index as usize]).unwrap();
+		let res: Fq = proof
+			.get_index(&smt.root(), &leaves[index as usize])
+			.unwrap();
 		let desired_res = Fq::from(index);
-		
+
 		assert_eq!(res, desired_res)
 	}
 }
