@@ -184,21 +184,23 @@ where
 		root: &NodeVar<F, P, HG, LHG>,
 		leaf: L,
 	) -> Result<FpVar<F>, SynthesisError> {
+		// First, check if the provided leaf is on the path
 		let isonpath = self.check_membership(root, &leaf);
 		isonpath.unwrap().enforce_equal(&Boolean::TRUE)?;
 
 		let mut index = FpVar::<F>::zero();
 		let mut twopower = FpVar::<F>::one();
-		let mut rightvalue = FpVar::<F>::zero();
-		// Check that the hash of the given leaf matches the leaf hash in the membership
-		// proof.
+		let mut rightvalue : FpVar::<F>;
+		
+		//Compute the hash of the provided leaf
 		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), &leaf)?;
 
 		// Check levels between leaf level and root.
 		let mut previous_hash = leaf_hash;
 		for &(ref left_hash, ref right_hash) in self.path.iter() {
-			// Check if the previous_hash matches the correct current hash.
+			// Check if the previous_hash is for a left node.
 			let previous_is_left = previous_hash.is_eq(&left_hash)?;
+
 			rightvalue = index.clone() + twopower.clone();
 			index = FpVar::<F>::conditionally_select(&previous_is_left, &index, &rightvalue)?;
 			twopower = twopower.clone() + twopower.clone();
