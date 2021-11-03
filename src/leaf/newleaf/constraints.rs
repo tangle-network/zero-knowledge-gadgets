@@ -177,7 +177,6 @@ mod test {
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
-
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
 		let params_var =
