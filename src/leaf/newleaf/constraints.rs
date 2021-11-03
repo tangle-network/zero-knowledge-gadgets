@@ -182,7 +182,6 @@ mod test {
 		let params_var =
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
-
 		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
 
 		// Check equality

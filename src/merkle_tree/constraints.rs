@@ -5,7 +5,8 @@ use crate::Vec;
 use ark_crypto_primitives::CRHGadget;
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
-	alloc::AllocVar, eq::EqGadget, prelude::*, select::CondSelectGadget, ToBytesGadget,
+	alloc::AllocVar, eq::EqGadget, fields::fp::FpVar, prelude::*, select::CondSelectGadget,
+	ToBytesGadget,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{borrow::Borrow, rc::Rc};
@@ -177,6 +178,40 @@ where
 
 		root.is_eq(&previous_hash)
 	}
+
+	pub fn get_index<L: ToBytesGadget<F>>(
+		&self,
+		root: &NodeVar<F, P, HG, LHG>,
+		leaf: L,
+	) -> Result<FpVar<F>, SynthesisError> {
+		let isonpath = self.check_membership(root, &leaf);
+		isonpath.unwrap().enforce_equal(&Boolean::TRUE)?;
+
+		let mut index = FpVar::<F>::zero();
+		let mut twopower = FpVar::<F>::one();
+		let mut rightvalue = FpVar::<F>::zero();
+		// Check that the hash of the given leaf matches the leaf hash in the membership
+		// proof.
+		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), &leaf)?;
+
+		// Check levels between leaf level and root.
+		let mut previous_hash = leaf_hash;
+		for &(ref left_hash, ref right_hash) in self.path.iter() {
+			// Check if the previous_hash matches the correct current hash.
+			let previous_is_left = previous_hash.is_eq(&left_hash)?;
+			rightvalue = index.clone() + twopower.clone();
+			index = FpVar::<F>::conditionally_select(&previous_is_left, &index, &rightvalue)?;
+			twopower = twopower.clone() + twopower.clone();
+
+			previous_hash = hash_inner_node_gadget::<F, P, HG, LHG>(
+				self.inner_params.borrow(),
+				left_hash,
+				right_hash,
+			)?;
+		}
+
+		Ok(index)
+	}
 }
 
 pub(crate) fn hash_leaf_gadget<F, P, HG, LHG, L>(
@@ -331,6 +366,37 @@ mod test {
 		let res = path_var.check_membership(&root_var, &leaf_var).unwrap();
 		assert!(res.cs().is_satisfied().unwrap());
 		assert!(res.value().unwrap());
+	}
+
+	#[test]
+	fn should_verify_index() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+		let index = 2;
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = SMT::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let root = smt.root();
+		let path = smt.generate_membership_proof(index);
+
+		let path_var =
+			PathVar::<_, _, _, _, { SMTConfig::HEIGHT as usize }>::new_witness(cs.clone(), || {
+				Ok(path)
+			})
+			.unwrap();
+		let root_var = SMTNode::new_witness(cs.clone(), || Ok(root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[index as usize])).unwrap();
+
+		let res = path_var.get_index(&root_var, &leaf_var).unwrap();
+		let desired_res = Fq::from(index);
+
+		assert!(res.cs().is_satisfied().unwrap());
+		assert_eq!(res.value().unwrap(), desired_res);
 	}
 
 	#[should_panic(expected = "Expected a Vec of length 2 but it was 3")]
