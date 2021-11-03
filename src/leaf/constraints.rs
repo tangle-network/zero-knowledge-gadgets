@@ -1,14 +1,12 @@
 use ark_crypto_primitives::crh::{constraints::CRHGadget, CRH};
 use ark_ff::PrimeField;
-use ark_r1cs_std::fields::fp::FpVar;
-use ark_r1cs_std::prelude::*;
+use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::SynthesisError;
 
 use ark_ff::Field;
 use core::fmt::Debug;
 
-use crate::leaf::LeafCreation;
-use crate::leaf::NewLeafCreation;
+use crate::leaf::{LeafCreation, NewLeafCreation};
 
 pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>>:
 	Sized
@@ -46,8 +44,6 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 	) -> Result<Self::NullifierVar, SynthesisError>;
 }
 
-
-
 pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: NewLeafCreation<H>>:
 	Sized
 {
@@ -60,7 +56,7 @@ pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: N
 		+ Clone
 		+ Sized;
 
-		type NullifierVar: EqGadget<F>
+	type NullifierVar: EqGadget<F>
 		+ ToBytesGadget<F>
 		+ CondSelectGadget<F>
 		+ AllocVar<L::Nullifier, F>
@@ -84,5 +80,4 @@ pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: N
 		h: &HG::ParametersVar,
 		indices: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError>;
-
 }

@@ -1,5 +1,5 @@
 use ark_crypto_primitives::{crh::CRH, Error};
-use ark_ff::{PrimeField, bytes::ToBytes};
+use ark_ff::{bytes::ToBytes, PrimeField};
 use ark_std::{hash::Hash, rand::Rng};
 
 pub mod basic;
@@ -30,10 +30,9 @@ pub trait LeafCreation<H: CRH>: Sized {
 	) -> Result<Self::Nullifier, Error>;
 }
 
-
 pub trait NewLeafCreation<H: CRH>: Sized {
 	type Leaf: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
-	type Private: Clone ;
+	type Private: Clone;
 	type Public: Clone + Default;
 	type Nullifier: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 
@@ -50,5 +49,4 @@ pub trait NewLeafCreation<H: CRH>: Sized {
 		h: &H::Parameters,
 		f: &F,
 	) -> Result<Self::Nullifier, Error>;
-
 }

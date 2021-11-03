@@ -14,13 +14,7 @@ pub struct Private<F: PrimeField> {
 	amount: F,
 	blinding: F,
 	priv_key: F,
-	index: F,
 }
-
-// #[derive(Clone)]
-// pub struct nullifier<F: PrimeField>{
-// 	val: PhantomData<F>
-// }
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
@@ -32,15 +26,13 @@ impl<F: PrimeField> Public<F> {
 		Self { chain_id, pubkey }
 	}
 }
-impl<F: PrimeField> Private<F> {
-	
-	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 
+impl<F: PrimeField> Private<F> {
+	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 		Self {
 			amount: F::rand(rng),
 			blinding: F::rand(rng),
 			priv_key: F::rand(rng),
-			index: F::zero()
 		}
 	}
 }
@@ -51,12 +43,15 @@ struct NewLeaf<F: PrimeField, H: CRH> {
 }
 
 impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
-	type Leaf = H::Output; // Commitment = hash(amount, blinding, pubKey)
-	type Nullifier = H::Output; // Nullifier = hash(commitment, pathIndices, privKey)
+	type Leaf = H::Output;
+	// Commitment = hash(amount, blinding, pubKey)
+	type Nullifier = H::Output;
+	// Nullifier = hash(commitment, pathIndices, privKey)
 	type Private = Private<F>;
 	type Public = Public<F>;
 
-	// Creates Random Secrets: r, nullifier, amount, blinding, priv_key, merkle_path(TODO: merkle_path needs to be costructed) // TODO
+	// Creates Random Secrets: r, nullifier, amount, blinding, priv_key,
+	// merkle_path(TODO: merkle_path needs to be costructed) // TODO
 	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error> {
 		Ok(Self::Private::generate(r))
 	}
@@ -67,7 +62,7 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		p: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![p.chain_id, s.amount,s.blinding,p.pubkey]?;
+		let bytes = to_bytes![p.chain_id, s.amount, s.blinding, p.pubkey]?;
 		H::evaluate(h, &bytes)
 	}
 
@@ -82,7 +77,6 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		H::evaluate(h, &bytes)
 	}
 }
-
 
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
@@ -116,8 +110,13 @@ mod test {
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
 		// Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![publics.chain_id, secrets.amount, 
-								secrets.blinding, publics.pubkey].unwrap();
+		let inputs_leaf = to_bytes![
+			publics.chain_id,
+			secrets.amount,
+			secrets.blinding,
+			publics.pubkey
+		]
+		.unwrap();
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
@@ -129,31 +128,35 @@ mod test {
 	}
 	use crate::ark_std::Zero;
 	#[test]
-	fn should_create_nullifier() { 
+	fn should_create_nullifier() {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let chain_id = Fq::zero();
 		let pubkey = Fq::zero();
-		let publics = Public::new(chain_id,pubkey);
-		
+		let publics = Public::new(chain_id, pubkey);
+		let index = Fq::zero();
 		// Since Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![publics.chain_id,secrets.amount, 
-								secrets.blinding, publics.pubkey].unwrap();
+		let inputs_leaf = to_bytes![
+			publics.chain_id,
+			secrets.amount,
+			secrets.blinding,
+			publics.pubkey
+		]
+		.unwrap();
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		
+
 		let commitment = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
 		assert_eq!(leaf, commitment);
-		
+
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
-		let inputs_null = to_bytes![commitment,  secrets.index, secrets.priv_key].unwrap();
+		let inputs_null = to_bytes![commitment, index, secrets.priv_key].unwrap();
 
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_null).unwrap();
-		let nullifier = Leaf::create_nullifier(&secrets, &commitment, 
-			&params,&secrets.index).unwrap();
+		let nullifier = Leaf::create_nullifier(&secrets, &commitment, &params, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 }
