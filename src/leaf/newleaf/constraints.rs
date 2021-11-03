@@ -116,27 +116,6 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 		let index_var=FpVar::new_variable(cs.clone(), || Ok(index), mode)?;
 		Ok(PrivateVar::new(amount_var, blinding_var, priv_key_var, index_var))
 	}
-
-fn new_constant(
-        cs: impl Into<Namespace<F>>,
-        t: impl Borrow<Private<F>>,
-    ) -> Result<Self, SynthesisError> {
-        Self::new_variable(cs, || Ok(t), AllocationMode::Constant)
-    }
-
-fn new_input<T: Borrow<Private<F>>>(
-        cs: impl Into<Namespace<F>>,
-        f: impl FnOnce() -> Result<T, SynthesisError>,
-    ) -> Result<Self, SynthesisError> {
-        Self::new_variable(cs, f, AllocationMode::Input)
-    }
-
-fn new_witness<T: Borrow<Private<F>>>(
-        cs: impl Into<Namespace<F>>,
-        f: impl FnOnce() -> Result<T, SynthesisError>,
-    ) -> Result<Self, SynthesisError> {
-        Self::new_variable(cs, f, AllocationMode::Witness)
-    }
 }
 
 impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
