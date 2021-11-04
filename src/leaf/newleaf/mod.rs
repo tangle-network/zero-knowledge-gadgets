@@ -43,10 +43,10 @@ struct NewLeaf<F: PrimeField, H: CRH> {
 }
 
 impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
+	// Commitment = hash(chain_id, amount, pubKey, blinding)
 	type Leaf = H::Output;
-	// Commitment = hash(amount, blinding, pubKey)
-	type Nullifier = H::Output;
 	// Nullifier = hash(commitment, pathIndices, privKey)
+	type Nullifier = H::Output;
 	type Private = Private<F>;
 	type Public = Public<F>;
 
@@ -56,13 +56,13 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 		Ok(Self::Private::generate(r))
 	}
 
-	// Commits to the values = hash(chain_id, amount, blinding, pubKey)
+	// Commits to the values = hash(chain_id, amount, pubKey, blinding)
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![p.chain_id, s.amount, s.blinding, p.pubkey]?;
+		let bytes = to_bytes![p.chain_id, s.amount, p.pubkey, s.blinding]?;
 		H::evaluate(h, &bytes)
 	}
 
@@ -113,8 +113,8 @@ mod test {
 		let inputs_leaf = to_bytes![
 			publics.chain_id,
 			secrets.amount,
-			secrets.blinding,
-			publics.pubkey
+			publics.pubkey,
+			secrets.blinding
 		]
 		.unwrap();
 
@@ -139,8 +139,8 @@ mod test {
 		let inputs_leaf = to_bytes![
 			publics.chain_id,
 			secrets.amount,
-			secrets.blinding,
-			publics.pubkey
+			publics.pubkey,
+			secrets.blinding
 		]
 		.unwrap();
 

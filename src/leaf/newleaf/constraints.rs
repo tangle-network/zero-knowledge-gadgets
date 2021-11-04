@@ -72,8 +72,8 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG,
 		let mut bytes = Vec::new();
 		bytes.extend(p.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
-		bytes.extend(s.blinding.to_bytes()?);
 		bytes.extend(p.pubkey.to_bytes()?);
+		bytes.extend(s.blinding.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
 
