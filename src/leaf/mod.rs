@@ -40,6 +40,7 @@ pub trait NewLeafCreation<H: CRH>: Sized {
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
+		pubk: &<H as CRH>::Output,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error>;
 

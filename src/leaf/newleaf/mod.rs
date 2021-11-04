@@ -18,12 +18,11 @@ pub struct Private<F: PrimeField> {
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
-	pubkey: F,
 	chain_id: F,
 }
 impl<F: PrimeField> Public<F> {
-	pub fn new(chain_id: F, pubkey: F) -> Self {
-		Self { chain_id, pubkey }
+	pub fn new(chain_id: F) -> Self {
+		Self { chain_id }
 	}
 }
 
@@ -60,9 +59,11 @@ impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
+		pubk: &<H as CRH>::Output,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![p.chain_id, s.amount, p.pubkey, s.blinding]?;
+
+		let bytes = to_bytes![p.chain_id, s.amount, pubk, s.blinding]?;
 		H::evaluate(h, &bytes)
 	}
 
@@ -109,21 +110,24 @@ mod test {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let publics = Public::default();
-		// Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![
-			publics.chain_id,
-			secrets.amount,
-			publics.pubkey,
-			secrets.blinding
-		]
-		.unwrap();
+
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let privkey= to_bytes![secrets.priv_key].unwrap();
+		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
+		// Commitment = hash(chainID, amount, blinding, pubKey)
+		let inputs_leaf = to_bytes![
+			publics.chain_id,
+			secrets.amount,
+			pubkey,
+			secrets.blinding
+		]
+		.unwrap();
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &publics, &pubkey,&params).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
@@ -132,24 +136,25 @@ mod test {
 		let rng = &mut test_rng();
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 		let chain_id = Fq::zero();
-		let pubkey = Fq::zero();
-		let publics = Public::new(chain_id, pubkey);
+		let publics = Public::new(chain_id);
 		let index = Fq::zero();
-		// Since Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![
-			publics.chain_id,
-			secrets.amount,
-			publics.pubkey,
-			secrets.blinding
-		]
-		.unwrap();
+		
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-
+		let privkey= to_bytes![secrets.priv_key].unwrap();
+		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
+		// Since Commitment = hash(chainID, amount, blinding, pubKey)
+		let inputs_leaf = to_bytes![
+			publics.chain_id,
+			secrets.amount,
+			pubkey,
+			secrets.blinding
+		]
+		.unwrap();
 		let commitment = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &publics,&pubkey, &params).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)

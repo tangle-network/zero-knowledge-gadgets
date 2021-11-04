@@ -19,23 +19,20 @@ pub struct PrivateVar<F: PrimeField> {
 
 #[derive(Clone)]
 pub struct PublicVar<F: PrimeField> {
-	pubkey: FpVar<F>,
 	chain_id: FpVar<F>,
 }
 
 impl<F: PrimeField> PublicVar<F> {
 	pub fn default() -> Self {
-		let pubkey = F::zero();
 		let chain_id = F::zero();
 
 		Self {
-			pubkey: ark_r1cs_std::fields::fp::FpVar::Constant(pubkey), // Is public key constant?
 			chain_id: ark_r1cs_std::fields::fp::FpVar::Constant(chain_id),
 		}
 	}
 
-	pub fn new(chain_id: FpVar<F>, pubkey: FpVar<F>) -> Self {
-		Self { pubkey, chain_id }
+	pub fn new(chain_id: FpVar<F>) -> Self {
+		Self { chain_id }
 	}
 }
 
@@ -67,12 +64,13 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG,
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
+		pubkey: &<HG as CRHGadget<H, F>>::OutputVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(p.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
-		bytes.extend(p.pubkey.to_bytes()?);
+		bytes.extend(pubkey.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
@@ -122,8 +120,7 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 		let ns = into_ns.into();
 		let cs = ns.cs();
 		let chain_id = FpVar::new_variable(cs.clone(), || Ok(public.chain_id), mode)?;
-		let pubkey = FpVar::new_variable(cs.clone(), || Ok(public.pubkey), mode)?;
-		Ok(PublicVar::new(chain_id, pubkey))
+		Ok(PublicVar::new(chain_id))
 	}
 }
 
@@ -140,9 +137,11 @@ mod test {
 		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
 	use ark_bls12_381::Fq;
+	use ark_ff::to_bytes;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
-
+	use ark_crypto_primitives::crh::CRH as CRHTrait;
+	use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait};
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;
 
@@ -169,20 +168,26 @@ mod test {
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let chain_id = Fq::one();
-		let pubkey = Fq::one();
 		let index = Fq::one();
-		let public = Public::new(chain_id, pubkey);
+		let public = Public::new(chain_id);
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
+		let privkey = to_bytes![secrets.priv_key].unwrap();
+		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
+
+		let leaf = Leaf::create_leaf(&secrets, &public,&pubkey, &params).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
+		let bytes = to_bytes![secrets.priv_key].unwrap();
+		let privkey_var = Vec::<UInt8<Fq>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
 		let params_var =
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
-		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
+		let pubkey_var = PoseidonCRH3Gadget::evaluate(&params_var, &privkey_var).unwrap();
+
+		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &pubkey_var, &params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();

@@ -71,6 +71,7 @@ pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: N
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
+		pubkey: &<HG as CRHGadget<H, F>>::OutputVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError>;
 
