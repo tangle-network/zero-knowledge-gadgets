@@ -1,2 +1,3 @@
 /target
+/src/circuit/vanchor.rs
 Cargo.lock

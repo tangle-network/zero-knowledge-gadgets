@@ -1,5 +1,5 @@
 use ark_crypto_primitives::{Error, CRH};
-use ark_ff::{to_bytes, ToBytes};
+use ark_ff::{to_bytes, PrimeField, ToBytes};
 use ark_std::{
 	borrow::Borrow,
 	collections::{BTreeMap, BTreeSet},
@@ -98,6 +98,33 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		}
 
 		Ok(root_hash == &prev)
+	}
+
+	pub fn get_index<L: ToBytes, F: PrimeField>(
+		&self,
+		root_hash: &Node<P>,
+		leaf: &L,
+	) -> Result<F, Error> {
+		if !self.check_membership(root_hash, leaf).unwrap() {
+			panic!("leaf is not in the path");
+		}
+
+		let mut prev = hash_leaf::<P, L>(self.leaf_params.borrow(), leaf)?;
+		let mut index = F::zero();
+		let mut twopower = F::one();
+		// Check levels between leaf level and root.
+		for &(ref left_hash, ref right_hash) in &self.path {
+			// Check if the previous hash is for a left node or right node.
+			if &prev == left_hash {
+				index = index;
+			} else {
+				index = index + twopower;
+			}
+			twopower = twopower + twopower;
+			prev = hash_inner_node::<P>(self.inner_params.borrow(), left_hash, right_hash)?;
+		}
+
+		Ok(index)
 	}
 }
 
@@ -465,6 +492,27 @@ mod test {
 		let res = proof.check_membership(&smt.root(), &leaves[0]).unwrap();
 		assert!(res);
 	}
+	#[test]
+	fn should_find_the_index_poseidon() {
+		let rng = &mut test_rng();
+		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+		let index = 2;
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = create_merkle_tree::<_, SMTConfig>(inner_params, leaf_params, &leaves);
+
+		let proof = smt.generate_membership_proof::<{ MiMCSMTConfig::HEIGHT as usize }>(index);
+
+		let res: Fq = proof
+			.get_index(&smt.root(), &leaves[index as usize])
+			.unwrap();
+		let desired_res = Fq::from(index);
+
+		assert_eq!(res, desired_res)
+	}
 
 	use crate::mimc::Rounds as MiMCRounds;
 	use ark_ed_on_bn254::Fq as Bn254Fq;
@@ -547,5 +595,31 @@ mod test {
 
 		let res = proof.check_membership(&smt.root(), &leaves[0]).unwrap();
 		assert!(res);
+	}
+
+	#[test]
+	fn should_find_the_index_mimc() {
+		let rng = &mut test_rng();
+		let params = crate::mimc::MiMCParameters::<Bn254Fq>::new(
+			Bn254Fq::from(0),
+			MiMCRounds220_2::ROUNDS,
+			MiMCRounds220_2::WIDTH,
+			MiMCRounds220_2::WIDTH,
+			crate::utils::get_rounds_mimc_220(),
+		);
+		let inner_params = Rc::new(params);
+		let leaf_params = inner_params.clone();
+		let index = 2;
+		let leaves = vec![Bn254Fq::rand(rng), Bn254Fq::rand(rng), Bn254Fq::rand(rng)];
+		let smt = create_merkle_tree::<_, MiMCSMTConfig>(inner_params, leaf_params, &leaves);
+
+		let proof = smt.generate_membership_proof::<{ MiMCSMTConfig::HEIGHT as usize }>(index);
+
+		let res: Fq = proof
+			.get_index(&smt.root(), &leaves[index as usize])
+			.unwrap();
+		let desired_res = Fq::from(index);
+
+		assert_eq!(res, desired_res)
 	}
 }
