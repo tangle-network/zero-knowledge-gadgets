@@ -14,7 +14,7 @@ use core::borrow::Borrow;
 pub struct PrivateVar<F: PrimeField> {
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
-	priv_key: FpVar<F>,
+	pub priv_key: FpVar<F>,
 }
 
 #[derive(Clone)]
