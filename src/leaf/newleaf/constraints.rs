@@ -137,11 +137,10 @@ mod test {
 		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
 	use ark_bls12_381::Fq;
+	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
 	use ark_ff::to_bytes;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
-	use ark_crypto_primitives::crh::CRH as CRHTrait;
-	use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait};
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;
 
@@ -174,7 +173,7 @@ mod test {
 		let privkey = to_bytes![secrets.priv_key].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &public,&pubkey, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &pubkey, &params).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -187,7 +186,8 @@ mod test {
 				.unwrap();
 		let pubkey_var = PoseidonCRH3Gadget::evaluate(&params_var, &privkey_var).unwrap();
 
-		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &pubkey_var, &params_var).unwrap();
+		let leaf_var =
+			LeafGadget::create_leaf(&secrets_var, &public_var, &pubkey_var, &params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();

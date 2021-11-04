@@ -1,6 +1,4 @@
-use crate::{
-	leaf::newleaf,
-};
+use crate::leaf::newleaf;
 use ark_crypto_primitives::CRH;
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_std::marker::PhantomData;
