@@ -135,7 +135,7 @@ where
 	) -> Result<(), SynthesisError> {
 		self.sums_var = FpVar::<F>::zero();
 		self.inputNullifier = nullifier_var;
-        let mut inUtxoHasher_var_out : Vec<LG::LeafVar> = Vec::with_capacity(10);
+		let mut inUtxoHasher_var_out: Vec<LG::LeafVar> = Vec::with_capacity(10);
 		for tx in 0..N {
 			self.inKeyPair_var[tx] = KCG::new(&hg, &secrets_var[tx]).unwrap();
 			self.inPrivateKey_var[tx] = self.inKeyPair_var[tx].private_key_var().unwrap();
