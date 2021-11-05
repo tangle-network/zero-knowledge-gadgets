@@ -36,8 +36,8 @@ pub struct VanchorCircuit<
 	const M: usize,
 > {
 	arbitrary_input: A::Input,
-	leaf_private_inputs: L::Private,// amount, blinding, privkey
-	leaf_public_inputs: L::Public, // pubkey, chain_id
+	leaf_private_inputs: L::Private, // amount, blinding, privkey
+	leaf_public_inputs: L::Public,   // pubkey, chain_id
 	set_private_inputs: S::Private,
 	root_set: [F; M],
 	hasher_params: H::Parameters,
@@ -197,18 +197,28 @@ where
 		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
 		let index_var = FpVar::<F>::new_witness(cs.clone(), || Ok(index)).unwrap();
-		
+
 		let prk = LG::get_privat_key(&leaf_private_var).unwrap();
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(prk.to_bytes()?);
 		//let bytes = to_bytes![prk.to_bytes()].unwrap();
-		//let privkey_var = Vec::<UInt8<F>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
+		//let privkey_var = Vec::<UInt8<F>>::new_witness(cs.clone(), ||
+		// Ok(bytes)).unwrap();
 		let pubkey_var = HG::evaluate(&hasher_params_var, &bytes).unwrap();
 
 		// Creating the leaf and checking the membership inside the tree
-		let vanchor_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &pubkey_var, &hasher_params_var)?;
-		let vanchor_nullifier = LG::create_nullifier(&leaf_private_var,&vanchor_leaf 
-			,&hasher_params_var,&index_var)?;
+		let vanchor_leaf = LG::create_leaf(
+			&leaf_private_var,
+			&leaf_public_var,
+			&pubkey_var,
+			&hasher_params_var,
+		)?;
+		let vanchor_nullifier = LG::create_nullifier(
+			&leaf_private_var,
+			&vanchor_leaf,
+			&hasher_params_var,
+			&index_var,
+		)?;
 		let is_member =
 			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &vanchor_leaf)?;
 		// Check if target root is in set
@@ -229,7 +239,7 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::setup::{bridge::*, common::*};// TODO: Create a setup for Vanchor
+	use crate::setup::{bridge::*, common::*}; // TODO: Create a setup for Vanchor
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;

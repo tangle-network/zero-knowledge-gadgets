@@ -88,9 +88,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG,
 		HG::evaluate(h, &bytes)
 	}
 
-	fn get_privat_key(
-		s: &Self::PrivateVar,
-	) -> Result<FpVar<F>, SynthesisError>{
+	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.priv_key.clone())
 	}
 }

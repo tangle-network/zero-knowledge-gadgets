@@ -82,7 +82,5 @@ pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: N
 		indices: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
-	fn get_privat_key(
-		s: &Self::PrivateVar,
-	) -> Result<FpVar<F>, SynthesisError>;
+	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
 }
