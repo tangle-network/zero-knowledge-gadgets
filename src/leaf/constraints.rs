@@ -6,7 +6,7 @@ use ark_relations::r1cs::SynthesisError;
 use ark_ff::Field;
 use core::fmt::Debug;
 
-use crate::leaf::{LeafCreation, NewLeafCreation};
+use crate::leaf::{LeafCreation, VanchorLeafCreation};
 
 pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>>:
 	Sized
@@ -44,8 +44,12 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 	) -> Result<Self::NullifierVar, SynthesisError>;
 }
 
-pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: NewLeafCreation<H>>:
-	Sized
+pub trait VanchorLeafCreationGadget<
+	F: PrimeField,
+	H: CRH,
+	HG: CRHGadget<H, F>,
+	L: VanchorLeafCreation<H>,
+>: Sized
 {
 	type LeafVar: EqGadget<F>
 		+ ToBytesGadget<F>
@@ -83,4 +87,5 @@ pub trait NewLeafCreationGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: N
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
 	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
+	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
 }

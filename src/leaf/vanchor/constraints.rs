@@ -1,6 +1,6 @@
-use super::{NewLeaf, Private, Public};
+use super::{Private, Public, VanchorLeaf};
 use crate::{
-	leaf::{NewLeafCreation, NewLeafCreationGadget},
+	leaf::{VanchorLeafCreation, VanchorLeafCreationGadget},
 	Vec,
 };
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
@@ -46,15 +46,21 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct NewLeafGadget<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>, L: NewLeafCreation<H1>> {
+pub struct VanchorLeafGadget<
+	F: PrimeField,
+	H1: CRH,
+	HG1: CRHGadget<H1, F>,
+	L: VanchorLeafCreation<H1>,
+> {
 	field: PhantomData<F>,
 	hasher1: PhantomData<H1>,
 	hasher_gadget1: PhantomData<HG1>,
 	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG, NewLeaf<F, H>>
-	for NewLeafGadget<F, H, HG, NewLeaf<F, H>>
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
+	VanchorLeafCreationGadget<F, H, HG, VanchorLeaf<F, H>>
+	for VanchorLeafGadget<F, H, HG, VanchorLeaf<F, H>>
 {
 	type LeafVar = HG::OutputVar;
 	type NullifierVar = HG::OutputVar;
@@ -80,7 +86,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG,
 		c: &Self::LeafVar,
 		h: &HG::ParametersVar,
 		i: &FpVar<F>,
-	) -> Result<Self::LeafVar, SynthesisError> {
+	) -> Result<Self::NullifierVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(c.to_bytes()?);
 		bytes.extend(i.to_bytes()?);
@@ -90,6 +96,10 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG,
 
 	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.priv_key.clone())
+	}
+
+	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
+		Ok(s.amount.clone())
 	}
 }
 
@@ -158,8 +168,8 @@ mod test {
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
 
-	type Leaf = NewLeaf<Fq, PoseidonCRH3>;
-	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
+	type Leaf = VanchorLeaf<Fq, PoseidonCRH3>;
+	type LeafGadget = VanchorLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	use crate::ark_std::One;
 	#[test]
 	fn should_crate_new_leaf_constraints() {

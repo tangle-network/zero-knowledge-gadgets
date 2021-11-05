@@ -1,5 +1,5 @@
-pub mod keypairs;
-pub mod vanchor;
+pub mod keypair;
+//pub mod vanchor;
 
 //#[cfg(feature = "r1cs")]
 pub mod constraints;

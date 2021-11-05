@@ -5,7 +5,7 @@ use ark_std::{hash::Hash, rand::Rng};
 pub mod basic;
 pub mod bridge;
 pub mod mixer;
-pub mod newleaf;
+pub mod vanchor;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -30,7 +30,7 @@ pub trait LeafCreation<H: CRH>: Sized {
 	) -> Result<Self::Nullifier, Error>;
 }
 
-pub trait NewLeafCreation<H: CRH>: Sized {
+pub trait VanchorLeafCreation<H: CRH>: Sized {
 	type Leaf: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Private: Clone;
 	type Public: Clone + Default;

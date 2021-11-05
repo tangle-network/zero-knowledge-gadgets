@@ -1,4 +1,4 @@
-use crate::leaf::NewLeafCreation;
+use crate::leaf::VanchorLeafCreation;
 use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes};
 
@@ -36,12 +36,12 @@ impl<F: PrimeField> Private<F> {
 	}
 }
 
-pub struct NewLeaf<F: PrimeField, H: CRH> {
+pub struct VanchorLeaf<F: PrimeField, H: CRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
+impl<F: PrimeField, H: CRH> VanchorLeafCreation<H> for VanchorLeaf<F, H> {
 	// Commitment = hash(chain_id, amount, pubKey, blinding)
 	type Leaf = H::Output;
 	// Nullifier = hash(commitment, pathIndices, privKey)
@@ -102,7 +102,7 @@ mod test {
 	}
 
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
-	type Leaf = NewLeaf<Fq, PoseidonCRH3>;
+	type Leaf = VanchorLeaf<Fq, PoseidonCRH3>;
 
 	#[test]
 	fn should_create_leaf() {

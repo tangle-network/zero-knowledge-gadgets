@@ -1,6 +1,6 @@
 use crate::{
 	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
-	leaf::{constraints::NewLeafCreationGadget, NewLeafCreation},
+	leaf::{constraints::VanchorLeafCreationGadget, VanchorLeafCreation},
 	merkle_tree::{
 		constraints::{NodeVar, PathVar},
 		Config as MerkleConfig, Path,
@@ -27,8 +27,8 @@ pub struct VanchorCircuit<
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
 	// Type of leaf creation
-	L: NewLeafCreation<H>,
-	LG: NewLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<H>,
+	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	// Set of merkle roots
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
@@ -43,7 +43,6 @@ pub struct VanchorCircuit<
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
 	index: F, // TODO: Temporary, we may need to compute it from path
-	root: <C::H as CRH>::Output,
 	nullifier_hash: L::Nullifier,
 	_arbitrary_gadget: PhantomData<AG>,
 	_hasher: PhantomData<H>,
@@ -68,8 +67,8 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: NewLeafCreation<H>,
-	LG: NewLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<H>,
+	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
@@ -82,7 +81,6 @@ where
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
 		index: F,
-		root: <C::H as CRH>::Output,
 		nullifier_hash: L::Nullifier,
 	) -> Self {
 		Self {
@@ -94,7 +92,6 @@ where
 			hasher_params,
 			path,
 			index,
-			root,
 			nullifier_hash,
 			_arbitrary_gadget: PhantomData,
 			_hasher: PhantomData,
@@ -121,8 +118,8 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: NewLeafCreation<H>,
-	LG: NewLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<H>,
+	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
@@ -135,7 +132,6 @@ where
 		let hasher_params = self.hasher_params.clone();
 		let path = self.path.clone();
 		let index = self.index.clone();
-		let root = self.root.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
 		Self::new(
 			arbitrary_input,
@@ -146,7 +142,6 @@ where
 			hasher_params,
 			path,
 			index,
-			root,
 			nullifier_hash,
 		)
 	}
@@ -163,8 +158,8 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: NewLeafCreation<H>,
-	LG: NewLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<H>,
+	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
@@ -177,7 +172,7 @@ where
 		let hasher_params = self.hasher_params;
 		let path = self.path;
 		let index = self.index;
-		let root = self.root;
+		let root = root_set[0];//TODO fix this
 		let nullifier_hash = self.nullifier_hash;
 
 		// Generating vars
@@ -185,7 +180,7 @@ where
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
+		let root_var = HG::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 		// TODO: publicAmount
 

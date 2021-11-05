@@ -5,14 +5,14 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::SynthesisError;
 use ark_std::marker::PhantomData;
 
-use crate::leaf::{NewLeafCreation, NewLeafCreationGadget};
+use crate::leaf::{VanchorLeafCreation, VanchorLeafCreationGadget};
 
 #[derive(Clone)]
-pub struct KeypairsVar<
+pub struct KeypairVar<
 	H: CRH,
 	HG: CRHGadget<H, F>,
-	L: NewLeafCreation<H>,
-	LG: NewLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<H>,
+	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	F: PrimeField,
 > {
 	pubkey_var: <HG as CRHGadget<H, F>>::OutputVar,
@@ -21,24 +21,33 @@ pub struct KeypairsVar<
 	_leaf_creation_gadget: PhantomData<LG>,
 }
 
-pub trait KeypairsCreationGadget<H: CRH, HG: CRHGadget<H, F>, F: PrimeField, L: NewLeafCreation<H>, LG: NewLeafCreationGadget<F, H, HG, L>>: Sized {
-	fn public_key_var(
+pub trait KeypairCreationGadget<
+	H: CRH,
+	HG: CRHGadget<H, F>,
+	F: PrimeField,
+	L: VanchorLeafCreation<H>,
+	LG: VanchorLeafCreationGadget<F, H, HG, L>,
+>: Sized
+{
+	fn new(
 		h: &HG::ParametersVar,
-		secrets: &<LG as NewLeafCreationGadget<F, H, HG, L>>::PrivateVar,
+		secrets: &<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar,
 	) -> Result<Self, SynthesisError>;
+	fn public_key_var(&self) -> Result<<HG as CRHGadget<H, F>>::OutputVar, SynthesisError>;
+	fn private_key_var(&self) -> Result<FpVar<F>, SynthesisError>;
 }
 
 impl<
 		H: CRH,
 		HG: CRHGadget<H, F>,
 		F: PrimeField,
-		L: NewLeafCreation<H>,
-		LG: NewLeafCreationGadget<F, H, HG, L>,
-	> KeypairsCreationGadget<H, HG, F, L, LG> for KeypairsVar<H, HG, L, LG, F>
+		L: VanchorLeafCreation<H>,
+		LG: VanchorLeafCreationGadget<F, H, HG, L>,
+	> KeypairCreationGadget<H, HG, F, L, LG> for KeypairVar<H, HG, L, LG, F>
 {
-	fn public_key_var(
+	fn new(
 		h: &HG::ParametersVar,
-		secrets: &<LG as NewLeafCreationGadget<F, H, HG, L>>::PrivateVar,
+		secrets: &<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar,
 	) -> Result<Self, SynthesisError> {
 		let privkey_var = LG::get_privat_key(&secrets).unwrap();
 		let mut bytes = Vec::<UInt8<F>>::new();
@@ -50,7 +59,14 @@ impl<
 			_leaf_creation: PhantomData,
 			_leaf_creation_gadget: PhantomData,
 		})
-		
+	}
+
+	fn public_key_var(&self) -> Result<<HG as CRHGadget<H, F>>::OutputVar, SynthesisError> {
+		Ok(self.pubkey_var.clone())
+	}
+
+	fn private_key_var(&self) -> Result<FpVar<F>, SynthesisError> {
+		Ok(self.privkey_var.clone())
 	}
 }
 
@@ -59,9 +75,9 @@ impl<
 mod test {
 	use super::*;
 	use crate::{
-		leaf::newleaf::{
-			constraints::{NewLeafGadget, PrivateVar},
-			NewLeaf,
+		leaf::vanchor::{
+			constraints::{PrivateVar, VanchorLeafGadget},
+			VanchorLeaf,
 		},
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
@@ -93,10 +109,10 @@ mod test {
 	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
 
-	type Leaf = NewLeaf<Fq, PoseidonCRH3>;
-	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
+	type Leaf = VanchorLeaf<Fq, PoseidonCRH3>;
+	type LeafGadget = VanchorLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
 	#[test]
-	fn should_crate_new_public_key() {
+	fn should_crate_new_public_key_var() {
 		let rng = &mut test_rng();
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
@@ -116,12 +132,12 @@ mod test {
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 		let pubkey_var = PoseidonCRH3Gadget::evaluate(&params_var, &privkey_var).unwrap();
-		let keypairs =
-			KeypairsVar::<PoseidonCRH3, PoseidonCRH3Gadget, Leaf, LeafGadget, Fq>::public_key_var(
-				&params_var,
-				&secrets_var,
-			).unwrap();
-		let new_pubkey_var = keypairs.pubkey_var;
+		let keypair = KeypairVar::<PoseidonCRH3, PoseidonCRH3Gadget, Leaf, LeafGadget, Fq>::new(
+			&params_var,
+			&secrets_var,
+		)
+		.unwrap();
+		let new_pubkey_var = keypair.pubkey_var;
 		let res = pubkey_var.is_eq(&new_pubkey_var).unwrap();
 
 		// Check equality
