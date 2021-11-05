@@ -197,10 +197,13 @@ where
 		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
 		let index_var = FpVar::<F>::new_witness(cs.clone(), || Ok(index)).unwrap();
-	
-		let bytes = to_bytes![leaf_private.privkey].unwrap();
-		let privkey_var = Vec::<UInt8<F>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
-		let pubkey_var = HG::evaluate(&hasher_params_var, &privkey_var).unwrap();
+		
+		let prk = LG::get_privat_key(&leaf_private_var).unwrap();
+		let mut bytes = Vec::<UInt8<F>>::new();
+		bytes.extend(prk.to_bytes()?);
+		//let bytes = to_bytes![prk.to_bytes()].unwrap();
+		//let privkey_var = Vec::<UInt8<F>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
+		let pubkey_var = HG::evaluate(&hasher_params_var, &bytes).unwrap();
 
 		// Creating the leaf and checking the membership inside the tree
 		let vanchor_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &pubkey_var, &hasher_params_var)?;

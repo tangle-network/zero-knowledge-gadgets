@@ -87,6 +87,12 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG,
 		bytes.extend(s.priv_key.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
+
+	fn get_privat_key(
+		s: &Self::PrivateVar,
+	) -> Result<FpVar<F>, SynthesisError>{
+		Ok(s.priv_key.clone())
+	}
 }
 
 impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
