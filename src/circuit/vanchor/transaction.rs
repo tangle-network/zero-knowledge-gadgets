@@ -110,7 +110,7 @@ where
 	KC: KeypairCreation<H, F>,
 	KCG: KeypairCreationGadget<H, HG, F, L, LG>,
 {
-	//TODO: Verify correctness of transaction inputs
+	//TODO: Verify correctness of transaction inputs with native values
 	pub fn verify_input(&mut self, hasher_params: H::Parameters, secrets: Vec<Private<F>>) {
 		//self.inKeyPair = Keypair();
 		for tx in 0..N {
@@ -121,7 +121,7 @@ where
 		//...
 	}
 
-	//TODO: Circuit to Verify correctness of transaction inputs
+	//TODO: Verify correctness of transaction inputs using constraints
 	pub fn verify_input_var(
 		&mut self,
 		hg: HG::ParametersVar,
