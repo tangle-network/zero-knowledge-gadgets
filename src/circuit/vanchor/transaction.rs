@@ -15,6 +15,8 @@ use crate::{
 	Vec,
 };
 
+use super::{constraints::{KeypairsCreationGadget, KeypairsVar}, keypairs::{Keypairs, KeypairsCreation}};
+
 pub struct TransactionGadget<
 	F: PrimeField,
 	// Arbitrary data constraints
@@ -33,10 +35,12 @@ pub struct TransactionGadget<
 	// Set of merkle roots
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
+	KP: KeypairsCreation<H, F>,
+	KPG: KeypairsCreationGadget<H, HG, F, L, LG>,
 	const N: usize,
 	const M: usize,
 > {
-	publicAmount: Vec<F>, //publicAmount: Vec<FpVar<F>>,
+	publicAmount: Vec<F>,
 	extDataHash: Vec<A>,
 
 	inputNullifier: Vec<H::Output>,
@@ -70,10 +74,12 @@ pub struct TransactionGadget<
 	_set: PhantomData<S>,
 	_set_gadget: PhantomData<SG>,
 	_merkle_config: PhantomData<C>,
+	_keypairs: PhantomData<KP>,
+    _keypairsgadet: PhantomData<KPG>,
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	TransactionGadget<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, KP, KPG, const N: usize, const M: usize>
+	TransactionGadget<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, KP, KPG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
@@ -87,9 +93,15 @@ where
 	LG: NewLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
+	KP: KeypairsCreation<H, F>,
+    KPG: KeypairsCreationGadget<H, HG, F, L, LG>,
+
 {
 	//TODO: Verify correctness of transaction inputs
-
+	pub fn verify_input(&self) {
+		// /self.inKeyPair = Vec::<>;
+		for tx in 0..N {}
+	}
 	//TODO: Verify correctness of transaction outputs
 
 	//TODO: Check that there are no same nullifiers among all inputs

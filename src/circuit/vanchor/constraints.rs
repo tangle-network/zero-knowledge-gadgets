@@ -2,6 +2,7 @@ use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 
+use ark_relations::r1cs::SynthesisError;
 use ark_std::marker::PhantomData;
 
 use crate::leaf::{NewLeafCreation, NewLeafCreationGadget};
@@ -20,28 +21,36 @@ pub struct KeypairsVar<
 	_leaf_creation_gadget: PhantomData<LG>,
 }
 
+pub trait KeypairsCreationGadget<H: CRH, HG: CRHGadget<H, F>, F: PrimeField, L: NewLeafCreation<H>, LG: NewLeafCreationGadget<F, H, HG, L>>: Sized {
+	fn public_key_var(
+		h: &HG::ParametersVar,
+		secrets: &<LG as NewLeafCreationGadget<F, H, HG, L>>::PrivateVar,
+	) -> Result<Self, SynthesisError>;
+}
+
 impl<
 		H: CRH,
 		HG: CRHGadget<H, F>,
+		F: PrimeField,
 		L: NewLeafCreation<H>,
 		LG: NewLeafCreationGadget<F, H, HG, L>,
-		F: PrimeField,
-	> KeypairsVar<H, HG, L, LG, F>
+	> KeypairsCreationGadget<H, HG, F, L, LG> for KeypairsVar<H, HG, L, LG, F>
 {
-	pub fn public_key_var(
-		h: HG::ParametersVar,
-		secrets: <LG as NewLeafCreationGadget<F, H, HG, L>>::PrivateVar,
-	) -> Self {
+	fn public_key_var(
+		h: &HG::ParametersVar,
+		secrets: &<LG as NewLeafCreationGadget<F, H, HG, L>>::PrivateVar,
+	) -> Result<Self, SynthesisError> {
 		let privkey_var = LG::get_privat_key(&secrets).unwrap();
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(privkey_var.to_bytes().unwrap());
 		let pubkey_var = HG::evaluate(&h, &bytes).unwrap();
-		KeypairsVar {
+		Ok(Self {
 			pubkey_var,
 			privkey_var,
 			_leaf_creation: PhantomData,
 			_leaf_creation_gadget: PhantomData,
-		}
+		})
+		
 	}
 }
 
@@ -109,9 +118,9 @@ mod test {
 		let pubkey_var = PoseidonCRH3Gadget::evaluate(&params_var, &privkey_var).unwrap();
 		let keypairs =
 			KeypairsVar::<PoseidonCRH3, PoseidonCRH3Gadget, Leaf, LeafGadget, Fq>::public_key_var(
-				params_var,
-				secrets_var,
-			);
+				&params_var,
+				&secrets_var,
+			).unwrap();
 		let new_pubkey_var = keypairs.pubkey_var;
 		let res = pubkey_var.is_eq(&new_pubkey_var).unwrap();
 
