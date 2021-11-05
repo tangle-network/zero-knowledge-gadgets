@@ -114,7 +114,7 @@ mod test {
 			);
 		let new_pubkey_var = keypairs.pubkey_var;
 		let res = pubkey_var.is_eq(&new_pubkey_var).unwrap();
-		
+
 		// Check equality
 		assert!(res.value().unwrap());
 		assert_eq!(pubkey, new_pubkey_var.value().unwrap());

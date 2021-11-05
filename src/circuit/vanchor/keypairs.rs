@@ -1,38 +1,34 @@
-use crate::leaf::{newleaf};
+use crate::leaf::newleaf;
 use ark_crypto_primitives::CRH;
 use ark_ff::{fields::PrimeField, to_bytes};
-use ark_std::marker::PhantomData;
 
 #[derive(Default, Clone)]
 pub struct Keypairs<H: CRH, F: PrimeField> {
 	pubkey: <H as CRH>::Output,
-	data: PhantomData<F>,
+	privkey: F,
 }
 impl<H: CRH, F: PrimeField> Keypairs<H, F> {
 	pub fn public_key(h: &H::Parameters, secrets: &newleaf::Private<F>) -> Self {
-		let bytes = to_bytes![secrets.priv_key].unwrap();
+		let privkey = secrets.priv_key;
+		let bytes = to_bytes![privkey].unwrap();
 		let pubkey = H::evaluate(&h, &bytes).unwrap();
-		Keypairs {
-			pubkey,
-			data: PhantomData,
-		}
+		Keypairs { pubkey, privkey }
 	}
 }
-
 
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use crate::{circuit::vanchor::keypairs::Keypairs, leaf::{newleaf::NewLeaf,NewLeafCreation}, poseidon::{
-			
-			sbox::PoseidonSbox,
-			PoseidonParameters, Rounds, CRH,
-		}, utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5}};
+	use crate::{
+		circuit::vanchor::keypairs::Keypairs,
+		leaf::{newleaf::NewLeaf, NewLeafCreation},
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
+	};
 	use ark_bls12_381::Fq;
-	use ark_crypto_primitives::crh::{CRH as CRHTrait};
+	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;
 
-	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;
@@ -59,9 +55,9 @@ mod test {
 		let privkey = to_bytes![secrets.priv_key].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 
-		let keypairs = Keypairs::<PoseidonCRH3,Fq>::public_key(&params, &secrets);
+		let keypairs = Keypairs::<PoseidonCRH3, Fq>::public_key(&params, &secrets);
 		let new_pubkey = keypairs.pubkey;
-		
-		assert_eq!(new_pubkey,pubkey)
+
+		assert_eq!(new_pubkey, pubkey)
 	}
 }
