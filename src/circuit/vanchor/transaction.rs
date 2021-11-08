@@ -203,7 +203,7 @@ where
 
 		Ok(())
 	}
-	
+
 	//Similar to Circom
 	pub fn verify_input_var_embeded(
 		&mut self,
@@ -214,34 +214,34 @@ where
 		let mut in_utxo_hasher_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
 		let mut nullifier_hash: Vec<HG::OutputVar> = Vec::with_capacity(N);
 
-		let mut inkeypair : Vec<KeypairVar<H,HG,L,LG,F>> = Vec::with_capacity(N);
+		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
 		for tx in 0..N {
-			inkeypair[tx] = KeypairCreationGadget::<H, HG,F, L, LG>::new_from_key(
+			inkeypair[tx] = KeypairCreationGadget::<H, HG, F, L, LG>::new_from_key(
 				&hg4,
 				&self.in_private_key_var[tx],
-			).unwrap();
+			)
+			.unwrap();
 			// Computing the hash
 			let mut bytes = Vec::new();
 			bytes.extend(self.chain_id_var.to_bytes()?);
 			bytes.extend(self.in_amount_var[tx].to_bytes()?);
 			bytes.extend(inkeypair[tx].public_key_var().unwrap().to_bytes()?);
 			bytes.extend(self.in_blinding_var[tx].to_bytes()?);
-			
+
 			in_utxo_hasher_var[tx] = HG::evaluate(&hg4, &bytes)?;
 			// End of computing the hash
-			
+
 			// Nullifier
 			let mut bytes = Vec::new();
 			bytes.extend(in_utxo_hasher_var[tx].to_bytes()?);
 			bytes.extend(self.in_path_indices_var[tx].to_bytes()?);
 			bytes.extend(self.in_private_key_var[tx].to_bytes()?);
-		
+
 			nullifier_hash[tx] = HG::evaluate(&hg4, &bytes)?;
 
 			nullifier_hash[tx].enforce_equal(&self.in_nullifier_var[tx])?;
 			// add the roots and diffs signals to the bridge circuit
-			// TODO: 
-
+			// TODO:
 
 			sums_ins_var = sums_ins_var + self.out_amount_var[tx].clone();
 		}
@@ -249,7 +249,10 @@ where
 	}
 
 	//TODO: Verify correctness of transaction outputs
-	pub fn verify_output_var(&mut self, hg4: HG::ParametersVar) -> Result<FpVar<F>, SynthesisError> {
+	pub fn verify_output_var(
+		&mut self,
+		hg4: HG::ParametersVar,
+	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
 		let mut in_utxo_hasher_var_out: Vec<HG::OutputVar> = Vec::with_capacity(N);
 		for tx in 0..N {
@@ -267,29 +270,32 @@ where
 			//...
 		}
 		// Check that amount fits into 248 bits to prevent overflow
-		// TODO: 
+		// TODO:
 		Ok(sums_outs_var)
 	}
 
 	//TODO: Check that there are no same nullifiers among all inputs
 	pub fn verify_no_sam_nul(&self) -> Result<(), SynthesisError> {
 		let mut same_nullifiers: Vec<HG::OutputVar> = Vec::with_capacity(2);
-			for i in 0..N{
-				for j in i..N{
-					same_nullifiers[0] = self.in_nullifier_var[i].clone();
-					same_nullifiers[1] = self.in_nullifier_var[j].clone();
-					same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
-				}
+		for i in 0..N {
+			for j in i..N {
+				same_nullifiers[0] = self.in_nullifier_var[i].clone();
+				same_nullifiers[1] = self.in_nullifier_var[j].clone();
+				same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
 			}
-			Ok(())
-
+		}
+		Ok(())
 	}
+
 	//TODO: Verify amount invariant
-	pub fn verify_input_invariant(&self,sum_ins_var: FpVar<F>,sum_outs_var: FpVar<F>)-> Result<(), SynthesisError>{
-		let res = sum_ins_var+self.public_amount_var.clone();
+	pub fn verify_input_invariant(
+		&self,
+		sum_ins_var: FpVar<F>,
+		sum_outs_var: FpVar<F>,
+	) -> Result<(), SynthesisError> {
+		let res = sum_ins_var + self.public_amount_var.clone();
 		res.enforce_equal(&sum_outs_var).unwrap();
 		Ok(())
-
 	}
 	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
 }
