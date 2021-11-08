@@ -11,7 +11,7 @@ use crate::leaf::{VanchorLeafCreation, VanchorLeafCreationGadget};
 pub struct KeypairVar<
 	H: CRH,
 	HG: CRHGadget<H, F>,
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H, F>,
 	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	F: PrimeField,
 > {
@@ -25,7 +25,7 @@ pub trait KeypairCreationGadget<
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	F: PrimeField,
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H, F>,
 	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 >: Sized
 {
@@ -41,7 +41,7 @@ impl<
 		H: CRH,
 		HG: CRHGadget<H, F>,
 		F: PrimeField,
-		L: VanchorLeafCreation<H>,
+		L: VanchorLeafCreation<H, F>,
 		LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	> KeypairCreationGadget<H, HG, F, L, LG> for KeypairVar<H, HG, L, LG, F>
 {

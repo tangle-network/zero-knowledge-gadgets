@@ -48,7 +48,7 @@ pub trait VanchorLeafCreationGadget<
 	F: PrimeField,
 	H: CRH,
 	HG: CRHGadget<H, F>,
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H, F>,
 >: Sized
 {
 	type LeafVar: EqGadget<F>
@@ -75,7 +75,6 @@ pub trait VanchorLeafCreationGadget<
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		pubkey: &<HG as CRHGadget<H, F>>::OutputVar,
 		h: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError>;
 
@@ -87,5 +86,11 @@ pub trait VanchorLeafCreationGadget<
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
 	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
+
+	fn gen_public_key(
+		s: &Self::PrivateVar,	
+		h: &HG::ParametersVar,
+	) -> Result<HG::OutputVar, SynthesisError>;
+
 	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
 }

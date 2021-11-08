@@ -30,7 +30,7 @@ pub trait LeafCreation<H: CRH>: Sized {
 	) -> Result<Self::Nullifier, Error>;
 }
 
-pub trait VanchorLeafCreation<H: CRH>: Sized {
+pub trait VanchorLeafCreation<H: CRH, F: PrimeField>: Sized {
 	type Leaf: ToBytes + Clone + Eq + core::fmt::Debug + Hash + Default;
 	type Private: Clone;
 	type Public: Clone + Default;
@@ -40,14 +40,22 @@ pub trait VanchorLeafCreation<H: CRH>: Sized {
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
-		pubk: &<H as CRH>::Output,
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error>;
 
-	fn create_nullifier<F: PrimeField>(
+	fn create_nullifier(
 		s: &Self::Private,
 		c: &Self::Leaf,
 		h: &H::Parameters,
 		f: &F,
 	) -> Result<Self::Nullifier, Error>;
+	
+	fn get_private_key(s: &Self::Private) -> Result<F, Error>;
+
+	fn gen_public_key(
+		s: &Self::Private,
+		h: &H::Parameters
+		) -> Result<H::Output, Error>;
+
+
 }
