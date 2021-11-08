@@ -33,6 +33,8 @@ pub trait KeypairCreationGadget<
 		h: &HG::ParametersVar,
 		secrets: &<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar,
 	) -> Result<Self, SynthesisError>;
+
+	fn new_from_key(h: &HG::ParametersVar, privkey: &FpVar<F>) -> Result<Self, SynthesisError>;
 	fn public_key_var(&self) -> Result<<HG as CRHGadget<H, F>>::OutputVar, SynthesisError>;
 	fn private_key_var(&self) -> Result<FpVar<F>, SynthesisError>;
 }
@@ -50,6 +52,19 @@ impl<
 		secrets: &<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar,
 	) -> Result<Self, SynthesisError> {
 		let privkey_var = LG::get_private_key(&secrets).unwrap();
+		let mut bytes = Vec::<UInt8<F>>::new();
+		bytes.extend(privkey_var.to_bytes().unwrap());
+		let pubkey_var = HG::evaluate(&h, &bytes).unwrap();
+		Ok(Self {
+			pubkey_var,
+			privkey_var,
+			_leaf_creation: PhantomData,
+			_leaf_creation_gadget: PhantomData,
+		})
+	}
+
+	fn new_from_key(h: &HG::ParametersVar, privkey: &FpVar<F>) -> Result<Self, SynthesisError> {
+		let privkey_var = privkey.clone();
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(privkey_var.to_bytes().unwrap());
 		let pubkey_var = HG::evaluate(&h, &bytes).unwrap();

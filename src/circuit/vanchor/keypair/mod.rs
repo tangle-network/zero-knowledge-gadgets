@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::leaf::{vanchor, VanchorLeafCreation};
+use crate::leaf::VanchorLeafCreation;
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{fields::PrimeField, to_bytes};
 
