@@ -166,6 +166,7 @@ where
 	SG: SetGadget<F, S, M>,
 {
 	//The Old way!
+	/*
 	pub fn verify_input_var(
 		&mut self,
 		hg4: HG::ParametersVar,
@@ -203,7 +204,7 @@ where
 
 		Ok(())
 	}
-
+	*/
 	//Similar to Circom
 	pub fn verify_input_var_embeded(
 		&mut self,
