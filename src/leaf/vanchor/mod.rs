@@ -62,7 +62,7 @@ impl<F: PrimeField, H: CRH> VanchorLeafCreation<H, F> for VanchorLeaf<F, H> {
 		h: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
 		let bytes = to_bytes![s.priv_key]?;
-		let pubk= H::evaluate(h, &bytes).unwrap();
+		let pubk = H::evaluate(h, &bytes).unwrap();
 		let bytes = to_bytes![p.chain_id, s.amount, pubk, s.blinding]?;
 		H::evaluate(h, &bytes)
 	}
@@ -77,15 +77,15 @@ impl<F: PrimeField, H: CRH> VanchorLeafCreation<H, F> for VanchorLeaf<F, H> {
 		let bytes = to_bytes![c, f, s.priv_key]?;
 		H::evaluate(h, &bytes)
 	}
+
 	fn get_private_key(s: &Self::Private) -> Result<F, Error> {
 		Ok(s.priv_key.clone())
 	}
-	fn gen_public_key(s: &Self::Private, h: &H::Parameters) -> Result<H::Output, Error>{
+
+	fn gen_public_key(s: &Self::Private, h: &H::Parameters) -> Result<H::Output, Error> {
 		let bytes = to_bytes![s.priv_key]?;
 		H::evaluate(h, &bytes)
 	}
-
-
 }
 
 #[cfg(feature = "default_poseidon")]

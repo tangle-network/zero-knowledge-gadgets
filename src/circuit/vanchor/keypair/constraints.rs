@@ -49,7 +49,7 @@ impl<
 		h: &HG::ParametersVar,
 		secrets: &<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar,
 	) -> Result<Self, SynthesisError> {
-		let privkey_var = LG::get_privat_key(&secrets).unwrap();
+		let privkey_var = LG::get_private_key(&secrets).unwrap();
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(privkey_var.to_bytes().unwrap());
 		let pubkey_var = HG::evaluate(&h, &bytes).unwrap();

@@ -49,13 +49,8 @@ pub trait VanchorLeafCreation<H: CRH, F: PrimeField>: Sized {
 		h: &H::Parameters,
 		f: &F,
 	) -> Result<Self::Nullifier, Error>;
-	
+
 	fn get_private_key(s: &Self::Private) -> Result<F, Error>;
 
-	fn gen_public_key(
-		s: &Self::Private,
-		h: &H::Parameters
-		) -> Result<H::Output, Error>;
-
-
+	fn gen_public_key(s: &Self::Private, h: &H::Parameters) -> Result<H::Output, Error>;
 }

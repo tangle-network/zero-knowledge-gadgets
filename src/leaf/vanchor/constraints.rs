@@ -74,7 +74,8 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes_p = Vec::new();
 		bytes_p.extend(s.priv_key.to_bytes()?);
-		let pubkey= HG::evaluate(h, &bytes_p)?;	
+		let pubkey = HG::evaluate(h, &bytes_p)?;
+
 		let mut bytes = Vec::new();
 		bytes.extend(p.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
@@ -96,17 +97,17 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 		HG::evaluate(h, &bytes)
 	}
 
-	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
+	fn get_private_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.priv_key.clone())
 	}
-	
+
 	fn gen_public_key(
-		s: &Self::PrivateVar,	
+		s: &Self::PrivateVar,
 		h: &HG::ParametersVar,
-	) -> Result<HG::OutputVar, SynthesisError>{
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(s.priv_key.to_bytes()?);
-		HG::evaluate(h, &bytes)		
+		HG::evaluate(h, &bytes)
 	}
 
 	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
@@ -204,8 +205,7 @@ mod test {
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 
-		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
+		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();

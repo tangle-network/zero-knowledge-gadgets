@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::leaf::{vanchor,VanchorLeafCreation};
+use crate::leaf::{vanchor, VanchorLeafCreation};
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{fields::PrimeField, to_bytes};
 
@@ -8,25 +8,31 @@ use ark_ff::{fields::PrimeField, to_bytes};
 pub mod constraints;
 
 #[derive(Default, Clone)]
-pub struct Keypair<H: CRH, F: PrimeField,L: VanchorLeafCreation<H, F>> {
+pub struct Keypair<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>> {
 	pubkey: <H as CRH>::Output,
 	privkey: F,
 	_d: PhantomData<L>,
 }
 
-pub trait KeypairCreation<H: CRH, F: PrimeField,L: VanchorLeafCreation<H, F>>: Sized {
+pub trait KeypairCreation<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>>: Sized {
 	fn new(h: &H::Parameters, secrets: &L::Private) -> Result<Self, Error>;
 	fn public_key(&self) -> Result<<H as CRH>::Output, Error>;
 	fn private_key(&self) -> Result<F, Error>;
 	fn public_key_raw(h: &H::Parameters, secrets: &F) -> Result<Self, Error>;
 }
 
-impl<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>> KeypairCreation<H, F,L> for Keypair<H, F,L> {
+impl<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>> KeypairCreation<H, F, L>
+	for Keypair<H, F, L>
+{
 	fn new(h: &H::Parameters, secrets: &L::Private) -> Result<Self, Error> {
 		let privkey = L::get_private_key(secrets).unwrap();
 		let bytes = to_bytes![privkey].unwrap();
 		let pubkey = H::evaluate(&h, &bytes).unwrap();
-		Ok(Keypair { pubkey, privkey,	_d: PhantomData	})
+		Ok(Keypair {
+			pubkey,
+			privkey,
+			_d: PhantomData,
+		})
 	}
 
 	fn public_key(&self) -> Result<<H as CRH>::Output, Error> {
@@ -41,7 +47,11 @@ impl<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>> KeypairCreation<H, F,L
 		let privkey = *privkey;
 		let bytes = to_bytes![privkey].unwrap();
 		let pubkey = H::evaluate(&h, &bytes).unwrap();
-		Ok(Keypair { pubkey, privkey,	_d: PhantomData	})
+		Ok(Keypair {
+			pubkey,
+			privkey,
+			_d: PhantomData,
+		})
 	}
 }
 

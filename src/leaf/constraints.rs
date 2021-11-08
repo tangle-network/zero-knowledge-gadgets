@@ -85,10 +85,10 @@ pub trait VanchorLeafCreationGadget<
 		indices: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
-	fn get_privat_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
+	fn get_private_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
 
 	fn gen_public_key(
-		s: &Self::PrivateVar,	
+		s: &Self::PrivateVar,
 		h: &HG::ParametersVar,
 	) -> Result<HG::OutputVar, SynthesisError>;
 

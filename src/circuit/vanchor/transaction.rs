@@ -20,12 +20,8 @@ use crate::{
 use ark_bls12_381::Fq;
 use ark_crypto_primitives::{CRHGadget, CRH};
 use ark_ff::PrimeField;
-use ark_r1cs_std::{ToBytesGadget, fields::fp::FpVar, prelude::EqGadget};
+use ark_r1cs_std::{fields::fp::FpVar, prelude::EqGadget, ToBytesGadget};
 use ark_relations::r1cs::SynthesisError;
-
-use super::{
-	keypair::{Keypair, KeypairCreation, constraints::{KeypairCreationGadget, KeypairVar}},
-};
 
 pub struct TransactionGadget<
 	F: PrimeField,
@@ -48,27 +44,27 @@ pub struct TransactionGadget<
 	const N: usize,
 	const M: usize,
 > {
-	publicAmount: F,
-	extDataHash: A,
+	public_amount: F,
+	ext_data_hash: A,
 
-	inputNullifier: Vec<LG::NullifierVar>,
-	inputAmount: Vec<F>,
-	inPrivateKey: Vec<F>,
-	inPrivateKey_var: Vec<FpVar<F>>,
-	inBlinding: Vec<F>,
-	inPathIndices: Vec<F>,
-	inPathElements: Vec<Path<C, N>>,
+	input_nullifier: Vec<LG::NullifierVar>,
+	input_amount: Vec<F>,
+	in_private_key: Vec<F>,
+	in_private_key_var: Vec<FpVar<F>>,
+	in_blinding: Vec<F>,
+	in_path_indices: Vec<F>,
+	in_path_elements: Vec<Path<C, N>>,
 
-	outputCommitment: Vec<FpVar<F>>,
-	outChainIDVar: Vec<FpVar<F>>,
-	outAmountVar: Vec<FpVar<F>>,
-	outPubkeyVar: Vec<FpVar<F>>,
-	outBlindingVar: Vec<FpVar<F>>,
+	output_commitment: Vec<HG::OutputVar>,
+	out_chain_idvar: Vec<FpVar<F>>,
+	out_amount_var: Vec<FpVar<F>>,
+	out_pubkey_var: Vec<FpVar<F>>,
+	out_blinding_var: Vec<FpVar<F>>,
 
-	chainID: F,
+	chain_id: F,
 	root_set: [F; M],
 	diffs: [Vec<F>; M],
-	
+
 	_arbitrary_gadget: PhantomData<AG>,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
@@ -102,7 +98,6 @@ where
 	//TODO: Verify correctness of transaction inputs using constraints
 	pub fn verify_input_var(
 		&mut self,
-		hg: HG::ParametersVar,
 		hg4: HG::ParametersVar,
 		hg3: HG::ParametersVar,
 		secrets_var: Vec<<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar>,
@@ -111,68 +106,50 @@ where
 		indices: Vec<FpVar<F>>,
 		// ...
 	) -> Result<(), SynthesisError> {
-		let mut sumsIns_var = FpVar::<F>::zero();
+		let mut sums_ins_var = FpVar::<F>::zero();
 		//let public_key :Vec<H::Output> =Vec::with_capacity(N);
 		//let private_key :Vec<F> =Vec::with_capacity(N);
-		self.inputNullifier = nullifier_var;
-		let mut inUtxoHasher_var_out: Vec<LG::LeafVar> = Vec::with_capacity(10);
+		self.input_nullifier = nullifier_var;
+		let mut in_utxo_hasher_var_out: Vec<LG::LeafVar> = Vec::with_capacity(10);
 		for tx in 0..N {
-			inUtxoHasher_var_out[tx] =
+			in_utxo_hasher_var_out[tx] =
 				LG::create_leaf(&secrets_var[tx], &public_var[tx], &hg4).unwrap();
 			let nullifier_hasher_out = LG::create_nullifier(
 				&secrets_var[tx],
-				&inUtxoHasher_var_out[tx],
+				&in_utxo_hasher_var_out[tx],
 				&hg3,
 				&indices[tx],
 			)
 			.unwrap();
-			nullifier_hasher_out.enforce_equal(&self.inputNullifier[tx])?;
+			nullifier_hasher_out.enforce_equal(&self.input_nullifier[tx])?;
 
 			let amount = LG::get_amount(&secrets_var[tx])?;
-		// We don't need to range check input amounts, since all inputs are valid UTXOs that
-        // were already checked as outputs in the previous transaction (or zero amount UTXOs that don't
-        // need to be checked either).
-			sumsIns_var = sumsIns_var + amount;
+			// We don't need to range check input amounts, since all inputs are valid UTXOs
+			// that were already checked as outputs in the previous transaction (or zero
+			// amount UTXOs that don't need to be checked either).
+			sums_ins_var = sums_ins_var + amount;
 			//...
 		}
 
 		Ok(())
 	}
 
-
-	
-
 	//TODO: Verify correctness of transaction outputs
-	pub fn verify_output_var(
-		&mut self,
-		hg: HG::ParametersVar,
-		hg4: HG::ParametersVar,
-		hg3: HG::ParametersVar,
-		secrets_var: Vec<<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar>,
-		public_var: Vec<<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PublicVar>,
-		outChainID: FpVar<F>,
-		outputCommitnents: Vec<LG::LeafVar>,
-		indices: Vec<FpVar<F>>,
-		// ...
-	) -> Result<(), SynthesisError> {
-		let mut sumsOuts_var = FpVar::<F>::zero();
-		let mut inUtxoHasher_var_out: Vec<HG::OutputVar> = Vec::with_capacity(N);
+	pub fn verify_output_var(&mut self, hg4: HG::ParametersVar) -> Result<(), SynthesisError> {
+		let mut sums_outs_var = FpVar::<F>::zero();
+		let mut in_utxo_hasher_var_out: Vec<HG::OutputVar> = Vec::with_capacity(N);
 		for tx in 0..N {
 			// Computing the hash
 			let mut bytes = Vec::new();
-			bytes.extend(self.outChainIDVar[tx].to_bytes()?);
-			bytes.extend(self.outAmountVar[tx].to_bytes()?);
-			bytes.extend(self.outPubkeyVar[tx].to_bytes()?);
-			bytes.extend(self.outBlindingVar[tx].to_bytes()?);
-			inUtxoHasher_var_out[tx]=  HG::evaluate(&hg4, &bytes)?;
+			bytes.extend(self.out_chain_idvar[tx].to_bytes()?);
+			bytes.extend(self.out_amount_var[tx].to_bytes()?);
+			bytes.extend(self.out_pubkey_var[tx].to_bytes()?);
+			bytes.extend(self.out_blinding_var[tx].to_bytes()?);
+			in_utxo_hasher_var_out[tx] = HG::evaluate(&hg4, &bytes)?;
 			// End of computing the hash
-	
+			in_utxo_hasher_var_out[tx].enforce_equal(&self.output_commitment[tx])?;
 
-			let amount = LG::get_amount(&secrets_var[tx])?;
-		// We don't need to range check input amounts, since all inputs are valid UTXOs that
-        // were already checked as outputs in the previous transaction (or zero amount UTXOs that don't
-        // need to be checked either).
-		sumsOuts_var = sumsOuts_var + amount;
+			sums_outs_var = sums_outs_var + self.out_amount_var[tx].clone();
 			//...
 		}
 
