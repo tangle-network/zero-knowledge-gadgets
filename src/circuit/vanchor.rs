@@ -42,7 +42,7 @@ pub struct VanchorCircuit<
 	arbitrary_input: A::Input,
 	leaf_private_inputs: Vec<L::Private>, // amount, blinding, privkey
 	leaf_public_inputs: Vec<L::Public>,   // pubkey, chain_id
-	set_private_inputs: [Vec<S::Private>;M], // diffs
+	set_private_inputs: [Vec<S::Private>; M], // diffs
 	root_set: [F; M],
 	hasher_params: H::Parameters,
 	path: Vec<Path<C, N>>,
@@ -89,7 +89,7 @@ where
 		arbitrary_input: A::Input,
 		leaf_private_inputs: Vec<L::Private>,
 		leaf_public_inputs: Vec<L::Public>,
-		set_private_inputs: [Vec<S::Private>;M],
+		set_private_inputs: [Vec<S::Private>; M],
 		root_set: [F; M],
 		hasher_params: H::Parameters,
 		path: Vec<Path<C, N>>,
@@ -135,7 +135,7 @@ where
 		&self,
 		hg4: &HG::ParametersVar,
 		secrets: &Vec<LG::PrivateVar>,
-		public: &Vec<LG::PublicVar>,//TODO: this doesn't need to be Vec
+		public: &Vec<LG::PublicVar>, //TODO: this doesn't need to be Vec
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
 		in_nullifier_var: &Vec<LG::NullifierVar>,
@@ -168,7 +168,7 @@ where
 			// add the roots and diffs signals to the bridge circuit
 			// TODO:
 
-			sums_ins_var = sums_ins_var + out_amount_var[tx].clone();// TODo: inamount
+			sums_ins_var = sums_ins_var + out_amount_var[tx].clone(); // TODo: inamount
 		}
 		Ok(sums_ins_var)
 	}
@@ -205,7 +205,10 @@ where
 	}
 
 	//TODO: Check that there are no same nullifiers among all inputs
-	pub fn verify_no_same_nul(&self, in_nullifier_var: &Vec<LG::NullifierVar>) -> Result<(), SynthesisError> {
+	pub fn verify_no_same_nul(
+		&self,
+		in_nullifier_var: &Vec<LG::NullifierVar>,
+	) -> Result<(), SynthesisError> {
 		let mut same_nullifiers: Vec<LG::NullifierVar> = Vec::with_capacity(2);
 		for i in 0..N {
 			for j in i..N {
@@ -248,8 +251,8 @@ where
 	SG: SetGadget<F, S, M>,
 {
 	fn clone(&self) -> Self {
-		let public_amount= self.public_amount.clone();
-		let ext_data_hash= self.ext_data_hash.clone();
+		let public_amount = self.public_amount.clone();
+		let ext_data_hash = self.ext_data_hash.clone();
 		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
@@ -307,13 +310,13 @@ where
 		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding, private key
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
-		let set_private = self.set_private_inputs.clone();
-		let root_set = self.root_set.clone();
+												   //let set_private = self.set_private_inputs.clone(); // TODO
+												   //let root_set = self.root_set.clone(); // TODO
 		let hasher_params = self.hasher_params.clone();
 		let path = self.path.clone();
 		let index = self.index.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
-		
+
 		let output_commitment = self.output_commitment.clone();
 		let out_chain_id = self.out_chain_id.clone();
 		let out_amount = self.out_amount.clone();
@@ -324,123 +327,111 @@ where
 		// Public inputs
 		let mut leaf_public_var: Vec<LG::PublicVar> = Vec::with_capacity(N);
 		let mut i = 0;
-		for lp in leaf_public{
+		for lp in leaf_public {
 			leaf_public_var[i] = LG::PublicVar::new_input(cs.clone(), || Ok(lp))?;
-			i+=1;
+			i += 1;
 		}
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
-		//let chain_id_var = LG::get_chain_id(&leaf_public_var).unwrap();
-		//let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), ||
-		// Ok(nullifier_hash))?;
-		let mut in_nullifier_var : Vec<LG::NullifierVar> = Vec::with_capacity(N);
+
+		let mut in_nullifier_var: Vec<LG::NullifierVar> = Vec::with_capacity(N);
 		let mut i = 0;
-		for nh in nullifier_hash{
+		for nh in nullifier_hash {
 			in_nullifier_var[i] = LG::NullifierVar::new_input(cs.clone(), || Ok(nh))?;
-			i+=1;
+			i += 1;
 		}
 		//let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
-		// TODO: publicAmount
 
 		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
 
 		// Private inputs
-		let mut leaf_private_var : Vec<LG::PrivateVar> = Vec::with_capacity(N);
+		let mut leaf_private_var: Vec<LG::PrivateVar> = Vec::with_capacity(N);
 		let mut i = 0;
-		for lp in leaf_private{
+		for lp in leaf_private {
 			leaf_private_var[i] = LG::PrivateVar::new_input(cs.clone(), || Ok(lp))?;
-			i+=1;
-		}
-		//let amount_var = LG::get_amount(&leaf_private_var).unwrap();
-		//let in_amount_var = vec![amount_var];
-		//let blinding_var = LG::get_blinding(&leaf_private_var).unwrap();
-		//let in_blinding_var = vec![blinding_var];
-
-		//let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
-
-		let mut in_path_elements_var : Vec<PathVar<F, C, HGT, LHGT, N>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for p in path{
-			in_path_elements_var[i] = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(p))?;
-			i+=1;
+			i += 1;
 		}
 
-		
-		let mut in_path_indices_var : Vec<FpVar<F>> = Vec::with_capacity(N);
+		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, N>> = Vec::with_capacity(N);
 		let mut i = 0;
-		for j in index{
+		for p in path {
+			in_path_elements_var[i] =
+				PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(p))?;
+			i += 1;
+		}
+
+		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N);
+		let mut i = 0;
+		for j in index {
 			in_path_indices_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(j))?;
-			i+=1;
+			i += 1;
 		}
-		//let prvk = LG::get_private_key(&leaf_private_var).unwrap();
-		//let mut bytes = Vec::<UInt8<F>>::new();
-		//bytes.extend(prvk.to_bytes()?);
-		//let bytes = to_bytes![prk.to_bytes()].unwrap();
-		//let privkey_var = Vec::<UInt8<F>>::new_witness(cs.clone(), ||
-		// Ok(bytes)).unwrap();
-		//let privkey_var = vec![prvk];
-		//let pubkey_var = HG::evaluate(&hasher_params_var, &bytes).unwrap();
 
-		let mut out_amount_var : Vec<FpVar<F>> = Vec::with_capacity(N);
+		let mut out_amount_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut i = 0;
-		for oa in out_amount{
+		for oa in out_amount {
 			out_amount_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(oa))?;
-			i+=1;
+			i += 1;
 		}
 
-		let mut out_chain_id_var : Vec<FpVar<F>> = Vec::with_capacity(N);
+		let mut out_chain_id_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut i = 0;
-		for oci in out_chain_id{
+		for oci in out_chain_id {
 			out_chain_id_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(oci))?;
-			i+=1;
+			i += 1;
 		}
 
-		let mut out_pubkey_var : Vec<FpVar<F>> = Vec::with_capacity(N);
+		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut i = 0;
-		for opk in out_pubkey{
+		for opk in out_pubkey {
 			out_pubkey_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(opk))?;
-			i+=1;
+			i += 1;
 		}
 
-		let mut out_blinding_var : Vec<FpVar<F>> = Vec::with_capacity(N);
+		let mut out_blinding_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut i = 0;
-		for ob in out_blinding{
+		for ob in out_blinding {
 			out_blinding_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(ob))?;
-			i+=1;
+			i += 1;
 		}
 
-		let mut output_commitment_var : Vec<HG::OutputVar> = Vec::with_capacity(N);
+		let mut output_commitment_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
 		let mut i = 0;
-		for oc in output_commitment{
+		for oc in output_commitment {
 			output_commitment_var[i] = HG::OutputVar::new_witness(cs.clone(), || Ok(oc))?;
-			i+=1;
+			i += 1;
 		}
-		let sum_ins_var=self.verify_input_var(
-			&hasher_params_var,
-			&leaf_private_var,
-			&leaf_public_var,
-			&in_path_indices_var,
-			&in_path_elements_var,
-			&in_nullifier_var,
-			&out_amount_var,
-		).unwrap();
+		let sum_ins_var = self
+			.verify_input_var(
+				&hasher_params_var,
+				&leaf_private_var,
+				&leaf_public_var,
+				&in_path_indices_var,
+				&in_path_elements_var,
+				&in_nullifier_var,
+				&out_amount_var,
+			)
+			.unwrap();
 
-		println!("{:?}",sum_ins_var); //TODO: Remove
+		println!("{:?}", sum_ins_var); //TODO: Remove
 
-		let sum_outs_var=self.verify_output_var(
-			&hasher_params_var, 
-			&output_commitment_var, 
-			&out_chain_id_var, 
-			&out_amount_var, 
-			&out_pubkey_var, 
-			&out_blinding_var
-		).unwrap();
+		let sum_outs_var = self
+			.verify_output_var(
+				&hasher_params_var,
+				&output_commitment_var,
+				&out_chain_id_var,
+				&out_amount_var,
+				&out_pubkey_var,
+				&out_blinding_var,
+			)
+			.unwrap();
 
-		println!("{:?}",sum_outs_var); //TODO: Remove
+		println!("{:?}", sum_outs_var); //TODO: Remove
 		self.verify_no_same_nul(&in_nullifier_var).unwrap();
 
-		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var).unwrap();
+		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
+			.unwrap();
 		// Check if target root is in set
 		// Constraining arbitrary inputs
 		AG::constrain(&arbitrary_input_var)?;
