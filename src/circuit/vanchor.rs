@@ -384,8 +384,6 @@ where
 			)
 			.unwrap();
 
-		println!("{:?}", sum_ins_var); //TODO: Remove
-
 		let sum_outs_var = self
 			.verify_output_var(
 				&hasher_params_var,
@@ -396,14 +394,16 @@ where
 				&out_blinding_var,
 			)
 			.unwrap();
-
-		println!("{:?}", sum_outs_var); //TODO: Remove
+    	
+		// check that there are no same nullifiers among all inputs
 		self.verify_no_same_nul(&in_nullifier_var).unwrap();
 
+		// verify amount invariant
 		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
 			.unwrap();
 		// Check if target root is in set
-		// Constraining arbitrary inputs
+		
+    	// optional safety constraint to make sure extDataHash cannot be changed
 		AG::constrain(&arbitrary_input_var)?;
 
 		Ok(())
