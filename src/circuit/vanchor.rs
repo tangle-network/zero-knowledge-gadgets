@@ -325,20 +325,12 @@ where
 
 		// Generating vars
 		// Public inputs
+
 		let mut leaf_public_var: Vec<LG::PublicVar> = Vec::with_capacity(N);
-		let mut i = 0;
-		for lp in leaf_public {
-			leaf_public_var[i] = LG::PublicVar::new_input(cs.clone(), || Ok(lp))?;
-			i += 1;
-		}
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 
 		let mut in_nullifier_var: Vec<LG::NullifierVar> = Vec::with_capacity(N);
-		let mut i = 0;
-		for nh in nullifier_hash {
-			in_nullifier_var[i] = LG::NullifierVar::new_input(cs.clone(), || Ok(nh))?;
-			i += 1;
-		}
+
 		//let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
@@ -347,61 +339,39 @@ where
 
 		// Private inputs
 		let mut leaf_private_var: Vec<LG::PrivateVar> = Vec::with_capacity(N);
-		let mut i = 0;
-		for lp in leaf_private {
-			leaf_private_var[i] = LG::PrivateVar::new_input(cs.clone(), || Ok(lp))?;
-			i += 1;
-		}
-
 		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, N>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for p in path {
-			in_path_elements_var[i] =
-				PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(p))?;
-			i += 1;
-		}
-
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for j in index {
-			in_path_indices_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(j))?;
-			i += 1;
-		}
 
+		// Outputs
 		let mut out_amount_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for oa in out_amount {
-			out_amount_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(oa))?;
-			i += 1;
-		}
-
 		let mut out_chain_id_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for oci in out_chain_id {
-			out_chain_id_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(oci))?;
-			i += 1;
-		}
-
 		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for opk in out_pubkey {
-			out_pubkey_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(opk))?;
-			i += 1;
-		}
-
 		let mut out_blinding_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut i = 0;
-		for ob in out_blinding {
-			out_blinding_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(ob))?;
-			i += 1;
+		let mut output_commitment_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
+
+		for i in 0..N {
+			leaf_public_var[i] =
+				LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public[i].clone()))?;
+
+			leaf_private_var[i] =
+				LG::PrivateVar::new_input(cs.clone(), || Ok(leaf_private[i].clone()))?;
+			in_nullifier_var[i] =
+				LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash[i].clone()))?;
+
+			in_path_elements_var[i] =
+				PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path[i].clone()))?;
+			in_path_indices_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(index[i].clone()))?;
+
+			out_amount_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(out_amount[i].clone()))?;
+			out_chain_id_var[i] =
+				FpVar::<F>::new_witness(cs.clone(), || Ok(out_chain_id[i].clone()))?;
+			out_pubkey_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(out_pubkey[i].clone()))?;
+			out_blinding_var[i] =
+				FpVar::<F>::new_witness(cs.clone(), || Ok(out_blinding[i].clone()))?;
+			output_commitment_var[i] =
+				HG::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
 		}
 
-		let mut output_commitment_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
-		let mut i = 0;
-		for oc in output_commitment {
-			output_commitment_var[i] = HG::OutputVar::new_witness(cs.clone(), || Ok(oc))?;
-			i += 1;
-		}
 		let sum_ins_var = self
 			.verify_input_var(
 				&hasher_params_var,
