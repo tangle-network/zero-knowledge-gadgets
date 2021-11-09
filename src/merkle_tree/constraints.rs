@@ -219,7 +219,6 @@ where
 		Ok(previous_hash)
 	}
 
-
 	pub fn get_index<L: ToBytesGadget<F>>(
 		&self,
 		root: &NodeVar<F, P, HG, LHG>,

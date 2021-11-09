@@ -133,9 +133,9 @@ where
 
 	pub fn verify_input_var(
 		&self,
-		hg4: &HG::ParametersVar,
-		secrets: &Vec<LG::PrivateVar>,
-		public: &Vec<LG::PublicVar>, //TODO: this doesn't need to be Vec
+		hasher_params_var: &HG::ParametersVar,
+		leaf_private_var: &Vec<LG::PrivateVar>,
+		leaf_public_var: &Vec<LG::PublicVar>, //TODO: this doesn't need to be Vec
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
 		in_nullifier_var: &Vec<LG::NullifierVar>,
@@ -148,26 +148,30 @@ where
 		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
 		for tx in 0..N {
 			inkeypair[tx] = KeypairCreationGadget::<H, HG, F, L, LG>::new_from_key(
-				&hg4,
-				&LG::get_private_key(&secrets[tx]).unwrap(),
+				&hasher_params_var,
+				&LG::get_private_key(&leaf_private_var[tx]).unwrap(),
 			)
 			.unwrap();
 			// Computing the hash
-			in_utxo_hasher_var[tx] = LG::create_leaf(&secrets[tx], &public[tx], &hg4)?;
+			in_utxo_hasher_var[tx] = LG::create_leaf(
+				&leaf_private_var[tx],
+				&leaf_public_var[tx],
+				&hasher_params_var,
+			)?;
 			// End of computing the hash
 
 			// Nullifier
 			nullifier_hash[tx] = LG::create_nullifier(
-				&secrets[tx],
+				&leaf_private_var[tx],
 				&in_utxo_hasher_var[tx],
-				&hg4,
+				&hasher_params_var,
 				&in_path_indices_var[tx],
 			)?;
 
 			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
 			// add the roots and diffs signals to the vanchor circuit
 			// TODO:
-			in_amounttx = LG::get_amount(&secrets[tx]).unwrap();
+			in_amounttx = LG::get_amount(&leaf_private_var[tx]).unwrap();
 			sums_ins_var = sums_ins_var + in_amounttx; // TODo: inamount
 		}
 		Ok(sums_ins_var)
@@ -176,7 +180,7 @@ where
 	//TODO: Verify correctness of transaction outputs
 	pub fn verify_output_var(
 		&self,
-		hg4: &HG::ParametersVar,
+		hasher_params_var: &HG::ParametersVar,
 		output_commitment_var: &Vec<HG::OutputVar>,
 		out_chain_id_var: &Vec<FpVar<F>>,
 		out_amount_var: &Vec<FpVar<F>>,
@@ -192,7 +196,7 @@ where
 			bytes.extend(out_amount_var[tx].to_bytes()?);
 			bytes.extend(out_pubkey_var[tx].to_bytes()?);
 			bytes.extend(out_blinding_var[tx].to_bytes()?);
-			in_utxo_hasher_var_out[tx] = HG::evaluate(&hg4, &bytes)?;
+			in_utxo_hasher_var_out[tx] = HG::evaluate(&hasher_params_var, &bytes)?;
 			// End of computing the hash
 			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
 
@@ -383,7 +387,7 @@ where
 			)
 			.unwrap();
 
-   		// verify correctness of transaction outputs
+		// verify correctness of transaction outputs
 		let sum_outs_var = self
 			.verify_output_var(
 				&hasher_params_var,
@@ -394,7 +398,7 @@ where
 				&out_blinding_var,
 			)
 			.unwrap();
-    	
+
 		// check that there are no same nullifiers among all inputs
 		self.verify_no_same_nul(&in_nullifier_var).unwrap();
 
@@ -403,14 +407,13 @@ where
 			.unwrap();
 		// Check if target root is in set
 
-    	// optional safety constraint to make sure extDataHash cannot be changed
+		// optional safety constraint to make sure extDataHash cannot be changed
 		AG::constrain(&arbitrary_input_var)?;
 
 		Ok(())
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
-#[cfg(test)]
-mod test {
-}
+//#[cfg(feature = "default_poseidon")]
+//#[cfg(test)]
+//mod test {}

@@ -127,12 +127,8 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		Ok(index)
 	}
 
-
 	/// Return hash of root computed by the path
-	pub fn root_hash<L: ToBytes>(
-		&self,
-		leaf: &L,
-	) -> Result<Node<P>, Error> {
+	pub fn root_hash<L: ToBytes>(&self, leaf: &L) -> Result<Node<P>, Error> {
 		if self.path.len() != P::HEIGHT as usize {
 			panic!("path.len !=  P::HEIGHT");
 		}
