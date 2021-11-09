@@ -139,11 +139,11 @@ where
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
 		in_nullifier_var: &Vec<LG::NullifierVar>,
-		out_amount_var: &Vec<FpVar<F>>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
 		let mut in_utxo_hasher_var: Vec<LG::LeafVar> = Vec::with_capacity(N);
 		let mut nullifier_hash: Vec<LG::NullifierVar> = Vec::with_capacity(N);
+		let mut in_amounttx: FpVar<F>;
 
 		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
 		for tx in 0..N {
@@ -165,10 +165,10 @@ where
 			)?;
 
 			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
-			// add the roots and diffs signals to the bridge circuit
+			// add the roots and diffs signals to the vanchor circuit
 			// TODO:
-
-			sums_ins_var = sums_ins_var + out_amount_var[tx].clone(); // TODo: inamount
+			in_amounttx = LG::get_amount(&secrets[tx]).unwrap();
+			sums_ins_var = sums_ins_var + in_amounttx; // TODo: inamount
 		}
 		Ok(sums_ins_var)
 	}
@@ -325,7 +325,6 @@ where
 
 		// Generating vars
 		// Public inputs
-
 		let mut leaf_public_var: Vec<LG::PublicVar> = Vec::with_capacity(N);
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 
@@ -372,6 +371,7 @@ where
 				HG::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
 		}
 
+		// verify correctness of transaction inputs
 		let sum_ins_var = self
 			.verify_input_var(
 				&hasher_params_var,
@@ -380,10 +380,10 @@ where
 				&in_path_indices_var,
 				&in_path_elements_var,
 				&in_nullifier_var,
-				&out_amount_var,
 			)
 			.unwrap();
 
+   		// verify correctness of transaction outputs
 		let sum_outs_var = self
 			.verify_output_var(
 				&hasher_params_var,
@@ -402,7 +402,7 @@ where
 		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
 			.unwrap();
 		// Check if target root is in set
-		
+
     	// optional safety constraint to make sure extDataHash cannot be changed
 		AG::constrain(&arbitrary_input_var)?;
 
@@ -413,251 +413,4 @@ where
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use super::*;
-	use crate::setup::{bridge::*, common::*}; // TODO: Create a setup for Vanchor
-	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-	use ark_ff::UniformRand;
-	use ark_groth16::Groth16;
-	use ark_snark::SNARK;
-	use ark_std::test_rng;
-
-	// merkle proof path legth
-	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
-	pub const TEST_N: usize = 30;
-	pub const TEST_M: usize = 2;
-
-	#[test]
-	fn setup_and_prove_vanchor_groth16() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) =
-			setup_random_circuit_x5::<_, BlsFr, TEST_N, TEST_M>(rng, curve);
-
-		let (pk, vk) =
-			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
-
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
-	}
-
-	#[should_panic]
-	#[test]
-	fn should_fail_with_invalid_public_inputs() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) =
-			setup_random_circuit_x5::<_, BlsFr, TEST_N, TEST_M>(rng, curve);
-
-		type GrothSetup = Groth16<Bls12_381>;
-
-		let (pk, vk) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = GrothSetup::prove(&pk, circuit, rng).unwrap();
-
-		// Without chain_id and nullifier
-		let pi = public_inputs[2..].to_vec();
-		let res = GrothSetup::verify(&vk, &pi, &proof).unwrap();
-		assert!(res);
-	}
-
-	#[should_panic]
-	#[test]
-	fn should_fail_with_invalid_root() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let chain_id = BlsFr::rand(rng);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::rand(rng);
-		let refund = BlsFr::rand(rng);
-		let commitment = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) =
-			setup_leaf_x5(chain_id, &params5, rng);
-
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
-		let roots = [root; TEST_M];
-		let set_private_inputs = setup_set(&root, &roots);
-
-		let circuit = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			set_private_inputs,
-			roots,
-			params5,
-			path,
-			root,
-			nullifier_hash,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
-		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots);
-		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.commitment);
-		let (pk, vk) =
-			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
-	}
-
-	#[should_panic]
-	#[test]
-	fn should_fail_with_invalid_set() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let chain_id = BlsFr::rand(rng);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::rand(rng);
-		let refund = BlsFr::rand(rng);
-		let commitment = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) =
-			setup_leaf_x5(chain_id, &params5, rng);
-
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
-		let mut roots = [BlsFr::rand(rng); TEST_M];
-		roots[0] = root;
-		let set_private_inputs = setup_set(&root, &roots);
-
-		let circuit = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			set_private_inputs,
-			roots.clone(),
-			params5,
-			path,
-			root,
-			nullifier_hash,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
-		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots);
-		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.commitment);
-		let (pk, vk) =
-			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
-	}
-
-	#[should_panic]
-	#[test]
-	fn should_fail_with_invalid_leaf() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let chain_id = BlsFr::rand(rng);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::rand(rng);
-		let refund = BlsFr::rand(rng);
-		let commitment = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, _, nullifier_hash) = setup_leaf_x5(chain_id, &params5, rng);
-		let leaf = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
-		let mut roots = [BlsFr::rand(rng); TEST_M];
-		roots[0] = root;
-		let set_private_inputs = setup_set(&root, &roots);
-
-		let circuit = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			set_private_inputs,
-			roots.clone(),
-			params5,
-			path,
-			root,
-			nullifier_hash,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
-		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots);
-		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.commitment);
-		let (pk, vk) =
-			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
-	}
-
-	#[should_panic]
-	#[test]
-	fn should_fail_with_invalid_nullifier() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let chain_id = BlsFr::rand(rng);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::rand(rng);
-		let refund = BlsFr::rand(rng);
-		let commitment = BlsFr::rand(rng);
-		let (leaf_private, leaf_public, leaf, _) = setup_leaf_x5(chain_id, &params5, rng);
-		let nullifier_hash = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
-		let mut roots = [BlsFr::rand(rng); TEST_M];
-		roots[0] = root;
-		let set_private_inputs = setup_set(&root, &roots);
-
-		let circuit = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			set_private_inputs,
-			roots.clone(),
-			params5,
-			path,
-			root,
-			nullifier_hash,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
-		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&roots);
-		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.commitment);
-		let (pk, vk) =
-			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
-	}
 }

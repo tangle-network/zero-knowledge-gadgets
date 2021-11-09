@@ -179,6 +179,47 @@ where
 		root.is_eq(&previous_hash)
 	}
 
+	pub fn root_hash<L: ToBytesGadget<F>>(
+		&self,
+		leaf: L,
+	) -> Result<NodeVar<F, P, HG, LHG>, SynthesisError> {
+		assert_eq!(self.path.len(), P::HEIGHT as usize);
+		// Check that the hash of the given leaf matches the leaf hash in the membership
+		// proof.
+		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), &leaf)?;
+
+		// Check if leaf is one of the bottom-most siblings.
+		let leaf_is_left = leaf_hash.is_eq(&self.path[0].0)?;
+
+		leaf_hash.enforce_equal(&NodeVar::conditionally_select(
+			&leaf_is_left,
+			&self.path[0].0,
+			&self.path[0].1,
+		)?)?;
+
+		// Check levels between leaf level and root.
+		let mut previous_hash = leaf_hash;
+		for &(ref left_hash, ref right_hash) in self.path.iter() {
+			// Check if the previous_hash matches the correct current hash.
+			let previous_is_left = previous_hash.is_eq(&left_hash)?;
+
+			previous_hash.enforce_equal(&NodeVar::conditionally_select(
+				&previous_is_left,
+				left_hash,
+				right_hash,
+			)?)?;
+
+			previous_hash = hash_inner_node_gadget::<F, P, HG, LHG>(
+				self.inner_params.borrow(),
+				left_hash,
+				right_hash,
+			)?;
+		}
+
+		Ok(previous_hash)
+	}
+
+
 	pub fn get_index<L: ToBytesGadget<F>>(
 		&self,
 		root: &NodeVar<F, P, HG, LHG>,

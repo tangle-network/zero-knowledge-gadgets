@@ -126,6 +126,41 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 
 		Ok(index)
 	}
+
+
+	/// Return hash of root computed by the path
+	pub fn root_hash<L: ToBytes>(
+		&self,
+		leaf: &L,
+	) -> Result<Node<P>, Error> {
+		if self.path.len() != P::HEIGHT as usize {
+			panic!("path.len !=  P::HEIGHT");
+		}
+		// Check that the given leaf matches the leaf in the membership proof.
+		if self.path.is_empty() {
+			panic!("path is empty");
+		}
+
+		let claimed_leaf_hash = hash_leaf::<P, L>(self.leaf_params.borrow(), leaf)?;
+
+		// Check if claimed leaf hash is the same as one of
+		// the provided hashes on level 0
+		if claimed_leaf_hash != self.path[0].0 && claimed_leaf_hash != self.path[0].1 {
+			panic!("Leaf is not on Path");
+		}
+
+		let mut prev = claimed_leaf_hash;
+		// Check levels between leaf level and root.
+		for &(ref left_hash, ref right_hash) in &self.path {
+			// Check if the previous hash matches the correct current hash.
+			if &prev != left_hash && &prev != right_hash {
+				panic!("path nodes are not consistent");
+			}
+			prev = hash_inner_node::<P>(self.inner_params.borrow(), left_hash, right_hash)?;
+		}
+
+		Ok(prev)
+	}
 }
 
 /// Merkle sparse tree
