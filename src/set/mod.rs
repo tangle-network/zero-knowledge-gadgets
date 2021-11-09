@@ -13,4 +13,10 @@ pub trait Set<F: PrimeField, const M: usize>: Sized {
 
 	fn generate_secrets<T: ToBytes>(target: &T, set: &[F; M]) -> Result<Self::Private, Error>;
 	fn check<T: ToBytes>(target: &T, set: &[F; M], private: &Self::Private) -> Result<bool, Error>;
+	fn check_is_enabled<T: ToBytes>(
+		target: &T,
+		set: &[F; M],
+		s: &Self::Private,
+		enabled: &F,
+	) -> Result<bool, Error>;
 }

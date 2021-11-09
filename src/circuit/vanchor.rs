@@ -42,7 +42,7 @@ pub struct VanchorCircuit<
 	arbitrary_input: A::Input,
 	leaf_private_inputs: Vec<L::Private>, // amount, blinding, privkey
 	leaf_public_inputs: Vec<L::Public>,   // pubkey, chain_id
-	set_private_inputs: [Vec<S::Private>; M], // diffs
+	set_private_inputs: Vec<S::Private>,  // diffs
 	root_set: [F; M],
 	hasher_params: H::Parameters,
 	path: Vec<Path<C, N>>,
@@ -89,7 +89,7 @@ where
 		arbitrary_input: A::Input,
 		leaf_private_inputs: Vec<L::Private>,
 		leaf_public_inputs: Vec<L::Public>,
-		set_private_inputs: [Vec<S::Private>; M],
+		set_private_inputs: Vec<S::Private>,
 		root_set: [F; M],
 		hasher_params: H::Parameters,
 		path: Vec<Path<C, N>>,
@@ -139,6 +139,8 @@ where
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
 		in_nullifier_var: &Vec<LG::NullifierVar>,
+		root_set_var: &Vec<FpVar<F>>,
+		set_input_private_var: &Vec<SG::PrivateVar>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
 		let mut in_utxo_hasher_var: Vec<LG::LeafVar> = Vec::with_capacity(N);
@@ -171,7 +173,15 @@ where
 			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
 			// add the roots and diffs signals to the vanchor circuit
 			// TODO:
+			let roothash =
+				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
 			in_amounttx = LG::get_amount(&leaf_private_var[tx]).unwrap();
+			SG::check_is_enabled(
+				&roothash,
+				&root_set_var,
+				&set_input_private_var[tx],
+				&in_amounttx,
+			);
 			sums_ins_var = sums_ins_var + in_amounttx; // TODo: inamount
 		}
 		Ok(sums_ins_var)
@@ -314,8 +324,8 @@ where
 		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding, private key
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
-												   //let set_private = self.set_private_inputs.clone(); // TODO
-												   //let root_set = self.root_set.clone(); // TODO
+		let set_private = self.set_private_inputs.clone(); // TODO
+		let root_set = self.root_set.clone(); // TODO
 		let hasher_params = self.hasher_params.clone();
 		let path = self.path.clone();
 		let index = self.index.clone();
@@ -331,6 +341,8 @@ where
 		// Public inputs
 		let mut leaf_public_var: Vec<LG::PublicVar> = Vec::with_capacity(N);
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
+		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
+		let mut set_input_private_var: Vec<SG::PrivateVar> = Vec::with_capacity(N);
 
 		let mut in_nullifier_var: Vec<LG::NullifierVar> = Vec::with_capacity(N);
 
@@ -353,6 +365,8 @@ where
 		let mut output_commitment_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
 
 		for i in 0..N {
+			set_input_private_var[i] =
+				SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private[i].clone()))?;
 			leaf_public_var[i] =
 				LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public[i].clone()))?;
 
@@ -384,6 +398,8 @@ where
 				&in_path_indices_var,
 				&in_path_elements_var,
 				&in_nullifier_var,
+				&root_set_var,
+				&set_input_private_var,
 			)
 			.unwrap();
 

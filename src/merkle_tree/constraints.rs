@@ -181,7 +181,7 @@ where
 
 	pub fn root_hash<L: ToBytesGadget<F>>(
 		&self,
-		leaf: L,
+		leaf: &L,
 	) -> Result<NodeVar<F, P, HG, LHG>, SynthesisError> {
 		assert_eq!(self.path.len(), P::HEIGHT as usize);
 		// Check that the hash of the given leaf matches the leaf hash in the membership

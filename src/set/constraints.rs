@@ -15,4 +15,11 @@ pub trait SetGadget<F: PrimeField, S: Set<F, M>, const M: usize>: Sized {
 		elements: &Vec<FpVar<F>>,
 		private: &Self::PrivateVar,
 	) -> Result<Boolean<F>, SynthesisError>;
+
+	fn check_is_enabled<T: ToBytesGadget<F>>(
+		target: &T,
+		elements: &Vec<FpVar<F>>,
+		private: &Self::PrivateVar,
+		is_enabled: &FpVar<F>,
+	) -> Result<Boolean<F>, SynthesisError>;
 }

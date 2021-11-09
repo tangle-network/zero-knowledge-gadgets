@@ -58,6 +58,26 @@ impl<F: PrimeField, const M: usize> Set<F, M> for SetMembership<F, M> {
 
 		Ok(product == F::zero())
 	}
+
+	fn check_is_enabled<T: ToBytes>(
+		target: &T,
+		set: &[F; M],
+		s: &Self::Private,
+		is_enabled: &F,
+	) -> Result<bool, Error> {
+		let target_bytes = to_bytes![target]?;
+		let target = F::read(target_bytes.as_slice())?;
+		let mut product = target.clone();
+
+		for (diff, real) in s.diffs.iter().zip(set.iter()) {
+			if *real != (*diff + target) {
+				return Ok(false);
+			}
+			product *= diff;
+		}
+
+		Ok(product * is_enabled == F::zero())
+	}
 }
 
 #[cfg(test)]

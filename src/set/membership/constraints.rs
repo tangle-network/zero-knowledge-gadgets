@@ -51,6 +51,23 @@ impl<F: PrimeField, const M: usize> SetGadget<F, SetMembership<F, M>, M>
 
 		Ok(product.is_eq(&FpVar::<F>::zero())?)
 	}
+
+	fn check_is_enabled<T: ToBytesGadget<F>>(
+		target: &T,
+		set: &Vec<FpVar<F>>,
+		private: &Self::PrivateVar,
+		is_enabled: &FpVar<F>,
+	) -> Result<Boolean<F>, SynthesisError> {
+		assert_eq!(set.len(), M); // FIXME Should we enforce it in constrain system?
+		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
+		let mut product = target.clone();
+		for (diff, real) in private.diffs.iter().zip(set.iter()) {
+			real.enforce_equal(&(diff + &target))?;
+			product *= diff;
+		}
+		product *= is_enabled;
+		Ok(product.is_eq(&FpVar::<F>::zero())?)
+	}
 }
 
 impl<F: PrimeField, const M: usize> AllocVar<Private<F, M>, F> for PrivateVar<F, M> {
