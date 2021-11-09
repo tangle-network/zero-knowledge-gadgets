@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
+use super::KeypairCreation;
 use crate::leaf::VanchorLeafCreation;
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{fields::PrimeField, to_bytes};
-use super::KeypairCreation;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
@@ -13,8 +13,6 @@ pub struct Keypair<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>> {
 	privkey: F,
 	_d: PhantomData<L>,
 }
-
-
 
 impl<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>> KeypairCreation<H, F, L>
 	for Keypair<H, F, L>
@@ -86,7 +84,8 @@ mod test {
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let privkey = to_bytes![secrets.priv_key].unwrap();
+		let prk = Leaf::get_private_key(&secrets).unwrap();
+		let privkey = to_bytes![prk].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 
 		let keypair = Keypair::<PoseidonCRH3, Fq, Leaf>::new(&params, &secrets).unwrap();

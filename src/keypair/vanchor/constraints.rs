@@ -5,7 +5,10 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::SynthesisError;
 use ark_std::marker::PhantomData;
 
-use crate::{keypair::constraints::KeypairCreationGadget, leaf::{VanchorLeafCreation, VanchorLeafCreationGadget}};
+use crate::{
+	keypair::constraints::KeypairCreationGadget,
+	leaf::{VanchorLeafCreation, VanchorLeafCreationGadget},
+};
 
 #[derive(Clone)]
 pub struct KeypairVar<
@@ -20,7 +23,6 @@ pub struct KeypairVar<
 	_leaf_creation: PhantomData<L>,
 	_leaf_creation_gadget: PhantomData<LG>,
 }
-
 
 impl<
 		H: CRH,
@@ -119,12 +121,13 @@ mod test {
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let privkey = to_bytes![secrets.priv_key].unwrap();
+		let prk = Leaf::get_private_key(&secrets).unwrap();
+		let privkey = to_bytes![prk].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 
 		// Constraints version
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let bytes = to_bytes![secrets.priv_key].unwrap();
+		let bytes = to_bytes![Leaf::get_private_key(&secrets).unwrap()].unwrap();
 		let privkey_var = Vec::<UInt8<Fq>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
 		let params_var =
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)

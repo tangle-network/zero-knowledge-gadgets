@@ -2,9 +2,9 @@ use crate::leaf::VanchorLeafCreation;
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::fields::PrimeField;
 
-pub mod vanchor;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+pub mod vanchor;
 pub trait KeypairCreation<H: CRH, F: PrimeField, L: VanchorLeafCreation<H, F>>: Sized {
 	fn new(h: &H::Parameters, secrets: &L::Private) -> Result<Self, Error>;
 	fn public_key(&self) -> Result<<H as CRH>::Output, Error>;

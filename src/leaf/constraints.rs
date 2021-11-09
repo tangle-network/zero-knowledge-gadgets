@@ -86,11 +86,13 @@ pub trait VanchorLeafCreationGadget<
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
 	fn get_private_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
+	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
+	fn get_blinding(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
 
 	fn gen_public_key(
 		s: &Self::PrivateVar,
 		h: &HG::ParametersVar,
 	) -> Result<HG::OutputVar, SynthesisError>;
 
-	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError>;
+	fn get_chain_id(p: &Self::PublicVar) -> Result<FpVar<F>, SynthesisError>;
 }

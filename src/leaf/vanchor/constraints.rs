@@ -14,7 +14,7 @@ use core::borrow::Borrow;
 pub struct PrivateVar<F: PrimeField> {
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
-	pub priv_key: FpVar<F>,
+	priv_key: FpVar<F>,
 }
 
 #[derive(Clone)]
@@ -112,6 +112,14 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 
 	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.amount.clone())
+	}
+
+	fn get_blinding(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
+		Ok(s.blinding.clone())
+	}
+
+	fn get_chain_id(p: &Self::PublicVar) -> Result<FpVar<F>, SynthesisError> {
+		Ok(p.chain_id.clone())
 	}
 }
 

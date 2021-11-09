@@ -1,4 +1,3 @@
-
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
