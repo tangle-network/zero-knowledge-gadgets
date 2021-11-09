@@ -1,1 +1,1 @@
-cargo bench --features r1cs -- --nocapture
+cargo bench --features "r1cs, test" -- --nocapture

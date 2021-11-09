@@ -90,8 +90,8 @@ macro_rules! setup_circuit {
 			LeafGadget,
 			TestSetMembership,
 			TestSetMembershipGadget,
-			M,
 			N,
+			M,
 		>;
 
 		let rng = &mut test_rng();
@@ -114,8 +114,9 @@ macro_rules! setup_circuit {
 		let refund = <$test_field>::rand(rng);
 		let recipient = <$test_field>::rand(rng);
 		let relayer = <$test_field>::rand(rng);
+		let commitment = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund);
+		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund, commitment);
 
 		// Making params for poseidon in merkle tree
 		let rounds3 = get_rounds_poseidon_bn254_x5_3::<$test_field>();
@@ -161,6 +162,8 @@ macro_rules! setup_circuit {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
+		public_inputs.push(arbitrary_input.refund);
+		public_inputs.push(arbitrary_input.commitment);
 		(public_inputs, mc)
 	}};
 }
@@ -190,7 +193,7 @@ macro_rules! benchmark_marlin {
 
 		// Setup
 		let srs = measure!(
-			{ <$marlin>::universal_setup($nc, $nv, $nv, rng).unwrap() },
+			{ <$marlin>::universal_setup($nc, $nv, 3 * $nv, rng).unwrap() },
 			$name,
 			"setup",
 			$num_iter
@@ -279,8 +282,8 @@ fn benchmark_marlin_ipa_pc(nc: usize, nv: usize, num_iter: u32) {
 }
 
 fn main() {
-	let nc = 36000;
-	let nv = 36000;
+	let nc = 65536;
+	let nv = 65536;
 	let num_iter = 5;
 
 	// Groth16
@@ -290,5 +293,5 @@ fn main() {
 	// Sonic
 	benchmark_marlin_sonic(nc, nv, num_iter);
 	// IPA
-	benchmark_marlin_ipa_pc(nc, nv, num_iter);
+	// benchmark_marlin_ipa_pc(nc, nv, num_iter);
 }
