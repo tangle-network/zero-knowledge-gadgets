@@ -41,7 +41,7 @@ pub struct VanchorCircuit<
 
 	arbitrary_input: A::Input,
 	leaf_private_inputs: Vec<L::Private>, // amount, blinding, privkey
-	leaf_public_inputs: Vec<L::Public>,   // pubkey, chain_id
+	leaf_public_inputs: L::Public,   // chain_id
 	set_private_inputs: Vec<S::Private>,  // diffs
 	root_set: [F; M],
 	hasher_params: H::Parameters,
@@ -88,7 +88,7 @@ where
 		ext_data_hash: A::Input,
 		arbitrary_input: A::Input,
 		leaf_private_inputs: Vec<L::Private>,
-		leaf_public_inputs: Vec<L::Public>,
+		leaf_public_inputs: L::Public,
 		set_private_inputs: Vec<S::Private>,
 		root_set: [F; M],
 		hasher_params: H::Parameters,
@@ -135,7 +135,7 @@ where
 		&self,
 		hasher_params_var: &HG::ParametersVar,
 		leaf_private_var: &Vec<LG::PrivateVar>,
-		leaf_public_var: &Vec<LG::PublicVar>, //TODO: this doesn't need to be Vec
+		leaf_public_var: &LG::PublicVar, //TODO: this doesn't need to be Vec
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
 		in_nullifier_var: &Vec<LG::NullifierVar>,
@@ -157,7 +157,7 @@ where
 			// Computing the hash
 			in_utxo_hasher_var[tx] = LG::create_leaf(
 				&leaf_private_var[tx],
-				&leaf_public_var[tx],
+				&leaf_public_var,
 				&hasher_params_var,
 			)?;
 			// End of computing the hash
@@ -176,12 +176,12 @@ where
 			let roothash =
 				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
 			in_amounttx = LG::get_amount(&leaf_private_var[tx]).unwrap();
-			SG::check_is_enabled(
+			let check =SG::check_is_enabled(
 				&roothash,
 				&root_set_var,
 				&set_input_private_var[tx],
 				&in_amounttx,
-			);
+			).unwrap();
 			sums_ins_var = sums_ins_var + in_amounttx; // TODo: inamount
 		}
 		Ok(sums_ins_var)
@@ -339,7 +339,8 @@ where
 
 		// Generating vars
 		// Public inputs
-		let mut leaf_public_var: Vec<LG::PublicVar> = Vec::with_capacity(N);
+		
+		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public.clone()))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let mut set_input_private_var: Vec<SG::PrivateVar> = Vec::with_capacity(N);
@@ -367,8 +368,7 @@ where
 		for i in 0..N {
 			set_input_private_var[i] =
 				SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private[i].clone()))?;
-			leaf_public_var[i] =
-				LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public[i].clone()))?;
+
 
 			leaf_private_var[i] =
 				LG::PrivateVar::new_input(cs.clone(), || Ok(leaf_private[i].clone()))?;
