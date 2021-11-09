@@ -1,13 +1,7 @@
-use crate::{
-	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
-	leaf::{constraints::VanchorLeafCreationGadget, VanchorLeafCreation},
-	merkle_tree::{
+use crate::{Vec, arbitrary::{constraints::ArbitraryGadget, Arbitrary}, keypair::{constraints::KeypairCreationGadget, vanchor::constraints::KeypairVar}, leaf::{constraints::VanchorLeafCreationGadget, VanchorLeafCreation}, merkle_tree::{
 		constraints::{NodeVar, PathVar},
 		Config as MerkleConfig, Path,
-	},
-	set::{Set, SetGadget},
-	Vec,
-};
+	}, set::{Set, SetGadget}};
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
@@ -27,7 +21,7 @@ pub struct VanchorCircuit<
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
 	// Type of leaf creation
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H,F>,
 	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	// Set of merkle roots
 	S: Set<F, M>,
@@ -67,7 +61,7 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H,F>,
 	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
@@ -105,6 +99,115 @@ where
 			_merkle_config: PhantomData,
 		}
 	}
+	pub fn verify_input_var_embeded(
+		&mut self,
+		hg4: HG::ParametersVar,
+		in_private_key_var: Vec<FpVar<F>>,
+		chain_id_var: FpVar<F>,
+		in_amount_var: Vec<FpVar<F>>,
+		in_blinding_var: Vec<FpVar<F>>,
+		in_path_indices_var: Vec<FpVar<F>>,
+		in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, N>>,
+		in_nullifier_var: Vec<HG::OutputVar>,
+		out_amount_var: Vec<FpVar<F>>,
+		// ...
+	) -> Result<FpVar<F>, SynthesisError> {
+		let mut sums_ins_var = FpVar::<F>::zero();
+		let mut in_utxo_hasher_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
+		let mut nullifier_hash: Vec<HG::OutputVar> = Vec::with_capacity(N);
+
+		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
+		for tx in 0..N {
+			inkeypair[tx] = KeypairCreationGadget::<H, HG, F, L, LG>::new_from_key(
+				&hg4,
+				&in_private_key_var[tx],
+			)
+			.unwrap();
+			// Computing the hash
+			let mut bytes = Vec::new();
+			bytes.extend(chain_id_var.to_bytes()?);
+			bytes.extend(in_amount_var[tx].to_bytes()?);
+			bytes.extend(inkeypair[tx].public_key_var().unwrap().to_bytes()?);
+			bytes.extend(in_blinding_var[tx].to_bytes()?);
+
+			in_utxo_hasher_var[tx] = HG::evaluate(&hg4, &bytes)?;
+			// End of computing the hash
+
+			// Nullifier
+			let mut bytes = Vec::new();
+			bytes.extend(in_utxo_hasher_var[tx].to_bytes()?);
+			bytes.extend(in_path_indices_var[tx].to_bytes()?);
+			bytes.extend(in_private_key_var[tx].to_bytes()?);
+
+			nullifier_hash[tx] = HG::evaluate(&hg4, &bytes)?;
+
+			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
+			// add the roots and diffs signals to the bridge circuit
+			// TODO:
+
+			sums_ins_var = sums_ins_var + out_amount_var[tx].clone();
+		}
+		Ok(sums_ins_var)
+	}
+
+	//TODO: Verify correctness of transaction outputs
+	pub fn verify_output_var(
+		&mut self,
+		hg4: HG::ParametersVar,
+		output_commitment_var: Vec<HG::OutputVar>,
+		out_chain_id_var: Vec<FpVar<F>>,
+		out_amount_var: Vec<FpVar<F>>,
+		out_pubkey_var: Vec<FpVar<F>>,
+		out_blinding_var: Vec<FpVar<F>>,
+	) -> Result<FpVar<F>, SynthesisError> {
+		let mut sums_outs_var = FpVar::<F>::zero();
+		let mut in_utxo_hasher_var_out: Vec<HG::OutputVar> = Vec::with_capacity(N);
+		for tx in 0..N {
+			// Computing the hash
+			let mut bytes = Vec::new();
+			bytes.extend(out_chain_id_var[tx].to_bytes()?);
+			bytes.extend(out_amount_var[tx].to_bytes()?);
+			bytes.extend(out_pubkey_var[tx].to_bytes()?);
+			bytes.extend(out_blinding_var[tx].to_bytes()?);
+			in_utxo_hasher_var_out[tx] = HG::evaluate(&hg4, &bytes)?;
+			// End of computing the hash
+			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
+
+			sums_outs_var = sums_outs_var + out_amount_var[tx].clone();
+			//...
+		}
+		// Check that amount fits into 248 bits to prevent overflow
+		// TODO:
+		Ok(sums_outs_var)
+	}
+
+	//TODO: Check that there are no same nullifiers among all inputs
+	pub fn verify_no_sam_nul(
+		in_nullifier_var: Vec<HG::OutputVar>,
+	) -> Result<(), SynthesisError> {
+		let mut same_nullifiers: Vec<HG::OutputVar> = Vec::with_capacity(2);
+		for i in 0..N {
+			for j in i..N {
+				same_nullifiers[0] = in_nullifier_var[i].clone();
+				same_nullifiers[1] = in_nullifier_var[j].clone();
+				same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
+			}
+		}
+		Ok(())
+	}
+
+	//TODO: Verify amount invariant
+	pub fn verify_input_invariant(
+		&self,
+		public_amount_var: FpVar<F>,
+		sum_ins_var: FpVar<F>,
+		sum_outs_var: FpVar<F>,
+	) -> Result<(), SynthesisError> {
+		let res = sum_ins_var + public_amount_var.clone();
+		res.enforce_equal(&sum_outs_var).unwrap();
+		Ok(())
+	}
+	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
@@ -118,7 +221,7 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H,F>,
 	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
@@ -145,6 +248,7 @@ where
 			nullifier_hash,
 		)
 	}
+	
 }
 
 impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
@@ -158,7 +262,7 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<H>,
+	L: VanchorLeafCreation<H,F>,
 	LG: VanchorLeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
@@ -180,7 +284,6 @@ where
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let root_var = HG::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 		// TODO: publicAmount
 
@@ -193,7 +296,7 @@ where
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
 		let index_var = FpVar::<F>::new_witness(cs.clone(), || Ok(index)).unwrap();
 
-		let prk = LG::get_privat_key(&leaf_private_var).unwrap();
+		let prk = LG::get_private_key(&leaf_private_var).unwrap();
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(prk.to_bytes()?);
 		//let bytes = to_bytes![prk.to_bytes()].unwrap();
@@ -205,7 +308,6 @@ where
 		let vanchor_leaf = LG::create_leaf(
 			&leaf_private_var,
 			&leaf_public_var,
-			&pubkey_var,
 			&hasher_params_var,
 		)?;
 		let vanchor_nullifier = LG::create_nullifier(
@@ -214,16 +316,11 @@ where
 			&hasher_params_var,
 			&index_var,
 		)?;
-		let is_member =
-			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &vanchor_leaf)?;
 		// Check if target root is in set
-		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
 		// Constraining arbitrary inputs
 		AG::constrain(&arbitrary_input_var)?;
 
 		// Enforcing constraints
-		is_member.enforce_equal(&Boolean::TRUE)?;
-		is_set_member.enforce_equal(&Boolean::TRUE)?;
 		vanchor_nullifier.enforce_equal(&nullifier_hash_var)?;
 
 		Ok(())

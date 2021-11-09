@@ -5,7 +5,7 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::SynthesisError;
 use ark_std::marker::PhantomData;
 
-use crate::leaf::{VanchorLeafCreation, VanchorLeafCreationGadget};
+use crate::{keypair::constraints::KeypairCreationGadget, leaf::{VanchorLeafCreation, VanchorLeafCreationGadget}};
 
 #[derive(Clone)]
 pub struct KeypairVar<
@@ -21,23 +21,6 @@ pub struct KeypairVar<
 	_leaf_creation_gadget: PhantomData<LG>,
 }
 
-pub trait KeypairCreationGadget<
-	H: CRH,
-	HG: CRHGadget<H, F>,
-	F: PrimeField,
-	L: VanchorLeafCreation<H, F>,
-	LG: VanchorLeafCreationGadget<F, H, HG, L>,
->: Sized
-{
-	fn new(
-		h: &HG::ParametersVar,
-		secrets: &<LG as VanchorLeafCreationGadget<F, H, HG, L>>::PrivateVar,
-	) -> Result<Self, SynthesisError>;
-
-	fn new_from_key(h: &HG::ParametersVar, privkey: &FpVar<F>) -> Result<Self, SynthesisError>;
-	fn public_key_var(&self) -> Result<<HG as CRHGadget<H, F>>::OutputVar, SynthesisError>;
-	fn private_key_var(&self) -> Result<FpVar<F>, SynthesisError>;
-}
 
 impl<
 		H: CRH,

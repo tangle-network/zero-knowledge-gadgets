@@ -15,6 +15,7 @@ pub mod merkle_tree;
 pub mod mimc;
 pub mod poseidon;
 pub mod set;
+pub mod keypair;
 #[cfg(feature = "r1cs")]
 pub mod setup;
 pub mod utils;
