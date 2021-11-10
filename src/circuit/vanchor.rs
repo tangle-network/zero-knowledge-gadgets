@@ -176,12 +176,13 @@ where
 			let roothash =
 				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
 			in_amounttx = LG::get_amount(&leaf_private_var[tx]).unwrap();
-			let check =SG::check_is_enabled(
+			let check = SG::check_is_enabled(
 				&roothash,
 				&root_set_var,
 				&set_input_private_var[tx],
 				&in_amounttx,
-			).unwrap();
+			)?;
+			check.enforce_equal(&Boolean::TRUE)?;
 			sums_ins_var = sums_ins_var + in_amounttx; // TODo: inamount
 		}
 		Ok(sums_ins_var)
