@@ -13,7 +13,7 @@ use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
-use ark_std::marker::PhantomData;
+use ark_std::{cmp::Ordering::Less, marker::PhantomData};
 
 pub struct VanchorCircuit<
 	F: PrimeField,
@@ -41,7 +41,7 @@ pub struct VanchorCircuit<
 
 	arbitrary_input: A::Input,
 	leaf_private_inputs: Vec<L::Private>, // amount, blinding, privkey
-	leaf_public_inputs: L::Public,   // chain_id
+	leaf_public_inputs: L::Public,        // chain_id
 	set_private_inputs: Vec<S::Private>,  // diffs
 	root_set: [F; M],
 	hasher_params: H::Parameters,
@@ -155,11 +155,8 @@ where
 			)
 			.unwrap();
 			// Computing the hash
-			in_utxo_hasher_var[tx] = LG::create_leaf(
-				&leaf_private_var[tx],
-				&leaf_public_var,
-				&hasher_params_var,
-			)?;
+			in_utxo_hasher_var[tx] =
+				LG::create_leaf(&leaf_private_var[tx], &leaf_public_var, &hasher_params_var)?;
 			// End of computing the hash
 
 			// Nullifier
@@ -197,6 +194,7 @@ where
 		out_amount_var: &Vec<FpVar<F>>,
 		out_pubkey_var: &Vec<FpVar<F>>,
 		out_blinding_var: &Vec<FpVar<F>>,
+		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
 		let mut in_utxo_hasher_var_out: Vec<HG::OutputVar> = Vec::with_capacity(N);
@@ -211,11 +209,12 @@ where
 			// End of computing the hash
 			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
 
+			// Check that amount is less than 2^248 in the field (to prevent overflow)
+			out_amount_var[tx].enforce_cmp(&limit_var, Less, false)?;
+
 			sums_outs_var = sums_outs_var + out_amount_var[tx].clone();
 			//...
 		}
-		// Check that amount fits into 248 bits to prevent overflow
-		// TODO:
 		Ok(sums_outs_var)
 	}
 
@@ -337,10 +336,42 @@ where
 		let out_amount = self.out_amount.clone();
 		let out_pubkey = self.out_pubkey.clone();
 		let out_blinding = self.out_blinding.clone();
+		// 2^248
+		let limit: F = F::from_str(
+			"452312848583266388373324160190187140051835877600158453279131187530910662656",
+		)
+		.unwrap_or_default();
+		// check the previous conversion is done correctly
+		assert_ne!(limit, F::default()); 
+		
+		// TENTATIVE CODE
+
+		// TODO: This is the second implementation proposal for 2^248 in case the previous one is 
+		//      not acceptable.Choose one
+		// The code has redundant part just for ease of understanding.
+
+		let two= F::one() + F::one();
+		let mut two16 = two;
+		let mut two31 : F;
+		let mut two248 : F;
+		for _i in 0..4 {
+			two16 = two16 * two16;
+		}
+		two31 = two16 ;
+		for _i in 0..15{
+			two31 = two31 * two;
+		}
+		two248 = two31;
+
+		for _i in 0..3{
+			two248 = two248*two248;
+		}
+		// let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), two248)?;
+		// End of  TENTATIVE CODE
 
 		// Generating vars
 		// Public inputs
-		
+		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public.clone()))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
@@ -369,7 +400,6 @@ where
 		for i in 0..N {
 			set_input_private_var[i] =
 				SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private[i].clone()))?;
-
 
 			leaf_private_var[i] =
 				LG::PrivateVar::new_input(cs.clone(), || Ok(leaf_private[i].clone()))?;
@@ -413,6 +443,7 @@ where
 				&out_amount_var,
 				&out_pubkey_var,
 				&out_blinding_var,
+				&limit_var,
 			)
 			.unwrap();
 

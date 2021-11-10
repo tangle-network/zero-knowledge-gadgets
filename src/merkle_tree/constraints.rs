@@ -143,7 +143,6 @@ where
 		root: &NodeVar<F, P, HG, LHG>,
 		leaf: L,
 	) -> Result<Boolean<F>, SynthesisError> {
-
 		let computed_root = self.root_hash(&leaf)?;
 
 		root.is_eq(&computed_root)
