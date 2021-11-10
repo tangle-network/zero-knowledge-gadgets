@@ -145,7 +145,7 @@ where
 		let mut sums_ins_var = FpVar::<F>::zero();
 		let mut in_utxo_hasher_var: Vec<LG::LeafVar> = Vec::with_capacity(N);
 		let mut nullifier_hash: Vec<LG::NullifierVar> = Vec::with_capacity(N);
-		let mut in_amounttx: FpVar<F>;
+		let mut in_amount_tx: FpVar<F>;
 
 		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
 		for tx in 0..N {
@@ -172,15 +172,15 @@ where
 			// TODO:
 			let roothash =
 				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
-			in_amounttx = LG::get_amount(&leaf_private_var[tx]).unwrap();
+			in_amount_tx = LG::get_amount(&leaf_private_var[tx]).unwrap();
 			let check = SG::check_is_enabled(
 				&roothash,
 				&root_set_var,
 				&set_input_private_var[tx],
-				&in_amounttx,
+				&in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-			sums_ins_var = sums_ins_var + in_amounttx; // TODo: inamount
+			sums_ins_var = sums_ins_var + in_amount_tx; // TODo: inamount
 		}
 		Ok(sums_ins_var)
 	}
@@ -342,29 +342,29 @@ where
 		)
 		.unwrap_or_default();
 		// check the previous conversion is done correctly
-		assert_ne!(limit, F::default()); 
-		
+		assert_ne!(limit, F::default());
+
 		// TENTATIVE CODE
 
-		// TODO: This is the second implementation proposal for 2^248 in case the previous one is 
-		//      not acceptable.Choose one
+		// TODO: This is the second implementation proposal for 2^248 in case the
+		// previous one is      not acceptable. Choose one
 		// The code has redundant part just for ease of understanding.
 
-		let two= F::one() + F::one();
+		let two = F::one() + F::one();
 		let mut two16 = two;
-		let mut two31 : F;
-		let mut two248 : F;
+		let mut two31: F;
+		let mut two248: F;
 		for _i in 0..4 {
 			two16 = two16 * two16;
 		}
-		two31 = two16 ;
-		for _i in 0..15{
+		two31 = two16;
+		for _i in 0..15 {
 			two31 = two31 * two;
 		}
 		two248 = two31;
 
-		for _i in 0..3{
-			two248 = two248*two248;
+		for _i in 0..3 {
+			two248 = two248 * two248;
 		}
 		// let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), two248)?;
 		// End of  TENTATIVE CODE
