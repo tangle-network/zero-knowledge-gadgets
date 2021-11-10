@@ -1,6 +1,6 @@
 use super::common::*;
 use crate::{
-	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
+	arbitrary::bridge_data::Input as BridgeDataInput,
 	circuit::bridge::BridgeCircuit,
 	leaf::{
 		bridge::{
@@ -24,9 +24,7 @@ use ark_std::{
 };
 use paste::paste;
 
-pub type BridgeConstraintData<F> = BridgeData<F>;
 pub type BridgeConstraintDataInput<F> = BridgeDataInput<F>;
-pub type BridgeConstraintDataGadget<F> = BridgeDataGadget<F>;
 
 pub type Leaf_x5<F> = BridgeLeaf<F, PoseidonCRH_x5_5<F>>;
 pub type Leaf_Circomx5<F> = BridgeLeaf<F, PoseidonCircomCRH_x5_5<F>>;
@@ -45,8 +43,6 @@ pub type TestSetMembershipGadget<F, const M: usize> = SetMembershipGadget<F, M>;
 
 pub type Circuit_x5<F, const N: usize, const M: usize> = BridgeCircuit<
 	F,
-	BridgeConstraintData<F>,
-	BridgeConstraintDataGadget<F>,
 	PoseidonCRH_x5_5<F>,
 	PoseidonCRH_x5_5Gadget<F>,
 	TreeConfig_x5<F>,
@@ -62,8 +58,6 @@ pub type Circuit_x5<F, const N: usize, const M: usize> = BridgeCircuit<
 
 pub type Circuit_Circomx5<F, const N: usize, const M: usize> = BridgeCircuit<
 	F,
-	BridgeConstraintData<F>,
-	BridgeConstraintDataGadget<F>,
 	PoseidonCircomCRH_x5_5<F>,
 	PoseidonCircomCRH_x5_5Gadget<F>,
 	TreeConfig_Circomx5<F>,
@@ -83,8 +77,6 @@ pub type LeafGadget_x17<F> =
 
 pub type Circuit_x17<F, const N: usize, const M: usize> = BridgeCircuit<
 	F,
-	BridgeConstraintData<F>,
-	BridgeConstraintDataGadget<F>,
 	PoseidonCRH_x17_5<F>,
 	PoseidonCRH_x17_5Gadget<F>,
 	TreeConfig_x17<F>,

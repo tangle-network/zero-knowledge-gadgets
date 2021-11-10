@@ -14,7 +14,6 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 	type LeafVar: EqGadget<F>
 		+ ToBytesGadget<F>
 		+ CondSelectGadget<F>
-		+ AllocVar<L::Leaf, F>
 		+ R1CSVar<F>
 		+ Debug
 		+ Clone

@@ -1,6 +1,6 @@
 use super::common::*;
 use crate::{
-	arbitrary::mixer_data::{constraints::MixerDataGadget, Input as MixerDataInput, MixerData},
+	arbitrary::mixer_data::Input as MixerDataInput,
 	circuit::mixer::MixerCircuit,
 	leaf::{
 		mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
@@ -19,9 +19,7 @@ use ark_std::{
 };
 use paste::paste;
 
-pub type MixerConstraintData<F> = MixerData<F>;
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
-pub type MixerConstraintDataGadget<F> = MixerDataGadget<F>;
 
 pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
 pub type Leaf_Circomx5<F> = MixerLeaf<F, PoseidonCircomCRH_x5_5<F>>;
@@ -37,8 +35,6 @@ pub type LeafGadget_Circomx5<F> = MixerLeafGadget<
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
-	MixerConstraintData<F>,
-	MixerConstraintDataGadget<F>,
 	PoseidonCRH_x5_5<F>,
 	PoseidonCRH_x5_5Gadget<F>,
 	TreeConfig_x5<F>,
@@ -51,8 +47,6 @@ pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 
 pub type Circuit_Circomx5<F, const N: usize> = MixerCircuit<
 	F,
-	MixerConstraintData<F>,
-	MixerConstraintDataGadget<F>,
 	PoseidonCircomCRH_x5_5<F>,
 	PoseidonCircomCRH_x5_5Gadget<F>,
 	TreeConfig_Circomx5<F>,
@@ -69,8 +63,6 @@ pub type LeafGadget_x17<F> =
 
 pub type Circuit_x17<F, const N: usize> = MixerCircuit<
 	F,
-	MixerConstraintData<F>,
-	MixerConstraintDataGadget<F>,
 	PoseidonCRH_x17_5<F>,
 	PoseidonCRH_x17_5Gadget<F>,
 	TreeConfig_x17<F>,
@@ -87,8 +79,6 @@ pub type LeafGadget_MiMC220<F> =
 
 pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	F,
-	MixerConstraintData<F>,
-	MixerConstraintDataGadget<F>,
 	MiMCCRH_220<F>,
 	MiMCCRH_220Gadget<F>,
 	TreeConfig_MiMC220<F>,

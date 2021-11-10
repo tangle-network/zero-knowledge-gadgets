@@ -1,5 +1,5 @@
 use crate::{
-	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
+	arbitrary::mixer_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
 	leaf::{constraints::LeafCreationGadget, LeafCreation},
 	merkle_tree::{
 		constraints::{NodeVar, PathVar},
@@ -14,9 +14,6 @@ use ark_std::marker::PhantomData;
 
 pub struct MixerCircuit<
 	F: PrimeField,
-	// Arbitrary data constraints
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	// Hasher for the leaf creation
 	H: CRH,
 	HG: CRHGadget<H, F>,
@@ -29,7 +26,7 @@ pub struct MixerCircuit<
 	LG: LeafCreationGadget<F, H, HG, L>,
 	const N: usize,
 > {
-	arbitrary_input: A::Input,
+	arbitrary_input: ArbitraryInput<F>,
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
 	hasher_params: H::Parameters,
@@ -37,7 +34,6 @@ pub struct MixerCircuit<
 	root: <C::H as CRH>::Output,
 	nullifier_hash: L::Nullifier,
 	_field: PhantomData<F>,
-	_arbitrary_gadget: PhantomData<AG>,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
@@ -47,12 +43,9 @@ pub struct MixerCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, const N: usize>
-	MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, N>
+impl<F, H, HG, C, LHGT, HGT, L, LG, const N: usize> MixerCircuit<F, H, HG, C, LHGT, HGT, L, LG, N>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
@@ -62,7 +55,7 @@ where
 	LG: LeafCreationGadget<F, H, HG, L>,
 {
 	pub fn new(
-		arbitrary_input: A::Input,
+		arbitrary_input: ArbitraryInput<F>,
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
 		hasher_params: H::Parameters,
@@ -79,7 +72,6 @@ where
 			root,
 			nullifier_hash,
 			_field: PhantomData,
-			_arbitrary_gadget: PhantomData,
 			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
@@ -91,12 +83,10 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, const N: usize> Clone
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, N>
+impl<F, H, HG, C, LHGT, HGT, L, LG, const N: usize> Clone
+	for MixerCircuit<F, H, HG, C, LHGT, HGT, L, LG, N>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
@@ -125,12 +115,10 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, const N: usize> ConstraintSynthesizer<F>
-	for MixerCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, N>
+impl<F, H, HG, C, LHGT, HGT, L, LG, const N: usize> ConstraintSynthesizer<F>
+	for MixerCircuit<F, H, HG, C, LHGT, HGT, L, LG, N>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
@@ -153,7 +141,7 @@ where
 		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
-		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
+		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
@@ -167,7 +155,7 @@ where
 		let mixer_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf)?;
 		// Constraining arbitrary inputs
-		AG::constrain(&arbitrary_input_var)?;
+		arbitrary_input_var.constrain()?;
 
 		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;

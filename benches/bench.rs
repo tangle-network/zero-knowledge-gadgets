@@ -8,7 +8,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
-	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
+	arbitrary::bridge_data::Input as BridgeDataInput,
 	circuit::bridge::BridgeCircuit,
 	leaf::{
 		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
@@ -32,8 +32,6 @@ macro_rules! setup_circuit {
 		const M: usize = 4;
 		const N: usize = 30;
 
-		type BridgeConstraintData = BridgeData<$test_field>;
-		type BridgeConstraintDataGadget = BridgeDataGadget<$test_field>;
 		#[derive(Default, Clone)]
 		struct PoseidonRounds5;
 
@@ -79,8 +77,6 @@ macro_rules! setup_circuit {
 
 		type Circuit = BridgeCircuit<
 			$test_field,
-			BridgeConstraintData,
-			BridgeConstraintDataGadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
 			BridgeTreeConfig,

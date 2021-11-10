@@ -1,5 +1,5 @@
 use crate::{
-	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
+	arbitrary::bridge_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
 	leaf::{constraints::LeafCreationGadget, LeafCreation},
 	merkle_tree::{
 		constraints::{NodeVar, PathVar},
@@ -16,9 +16,6 @@ use ark_std::marker::PhantomData;
 
 pub struct BridgeCircuit<
 	F: PrimeField,
-	// Arbitrary data constraints
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	// Hasher for the leaf creation
 	H: CRH,
 	HG: CRHGadget<H, F>,
@@ -35,7 +32,7 @@ pub struct BridgeCircuit<
 	const N: usize,
 	const M: usize,
 > {
-	arbitrary_input: A::Input,
+	arbitrary_input: ArbitraryInput<F>,
 	leaf_private_inputs: L::Private,
 	leaf_public_inputs: L::Public,
 	set_private_inputs: S::Private,
@@ -44,7 +41,6 @@ pub struct BridgeCircuit<
 	path: Path<C, N>,
 	root: <C::H as CRH>::Output,
 	nullifier_hash: L::Nullifier,
-	_arbitrary_gadget: PhantomData<AG>,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
@@ -56,12 +52,10 @@ pub struct BridgeCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
+	BridgeCircuit<F, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
@@ -73,7 +67,7 @@ where
 	SG: SetGadget<F, S, M>,
 {
 	pub fn new(
-		arbitrary_input: A::Input,
+		arbitrary_input: ArbitraryInput<F>,
 		leaf_private_inputs: L::Private,
 		leaf_public_inputs: L::Public,
 		set_private_inputs: S::Private,
@@ -93,7 +87,6 @@ where
 			path,
 			root,
 			nullifier_hash,
-			_arbitrary_gadget: PhantomData,
 			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
@@ -107,12 +100,10 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
-	for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
+	for BridgeCircuit<F, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
@@ -147,12 +138,10 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	ConstraintSynthesizer<F> for BridgeCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> ConstraintSynthesizer<F>
+	for BridgeCircuit<F, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	C: MerkleConfig,
@@ -180,7 +169,7 @@ where
 		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
-		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
+		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
@@ -198,7 +187,7 @@ where
 		// Check if target root is in set
 		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
 		// Constraining arbitrary inputs
-		AG::constrain(&arbitrary_input_var)?;
+		arbitrary_input_var.constrain()?;
 
 		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
