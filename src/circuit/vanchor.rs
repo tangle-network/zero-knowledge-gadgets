@@ -210,7 +210,7 @@ where
 			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
 
 			// Check that amount is less than 2^248 in the field (to prevent overflow)
-			out_amount_var[tx].enforce_cmp(&limit_var, Less, false)?;
+			out_amount_var[tx].enforce_cmp_unchecked(&limit_var, Less, false)?;
 
 			sums_outs_var = sums_outs_var + out_amount_var[tx].clone();
 			//...
@@ -344,31 +344,6 @@ where
 		// check the previous conversion is done correctly
 		assert_ne!(limit, F::default());
 
-		// TENTATIVE CODE
-
-		// TODO: This is the second implementation proposal for 2^248 in case the
-		// previous one is      not acceptable. Choose one
-		// The code has redundant part just for ease of understanding.
-
-		let two = F::one() + F::one();
-		let mut two16 = two;
-		let mut two31: F;
-		let mut two248: F;
-		for _i in 0..4 {
-			two16 = two16 * two16;
-		}
-		two31 = two16;
-		for _i in 0..15 {
-			two31 = two31 * two;
-		}
-		two248 = two31;
-
-		for _i in 0..3 {
-			two248 = two248 * two248;
-		}
-		// let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), two248)?;
-		// End of  TENTATIVE CODE
-
 		// Generating vars
 		// Public inputs
 		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
@@ -462,6 +437,65 @@ where
 	}
 }
 
-//#[cfg(feature = "default_poseidon")]
-//#[cfg(test)]
-//mod test {}
+#[cfg(feature = "default_poseidon")]
+#[cfg(test)]
+mod test {
+	use ark_ed_on_bls12_381::Fq;
+	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar};
+	use ark_relations::r1cs::ConstraintSystem;
+	use std::str::FromStr;
+	#[test]
+	fn test_2_to_248() {
+		use ark_std::cmp::Ordering::{Greater, Less};
+		let limit: Fq = Fq::from_str(
+			"452312848583266388373324160190187140051835877600158453279131187530910662656",
+		)
+		.unwrap_or_default();
+		// check the previous conversion is done correctly
+		assert_ne!(limit, Fq::default());
+
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let limit_var: FpVar<Fq> = FpVar::<Fq>::new_constant(cs.clone(), limit).unwrap();
+		let less_value: Fq = Fq::from_str(
+			"452312848583266388373324160190187140051835877600158453279131187530910662655",
+		)
+		.unwrap_or_default();
+		let greater_value: Fq = Fq::from_str(
+			"452312848583266388373324160190187140051835877600158453279131187530910662657",
+		)
+		.unwrap_or_default();
+
+		let greater_value2: Fq = Fq::from_str(
+			"452312848583266388373324160190187140051835877600158453279131187530910662657",
+		)
+		.unwrap_or_default();
+		let less_value_var: FpVar<Fq> =
+			FpVar::<Fq>::new_input(cs.clone(), || Ok(less_value)).unwrap();
+
+		let great_value_var: FpVar<Fq> =
+			FpVar::<Fq>::new_input(cs.clone(), || Ok(greater_value)).unwrap();
+
+		let great_value2_var: FpVar<Fq> =
+			FpVar::<Fq>::new_input(cs.clone(), || Ok(greater_value2)).unwrap();
+		let _res1 = less_value_var
+			.enforce_cmp_unchecked(&limit_var, Less, false)
+			.unwrap();
+		assert!(cs.is_satisfied().unwrap());
+
+		let _res2 = great_value_var
+			.enforce_cmp_unchecked(&limit_var, Greater, false)
+			.unwrap();
+		assert!(cs.is_satisfied().unwrap());
+
+		let _res3 = great_value_var
+			.enforce_cmp_unchecked(&great_value2_var, Less, true)
+			.unwrap();
+		assert!(cs.is_satisfied().unwrap());
+
+		let _res4 = less_value_var
+			.enforce_cmp_unchecked(&limit_var, Greater, false)
+			.unwrap();
+		assert!(!cs.is_satisfied().unwrap());
+	}
+}
