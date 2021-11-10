@@ -1,4 +1,3 @@
-use crate::leaf::LeafCreation;
 use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_std::{marker::PhantomData, rand::Rng};
@@ -12,11 +11,6 @@ pub struct Private<F: PrimeField> {
 	nullifier: F,
 }
 
-#[derive(Default, Clone)]
-pub struct Public<F: PrimeField> {
-	f: PhantomData<F>,
-}
-
 impl<F: PrimeField> Private<F> {
 	pub fn generate<R: Rng>(rng: &mut R) -> Self {
 		Self {
@@ -27,34 +21,25 @@ impl<F: PrimeField> Private<F> {
 }
 
 struct BasicLeaf<F: PrimeField, H: CRH> {
-	field: PhantomData<F>,
-	hasher: PhantomData<H>,
+	private: Private<F>,
+	_hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: CRH> LeafCreation<H> for BasicLeaf<F, H> {
-	type Leaf = H::Output;
-	type Nullifier = H::Output;
-	type Private = Private<F>;
-	type Public = Public<F>;
-
-	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error> {
-		Ok(Self::Private::generate(r))
+impl<F: PrimeField, H: CRH> BasicLeaf<F, H> {
+	fn new(s: Private<F>) -> BasicLeaf<F, H> {
+		Self {
+			private: s,
+			_hasher: PhantomData,
+		}
 	}
 
-	fn create_leaf(
-		s: &Self::Private,
-		_: &Self::Public,
-		h: &H::Parameters,
-	) -> Result<Self::Leaf, Error> {
-		let bytes = to_bytes![s.r, s.nullifier]?;
+	fn create_leaf(&self, h: &H::Parameters) -> Result<H::Output, Error> {
+		let bytes = to_bytes![self.private.r, self.private.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier_hash(
-		s: &Self::Private,
-		h: &H::Parameters,
-	) -> Result<Self::Nullifier, Error> {
-		let bytes = to_bytes![s.nullifier, s.nullifier]?;
+	fn create_nullifier_hash(&self, h: &H::Parameters) -> Result<H::Output, Error> {
+		let bytes = to_bytes![self.private.nullifier, self.private.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -88,8 +73,8 @@ mod test {
 	#[test]
 	fn should_create_leaf() {
 		let rng = &mut test_rng();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let publics = Public::default();
+		let secrets = Private::<Fq>::generate(rng);
+		let leaf = Leaf::new(secrets.clone());
 
 		let inputs_leaf = to_bytes![secrets.r, secrets.nullifier].unwrap();
 
@@ -98,7 +83,7 @@ mod test {
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		let leaf = leaf.create_leaf(&params).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 }

@@ -1,8 +1,5 @@
-use super::{BasicLeaf, Private, Public};
-use crate::{
-	leaf::{LeafCreation, LeafCreationGadget},
-	Vec,
-};
+use super::Private;
+use crate::Vec;
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
@@ -27,39 +24,32 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct BasicLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>> {
-	field: PhantomData<F>,
+pub struct BasicLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
+	private: PrivateVar<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
-	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> LeafCreationGadget<F, H, HG, BasicLeaf<F, H>>
-	for BasicLeafGadget<F, H, HG, BasicLeaf<F, H>>
-{
-	type LeafVar = HG::OutputVar;
-	type NullifierVar = HG::OutputVar;
-	type PrivateVar = PrivateVar<F>;
-	type PublicVar = PublicVar<F>;
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> BasicLeafGadget<F, H, HG> {
+	fn new(private: PrivateVar<F>) -> Self {
+		Self {
+			private,
+			hasher: PhantomData,
+			hasher_gadget: PhantomData,
+		}
+	}
 
-	fn create_leaf(
-		s: &Self::PrivateVar,
-		_: &Self::PublicVar,
-		h: &HG::ParametersVar,
-	) -> Result<Self::LeafVar, SynthesisError> {
+	fn create_leaf(&self, h: &HG::ParametersVar) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(s.r.to_bytes()?);
-		bytes.extend(s.nullifier.to_bytes()?);
+		bytes.extend(self.private.r.to_bytes()?);
+		bytes.extend(self.private.nullifier.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier(
-		s: &Self::PrivateVar,
-		h: &HG::ParametersVar,
-	) -> Result<Self::NullifierVar, SynthesisError> {
+	fn create_nullifier(&self, h: &HG::ParametersVar) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(s.nullifier.to_bytes()?);
-		bytes.extend(s.nullifier.to_bytes()?);
+		bytes.extend(self.private.nullifier.to_bytes()?);
+		bytes.extend(self.private.nullifier.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
 }
@@ -82,21 +72,12 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 	}
 }
 
-impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
-	fn new_variable<T: Borrow<Public<F>>>(
-		_: impl Into<Namespace<F>>,
-		_: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
-	) -> Result<Self, SynthesisError> {
-		Ok(PublicVar::default())
-	}
-}
-
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;
 	use crate::{
+		leaf::basic::BasicLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
@@ -122,7 +103,7 @@ mod test {
 	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
 
 	type Leaf = BasicLeaf<Fq, PoseidonCRH3>;
-	type LeafGadget = BasicLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
+	type LeafGadget = BasicLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget>;
 	#[test]
 	fn should_crate_basic_leaf_constraints() {
 		let rng = &mut test_rng();
@@ -133,19 +114,19 @@ mod test {
 		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
 
 		// Native version
-		let public = Public::default();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let secrets = Private::generate(rng);
+		let leaf = Leaf::new(secrets.clone());
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
+		let leaf = leaf.create_leaf(&params).unwrap();
 
 		// Constraints version
-		let public_var = PublicVar::default();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
 		let params_var =
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
+		let leaf_gadget = LeafGadget::new(secrets_var);
 
-		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
+		let leaf_var = leaf_gadget.create_leaf(&params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
