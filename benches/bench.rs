@@ -11,7 +11,9 @@ use arkworks_gadgets::{
 	arbitrary::bridge_data::Input as BridgeDataInput,
 	circuit::bridge::BridgeCircuit,
 	leaf::{
-		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
+		bridge::{
+			constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
+		},
 		LeafCreation,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
@@ -59,7 +61,7 @@ macro_rules! setup_circuit {
 		type PoseidonCRH3Gadget = CRHGadget<$test_field, PoseidonRounds3>;
 
 		type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
-		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget>;
 
 		#[derive(Clone)]
 		struct BridgeTreeConfig;
@@ -82,8 +84,6 @@ macro_rules! setup_circuit {
 			BridgeTreeConfig,
 			PoseidonCRH3Gadget,
 			PoseidonCRH3Gadget,
-			Leaf,
-			LeafGadget,
 			TestSetMembership,
 			TestSetMembershipGadget,
 			N,
@@ -93,18 +93,19 @@ macro_rules! setup_circuit {
 		let rng = &mut test_rng();
 
 		// Secret inputs for the leaf
-		let leaf_private = Leaf::generate_secrets(rng).unwrap();
+		let leaf_private = LeafPrivate::generate(rng);
 		// Public inputs for the leaf
 		let chain_id = <$test_field>::one();
 		let leaf_public = LeafPublic::new(chain_id);
+		let leaf = Leaf::new(leaf_private.clone(), leaf_public.clone());
 
 		// Round params for the poseidon in leaf creation gadget
 		let rounds5 = get_rounds_poseidon_bn254_x5_5::<$test_field>();
 		let mds5 = get_mds_poseidon_bn254_x5_5::<$test_field>();
 		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 		// Creating the leaf
-		let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
-		let nullifier_hash = Leaf::create_nullifier_hash(&leaf_private, &params5).unwrap();
+		let leaf_hash = leaf.create_leaf(&params5).unwrap();
+		let nullifier_hash = leaf.create_nullifier(&params5).unwrap();
 
 		let fee = <$test_field>::rand(rng);
 		let refund = <$test_field>::rand(rng);
@@ -121,7 +122,7 @@ macro_rules! setup_circuit {
 		let leaves = vec![
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
-			leaf,
+			leaf_hash,
 			<$test_field>::rand(rng),
 		];
 		let inner_params = Rc::new(params3.clone());

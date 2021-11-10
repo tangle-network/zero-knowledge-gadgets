@@ -1,6 +1,11 @@
 use crate::{
 	arbitrary::bridge_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
-	leaf::{constraints::LeafCreationGadget, LeafCreation},
+	leaf::bridge::{
+		constraints::{
+			BridgeLeafGadget, PrivateVar as LeafPrivateInputsVar, PublicVar as LeafPublicInputsVar,
+		},
+		BridgeLeaf, Private as LeafPrivateInputs, Public as LeafPublicInputs,
+	},
 	merkle_tree::{
 		constraints::{NodeVar, PathVar},
 		Config as MerkleConfig, Path,
@@ -23,9 +28,6 @@ pub struct BridgeCircuit<
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	// Type of leaf creation
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 	// Set of merkle roots
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
@@ -33,27 +35,25 @@ pub struct BridgeCircuit<
 	const M: usize,
 > {
 	arbitrary_input: ArbitraryInput<F>,
-	leaf_private_inputs: L::Private,
-	leaf_public_inputs: L::Public,
+	leaf_private_inputs: LeafPrivateInputs<F>,
+	leaf_public_inputs: LeafPublicInputs<F>,
 	set_private_inputs: S::Private,
 	root_set: [F; M],
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
 	root: <C::H as CRH>::Output,
-	nullifier_hash: L::Nullifier,
+	nullifier_hash: H::Output,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
 	_tree_hasher_gadget: PhantomData<HGT>,
-	_leaf_creation: PhantomData<L>,
-	_leaf_creation_gadget: PhantomData<LG>,
 	_set: PhantomData<S>,
 	_set_gadget: PhantomData<SG>,
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	BridgeCircuit<F, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, S, SG, const N: usize, const M: usize>
+	BridgeCircuit<F, H, HG, C, LHGT, HGT, S, SG, N, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -61,21 +61,19 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
 	pub fn new(
 		arbitrary_input: ArbitraryInput<F>,
-		leaf_private_inputs: L::Private,
-		leaf_public_inputs: L::Public,
+		leaf_private_inputs: LeafPrivateInputs<F>,
+		leaf_public_inputs: LeafPublicInputs<F>,
 		set_private_inputs: S::Private,
 		root_set: [F; M],
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
 		root: <C::H as CRH>::Output,
-		nullifier_hash: L::Nullifier,
+		nullifier_hash: H::Output,
 	) -> Self {
 		Self {
 			arbitrary_input,
@@ -91,8 +89,6 @@ where
 			_hasher_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
-			_leaf_creation: PhantomData,
-			_leaf_creation_gadget: PhantomData,
 			_set: PhantomData,
 			_set_gadget: PhantomData,
 			_merkle_config: PhantomData,
@@ -100,8 +96,8 @@ where
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
-	for BridgeCircuit<F, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, S, SG, const N: usize, const M: usize> Clone
+	for BridgeCircuit<F, H, HG, C, LHGT, HGT, S, SG, N, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -109,8 +105,6 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
@@ -138,8 +132,8 @@ where
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> ConstraintSynthesizer<F>
-	for BridgeCircuit<F, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, S, SG, const N: usize, const M: usize> ConstraintSynthesizer<F>
+	for BridgeCircuit<F, H, HG, C, LHGT, HGT, S, SG, N, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -147,8 +141,6 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
@@ -165,8 +157,8 @@ where
 
 		// Generating vars
 		// Public inputs
-		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
-		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
+		let leaf_public_var = LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public))?;
+		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
@@ -175,13 +167,14 @@ where
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
 
 		// Private inputs
-		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
+		let leaf_private_var = LeafPrivateInputsVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
 
+		let leaf_gadget = BridgeLeafGadget::<F, H, HG>::new(leaf_private_var, leaf_public_var);
 		// Creating the leaf and checking the membership inside the tree
-		let bridge_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
-		let bridge_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
+		let bridge_leaf = leaf_gadget.create_leaf(&hasher_params_var)?;
+		let bridge_nullifier = leaf_gadget.create_nullifier(&hasher_params_var)?;
 		let is_member =
 			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &bridge_leaf)?;
 		// Check if target root is in set
