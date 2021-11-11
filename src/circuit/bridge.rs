@@ -10,7 +10,10 @@ use crate::{
 		constraints::{NodeVar, PathVar},
 		Config as MerkleConfig, Path,
 	},
-	set::{Set, SetGadget},
+	set::membership::{
+		constraints::{PrivateVar as SetPrivateInputsVar, SetMembershipGadget},
+		Private as SetPrivateInputs,
+	},
 	Vec,
 };
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
@@ -28,16 +31,13 @@ pub struct BridgeCircuit<
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	// Set of merkle roots
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 	const N: usize,
 	const M: usize,
 > {
 	arbitrary_input: ArbitraryInput<F>,
 	leaf_private_inputs: LeafPrivateInputs<F>,
 	leaf_public_inputs: LeafPublicInputs<F>,
-	set_private_inputs: S::Private,
+	set_private_inputs: SetPrivateInputs<F, M>,
 	root_set: [F; M],
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
@@ -47,13 +47,11 @@ pub struct BridgeCircuit<
 	_hasher_gadget: PhantomData<HG>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
 	_tree_hasher_gadget: PhantomData<HGT>,
-	_set: PhantomData<S>,
-	_set_gadget: PhantomData<SG>,
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, H, HG, C, LHGT, HGT, S, SG, const N: usize, const M: usize>
-	BridgeCircuit<F, H, HG, C, LHGT, HGT, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, const N: usize, const M: usize>
+	BridgeCircuit<F, H, HG, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -61,14 +59,12 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 {
 	pub fn new(
 		arbitrary_input: ArbitraryInput<F>,
 		leaf_private_inputs: LeafPrivateInputs<F>,
 		leaf_public_inputs: LeafPublicInputs<F>,
-		set_private_inputs: S::Private,
+		set_private_inputs: SetPrivateInputs<F, M>,
 		root_set: [F; M],
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
@@ -89,15 +85,13 @@ where
 			_hasher_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
-			_set: PhantomData,
-			_set_gadget: PhantomData,
 			_merkle_config: PhantomData,
 		}
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, S, SG, const N: usize, const M: usize> Clone
-	for BridgeCircuit<F, H, HG, C, LHGT, HGT, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, const N: usize, const M: usize> Clone
+	for BridgeCircuit<F, H, HG, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -105,8 +99,6 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 {
 	fn clone(&self) -> Self {
 		let arbitrary_input = self.arbitrary_input.clone();
@@ -132,8 +124,8 @@ where
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, S, SG, const N: usize, const M: usize> ConstraintSynthesizer<F>
-	for BridgeCircuit<F, H, HG, C, LHGT, HGT, S, SG, N, M>
+impl<F, H, HG, C, LHGT, HGT, const N: usize, const M: usize> ConstraintSynthesizer<F>
+	for BridgeCircuit<F, H, HG, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -141,8 +133,6 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let arbitrary_input = self.arbitrary_input;
@@ -168,7 +158,8 @@ where
 
 		// Private inputs
 		let leaf_private_var = LeafPrivateInputsVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let set_input_private_var = SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private))?;
+		let set_input_private_var =
+			SetPrivateInputsVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
 
 		let leaf_gadget = BridgeLeafGadget::<F, H, HG>::new(leaf_private_var, leaf_public_var);
@@ -178,7 +169,8 @@ where
 		let is_member =
 			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &bridge_leaf)?;
 		// Check if target root is in set
-		let is_set_member = SG::check(&root_var, &root_set_var, &set_input_private_var)?;
+		let is_set_member =
+			SetMembershipGadget::check(&root_var, &root_set_var, &set_input_private_var)?;
 		// Constraining arbitrary inputs
 		arbitrary_input_var.constrain()?;
 

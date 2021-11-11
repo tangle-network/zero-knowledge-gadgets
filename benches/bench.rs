@@ -15,10 +15,7 @@ use arkworks_gadgets::{
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-	set::{
-		membership::{constraints::SetMembershipGadget, SetMembership},
-		Set,
-	},
+	set::membership::{constraints::SetMembershipGadget, SetMembership},
 	utils::{
 		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
 		get_rounds_poseidon_bn254_x5_5,
@@ -81,8 +78,6 @@ macro_rules! setup_circuit {
 			BridgeTreeConfig,
 			PoseidonCRH3Gadget,
 			PoseidonCRH3Gadget,
-			TestSetMembership,
-			TestSetMembershipGadget,
 			N,
 			M,
 		>;

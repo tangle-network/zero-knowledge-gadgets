@@ -6,9 +6,8 @@ use crate::{
 		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	poseidon::PoseidonParameters,
-	set::{
-		membership::{constraints::SetMembershipGadget, SetMembership},
-		Set,
+	set::membership::{
+		constraints::SetMembershipGadget, Private as SetMembershipPrivate, SetMembership,
 	},
 };
 use ark_crypto_primitives::{CRH as CRHTrait, SNARK};
@@ -40,8 +39,6 @@ pub type Circuit_x5<F, const N: usize, const M: usize> = BridgeCircuit<
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x5_3Gadget<F>,
-	TestSetMembership<F, M>,
-	TestSetMembershipGadget<F, M>,
 	N,
 	M,
 >;
@@ -53,8 +50,6 @@ pub type Circuit_Circomx5<F, const N: usize, const M: usize> = BridgeCircuit<
 	TreeConfig_Circomx5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCircomCRH_x5_3Gadget<F>,
-	TestSetMembership<F, M>,
-	TestSetMembershipGadget<F, M>,
 	N,
 	M,
 >;
@@ -69,8 +64,6 @@ pub type Circuit_x17<F, const N: usize, const M: usize> = BridgeCircuit<
 	TreeConfig_x17<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x17_3Gadget<F>,
-	TestSetMembership<F, M>,
-	TestSetMembershipGadget<F, M>,
 	N,
 	M,
 >;
@@ -78,7 +71,7 @@ pub type Circuit_x17<F, const N: usize, const M: usize> = BridgeCircuit<
 pub fn setup_set<F: PrimeField, const M: usize>(
 	root: &F,
 	roots: &[F; M],
-) -> <TestSetMembership<F, M> as Set<F, M>>::Private {
+) -> SetMembershipPrivate<F, M> {
 	TestSetMembership::generate_secrets(root, roots).unwrap()
 }
 
