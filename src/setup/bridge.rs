@@ -132,11 +132,19 @@ macro_rules! impl_setup_bridge_leaf {
 				let leaf_private = LeafPrivate::generate(rng);
 				// Public inputs for the leaf
 				let leaf_public = LeafPublic::new(chain_id);
-				let leaf = BridgeLeaf::<F, $leaf_crh_ty<F>>::new(leaf_private.clone(), leaf_public.clone());
+				// let leaf = BridgeLeaf::<F, $leaf_crh_ty<F>>::new(leaf_private.clone(), leaf_public.clone());
 
 				// Creating the leaf
-				let leaf_hash = leaf.create_leaf(params).unwrap();
-				let nullifier_hash = leaf.create_nullifier(params).unwrap();
+				let leaf_hash = BridgeLeaf::<F, $leaf_crh_ty<F>>::create_leaf(
+					&leaf_private,
+					&leaf_public,
+					params
+				).unwrap();
+				let nullifier_hash = BridgeLeaf::<F, $leaf_crh_ty<F>>::create_nullifier(
+					&leaf_private,
+					&leaf_public,
+					params
+				).unwrap();
 				(leaf_private, leaf_public, leaf_hash, nullifier_hash)
 			}
 		}

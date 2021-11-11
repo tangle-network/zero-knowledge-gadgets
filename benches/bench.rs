@@ -89,15 +89,14 @@ macro_rules! setup_circuit {
 		// Public inputs for the leaf
 		let chain_id = <$test_field>::one();
 		let leaf_public = LeafPublic::new(chain_id);
-		let leaf = Leaf::new(leaf_private.clone(), leaf_public.clone());
 
 		// Round params for the poseidon in leaf creation gadget
 		let rounds5 = get_rounds_poseidon_bn254_x5_5::<$test_field>();
 		let mds5 = get_mds_poseidon_bn254_x5_5::<$test_field>();
 		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 		// Creating the leaf
-		let leaf_hash = leaf.create_leaf(&params5).unwrap();
-		let nullifier_hash = leaf.create_nullifier(&params5).unwrap();
+		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &leaf_public, &params5).unwrap();
 
 		let fee = <$test_field>::rand(rng);
 		let refund = <$test_field>::rand(rng);

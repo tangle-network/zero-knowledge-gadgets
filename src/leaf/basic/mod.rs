@@ -21,25 +21,18 @@ impl<F: PrimeField> Private<F> {
 }
 
 struct BasicLeaf<F: PrimeField, H: CRH> {
-	private: Private<F>,
+	_field: PhantomData<F>,
 	_hasher: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: CRH> BasicLeaf<F, H> {
-	fn new(s: Private<F>) -> BasicLeaf<F, H> {
-		Self {
-			private: s,
-			_hasher: PhantomData,
-		}
-	}
-
-	fn create_leaf(&self, h: &H::Parameters) -> Result<H::Output, Error> {
-		let bytes = to_bytes![self.private.r, self.private.nullifier]?;
+	fn create_leaf(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
+		let bytes = to_bytes![private.r, private.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier_hash(&self, h: &H::Parameters) -> Result<H::Output, Error> {
-		let bytes = to_bytes![self.private.nullifier, self.private.nullifier]?;
+	fn create_nullifier_hash(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
+		let bytes = to_bytes![private.nullifier, private.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -74,7 +67,6 @@ mod test {
 	fn should_create_leaf() {
 		let rng = &mut test_rng();
 		let secrets = Private::<Fq>::generate(rng);
-		let leaf = Leaf::new(secrets.clone());
 
 		let inputs_leaf = to_bytes![secrets.r, secrets.nullifier].unwrap();
 
@@ -83,7 +75,7 @@ mod test {
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let leaf = leaf.create_leaf(&params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &params).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 }

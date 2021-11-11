@@ -162,10 +162,17 @@ where
 			SetPrivateInputsVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
 
-		let leaf_gadget = BridgeLeafGadget::<F, H, HG>::new(leaf_private_var, leaf_public_var);
 		// Creating the leaf and checking the membership inside the tree
-		let bridge_leaf = leaf_gadget.create_leaf(&hasher_params_var)?;
-		let bridge_nullifier = leaf_gadget.create_nullifier(&hasher_params_var)?;
+		let bridge_leaf = BridgeLeafGadget::<F, H, HG>::create_leaf(
+			&leaf_private_var,
+			&leaf_public_var,
+			&hasher_params_var,
+		)?;
+		let bridge_nullifier = BridgeLeafGadget::<F, H, HG>::create_nullifier(
+			&leaf_private_var,
+			&leaf_public_var,
+			&hasher_params_var,
+		)?;
 		let is_member =
 			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &bridge_leaf)?;
 		// Check if target root is in set

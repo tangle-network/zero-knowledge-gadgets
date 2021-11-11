@@ -20,32 +20,30 @@ impl<F: PrimeField> PrivateVar<F> {
 }
 
 pub struct MixerLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
-	private: PrivateVar<F>,
+	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
 
 impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> MixerLeafGadget<F, H, HG> {
-	pub fn new(s: PrivateVar<F>) -> Self {
-		Self {
-			private: s,
-			hasher: PhantomData,
-			hasher_gadget: PhantomData,
-		}
-	}
-
-	pub fn create_leaf(&self, h: &HG::ParametersVar) -> Result<HG::OutputVar, SynthesisError> {
+	pub fn create_leaf(
+		private: &PrivateVar<F>,
+		h: &HG::ParametersVar,
+	) -> Result<HG::OutputVar, SynthesisError> {
 		// leaf
 		let mut leaf_bytes = Vec::new();
-		leaf_bytes.extend(self.private.secret.to_bytes()?);
-		leaf_bytes.extend(self.private.nullifier.to_bytes()?);
+		leaf_bytes.extend(private.secret.to_bytes()?);
+		leaf_bytes.extend(private.nullifier.to_bytes()?);
 		HG::evaluate(h, &leaf_bytes)
 	}
 
-	pub fn create_nullifier(&self, h: &HG::ParametersVar) -> Result<HG::OutputVar, SynthesisError> {
+	pub fn create_nullifier(
+		private: &PrivateVar<F>,
+		h: &HG::ParametersVar,
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut nullifier_hash_bytes = Vec::new();
-		nullifier_hash_bytes.extend(self.private.nullifier.to_bytes()?);
-		nullifier_hash_bytes.extend(self.private.nullifier.to_bytes()?);
+		nullifier_hash_bytes.extend(private.nullifier.to_bytes()?);
+		nullifier_hash_bytes.extend(private.nullifier.to_bytes()?);
 		HG::evaluate(h, &nullifier_hash_bytes)
 	}
 }
@@ -84,7 +82,6 @@ mod test {
 		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
 	};
 	use ark_bls12_381::Fq;
-	use ark_r1cs_std::R1CSVar;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
@@ -114,10 +111,9 @@ mod test {
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
-		let secrets = Private::generate(rng);
-		let leaf = Leaf::new(secrets.clone());
-		let leaf_hash = leaf.create_leaf(&params).unwrap();
-		let nullifier_hash = leaf.create_nullifier(&params).unwrap();
+		let private = Private::generate(rng);
+		let leaf_hash = Leaf::create_leaf(&private, &params).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&private, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(
@@ -127,10 +123,9 @@ mod test {
 		)
 		.unwrap();
 
-		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let leaf_var = LeafGadget::new(secrets_var);
-		let leaf_hash_var = leaf_var.create_leaf(&params_var).unwrap();
-		let nullifier_hash_var = leaf_var.create_nullifier(&params_var).unwrap();
+		let private_var = PrivateVar::new_witness(cs.clone(), || Ok(&private)).unwrap();
+		let leaf_hash_var = LeafGadget::create_leaf(&private_var, &params_var).unwrap();
+		let nullifier_hash_var = LeafGadget::create_nullifier(&private_var, &params_var).unwrap();
 
 		// Checking equality
 		let leaf_new_hash_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf_hash)).unwrap();

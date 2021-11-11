@@ -171,9 +171,8 @@ mod test {
 		let private = Private::generate(rng);
 		let privkey = to_bytes![private.priv_key].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
-		let leaf = Leaf::new(private.clone(), public.clone());
 
-		let leaf_hash = leaf.create_leaf(&pubkey, &params).unwrap();
+		let leaf_hash = Leaf::create_leaf(&private, &public, &pubkey, &params).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -200,7 +199,7 @@ mod test {
 
 		// Test Nullifier
 		// Native version
-		let nullifier = leaf.create_nullifier(&leaf_hash, &params, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&private, &leaf_hash, &params, &index).unwrap();
 
 		// Constraints version
 		let nullifier_var = leaf_var

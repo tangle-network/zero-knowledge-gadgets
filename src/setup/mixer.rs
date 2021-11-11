@@ -109,12 +109,12 @@ macro_rules! impl_setup_mixer_leaf {
 			) {
 				// Secret inputs for the leaf
 				let leaf_private = LeafPrivate::generate(rng);
-				// Public inputs for the leaf
-				let leaf = MixerLeaf::<F, $leaf_crh_ty<F>>::new(leaf_private.clone());
 
 				// Creating the leaf
-				let leaf_hash = leaf.create_leaf(params).unwrap();
-				let nullifier_hash = leaf.create_nullifier(params).unwrap();
+				let leaf_hash =
+					MixerLeaf::<F, $leaf_crh_ty<F>>::create_leaf(&leaf_private, params).unwrap();
+				let nullifier_hash =
+					MixerLeaf::<F, $leaf_crh_ty<F>>::create_nullifier(&leaf_private, params).unwrap();
 				(leaf_private, leaf_hash, nullifier_hash)
 			}
 		}

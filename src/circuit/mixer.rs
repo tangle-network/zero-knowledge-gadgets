@@ -132,10 +132,11 @@ where
 		let leaf_private_var = LeafPrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs, || Ok(path))?;
 
-		let mixer_leaf = MixerLeafGadget::<F, H, HG>::new(leaf_private_var);
 		// Creating the leaf and checking the membership inside the tree
-		let mixer_leaf_hash = mixer_leaf.create_leaf(&hasher_params_var)?;
-		let mixer_nullifier_hash = mixer_leaf.create_nullifier(&hasher_params_var)?;
+		let mixer_leaf_hash =
+			MixerLeafGadget::<F, H, HG>::create_leaf(&leaf_private_var, &hasher_params_var)?;
+		let mixer_nullifier_hash =
+			MixerLeafGadget::<F, H, HG>::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf_hash)?;
 		// Constraining arbitrary inputs
 		arbitrary_input_var.constrain()?;

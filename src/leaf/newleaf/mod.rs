@@ -37,39 +37,30 @@ impl<F: PrimeField> Private<F> {
 }
 
 struct NewLeaf<F: PrimeField, H: CRH> {
-	private: Private<F>,
-	public: Public<F>,
+	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: CRH> NewLeaf<F, H> {
-	pub fn new(private: Private<F>, public: Public<F>) -> Self {
-		Self {
-			private,
-			public,
-			hasher: PhantomData,
-		}
-	}
-
 	// Commits to the values = hash(chain_id, amount, pubKey, blinding)
-	pub fn create_leaf(&self, pubk: &H::Output, h: &H::Parameters) -> Result<H::Output, Error> {
-		let bytes = to_bytes![
-			self.public.chain_id,
-			self.private.amount,
-			pubk,
-			self.private.blinding
-		]?;
+	pub fn create_leaf(
+		private: &Private<F>,
+		public: &Public<F>,
+		pubk: &H::Output,
+		h: &H::Parameters,
+	) -> Result<H::Output, Error> {
+		let bytes = to_bytes![public.chain_id, private.amount, pubk, private.blinding]?;
 		H::evaluate(h, &bytes)
 	}
 
 	// Computes the nullifier = hash(commitment, pathIndices, privKey)
 	pub fn create_nullifier(
-		&self,
+		private: &Private<F>,
 		leaf: &H::Output,
 		h: &H::Parameters,
 		index: &F,
 	) -> Result<H::Output, Error> {
-		let bytes = to_bytes![leaf, index, self.private.priv_key]?;
+		let bytes = to_bytes![leaf, index, private.priv_key]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -105,7 +96,6 @@ mod test {
 		let rng = &mut test_rng();
 		let private = Private::generate(rng);
 		let public = Public::default();
-		let leaf = Leaf::new(private.clone(), public.clone());
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
@@ -117,7 +107,7 @@ mod test {
 			to_bytes![public.chain_id, private.amount, pubkey, private.blinding].unwrap();
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let leaf_hash = leaf.create_leaf(&pubkey, &params).unwrap();
+		let leaf_hash = Leaf::create_leaf(&private, &public, &pubkey, &params).unwrap();
 		assert_eq!(ev_res, leaf_hash);
 	}
 	use crate::ark_std::Zero;
@@ -128,7 +118,6 @@ mod test {
 		let chain_id = Fq::zero();
 		let public = Public::new(chain_id);
 		let index = Fq::zero();
-		let leaf = Leaf::new(private.clone(), public.clone());
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
@@ -139,14 +128,14 @@ mod test {
 		let inputs_leaf =
 			to_bytes![public.chain_id, private.amount, pubkey, private.blinding].unwrap();
 		let commitment = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
-		let leaf_hash = leaf.create_leaf(&pubkey, &params).unwrap();
+		let leaf_hash = Leaf::create_leaf(&private, &public, &pubkey, &params).unwrap();
 		assert_eq!(leaf_hash, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
 		let inputs_null = to_bytes![commitment, index, private.priv_key].unwrap();
 
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_null).unwrap();
-		let nullifier = leaf.create_nullifier(&commitment, &params, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&private, &commitment, &params, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 }
