@@ -10,11 +10,8 @@ use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
 	arbitrary::bridge_data::Input as BridgeDataInput,
 	circuit::bridge::BridgeCircuit,
-	leaf::{
-		bridge::{
-			constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
-		},
-		LeafCreation,
+	leaf::bridge::{
+		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},

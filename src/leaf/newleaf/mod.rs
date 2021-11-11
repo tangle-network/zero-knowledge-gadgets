@@ -1,4 +1,3 @@
-use crate::leaf::NewLeafCreation;
 use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes};
 
@@ -20,6 +19,7 @@ pub struct Private<F: PrimeField> {
 pub struct Public<F: PrimeField> {
 	chain_id: F,
 }
+
 impl<F: PrimeField> Public<F> {
 	pub fn new(chain_id: F) -> Self {
 		Self { chain_id }
@@ -37,44 +37,39 @@ impl<F: PrimeField> Private<F> {
 }
 
 struct NewLeaf<F: PrimeField, H: CRH> {
-	field: PhantomData<F>,
+	private: Private<F>,
+	public: Public<F>,
 	hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: CRH> NewLeafCreation<H> for NewLeaf<F, H> {
-	// Commitment = hash(chain_id, amount, pubKey, blinding)
-	type Leaf = H::Output;
-	// Nullifier = hash(commitment, pathIndices, privKey)
-	type Nullifier = H::Output;
-	type Private = Private<F>;
-	type Public = Public<F>;
-
-	// Creates Random Secrets: r, nullifier, amount, blinding, priv_key,
-	// merkle_path(TODO: merkle_path needs to be costructed) // TODO
-	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error> {
-		Ok(Self::Private::generate(r))
+impl<F: PrimeField, H: CRH> NewLeaf<F, H> {
+	pub fn new(private: Private<F>, public: Public<F>) -> Self {
+		Self {
+			private,
+			public,
+			hasher: PhantomData,
+		}
 	}
 
 	// Commits to the values = hash(chain_id, amount, pubKey, blinding)
-	fn create_leaf(
-		s: &Self::Private,
-		p: &Self::Public,
-		pubk: &<H as CRH>::Output,
-		h: &H::Parameters,
-	) -> Result<Self::Leaf, Error> {
-
-		let bytes = to_bytes![p.chain_id, s.amount, pubk, s.blinding]?;
+	pub fn create_leaf(&self, pubk: &H::Output, h: &H::Parameters) -> Result<H::Output, Error> {
+		let bytes = to_bytes![
+			self.public.chain_id,
+			self.private.amount,
+			pubk,
+			self.private.blinding
+		]?;
 		H::evaluate(h, &bytes)
 	}
 
 	// Computes the nullifier = hash(commitment, pathIndices, privKey)
-	fn create_nullifier<F1: PrimeField>(
-		s: &Self::Private,
-		c: &Self::Leaf,
+	pub fn create_nullifier(
+		&self,
+		leaf: &H::Output,
 		h: &H::Parameters,
-		f: &F1,
-	) -> Result<Self::Nullifier, Error> {
-		let bytes = to_bytes![c, f, s.priv_key]?;
+		index: &F,
+	) -> Result<H::Output, Error> {
+		let bytes = to_bytes![leaf, index, self.private.priv_key]?;
 		H::evaluate(h, &bytes)
 	}
 }
@@ -108,60 +103,50 @@ mod test {
 	#[test]
 	fn should_create_leaf() {
 		let rng = &mut test_rng();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let publics = Public::default();
-
+		let private = Private::generate(rng);
+		let public = Public::default();
+		let leaf = Leaf::new(private.clone(), public.clone());
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let privkey= to_bytes![secrets.priv_key].unwrap();
+		let privkey = to_bytes![private.priv_key].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 		// Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![
-			publics.chain_id,
-			secrets.amount,
-			pubkey,
-			secrets.blinding
-		]
-		.unwrap();
+		let inputs_leaf =
+			to_bytes![public.chain_id, private.amount, pubkey, private.blinding].unwrap();
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &publics, &pubkey,&params).unwrap();
-		assert_eq!(ev_res, leaf);
+		let leaf_hash = leaf.create_leaf(&pubkey, &params).unwrap();
+		assert_eq!(ev_res, leaf_hash);
 	}
 	use crate::ark_std::Zero;
 	#[test]
 	fn should_create_nullifier() {
 		let rng = &mut test_rng();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let private = Private::generate(rng);
 		let chain_id = Fq::zero();
-		let publics = Public::new(chain_id);
+		let public = Public::new(chain_id);
 		let index = Fq::zero();
-		
+		let leaf = Leaf::new(private.clone(), public.clone());
 
 		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
 		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let privkey= to_bytes![secrets.priv_key].unwrap();
+		let privkey = to_bytes![private.priv_key].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 		// Since Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf = to_bytes![
-			publics.chain_id,
-			secrets.amount,
-			pubkey,
-			secrets.blinding
-		]
-		.unwrap();
+		let inputs_leaf =
+			to_bytes![public.chain_id, private.amount, pubkey, private.blinding].unwrap();
 		let commitment = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &publics,&pubkey, &params).unwrap();
-		assert_eq!(leaf, commitment);
+		let leaf_hash = leaf.create_leaf(&pubkey, &params).unwrap();
+		assert_eq!(leaf_hash, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
-		let inputs_null = to_bytes![commitment, index, secrets.priv_key].unwrap();
+		let inputs_null = to_bytes![commitment, index, private.priv_key].unwrap();
 
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_null).unwrap();
-		let nullifier = Leaf::create_nullifier(&secrets, &commitment, &params, &index).unwrap();
+		let nullifier = leaf.create_nullifier(&commitment, &params, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 }
