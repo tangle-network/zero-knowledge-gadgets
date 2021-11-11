@@ -75,7 +75,8 @@ pub trait VanchorLeafCreationGadget<
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		h: &HG::ParametersVar,
+		h_w2: &HG::ParametersVar,
+		h_w5: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError>;
 
 	fn create_nullifier(

@@ -20,7 +20,7 @@ pub struct VanchorCircuit<
 	// Arbitrary data constraints
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	// Hasher for the leaf creation
+	// Hasher for the leaf creation,  Nullifier, Public key generation
 	H: CRH,
 	HG: CRHGadget<H, F>,
 	// Merkle config and hasher gadget for the tree
@@ -44,7 +44,9 @@ pub struct VanchorCircuit<
 	leaf_public_inputs: L::Public,        // chain_id
 	set_private_inputs: Vec<S::Private>,  // diffs
 	root_set: [F; M],
-	hasher_params: H::Parameters,
+	hasher_params_w2: H::Parameters,
+	hasher_params_w4: H::Parameters,
+	hasher_params_w5: H::Parameters,
 	path: Vec<Path<C, N>>,
 	index: Vec<F>, // TODO: Temporary, we may need to compute it from path
 	nullifier_hash: Vec<L::Nullifier>,
@@ -91,7 +93,9 @@ where
 		leaf_public_inputs: L::Public,
 		set_private_inputs: Vec<S::Private>,
 		root_set: [F; M],
-		hasher_params: H::Parameters,
+		hasher_params_w2: H::Parameters,
+		hasher_params_w4: H::Parameters,
+		hasher_params_w5: H::Parameters,
 		path: Vec<Path<C, N>>,
 		index: Vec<F>,
 		nullifier_hash: Vec<L::Nullifier>,
@@ -109,7 +113,9 @@ where
 			leaf_public_inputs,
 			set_private_inputs,
 			root_set,
-			hasher_params,
+			hasher_params_w2,
+			hasher_params_w4,
+			hasher_params_w5,
 			path,
 			index,
 			nullifier_hash,
@@ -133,7 +139,9 @@ where
 
 	pub fn verify_input_var(
 		&self,
-		hasher_params_var: &HG::ParametersVar,
+		hasher_params_w2_var: &HG::ParametersVar,
+		hasher_params_w4_var: &HG::ParametersVar,
+		hasher_params_w5_var: &HG::ParametersVar,
 		leaf_private_var: &Vec<LG::PrivateVar>,
 		leaf_public_var: &LG::PublicVar, //TODO: this doesn't need to be Vec
 		in_path_indices_var: &Vec<FpVar<F>>,
@@ -150,20 +158,24 @@ where
 		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
 		for tx in 0..N {
 			inkeypair[tx] = KeypairCreationGadget::<H, HG, F, L, LG>::new_from_key(
-				&hasher_params_var,
+				&hasher_params_w2_var,
 				&LG::get_private_key(&leaf_private_var[tx]).unwrap(),
 			)
 			.unwrap();
 			// Computing the hash
-			in_utxo_hasher_var[tx] =
-				LG::create_leaf(&leaf_private_var[tx], &leaf_public_var, &hasher_params_var)?;
+			in_utxo_hasher_var[tx] = LG::create_leaf(
+				&leaf_private_var[tx],
+				&leaf_public_var,
+				&hasher_params_w2_var,
+				&hasher_params_w5_var,
+			)?;
 			// End of computing the hash
 
 			// Nullifier
 			nullifier_hash[tx] = LG::create_nullifier(
 				&leaf_private_var[tx],
 				&in_utxo_hasher_var[tx],
-				&hasher_params_var,
+				&hasher_params_w4_var,
 				&in_path_indices_var[tx],
 			)?;
 
@@ -188,7 +200,7 @@ where
 	//TODO: Verify correctness of transaction outputs
 	pub fn verify_output_var(
 		&self,
-		hasher_params_var: &HG::ParametersVar,
+		hasher_params_w5_var: &HG::ParametersVar,
 		output_commitment_var: &Vec<HG::OutputVar>,
 		out_chain_id_var: &Vec<FpVar<F>>,
 		out_amount_var: &Vec<FpVar<F>>,
@@ -205,7 +217,7 @@ where
 			bytes.extend(out_amount_var[tx].to_bytes()?);
 			bytes.extend(out_pubkey_var[tx].to_bytes()?);
 			bytes.extend(out_blinding_var[tx].to_bytes()?);
-			in_utxo_hasher_var_out[tx] = HG::evaluate(&hasher_params_var, &bytes)?;
+			in_utxo_hasher_var_out[tx] = HG::evaluate(&hasher_params_w5_var, &bytes)?;
 			// End of computing the hash
 			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
 
@@ -272,7 +284,9 @@ where
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
 		let set_private_inputs = self.set_private_inputs.clone();
 		let root_set = self.root_set;
-		let hasher_params = self.hasher_params.clone();
+		let hasher_params_w2 = self.hasher_params_w2.clone();
+		let hasher_params_w4 = self.hasher_params_w2.clone();
+		let hasher_params_w5 = self.hasher_params_w2.clone();
 		let path = self.path.clone();
 		let index = self.index.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
@@ -290,7 +304,9 @@ where
 			leaf_public_inputs,
 			set_private_inputs,
 			root_set,
-			hasher_params,
+			hasher_params_w2,
+			hasher_params_w4,
+			hasher_params_w5,
 			path,
 			index,
 			nullifier_hash,
@@ -326,7 +342,9 @@ where
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
 		let set_private = self.set_private_inputs.clone(); // TODO
 		let root_set = self.root_set.clone(); // TODO
-		let hasher_params = self.hasher_params.clone();
+		let hasher_params_w2 = self.hasher_params_w2.clone();
+		let hasher_params_w4 = self.hasher_params_w4.clone();
+		let hasher_params_w5 = self.hasher_params_w5.clone();
 		let path = self.path.clone();
 		let index = self.index.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
@@ -358,7 +376,9 @@ where
 		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
-		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
+		let hasher_params_w2_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params_w2)?;
+		let hasher_params_w4_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params_w4)?;
+		let hasher_params_w5_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params_w5)?;
 
 		// Private inputs
 		let mut leaf_private_var: Vec<LG::PrivateVar> = Vec::with_capacity(N);
@@ -398,7 +418,9 @@ where
 		// verify correctness of transaction inputs
 		let sum_ins_var = self
 			.verify_input_var(
-				&hasher_params_var,
+				&hasher_params_w2_var,
+				&hasher_params_w4_var,
+				&hasher_params_w5_var,
 				&leaf_private_var,
 				&leaf_public_var,
 				&in_path_indices_var,
@@ -412,7 +434,7 @@ where
 		// verify correctness of transaction outputs
 		let sum_outs_var = self
 			.verify_output_var(
-				&hasher_params_var,
+				&hasher_params_w5_var,
 				&output_commitment_var,
 				&out_chain_id_var,
 				&out_amount_var,

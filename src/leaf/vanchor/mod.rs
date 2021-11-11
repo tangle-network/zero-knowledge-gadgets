@@ -59,32 +59,33 @@ impl<F: PrimeField, H: CRH> VanchorLeafCreation<H, F> for VanchorLeaf<F, H> {
 	fn create_leaf(
 		s: &Self::Private,
 		p: &Self::Public,
-		h: &H::Parameters,
+		h_w2: &H::Parameters,
+		h_w5: &H::Parameters,
 	) -> Result<Self::Leaf, Error> {
 		let bytes = to_bytes![s.priv_key]?;
-		let pubk = H::evaluate(h, &bytes).unwrap();
+		let pubk = H::evaluate(h_w2, &bytes).unwrap();
 		let bytes = to_bytes![p.chain_id, s.amount, pubk, s.blinding]?;
-		H::evaluate(h, &bytes)
+		H::evaluate(h_w5, &bytes)
 	}
 
 	// Computes the nullifier = hash(commitment, pathIndices, privKey)
 	fn create_nullifier(
 		s: &Self::Private,
 		c: &Self::Leaf,
-		h: &H::Parameters,
+		h_w4: &H::Parameters,
 		f: &F,
 	) -> Result<Self::Nullifier, Error> {
 		let bytes = to_bytes![c, f, s.priv_key]?;
-		H::evaluate(h, &bytes)
+		H::evaluate(h_w4, &bytes)
 	}
 
 	fn get_private_key(s: &Self::Private) -> Result<F, Error> {
 		Ok(s.priv_key.clone())
 	}
 
-	fn gen_public_key(s: &Self::Private, h: &H::Parameters) -> Result<H::Output, Error> {
+	fn gen_public_key(s: &Self::Private, h_w1: &H::Parameters) -> Result<H::Output, Error> {
 		let bytes = to_bytes![s.priv_key]?;
-		H::evaluate(h, &bytes)
+		H::evaluate(h_w1, &bytes)
 	}
 }
 
@@ -130,7 +131,8 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let ev_res = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+		//TODO: change the params
+		let leaf = Leaf::create_leaf(&secrets, &publics, &params, &params).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
@@ -151,7 +153,9 @@ mod test {
 		let inputs_leaf =
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let commitment = PoseidonCRH3::evaluate(&params, &inputs_leaf).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &publics, &params).unwrap();
+
+		//TODO: change the params
+		let leaf = Leaf::create_leaf(&secrets, &publics, &params, &params).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)

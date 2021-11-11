@@ -70,31 +70,32 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		h: &HG::ParametersVar,
+		h_w2: &HG::ParametersVar,
+		h_w5: &HG::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes_p = Vec::new();
 		bytes_p.extend(s.priv_key.to_bytes()?);
-		let pubkey = HG::evaluate(h, &bytes_p)?;
+		let pubkey = HG::evaluate(h_w2, &bytes_p)?;
 
 		let mut bytes = Vec::new();
 		bytes.extend(p.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
 		bytes.extend(pubkey.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
-		HG::evaluate(h, &bytes)
+		HG::evaluate(h_w5, &bytes)
 	}
 
 	fn create_nullifier(
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
-		h: &HG::ParametersVar,
+		h_w4: &HG::ParametersVar,
 		i: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(c.to_bytes()?);
 		bytes.extend(i.to_bytes()?);
 		bytes.extend(s.priv_key.to_bytes()?);
-		HG::evaluate(h, &bytes)
+		HG::evaluate(h_w4, &bytes)
 	}
 
 	fn get_private_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
@@ -103,11 +104,11 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 
 	fn gen_public_key(
 		s: &Self::PrivateVar,
-		h: &HG::ParametersVar,
+		h_w2: &HG::ParametersVar,
 	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(s.priv_key.to_bytes()?);
-		HG::evaluate(h, &bytes)
+		HG::evaluate(h_w2, &bytes)
 	}
 
 	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
@@ -203,7 +204,8 @@ mod test {
 		let public = Public::new(chain_id);
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
+		//TODO Change the parameters
+		let leaf = Leaf::create_leaf(&secrets, &public, &params, &params).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -213,7 +215,9 @@ mod test {
 			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 
-		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
+		//TODO Change the parameters
+		let leaf_var =
+			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var, &params_var).unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
