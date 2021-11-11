@@ -1,6 +1,9 @@
 use crate::{
 	arbitrary::mixer_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
-	leaf::{constraints::LeafCreationGadget, LeafCreation},
+	leaf::mixer::{
+		constraints::{MixerLeafGadget, PrivateVar as LeafPrivateVar},
+		Private as LeafPrivate,
+	},
 	merkle_tree::{
 		constraints::{NodeVar, PathVar},
 		Config as MerkleConfig, Path,
@@ -21,29 +24,23 @@ pub struct MixerCircuit<
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	// Type of leaf creation
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 	const N: usize,
 > {
 	arbitrary_input: ArbitraryInput<F>,
-	leaf_private_inputs: L::Private,
-	leaf_public_inputs: L::Public,
+	leaf_private_inputs: LeafPrivate<F>,
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
 	root: <C::H as CRH>::Output,
-	nullifier_hash: L::Nullifier,
+	nullifier_hash: H::Output,
 	_field: PhantomData<F>,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
 	_tree_hasher_gadget: PhantomData<HGT>,
-	_leaf_creation: PhantomData<L>,
-	_leaf_creation_gadget: PhantomData<LG>,
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, H, HG, C, LHGT, HGT, L, LG, const N: usize> MixerCircuit<F, H, HG, C, LHGT, HGT, L, LG, N>
+impl<F, H, HG, C, LHGT, HGT, const N: usize> MixerCircuit<F, H, HG, C, LHGT, HGT, N>
 where
 	F: PrimeField,
 	H: CRH,
@@ -51,22 +48,18 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 {
 	pub fn new(
 		arbitrary_input: ArbitraryInput<F>,
-		leaf_private_inputs: L::Private,
-		leaf_public_inputs: L::Public,
+		leaf_private_inputs: LeafPrivate<F>,
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
 		root: <C::H as CRH>::Output,
-		nullifier_hash: L::Nullifier,
+		nullifier_hash: H::Output,
 	) -> Self {
 		Self {
 			arbitrary_input,
 			leaf_private_inputs,
-			leaf_public_inputs,
 			hasher_params,
 			path,
 			root,
@@ -76,15 +69,12 @@ where
 			_hasher_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
-			_leaf_creation: PhantomData,
-			_leaf_creation_gadget: PhantomData,
 			_merkle_config: PhantomData,
 		}
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, L, LG, const N: usize> Clone
-	for MixerCircuit<F, H, HG, C, LHGT, HGT, L, LG, N>
+impl<F, H, HG, C, LHGT, HGT, const N: usize> Clone for MixerCircuit<F, H, HG, C, LHGT, HGT, N>
 where
 	F: PrimeField,
 	H: CRH,
@@ -92,13 +82,10 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 {
 	fn clone(&self) -> Self {
 		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
-		let leaf_public_inputs = self.leaf_public_inputs.clone();
 		let hasher_params = self.hasher_params.clone();
 		let path = self.path.clone();
 		let root = self.root.clone();
@@ -106,7 +93,6 @@ where
 		Self::new(
 			arbitrary_input,
 			leaf_private_inputs,
-			leaf_public_inputs,
 			hasher_params,
 			path,
 			root,
@@ -115,8 +101,8 @@ where
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, L, LG, const N: usize> ConstraintSynthesizer<F>
-	for MixerCircuit<F, H, HG, C, LHGT, HGT, L, LG, N>
+impl<F, H, HG, C, LHGT, HGT, const N: usize> ConstraintSynthesizer<F>
+	for MixerCircuit<F, H, HG, C, LHGT, HGT, N>
 where
 	F: PrimeField,
 	H: CRH,
@@ -124,13 +110,10 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: LeafCreation<H>,
-	LG: LeafCreationGadget<F, H, HG, L>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let arbitrary_input = self.arbitrary_input;
 		let leaf_private = self.leaf_private_inputs;
-		let leaf_public = self.leaf_public_inputs;
 		let hasher_params = self.hasher_params;
 		let path = self.path;
 		let root = self.root;
@@ -138,8 +121,7 @@ where
 
 		// Generating vars
 		// Public inputs
-		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public))?;
-		let nullifier_hash_var = LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
+		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
@@ -147,19 +129,20 @@ where
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
 
 		// Private inputs
-		let leaf_private_var = LG::PrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
+		let leaf_private_var = LeafPrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs, || Ok(path))?;
 
+		let mixer_leaf = MixerLeafGadget::<F, H, HG>::new(leaf_private_var);
 		// Creating the leaf and checking the membership inside the tree
-		let mixer_leaf = LG::create_leaf(&leaf_private_var, &leaf_public_var, &hasher_params_var)?;
-		let mixer_nullifier = LG::create_nullifier(&leaf_private_var, &hasher_params_var)?;
-		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf)?;
+		let mixer_leaf_hash = mixer_leaf.create_leaf(&hasher_params_var)?;
+		let mixer_nullifier_hash = mixer_leaf.create_nullifier(&hasher_params_var)?;
+		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf_hash)?;
 		// Constraining arbitrary inputs
 		arbitrary_input_var.constrain()?;
 
 		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
-		mixer_nullifier.enforce_equal(&nullifier_hash_var)?;
+		mixer_nullifier_hash.enforce_equal(&nullifier_hash_var)?;
 
 		Ok(())
 	}
@@ -281,7 +264,6 @@ mod test {
 		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
-			(),
 			params5,
 			path,
 			root,
@@ -319,7 +301,6 @@ mod test {
 		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
-			(),
 			params5,
 			path,
 			root,
@@ -357,7 +338,6 @@ mod test {
 		let circuit = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
-			(),
 			params5,
 			path,
 			root,

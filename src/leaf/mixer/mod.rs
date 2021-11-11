@@ -1,30 +1,9 @@
 use ark_crypto_primitives::{crh::CRH, Error};
-use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
-use ark_std::{
-	io::{Result as IoResult, Write},
-	marker::PhantomData,
-	rand::Rng,
-};
-
-use crate::leaf::LeafCreation;
+use ark_ff::{fields::PrimeField, to_bytes};
+use ark_std::{marker::PhantomData, rand::Rng};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
-
-#[derive(Clone)]
-pub struct PrivateBuilder<F: PrimeField> {
-	pub secret: F,
-	pub nullifier: F,
-}
-
-impl<F: PrimeField> PrivateBuilder<F> {
-	pub fn build(self) -> Private<F> {
-		Private {
-			secret: self.secret,
-			nullifier: self.nullifier,
-		}
-	}
-}
 
 #[derive(Default, Clone)]
 pub struct Private<F: PrimeField> {
@@ -49,50 +28,27 @@ impl<F: PrimeField> Private<F> {
 	}
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Default)]
-pub struct Output<F: PrimeField> {
-	pub leaf: F,
-	pub nullifier_hash: F,
-}
-
-impl<F: PrimeField> ToBytes for Output<F> {
-	fn write<W: Write>(&self, mut writer: W) -> IoResult<()> {
-		writer.write_all(&to_bytes![self.leaf].unwrap())?;
-		writer.write_all(&to_bytes![self.nullifier_hash].unwrap())?;
-		Ok(())
-	}
-}
-
 #[derive(Clone)]
 pub struct MixerLeaf<F: PrimeField, H: CRH> {
-	field: PhantomData<F>,
+	private: Private<F>,
 	hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: CRH> LeafCreation<H> for MixerLeaf<F, H> {
-	type Leaf = H::Output;
-	type Nullifier = H::Output;
-	type Private = Private<F>;
-	type Public = ();
-
-	fn generate_secrets<R: Rng>(r: &mut R) -> Result<Self::Private, Error> {
-		Ok(Self::Private::generate(r))
+impl<F: PrimeField, H: CRH> MixerLeaf<F, H> {
+	pub fn new(s: Private<F>) -> Self {
+		Self {
+			private: s,
+			hasher: PhantomData,
+		}
 	}
 
-	fn create_leaf(
-		s: &Self::Private,
-		_: &Self::Public,
-		h: &H::Parameters,
-	) -> Result<Self::Leaf, Error> {
-		let input_bytes = to_bytes![s.secret, s.nullifier]?;
+	pub fn create_leaf(&self, h: &H::Parameters) -> Result<H::Output, Error> {
+		let input_bytes = to_bytes![self.private.secret, self.private.nullifier]?;
 		H::evaluate(h, &input_bytes)
 	}
 
-	fn create_nullifier_hash(
-		s: &Self::Private,
-		h: &H::Parameters,
-	) -> Result<Self::Nullifier, Error> {
-		let nullifier_bytes = to_bytes![s.nullifier, s.nullifier]?;
+	pub fn create_nullifier(&self, h: &H::Parameters) -> Result<H::Output, Error> {
+		let nullifier_bytes = to_bytes![self.private.nullifier, self.private.nullifier]?;
 		H::evaluate(h, &nullifier_bytes)
 	}
 }
@@ -127,7 +83,8 @@ mod test {
 	#[test]
 	fn should_crate_mixer_leaf() {
 		let rng = &mut test_rng();
-		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let secrets = Private::generate(rng);
+		let leaf = Leaf::new(secrets.clone());
 
 		let leaf_inputs = to_bytes![secrets.secret, secrets.nullifier].unwrap();
 
@@ -139,9 +96,9 @@ mod test {
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &(), &params).unwrap();
-		let nullifier_hash = Leaf::create_nullifier_hash(&secrets, &params).unwrap();
-		assert_eq!(leaf_res, leaf);
+		let leaf_hash = leaf.create_leaf(&params).unwrap();
+		let nullifier_hash = leaf.create_nullifier(&params).unwrap();
+		assert_eq!(leaf_res, leaf_hash);
 		assert_eq!(nullifier_res, nullifier_hash);
 	}
 }

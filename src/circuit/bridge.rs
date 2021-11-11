@@ -4,7 +4,7 @@ use crate::{
 		constraints::{
 			BridgeLeafGadget, PrivateVar as LeafPrivateInputsVar, PublicVar as LeafPublicInputsVar,
 		},
-		BridgeLeaf, Private as LeafPrivateInputs, Public as LeafPublicInputs,
+		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
 	merkle_tree::{
 		constraints::{NodeVar, PathVar},

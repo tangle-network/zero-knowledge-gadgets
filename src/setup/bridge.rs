@@ -11,7 +11,7 @@ use crate::{
 		Set,
 	},
 };
-use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait, SNARK};
+use ark_crypto_primitives::{CRH as CRHTrait, SNARK};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
