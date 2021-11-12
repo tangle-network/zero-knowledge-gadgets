@@ -1,9 +1,6 @@
 use crate::{
 	leaf::{
-		vanchor::{
-			 Private as LeafPrivate, Public as LeafPublic,
-			VanchorLeaf,
-		},
+		vanchor::{Private as LeafPrivate, Public as LeafPublic, VanchorLeaf},
 		VanchorLeafCreation,
 	},
 	merkle_tree::{Config, Node, Path},
@@ -31,7 +28,13 @@ impl Rounds for PoseidonRounds_x5_5 {
 pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
 pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
 
-pub fn generate_vanchor_leaf_rng<F: PrimeField, H2: CRHTrait, H4: CRHTrait, H5: CRHTrait, R: Rng>(
+pub fn generate_vanchor_leaf_rng<
+	F: PrimeField,
+	H2: CRHTrait,
+	H4: CRHTrait,
+	H5: CRHTrait,
+	R: Rng,
+>(
 	chain_id: F,
 	h_w2: &H2::Parameters,
 	h_w5: &H5::Parameters,

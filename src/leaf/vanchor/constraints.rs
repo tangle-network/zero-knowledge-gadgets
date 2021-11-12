@@ -178,11 +178,19 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{poseidon::{
+	use crate::{
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
-		}, utils::{get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5}};
+		},
+		utils::{
+			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4,
+			get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bls381_x5_5,
+			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
+			get_rounds_poseidon_bn254_x5_5,
+		},
+	};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
@@ -263,16 +271,23 @@ mod test {
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let params_var5_5 =
-			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params5_5), AllocationMode::Constant)
-				.unwrap();
-		let params_var5_2 =
-			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params5_2), AllocationMode::Constant)
-				.unwrap();
+		let params_var5_5 = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(&params5_5),
+			AllocationMode::Constant,
+		)
+		.unwrap();
+		let params_var5_2 = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(&params5_2),
+			AllocationMode::Constant,
+		)
+		.unwrap();
 
 		//TODO Change the parameters
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var5_2, &params_var5_5).unwrap();
+			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var5_2, &params_var5_5)
+				.unwrap();
 
 		// Check equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(leaf)).unwrap();
@@ -285,14 +300,18 @@ mod test {
 		let rounds5_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
 		let mds5_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
 		let params5_4 = PoseidonParameters::<Fq>::new(rounds5_4, mds5_4);
-		let params_var5_4 =
-			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params5_4), AllocationMode::Constant)
-				.unwrap();		
+		let params_var5_4 = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(&params5_4),
+			AllocationMode::Constant,
+		)
+		.unwrap();
 		let nullifier = Leaf::create_nullifier(&secrets, &leaf, &params5_4, &index).unwrap();
 
 		// Constraints version
 		let nullifier_var =
-		LeafGadget::create_nullifier(&secrets_var, &leaf_var, &params_var5_4, &index_var).unwrap();
+			LeafGadget::create_nullifier(&secrets_var, &leaf_var, &params_var5_4, &index_var)
+				.unwrap();
 
 		// Check equality
 		let nullifier_new_var =

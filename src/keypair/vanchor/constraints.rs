@@ -30,7 +30,6 @@ pub struct KeypairVar<
 	_hg4: PhantomData<HG4>,
 	_h5: PhantomData<H5>,
 	_hg5: PhantomData<HG5>,
-
 }
 
 impl<
@@ -96,14 +95,21 @@ impl<
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{leaf::vanchor::{
+	use crate::{
+		leaf::vanchor::{
 			constraints::{PrivateVar, VanchorLeafGadget},
 			VanchorLeaf,
-		}, poseidon::{
+		},
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
-		}, utils::{get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2}};
+		},
+		utils::{
+			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2,
+			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
+		},
+	};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};

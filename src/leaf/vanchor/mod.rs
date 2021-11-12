@@ -97,7 +97,14 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VanchorLeafCreation<F, H2, H4, H5
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH}, utils::{get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_5}};
+	use crate::{
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		utils::{
+			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_5,
+			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
+			get_rounds_poseidon_bn254_x5_5,
+		},
+	};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 

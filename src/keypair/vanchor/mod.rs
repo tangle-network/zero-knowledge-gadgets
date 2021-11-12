@@ -58,7 +58,14 @@ impl<H2: CRH, H4: CRH, H5: CRH, F: PrimeField, L: VanchorLeafCreation<F, H2, H4,
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use crate::{leaf::{vanchor::VanchorLeaf, VanchorLeafCreation}, poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH}, utils::{get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2}};
+	use crate::{
+		leaf::{vanchor::VanchorLeaf, VanchorLeafCreation},
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		utils::{
+			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2,
+			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
+		},
+	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;

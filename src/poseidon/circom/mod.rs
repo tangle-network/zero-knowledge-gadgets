@@ -109,7 +109,14 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::{poseidon::PoseidonSbox, utils::{get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5}};
+	use crate::{
+		poseidon::PoseidonSbox,
+		utils::{
+			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3,
+			get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bn254_x5_2,
+			get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5,
+		},
+	};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
@@ -139,7 +146,6 @@ mod test {
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 2;
 	}
-
 
 	type PoseidonCircomCRH3 = CircomCRH<Fq, PoseidonCircomRounds3>;
 	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
@@ -265,11 +271,7 @@ mod test {
 		//println!("expected_res = {:?}", res[0]);
 		println!("res_zero     = {:?}", res_zero[0]);
 		println!("res_2zeros   = {:?}", res_2zeros[0]);
-		assert_eq!(
-			res_zero[0], poseidon_res,
-			"{} != {}",
-			res[0], poseidon_res
-		);
+		assert_eq!(res_zero[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 
 		//assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 		// "0x0000000000000000000000000000000000000000000000000000000000000000"
