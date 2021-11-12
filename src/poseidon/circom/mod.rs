@@ -109,7 +109,16 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::{poseidon::PoseidonSbox, utils::{get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5, get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5, get_rounds_poseidon_circom_bn254_x5_5}};
+	use crate::{
+		poseidon::PoseidonSbox,
+		utils::{
+			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_4,
+			get_mds_poseidon_bn254_x5_5, get_mds_poseidon_circom_bn254_x5_5,
+			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3,
+			get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5,
+			get_rounds_poseidon_circom_bn254_x5_5,
+		},
+	};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
@@ -199,8 +208,6 @@ mod test {
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
 
-
-	
 	#[derive(Default, Clone)]
 	struct PoseidonCircomRounds2;
 
@@ -239,15 +246,15 @@ mod test {
 		let round_keys = get_rounds_poseidon_bn254_x5_2::<Fq>();
 		let mds_matrix = get_mds_poseidon_bn254_x5_2::<Fq>();
 		let parameters2 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
-		
+
 		let round_keys = get_rounds_poseidon_bn254_x5_4::<Fq>();
 		let mds_matrix = get_mds_poseidon_bn254_x5_4::<Fq>();
 		let parameters4 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
-		
+
 		let round_keys = get_rounds_poseidon_bn254_x5_5::<Fq>();
 		let mds_matrix = get_mds_poseidon_bn254_x5_5::<Fq>();
 		let parameters5 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
-		
+
 		let expected_public_key: Vec<Fq> = parse_vec(vec![
 			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
 		]);
@@ -257,10 +264,15 @@ mod test {
 		]);
 		let input = private_key[0].into_repr().to_bytes_le();
 
-		let computed_public_key = <PoseidonCircomCRH2 as CRHTrait>::evaluate(&parameters2, &input).unwrap();
+		let computed_public_key =
+			<PoseidonCircomCRH2 as CRHTrait>::evaluate(&parameters2, &input).unwrap();
 		println!("poseidon_res = {:?}", computed_public_key);
 		//println!("expected_res = {:?}", res[0]);
-		assert_eq!(expected_public_key[0], computed_public_key, "{} != {}", expected_public_key[0], computed_public_key);
+		assert_eq!(
+			expected_public_key[0], computed_public_key,
+			"{} != {}",
+			expected_public_key[0], computed_public_key
+		);
 
 		let chain_id: Vec<Fq> = parse_vec(vec![
 			"0x0000000000000000000000000000000000000000000000000000000000007a69",
@@ -272,36 +284,45 @@ mod test {
 			"0x00a668ba0dcb34960aca597f433d0d3289c753046afa26d97e1613148c05f2c0",
 		]);
 
-		let expected_leaf : Vec<Fq> = parse_vec(vec![
+		let expected_leaf: Vec<Fq> = parse_vec(vec![
 			"0x15206d966a7fb3e3fbbb7f4d7b623ca1c7c9b5c6e6d0a3348df428189441a1e4",
 		]);
 		let mut input = chain_id[0].into_repr().to_bytes_le();
-		let mut tmp= amount[0].into_repr().to_bytes_le();
+		let mut tmp = amount[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
-		let mut tmp= expected_public_key[0].into_repr().to_bytes_le();
+		let mut tmp = expected_public_key[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
-		let mut tmp= blinding[0].into_repr().to_bytes_le();
+		let mut tmp = blinding[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
-		let computed_leaf = <PoseidonCircomCRH5 as CRHTrait>::evaluate(&parameters5, &input).unwrap();
+		let computed_leaf =
+			<PoseidonCircomCRH5 as CRHTrait>::evaluate(&parameters5, &input).unwrap();
 
-		assert_eq!(expected_leaf[0], computed_leaf, "{} != {}", expected_leaf[0], computed_leaf);
+		assert_eq!(
+			expected_leaf[0], computed_leaf,
+			"{} != {}",
+			expected_leaf[0], computed_leaf
+		);
 
-
-		let path_index : Vec<Fq> = parse_vec(vec![
+		let path_index: Vec<Fq> = parse_vec(vec![
 			"0x0000000000000000000000000000000000000000000000000000000000000000",
 		]);
-		let expected_nullifier : Vec<Fq> = parse_vec(vec![
+		let expected_nullifier: Vec<Fq> = parse_vec(vec![
 			"0x21423c7374ce5b3574f04f92243449359ae3865bb8e34cb2b7b5e4187ba01fca",
 		]);
 		let mut input = expected_leaf[0].into_repr().to_bytes_le();
-		let mut tmp= path_index[0].into_repr().to_bytes_le();
+		let mut tmp = path_index[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
 
-		let mut tmp= private_key[0].into_repr().to_bytes_le();
+		let mut tmp = private_key[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
 
-		let computed_nullifier = <PoseidonCircomCRH4 as CRHTrait>::evaluate(&parameters4, &input).unwrap();
+		let computed_nullifier =
+			<PoseidonCircomCRH4 as CRHTrait>::evaluate(&parameters4, &input).unwrap();
 
-		assert_eq!(expected_nullifier[0], computed_nullifier, "{} != {}", expected_nullifier[0], computed_nullifier);
+		assert_eq!(
+			expected_nullifier[0], computed_nullifier,
+			"{} != {}",
+			expected_nullifier[0], computed_nullifier
+		);
 	}
 }
