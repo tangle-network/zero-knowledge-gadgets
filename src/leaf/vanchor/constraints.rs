@@ -48,54 +48,69 @@ impl<F: PrimeField> PrivateVar<F> {
 
 pub struct VanchorLeafGadget<
 	F: PrimeField,
-	H1: CRH,
-	HG1: CRHGadget<H1, F>,
-	L: VanchorLeafCreation<H1, F>,
+	H2: CRH,
+	HG2: CRHGadget<H2, F>,
+	H4: CRH,
+	HG4: CRHGadget<H4, F>,
+	H5: CRH,
+	HG5: CRHGadget<H5, F>,
+	L: VanchorLeafCreation<F, H2, H4, H5>,
 > {
 	field: PhantomData<F>,
-	hasher1: PhantomData<H1>,
-	hasher_gadget1: PhantomData<HG1>,
+	hasher2: PhantomData<H2>,
+	hasher_gadget2: PhantomData<HG2>,
+	hasher4: PhantomData<H4>,
+	hasher_gadget4: PhantomData<HG4>,
+	hasher5: PhantomData<H5>,
+	hasher_gadget5: PhantomData<HG5>,
 	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
-	VanchorLeafCreationGadget<F, H, HG, VanchorLeaf<F, H>>
-	for VanchorLeafGadget<F, H, HG, VanchorLeaf<F, H>>
+impl<
+		F: PrimeField,
+		H2: CRH,
+		HG2: CRHGadget<H2, F>,
+		H4: CRH,
+		HG4: CRHGadget<H4, F>,
+		H5: CRH,
+		HG5: CRHGadget<H5, F>,
+	> VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, VanchorLeaf<F, H2, H4, H5>>
+	for VanchorLeafGadget<F, H2, HG2, H4, HG4, H5, HG5, VanchorLeaf<F, H2, H4, H5>>
 {
-	type LeafVar = HG::OutputVar;
-	type NullifierVar = HG::OutputVar;
+	type LeafVar = HG5::OutputVar;
+	type NullifierVar = HG4::OutputVar;
 	type PrivateVar = PrivateVar<F>;
 	type PublicVar = PublicVar<F>;
 
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		h_w2: &HG::ParametersVar,
-		h_w5: &HG::ParametersVar,
+		h_w2: &HG2::ParametersVar,
+		h_w5: &HG5::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError> {
 		let mut bytes_p = Vec::new();
 		bytes_p.extend(s.priv_key.to_bytes()?);
-		let pubkey = HG::evaluate(h_w2, &bytes_p)?;
+		let pubkey = HG2::evaluate(&h_w2, &bytes_p)?;
 
 		let mut bytes = Vec::new();
 		bytes.extend(p.chain_id.to_bytes()?);
 		bytes.extend(s.amount.to_bytes()?);
 		bytes.extend(pubkey.to_bytes()?);
 		bytes.extend(s.blinding.to_bytes()?);
-		HG::evaluate(h_w5, &bytes)
+		HG5::evaluate(h_w5, &bytes)
 	}
 
 	fn create_nullifier(
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
-		h_w4: &HG::ParametersVar,
+		h_w4: &HG4::ParametersVar,
 		i: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(c.to_bytes()?);
 		bytes.extend(i.to_bytes()?);
 		bytes.extend(s.priv_key.to_bytes()?);
-		HG::evaluate(h_w4, &bytes)
+		HG4::evaluate(h_w4, &bytes)
 	}
 
 	fn get_private_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
@@ -104,11 +119,11 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>>
 
 	fn gen_public_key(
 		s: &Self::PrivateVar,
-		h_w2: &HG::ParametersVar,
-	) -> Result<HG::OutputVar, SynthesisError> {
+		h_w2: &HG2::ParametersVar,
+	) -> Result<HG2::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(s.priv_key.to_bytes()?);
-		HG::evaluate(h_w2, &bytes)
+		HG2::evaluate(h_w2, &bytes)
 	}
 
 	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
@@ -163,32 +178,66 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::{
+	use crate::{poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
-		},
-		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
-	};
-	use ark_bls12_381::Fq;
+		}, utils::{get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5}};
+	//use ark_bls12_381::Fq;
+	use ark_bn254::Fq;
+
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
 
-	impl Rounds for PoseidonRounds3 {
+	#[derive(Default, Clone)]
+	struct PoseidonRounds2;
+
+	impl Rounds for PoseidonRounds2 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
+		const PARTIAL_ROUNDS: usize = 56;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 2;
+	}
+
+	#[derive(Default, Clone)]
+	struct PoseidonRounds4;
+
+	impl Rounds for PoseidonRounds4 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 56;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 4;
 	}
 
-	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
-	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
+	#[derive(Default, Clone)]
+	struct PoseidonRounds5;
 
-	type Leaf = VanchorLeaf<Fq, PoseidonCRH3>;
-	type LeafGadget = VanchorLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
+	impl Rounds for PoseidonRounds5 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 60;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 5;
+	}
+
+	type PoseidonCRH2 = CRH<Fq, PoseidonRounds2>;
+	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
+	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+
+	type PoseidonCRH2Gadget = CRHGadget<Fq, PoseidonRounds2>;
+	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
+	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
+
+	type Leaf = VanchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type LeafGadget = VanchorLeafGadget<
+		Fq,
+		PoseidonCRH2,
+		PoseidonCRH2Gadget,
+		PoseidonCRH4,
+		PoseidonCRH4Gadget,
+		PoseidonCRH5,
+		PoseidonCRH5Gadget,
+		Leaf,
+	>;
 	use crate::ark_std::One;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
@@ -196,42 +245,54 @@ mod test {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		// Native version
-		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let rounds5_5 = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds5_5 = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let params5_5 = PoseidonParameters::<Fq>::new(rounds5_5, mds5_5);
+		let rounds5_2 = get_rounds_poseidon_bn254_x5_2::<Fq>();
+		let mds5_2 = get_mds_poseidon_bn254_x5_2::<Fq>();
+		let params5_2 = PoseidonParameters::<Fq>::new(rounds5_2, mds5_2);
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);
 		let secrets = Leaf::generate_secrets(rng).unwrap();
 
 		//TODO Change the parameters
-		let leaf = Leaf::create_leaf(&secrets, &public, &params, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &params5_2, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let params_var =
-			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
+		let params_var5_5 =
+			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params5_5), AllocationMode::Constant)
+				.unwrap();
+		let params_var5_2 =
+			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params5_2), AllocationMode::Constant)
 				.unwrap();
 
 		//TODO Change the parameters
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var, &params_var).unwrap();
+			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var5_2, &params_var5_5).unwrap();
 
 		// Check equality
-		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
+		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(leaf)).unwrap();
 		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
 		assert!(res.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());
 
 		// Test Nullifier
 		// Native version
-		let nullifier = Leaf::create_nullifier(&secrets, &leaf, &params, &index).unwrap();
+		let rounds5_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
+		let mds5_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
+		let params5_4 = PoseidonParameters::<Fq>::new(rounds5_4, mds5_4);
+		let params_var5_4 =
+			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params5_4), AllocationMode::Constant)
+				.unwrap();		
+		let nullifier = Leaf::create_nullifier(&secrets, &leaf, &params5_4, &index).unwrap();
 
 		// Constraints version
 		let nullifier_var =
-			LeafGadget::create_nullifier(&secrets_var, &leaf_var, &params_var, &index_var).unwrap();
+		LeafGadget::create_nullifier(&secrets_var, &leaf_var, &params_var5_4, &index_var).unwrap();
 
 		// Check equality
 		let nullifier_new_var =

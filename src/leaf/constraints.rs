@@ -46,9 +46,13 @@ pub trait LeafCreationGadget<F: Field, H: CRH, HG: CRHGadget<H, F>, L: LeafCreat
 
 pub trait VanchorLeafCreationGadget<
 	F: PrimeField,
-	H: CRH,
-	HG: CRHGadget<H, F>,
-	L: VanchorLeafCreation<H, F>,
+	H2: CRH,
+	HG2: CRHGadget<H2, F>,
+	H4: CRH,
+	HG4: CRHGadget<H4, F>,
+	H5: CRH,
+	HG5: CRHGadget<H5, F>,
+	L: VanchorLeafCreation<F, H2, H4, H5>,
 >: Sized
 {
 	type LeafVar: EqGadget<F>
@@ -75,14 +79,14 @@ pub trait VanchorLeafCreationGadget<
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
-		h_w2: &HG::ParametersVar,
-		h_w5: &HG::ParametersVar,
+		h_w2: &HG2::ParametersVar,
+		h_w5: &HG5::ParametersVar,
 	) -> Result<Self::LeafVar, SynthesisError>;
 
 	fn create_nullifier(
 		s: &Self::PrivateVar,
 		c: &Self::LeafVar,
-		h: &HG::ParametersVar,
+		h_w4: &HG4::ParametersVar,
 		indices: &FpVar<F>,
 	) -> Result<Self::NullifierVar, SynthesisError>;
 
@@ -92,8 +96,8 @@ pub trait VanchorLeafCreationGadget<
 
 	fn gen_public_key(
 		s: &Self::PrivateVar,
-		h: &HG::ParametersVar,
-	) -> Result<HG::OutputVar, SynthesisError>;
+		h_w2: &HG2::ParametersVar,
+	) -> Result<HG2::OutputVar, SynthesisError>;
 
 	fn get_chain_id(p: &Self::PublicVar) -> Result<FpVar<F>, SynthesisError>;
 }

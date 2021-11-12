@@ -68,9 +68,9 @@ impl<F: PrimeField, const M: usize> Set<F, M> for SetMembership<F, M> {
 		let target_bytes = to_bytes![target]?;
 		let target = F::read(target_bytes.as_slice())?;
 		let mut product = target.clone();
-		let z= F::zero();
+		let z = F::zero();
 		for (diff, real) in s.diffs.iter().zip(set.iter()) {
-			if z != ((*real- *diff - target) * enabled) {
+			if z != ((*real - *diff - target) * enabled) {
 				return Ok(false);
 			}
 			product *= diff;
@@ -149,7 +149,8 @@ mod test {
 
 		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
 		let random_element = Fq::rand(rng);
-		let is_member = TestSetMembership::check_is_enabled(&random_element, &set, &s, &is_enabled).unwrap();
+		let is_member =
+			TestSetMembership::check_is_enabled(&random_element, &set, &s, &is_enabled).unwrap();
 
 		assert!(!is_member);
 	}

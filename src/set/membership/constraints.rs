@@ -63,7 +63,7 @@ impl<F: PrimeField, const M: usize> SetGadget<F, SetMembership<F, M>, M>
 		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
 		let mut product = target.clone();
 		for (diff, real) in private.diffs.iter().zip(set.iter()) {
-			let check =(real- diff - &target)*is_enabled;
+			let check = (real - diff - &target) * is_enabled;
 			check.enforce_equal(&zero_var)?;
 			product *= diff;
 		}
@@ -122,7 +122,7 @@ mod test {
 		assert!(is_member.cs().is_satisfied().unwrap());
 	}
 
-	use crate::ark_std::Zero;
+	use crate::ark_std::{One, Zero};
 
 	#[test]
 	fn test_native_equality_is_enabled() {
@@ -136,7 +136,7 @@ mod test {
 
 		// Native: not enabled
 		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
-		let product_not =
+		let product_with_not_enabled =
 			TestSetMembership::check_is_enabled(&random_element, &set, &s, &not_enabled).unwrap();
 
 		// Constraint version
@@ -146,8 +146,8 @@ mod test {
 		let not_enabled_var = FpVar::<Fq>::new_input(cs.clone(), || Ok(not_enabled)).unwrap();
 		let set_var = Vec::<FpVar<Fq>>::new_input(cs.clone(), || Ok(set)).unwrap();
 
-		// res_not_enabled is the result of the check when is_enabled is zero
-		let res_when_not_enabled = TestSetMembershipGadget::check_is_enabled(
+		// res_when_not_enabled is the result of the check when is_enabled is zero
+		let res_with_not_enabled = TestSetMembershipGadget::check_is_enabled(
 			&random_element_var,
 			&set_var,
 			&private_var,
@@ -155,19 +155,22 @@ mod test {
 		)
 		.unwrap();
 
-		let res_when_not_enabled_native = Boolean::<Fq>::Constant(product_not);
-		res_when_not_enabled_native.enforce_equal(&res_when_not_enabled).unwrap();
-		res_when_not_enabled.enforce_equal(&Boolean::TRUE).unwrap();
-		assert!(res_when_not_enabled.cs().is_satisfied().unwrap());
+		let res_with_not_enabled_native = Boolean::<Fq>::Constant(product_with_not_enabled);
+		res_with_not_enabled_native
+			.enforce_equal(&res_with_not_enabled)
+			.unwrap();
+		res_with_not_enabled.enforce_equal(&Boolean::TRUE).unwrap();
+		assert!(res_with_not_enabled.cs().is_satisfied().unwrap());
 
 		// Native: is enabled
-		let product_is = TestSetMembership::check_is_enabled(&root, &set, &s, &is_enabled).unwrap();
+		let product_with_is_enabled =
+			TestSetMembership::check_is_enabled(&root, &set, &s, &is_enabled).unwrap();
 
 		// Constraint version
 		let root_var = FpVar::<Fq>::new_input(cs.clone(), || Ok(root)).unwrap();
 		let is_enabled_var = FpVar::<Fq>::new_input(cs.clone(), || Ok(is_enabled)).unwrap();
 
-		let res_when_enabled = TestSetMembershipGadget::check_is_enabled(
+		let res_with_is_enabled = TestSetMembershipGadget::check_is_enabled(
 			&root_var,
 			&set_var,
 			&private_var,
@@ -175,10 +178,12 @@ mod test {
 		)
 		.unwrap();
 
-		let res_when_is_enabled_native = Boolean::<Fq>::Constant(product_is);
-		res_when_is_enabled_native.enforce_equal(&res_when_enabled).unwrap();
-		res_when_enabled.enforce_equal(&Boolean::TRUE).unwrap();
-		assert!(res_when_enabled.cs().is_satisfied().unwrap());
+		let res_with_is_enabled_native = Boolean::<Fq>::Constant(product_with_is_enabled);
+		res_with_is_enabled_native
+			.enforce_equal(&res_with_is_enabled)
+			.unwrap();
+		res_with_is_enabled.enforce_equal(&Boolean::TRUE).unwrap();
+		assert!(res_with_is_enabled.cs().is_satisfied().unwrap());
 	}
 
 	#[test]
@@ -212,7 +217,7 @@ mod test {
 		let root = Fq::rand(rng);
 		let mut set = [Fq::rand(rng); TEST_M];
 		set[0] = root;
-		let is_enabled = Fq::rand(rng);
+		let is_enabled = Fq::one();
 
 		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
 
@@ -243,11 +248,15 @@ mod test {
 		)
 		.unwrap();
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
-		assert!(!is_member.cs().is_satisfied().unwrap(),"{:?}",is_enabled_var.value());
+		assert!(
+			!is_member.cs().is_satisfied().unwrap(),
+			"{:?}",
+			is_enabled_var.value()
+		);
 	}
-	
+
 	#[test]
-	fn membership_success_not_eanbled() {
+	fn membership_success_not_enabled() {
 		let rng = &mut test_rng();
 		let root = Fq::rand(rng);
 		let mut set = [Fq::rand(rng); TEST_M];
@@ -283,7 +292,11 @@ mod test {
 		)
 		.unwrap();
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
-		assert!(is_member.cs().is_satisfied().unwrap(),"{:?}",not_enabled_var.value());
+		assert!(
+			is_member.cs().is_satisfied().unwrap(),
+			"{:?}",
+			not_enabled_var.value()
+		);
 	}
 
 	#[should_panic(expected = "assertion failed: `(left == right)`
@@ -310,7 +323,6 @@ mod test {
 		assert!(is_member.cs().is_satisfied().unwrap());
 	}
 
-	
 	#[should_panic(expected = "assertion failed: `(left == right)`
   left: `4`,
  right: `5`")]
@@ -331,8 +343,13 @@ mod test {
 		// same as set for which secret is generated but one less in size
 		let another_set = [set[0], set[1], set[2], set[3]];
 		let another_set_var = Vec::<FpVar<Fq>>::new_input(cs.clone(), || Ok(another_set)).unwrap();
-		let is_member =
-			TestSetMembershipGadget::check_is_enabled(&root_var, &another_set_var, &private_var, &is_enabled_var).unwrap();
+		let is_member = TestSetMembershipGadget::check_is_enabled(
+			&root_var,
+			&another_set_var,
+			&private_var,
+			&is_enabled_var,
+		)
+		.unwrap();
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 		assert!(is_member.cs().is_satisfied().unwrap());
 	}

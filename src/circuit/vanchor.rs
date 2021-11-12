@@ -21,15 +21,19 @@ pub struct VanchorCircuit<
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
 	// Hasher for the leaf creation,  Nullifier, Public key generation
-	H: CRH,
-	HG: CRHGadget<H, F>,
+	H2: CRH,
+	HG2: CRHGadget<H2, F>,
+	H4: CRH,
+	HG4: CRHGadget<H4, F>,
+	H5: CRH,
+	HG5: CRHGadget<H5, F>,
 	// Merkle config and hasher gadget for the tree
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
 	// Type of leaf creation
-	L: VanchorLeafCreation<H, F>,
-	LG: VanchorLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<F, H2, H4, H5>,
+	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
 	// Set of merkle roots
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
@@ -39,27 +43,30 @@ pub struct VanchorCircuit<
 	public_amount: F,
 	ext_data_hash: A::Input,
 
-	arbitrary_input: A::Input,
 	leaf_private_inputs: Vec<L::Private>, // amount, blinding, privkey
 	leaf_public_inputs: L::Public,        // chain_id
 	set_private_inputs: Vec<S::Private>,  // diffs
 	root_set: [F; M],
-	hasher_params_w2: H::Parameters,
-	hasher_params_w4: H::Parameters,
-	hasher_params_w5: H::Parameters,
+	hasher_params_w2: H2::Parameters,
+	hasher_params_w4: H4::Parameters,
+	hasher_params_w5: H5::Parameters,
 	path: Vec<Path<C, N>>,
 	index: Vec<F>, // TODO: Temporary, we may need to compute it from path
 	nullifier_hash: Vec<L::Nullifier>,
 
-	output_commitment: Vec<H::Output>,
+	output_commitment: Vec<H5::Output>,
 	out_chain_id: Vec<F>,
 	out_amount: Vec<F>,
 	out_pubkey: Vec<F>,
 	out_blinding: Vec<F>,
 
 	_arbitrary_gadget: PhantomData<AG>,
-	_hasher: PhantomData<H>,
-	_hasher_gadget: PhantomData<HG>,
+	_hasher2: PhantomData<H2>,
+	_hasher2_gadget: PhantomData<HG2>,
+	_hasher4: PhantomData<H4>,
+	_hasher4_gadget: PhantomData<HG4>,
+	_hasher5: PhantomData<H5>,
+	_hasher5_gadget: PhantomData<HG5>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
 	_tree_hasher_gadget: PhantomData<HGT>,
 	_leaf_creation: PhantomData<L>,
@@ -69,37 +76,40 @@ pub struct VanchorCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	VanchorCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
+	VanchorCircuit<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	H: CRH,
-	HG: CRHGadget<H, F>,
+	H2: CRH,
+	HG2: CRHGadget<H2, F>,
+	H4: CRH,
+	HG4: CRHGadget<H4, F>,
+	H5: CRH,
+	HG5: CRHGadget<H5, F>,
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<H, F>,
-	LG: VanchorLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<F, H2, H4, H5>,
+	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
 	pub fn new(
 		public_amount: F,
 		ext_data_hash: A::Input,
-		arbitrary_input: A::Input,
 		leaf_private_inputs: Vec<L::Private>,
 		leaf_public_inputs: L::Public,
 		set_private_inputs: Vec<S::Private>,
 		root_set: [F; M],
-		hasher_params_w2: H::Parameters,
-		hasher_params_w4: H::Parameters,
-		hasher_params_w5: H::Parameters,
+		hasher_params_w2: H2::Parameters,
+		hasher_params_w4: H4::Parameters,
+		hasher_params_w5: H5::Parameters,
 		path: Vec<Path<C, N>>,
 		index: Vec<F>,
 		nullifier_hash: Vec<L::Nullifier>,
-		output_commitment: Vec<H::Output>,
+		output_commitment: Vec<H5::Output>,
 		out_chain_id: Vec<F>,
 		out_amount: Vec<F>,
 		out_pubkey: Vec<F>,
@@ -108,7 +118,6 @@ where
 		Self {
 			public_amount,
 			ext_data_hash,
-			arbitrary_input,
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_private_inputs,
@@ -125,8 +134,12 @@ where
 			out_pubkey,
 			out_blinding,
 			_arbitrary_gadget: PhantomData,
-			_hasher: PhantomData,
-			_hasher_gadget: PhantomData,
+			_hasher2: PhantomData,
+			_hasher2_gadget: PhantomData,
+			_hasher4: PhantomData,
+			_hasher4_gadget: PhantomData,
+			_hasher5: PhantomData,
+			_hasher5_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
 			_leaf_creation: PhantomData,
@@ -139,9 +152,9 @@ where
 
 	pub fn verify_input_var(
 		&self,
-		hasher_params_w2_var: &HG::ParametersVar,
-		hasher_params_w4_var: &HG::ParametersVar,
-		hasher_params_w5_var: &HG::ParametersVar,
+		hasher_params_w2_var: &HG2::ParametersVar,
+		hasher_params_w4_var: &HG4::ParametersVar,
+		hasher_params_w5_var: &HG5::ParametersVar,
 		leaf_private_var: &Vec<LG::PrivateVar>,
 		leaf_public_var: &LG::PublicVar, //TODO: this doesn't need to be Vec
 		in_path_indices_var: &Vec<FpVar<F>>,
@@ -155,9 +168,9 @@ where
 		let mut nullifier_hash: Vec<LG::NullifierVar> = Vec::with_capacity(N);
 		let mut in_amount_tx: FpVar<F>;
 
-		let mut inkeypair: Vec<KeypairVar<H, HG, L, LG, F>> = Vec::with_capacity(N);
+		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5, L, LG>> = Vec::with_capacity(N);
 		for tx in 0..N {
-			inkeypair[tx] = KeypairCreationGadget::<H, HG, F, L, LG>::new_from_key(
+			inkeypair[tx] = KeypairCreationGadget::<F, H2, HG2, H4, HG4, H5, HG5, L, LG>::new_from_key(
 				&hasher_params_w2_var,
 				&LG::get_private_key(&leaf_private_var[tx]).unwrap(),
 			)
@@ -200,8 +213,8 @@ where
 	//TODO: Verify correctness of transaction outputs
 	pub fn verify_output_var(
 		&self,
-		hasher_params_w5_var: &HG::ParametersVar,
-		output_commitment_var: &Vec<HG::OutputVar>,
+		hasher_params_w5_var: &HG5::ParametersVar,
+		output_commitment_var: &Vec<HG5::OutputVar>,
 		out_chain_id_var: &Vec<FpVar<F>>,
 		out_amount_var: &Vec<FpVar<F>>,
 		out_pubkey_var: &Vec<FpVar<F>>,
@@ -209,7 +222,7 @@ where
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
-		let mut in_utxo_hasher_var_out: Vec<HG::OutputVar> = Vec::with_capacity(N);
+		let mut in_utxo_hasher_var_out: Vec<HG5::OutputVar> = Vec::with_capacity(N);
 		for tx in 0..N {
 			// Computing the hash
 			let mut bytes = Vec::new();
@@ -217,7 +230,7 @@ where
 			bytes.extend(out_amount_var[tx].to_bytes()?);
 			bytes.extend(out_pubkey_var[tx].to_bytes()?);
 			bytes.extend(out_blinding_var[tx].to_bytes()?);
-			in_utxo_hasher_var_out[tx] = HG::evaluate(&hasher_params_w5_var, &bytes)?;
+			in_utxo_hasher_var_out[tx] = HG5::evaluate(&hasher_params_w5_var, &bytes)?;
 			// End of computing the hash
 			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
 
@@ -260,33 +273,36 @@ where
 	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
-	for VanchorCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
+	for VanchorCircuit<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	H: CRH,
-	HG: CRHGadget<H, F>,
+	H2: CRH,
+	HG2: CRHGadget<H2, F>,
+	H4: CRH,
+	HG4: CRHGadget<H4, F>,
+	H5: CRH,
+	HG5: CRHGadget<H5, F>,
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<H, F>,
-	LG: VanchorLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<F, H2, H4, H5>,
+	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
 	fn clone(&self) -> Self {
 		let public_amount = self.public_amount.clone();
 		let ext_data_hash = self.ext_data_hash.clone();
-		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
 		let set_private_inputs = self.set_private_inputs.clone();
 		let root_set = self.root_set;
 		let hasher_params_w2 = self.hasher_params_w2.clone();
-		let hasher_params_w4 = self.hasher_params_w2.clone();
-		let hasher_params_w5 = self.hasher_params_w2.clone();
+		let hasher_params_w4 = self.hasher_params_w4.clone();
+		let hasher_params_w5 = self.hasher_params_w5.clone();
 		let path = self.path.clone();
 		let index = self.index.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
@@ -299,7 +315,6 @@ where
 		Self::new(
 			public_amount,
 			ext_data_hash,
-			arbitrary_input,
 			leaf_private_inputs,
 			leaf_public_inputs,
 			set_private_inputs,
@@ -319,25 +334,29 @@ where
 	}
 }
 
-impl<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	ConstraintSynthesizer<F> for VanchorCircuit<F, A, AG, H, HG, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
+	ConstraintSynthesizer<F> for VanchorCircuit<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, N, M>
 where
 	F: PrimeField,
 	A: Arbitrary,
 	AG: ArbitraryGadget<F, A>,
-	H: CRH,
-	HG: CRHGadget<H, F>,
+	H2: CRH,
+	HG2: CRHGadget<H2, F>,
+	H4: CRH,
+	HG4: CRHGadget<H4, F>,
+	H5: CRH,
+	HG5: CRHGadget<H5, F>,
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<H, F>,
-	LG: VanchorLeafCreationGadget<F, H, HG, L>,
+	L: VanchorLeafCreation<F, H2, H4, H5>,
+	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
 	S: Set<F, M>,
 	SG: SetGadget<F, S, M>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let public_amount = self.public_amount.clone();
-		let arbitrary_input = self.arbitrary_input.clone();
+		let ext_data_hash = self.ext_data_hash.clone();
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding, private key
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
 		let set_private = self.set_private_inputs.clone(); // TODO
@@ -373,12 +392,12 @@ where
 		let mut in_nullifier_var: Vec<LG::NullifierVar> = Vec::with_capacity(N);
 
 		//let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
+		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 
 		// Constants
-		let hasher_params_w2_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params_w2)?;
-		let hasher_params_w4_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params_w4)?;
-		let hasher_params_w5_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params_w5)?;
+		let hasher_params_w2_var = HG2::ParametersVar::new_constant(cs.clone(), hasher_params_w2)?;
+		let hasher_params_w4_var = HG4::ParametersVar::new_constant(cs.clone(), hasher_params_w4)?;
+		let hasher_params_w5_var = HG5::ParametersVar::new_constant(cs.clone(), hasher_params_w5)?;
 
 		// Private inputs
 		let mut leaf_private_var: Vec<LG::PrivateVar> = Vec::with_capacity(N);
@@ -390,7 +409,7 @@ where
 		let mut out_chain_id_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut out_blinding_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut output_commitment_var: Vec<HG::OutputVar> = Vec::with_capacity(N);
+		let mut output_commitment_var: Vec<HG5::OutputVar> = Vec::with_capacity(N);
 
 		for i in 0..N {
 			set_input_private_var[i] =
@@ -412,7 +431,7 @@ where
 			out_blinding_var[i] =
 				FpVar::<F>::new_witness(cs.clone(), || Ok(out_blinding[i].clone()))?;
 			output_commitment_var[i] =
-				HG::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
+				HG5::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
 		}
 
 		// verify correctness of transaction inputs
@@ -462,44 +481,104 @@ where
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use ark_ed_on_bls12_381::Fq;
+	use super::*;
+	use crate::{ark_std::{One, Zero}, leaf::vanchor::{VanchorLeaf, constraints::VanchorLeafGadget}, poseidon::{CRH as PCRH, PoseidonParameters, Rounds, sbox::PoseidonSbox, constraints::CRHGadget as PCRHGadget}, setup::{bridge::*, common::*, vanchor::generate_vanchor_leaf_rng}};
+	use ark_bn254::{Bn254, Fq as BnFq, Fr as BnFr};
+	use ark_ff::UniformRand;
+	use ark_groth16::{Groth16, create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof};
+	
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar};
 	use ark_relations::r1cs::ConstraintSystem;
+	use ark_snark::SNARK;
+	use ark_std::{rand::Rng, test_rng};
 	use std::str::FromStr;
+
+	pub const TEST_N: usize = 30;
+	pub const TEST_M: usize = 2;
+
+	#[derive(Default, Clone)]
+	struct PoseidonRounds2;
+
+	impl Rounds for PoseidonRounds2 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 2;
+	}
+
+	#[derive(Default, Clone)]
+	struct PoseidonRounds4;
+
+	impl Rounds for PoseidonRounds4 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 59;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 4;
+	}
+
+	#[derive(Default, Clone)]
+	struct PoseidonRounds5;
+
+	impl Rounds for PoseidonRounds5 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 60;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 5;
+	}
+
+	type PoseidonCRH2 = PCRH<BnFq, PoseidonRounds2>;
+	type PoseidonCRH4 = PCRH<BnFq, PoseidonRounds4>;
+	type PoseidonCRH5 = PCRH<BnFq, PoseidonRounds5>;
+
+	type PoseidonCRH2Gadget = PCRHGadget<BnFq, PoseidonRounds2>;
+	type PoseidonCRH4Gadget = PCRHGadget<BnFq, PoseidonRounds4>;
+	type PoseidonCRH5Gadget = PCRHGadget<BnFq, PoseidonRounds5>;
+
+	type Leaf = VanchorLeaf<BnFq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type LeafGadget = VanchorLeafGadget<
+		BnFq,
+		PoseidonCRH2,
+		PoseidonCRH2Gadget,
+		PoseidonCRH4,
+		PoseidonCRH4Gadget,
+		PoseidonCRH5,
+		PoseidonCRH5Gadget,
+		Leaf,
+	>;
 	#[test]
 	fn test_2_to_248() {
 		use ark_std::cmp::Ordering::{Greater, Less};
-		let limit: Fq = Fq::from_str(
+		let limit: BnFq = BnFq::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662656",
 		)
 		.unwrap_or_default();
 		// check the previous conversion is done correctly
-		assert_ne!(limit, Fq::default());
+		assert_ne!(limit, BnFq::default());
 
-		let cs = ConstraintSystem::<Fq>::new_ref();
+		let cs = ConstraintSystem::<BnFq>::new_ref();
 
-		let limit_var: FpVar<Fq> = FpVar::<Fq>::new_constant(cs.clone(), limit).unwrap();
-		let less_value: Fq = Fq::from_str(
+		let limit_var: FpVar<BnFq> = FpVar::<BnFq>::new_constant(cs.clone(), limit).unwrap();
+		let less_value: BnFq = BnFq::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662655",
 		)
 		.unwrap_or_default();
-		let greater_value: Fq = Fq::from_str(
+		let greater_value: BnFq = BnFq::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662657",
 		)
 		.unwrap_or_default();
 
-		let greater_value2: Fq = Fq::from_str(
+		let greater_value2: BnFq = BnFq::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662657",
 		)
 		.unwrap_or_default();
-		let less_value_var: FpVar<Fq> =
-			FpVar::<Fq>::new_input(cs.clone(), || Ok(less_value)).unwrap();
+		let less_value_var: FpVar<BnFq> =
+			FpVar::<BnFq>::new_input(cs.clone(), || Ok(less_value)).unwrap();
 
-		let great_value_var: FpVar<Fq> =
-			FpVar::<Fq>::new_input(cs.clone(), || Ok(greater_value)).unwrap();
+		let great_value_var: FpVar<BnFq> =
+			FpVar::<BnFq>::new_input(cs.clone(), || Ok(greater_value)).unwrap();
 
-		let great_value2_var: FpVar<Fq> =
-			FpVar::<Fq>::new_input(cs.clone(), || Ok(greater_value2)).unwrap();
+		let great_value2_var: FpVar<BnFq> =
+			FpVar::<BnFq>::new_input(cs.clone(), || Ok(greater_value2)).unwrap();
 		let _res1 = less_value_var
 			.enforce_cmp_unchecked(&limit_var, Less, false)
 			.unwrap();
@@ -519,5 +598,77 @@ mod test {
 			.enforce_cmp_unchecked(&limit_var, Greater, false)
 			.unwrap();
 		assert!(!cs.is_satisfied().unwrap());
+	}
+	use crate::prelude::ark_crypto_primitives::crh::poseidon::Poseidon;
+	#[should_panic]
+	#[test]
+	fn should_fail_with_invalid_root() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+		let params5: PoseidonParameters<BnFq> = setup_params_x5_5(curve);
+		let params4: PoseidonParameters<BnFq> = setup_params_x5_4(curve);
+		let params3: PoseidonParameters<BnFq> = setup_params_x5_3(curve);
+		let params2: PoseidonParameters<BnFq> = setup_params_x5_2(curve); // TODO: Change it
+		let chain_id = BnFq::zero();
+		let relayer = BnFq::rand(rng);
+		let recipient = BnFq::rand(rng);
+		let fee = BnFq::rand(rng);
+		let refund = BnFq::rand(rng);
+		let commitment = BnFq::rand(rng); //TODO: Change to VanchorLeaf
+		let (leaf_private, leaf_public, leaf) =
+			generate_vanchor_leaf_rng::<BnFq,PoseidonCRH2,PoseidonCRH4,PoseidonCRH5,_ >(chain_id, &params2, &params5, rng);
+		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFq, TEST_N>(&[leaf], 0, &params3);
+		let public_amount = BnFq::rand(rng);
+		//TODO: Change aritrary data
+		let ext_data_hash = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
+		let root = BnFq::rand(rng);
+		let root_set = [root; TEST_M];
+		let leaves = vec![leaf, BnFq::rand(rng), BnFq::rand(rng)];
+		let index: BnFq = path.get_index(&tree.root(), &leaves[0 as usize]).unwrap();
+		let nullifier_hash =
+			Leaf::create_nullifier(&leaf_private, &leaf, &params4, &index).unwrap();
+		let set_private_inputs = setup_set(&root, &root_set);
+
+		let out_chain_id = BnFq::one();
+		let out_amount = BnFq::one() + BnFq::one();
+		let out_pubkey = BnFq::rand(rng);
+		let out_blinding = BnFq::rand(rng);
+		let mut bytes = to_bytes![out_chain_id, out_amount, out_pubkey, out_blinding].unwrap();
+		let out_commitment = PoseidonCRH5::evaluate(&params4, &bytes).unwrap();
+
+		let circuit = VanchorCircuit::new(
+			public_amount,
+			ext_data_hash.clone(),
+			vec![leaf_private],
+			vec![leaf_public],
+			vec![set_private_inputs],
+			root_set,
+			params2,
+			params4,
+			params5,
+			vec![path],
+			vec![index],
+			vec![nullifier_hash],
+			vec![out_commitment],
+			vec![out_chain_id],
+			vec![out_chain_id],
+			vec![out_pubkey],
+			vec![out_blinding],
+		);
+
+		let mut public_inputs = Vec::new();
+		public_inputs.push(chain_id);
+		public_inputs.push(nullifier_hash);
+		public_inputs.extend(&root_set);
+		public_inputs.push(root);
+		public_inputs.push(ext_data_hash.recipient);
+		public_inputs.push(ext_data_hash.relayer);
+		public_inputs.push(ext_data_hash.fee);
+		public_inputs.push(ext_data_hash.commitment);
+		let pk = generate_random_parameters(circuit.clone(),rng).unwrap();
+		let proof =     create_random_proof(circuit, &pk, &mut rng).unwrap();
+		let vk = prepare_verifying_key(&pk.vk);
+		let res = verify_proof(&vk, &proof, &public_inputs).unwrap();
+		assert!(res);
 	}
 }

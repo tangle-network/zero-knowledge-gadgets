@@ -109,10 +109,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::PoseidonSbox,
-		utils::{get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_circom_bn254_x5_5},
-	};
+	use crate::{poseidon::PoseidonSbox, utils::{get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5}};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
@@ -133,7 +130,19 @@ mod test {
 		const WIDTH: usize = 3;
 	}
 
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds2;
+
+	impl Rounds for PoseidonCircomRounds2 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 56;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 2;
+	}
+
+
 	type PoseidonCircomCRH3 = CircomCRH<Fq, PoseidonCircomRounds3>;
+	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
 	#[test]
 	fn test_width_3_circom_bn_254() {
 		let rounds = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
@@ -215,8 +224,8 @@ mod test {
 	type PoseidonCircomCRH5 = CircomCRH<Fq, PoseidonCircomRounds5>;
 	#[test]
 	fn test_width_3_zero_input_circom_bn_254() {
-		let round_keys = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let mds_matrix = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
+		let round_keys = get_rounds_poseidon_bn254_x5_2::<Fq>();
+		let mds_matrix = get_mds_poseidon_bn254_x5_2::<Fq>();
 		let parameters = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
 
 		let res: Vec<Fq> = parse_vec(vec![
@@ -245,19 +254,19 @@ mod test {
 		]);
 		let mut input = biginput[0].into_repr().to_bytes_le();
 
-		let mut input2 = biginput[1].into_repr().to_bytes_le();
-		input.append(&mut input2);
+		//let mut input2 = biginput[1].into_repr().to_bytes_le();
+		//input.append(&mut input2);
 
 		println!("input = {:?}", input);
 		println!("input.len() = {:?}", input.len());
 		let zero_input = Fq::zero().into_repr().to_bytes_le();
-		let poseidon_res = <PoseidonCircomCRH3 as CRHTrait>::evaluate(&parameters, &input).unwrap();
+		let poseidon_res = <PoseidonCircomCRH2 as CRHTrait>::evaluate(&parameters, &input).unwrap();
 		println!("poseidon_res = {:?}", poseidon_res);
 		//println!("expected_res = {:?}", res[0]);
-		//println!("res_zero     = {:?}", res_zero[0]);
+		println!("res_zero     = {:?}", res_zero[0]);
 		println!("res_2zeros   = {:?}", res_2zeros[0]);
 		assert_eq!(
-			res_2zeros[0], poseidon_res,
+			res_zero[0], poseidon_res,
 			"{} != {}",
 			res[0], poseidon_res
 		);

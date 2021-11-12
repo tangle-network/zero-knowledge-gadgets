@@ -12,14 +12,16 @@ use crate::{
 		get_mds_poseidon_bls381_x17_3, get_mds_poseidon_bls381_x17_5, get_mds_poseidon_bls381_x3_3,
 		get_mds_poseidon_bls381_x3_5, get_mds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_5,
 		get_mds_poseidon_bn254_x17_3, get_mds_poseidon_bn254_x17_5, get_mds_poseidon_bn254_x3_3,
-		get_mds_poseidon_bn254_x3_5, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5,
+		get_mds_poseidon_bn254_x3_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3,
+		get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
 		get_mds_poseidon_circom_bn254_x5_3, get_mds_poseidon_circom_bn254_x5_5,
 		get_rounds_poseidon_bls381_x17_3, get_rounds_poseidon_bls381_x17_5,
 		get_rounds_poseidon_bls381_x3_3, get_rounds_poseidon_bls381_x3_5,
 		get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5,
 		get_rounds_poseidon_bn254_x17_3, get_rounds_poseidon_bn254_x17_5,
 		get_rounds_poseidon_bn254_x3_3, get_rounds_poseidon_bn254_x3_5,
-		get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_5,
+		get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3,
+		get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5,
 		get_rounds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5,
 	},
 };
@@ -138,7 +140,7 @@ pub enum Curve {
 	Bn254,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
 impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
 	type H = PoseidonCRH_x5_3<F>;
@@ -177,6 +179,7 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_MiMC220<F> {
 // Generate tree setup functions
 // 	1. `setup_<tree>`
 //	2. `setup_tree_and_create_path_<tree>`
+
 macro_rules! impl_setup_tree {
 	(
 		tree: $tree_ty:ident, // tree type
@@ -276,6 +279,20 @@ pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	}
 }
 
+pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
+	// Making params for poseidon in merkle tree
+	match curve {
+		Curve::Bls381 => {
+			unimplemented!("we don't hava parameters for bls381 curve yet");
+		}
+		Curve::Bn254 => {
+			let rounds2 = get_rounds_poseidon_bn254_x5_2::<F>();
+			let mds2 = get_mds_poseidon_bn254_x5_2::<F>();
+			PoseidonParameters::<F>::new(rounds2, mds2)
+		}
+	}
+}
+
 pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -286,6 +303,20 @@ pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParamete
 			let rounds3 = get_rounds_poseidon_circom_bn254_x5_3::<F>();
 			let mds3 = get_mds_poseidon_circom_bn254_x5_3::<F>();
 			PoseidonParameters::<F>::new(rounds3, mds3)
+		}
+	}
+}
+
+pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
+	// Making params for poseidon in merkle tree
+	match curve {
+		Curve::Bls381 => {
+			unimplemented!("we don't hava parameters for bls381 curve yet");
+		}
+		Curve::Bn254 => {
+			let rounds4 = get_rounds_poseidon_bn254_x5_4::<F>();
+			let mds4 = get_mds_poseidon_bn254_x5_4::<F>();
+			PoseidonParameters::<F>::new(rounds4, mds4)
 		}
 	}
 }
