@@ -109,14 +109,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CircomCRH<F, P> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::PoseidonSbox,
-		utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3,
-			get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bn254_x5_2,
-			get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5,
-		},
-	};
+	use crate::{poseidon::PoseidonSbox, utils::{get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5, get_mds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5, get_rounds_poseidon_circom_bn254_x5_5}};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
@@ -137,18 +130,7 @@ mod test {
 		const WIDTH: usize = 3;
 	}
 
-	#[derive(Default, Clone)]
-	struct PoseidonCircomRounds2;
-
-	impl Rounds for PoseidonCircomRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
 	type PoseidonCircomCRH3 = CircomCRH<Fq, PoseidonCircomRounds3>;
-	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
 	#[test]
 	fn test_width_3_circom_bn_254() {
 		let rounds = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
@@ -217,71 +199,109 @@ mod test {
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
 
+
+	
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds2;
+
+	impl Rounds for PoseidonCircomRounds2 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 56;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 2;
+	}
+	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
+
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds4;
+
+	impl Rounds for PoseidonCircomRounds4 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 56;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 4;
+	}
+	type PoseidonCircomCRH4 = CircomCRH<Fq, PoseidonCircomRounds4>;
+
 	#[derive(Default, Clone)]
 	struct PoseidonCircomRounds5;
 
 	impl Rounds for PoseidonCircomRounds5 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
+		const PARTIAL_ROUNDS: usize = 60;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 5;
 	}
 
 	type PoseidonCircomCRH5 = CircomCRH<Fq, PoseidonCircomRounds5>;
 	#[test]
-	fn test_width_3_zero_input_circom_bn_254() {
+	fn test_compare_hashes_with_circom_bn_254() {
 		let round_keys = get_rounds_poseidon_bn254_x5_2::<Fq>();
 		let mds_matrix = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let parameters = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
-
-		let res: Vec<Fq> = parse_vec(vec![
+		let parameters2 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+		
+		let round_keys = get_rounds_poseidon_bn254_x5_4::<Fq>();
+		let mds_matrix = get_mds_poseidon_bn254_x5_4::<Fq>();
+		let parameters4 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+		
+		let round_keys = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds_matrix = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let parameters5 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+		
+		let expected_public_key: Vec<Fq> = parse_vec(vec![
 			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
 		]);
 
-		let res_zero: Vec<Fq> = parse_vec(vec![
-			"0x2a09a9fd93c590c26b91effbb2499f07e8f7aa12e2b4940a3aed2411cb65e11c",
+		let private_key: Vec<Fq> = parse_vec(vec![
+			"0xb2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046",
 		]);
+		let input = private_key[0].into_repr().to_bytes_le();
 
-		let res_2zeros: Vec<Fq> = parse_vec(vec![
-			"0x2098f5fb9e239eab3ceac3f27b81e481dc3124d55ffed523a839ee8446b64864",
-		]);
-		//let s_input =
-		// "b2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046"; let input
-		// =<[u8;32]>::from_hex(s_input).expect("Decoding failed"); println!("input
-		// = {:?}", input); let input_byte: &[u8] =&[
-		//	0xb2, 0xac, 0x10, 0xdc, 0xcf, 0xb5, 0xa5, 0x71, 0x2d, 0x63, 0x24, 0x64, 0xa3,
-		// 0x59, 	0x66, 0x8b, 0xb5, 0x13, 0xe8, 0x0e, 0x9d, 0x14, 0x5a, 0xb5, 0xa8, 0x83,
-		// 0x81, 0xde, 	0x83, 0xaf, 0x10, 0x46,
-		//];
-		//println!("input_byte = {:?}", input_byte);
-		let biginput: Vec<Fq> = parse_vec(vec![
-			"0x0000000000000000000000000000000000000000000000000000000000000000",
-			"0x0000000000000000000000000000000000000000000000000000000000000000",
-		]);
-		let mut input = biginput[0].into_repr().to_bytes_le();
-
-		//let mut input2 = biginput[1].into_repr().to_bytes_le();
-		//input.append(&mut input2);
-
-		println!("input = {:?}", input);
-		println!("input.len() = {:?}", input.len());
-		let zero_input = Fq::zero().into_repr().to_bytes_le();
-		let poseidon_res = <PoseidonCircomCRH2 as CRHTrait>::evaluate(&parameters, &input).unwrap();
-		println!("poseidon_res = {:?}", poseidon_res);
+		let computed_public_key = <PoseidonCircomCRH2 as CRHTrait>::evaluate(&parameters2, &input).unwrap();
+		println!("poseidon_res = {:?}", computed_public_key);
 		//println!("expected_res = {:?}", res[0]);
-		println!("res_zero     = {:?}", res_zero[0]);
-		println!("res_2zeros   = {:?}", res_2zeros[0]);
-		assert_eq!(res_zero[0], poseidon_res, "{} != {}", res[0], poseidon_res);
+		assert_eq!(expected_public_key[0], computed_public_key, "{} != {}", expected_public_key[0], computed_public_key);
 
-		//assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
-		// "0x0000000000000000000000000000000000000000000000000000000000000000"
-		// `Private Key =`
-		// 0xb2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046
-		// `Public Key = Poseidon(Private Key) =`
-		// 0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa
-		//      poseidon_res = Fp256(BigInteger256([17480363595638945920,
-		// 1253640362899031899, 6874398346593975678, 1872052294913738484])) zero
-		// poseidon_res = Fp256(BigInteger256([12887110008706979002,
-		// 2630454327059184150, 15767152811187647922, 1755600115054570625]))
+		let chain_id: Vec<Fq> = parse_vec(vec![
+			"0x0000000000000000000000000000000000000000000000000000000000007a69",
+		]);
+		let amount: Vec<Fq> = parse_vec(vec![
+			"0x0000000000000000000000000000000000000000000000000000000000989680",
+		]);
+		let blinding: Vec<Fq> = parse_vec(vec![
+			"0x00a668ba0dcb34960aca597f433d0d3289c753046afa26d97e1613148c05f2c0",
+		]);
+
+		let expected_leaf : Vec<Fq> = parse_vec(vec![
+			"0x15206d966a7fb3e3fbbb7f4d7b623ca1c7c9b5c6e6d0a3348df428189441a1e4",
+		]);
+		let mut input = chain_id[0].into_repr().to_bytes_le();
+		let mut tmp= amount[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+		let mut tmp= expected_public_key[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+		let mut tmp= blinding[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+		let computed_leaf = <PoseidonCircomCRH5 as CRHTrait>::evaluate(&parameters5, &input).unwrap();
+
+		assert_eq!(expected_leaf[0], computed_leaf, "{} != {}", expected_leaf[0], computed_leaf);
+
+
+		let path_index : Vec<Fq> = parse_vec(vec![
+			"0x0000000000000000000000000000000000000000000000000000000000000000",
+		]);
+		let expected_nullifier : Vec<Fq> = parse_vec(vec![
+			"0x21423c7374ce5b3574f04f92243449359ae3865bb8e34cb2b7b5e4187ba01fca",
+		]);
+		let mut input = expected_leaf[0].into_repr().to_bytes_le();
+		let mut tmp= path_index[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+
+		let mut tmp= private_key[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+
+		let computed_nullifier = <PoseidonCircomCRH4 as CRHTrait>::evaluate(&parameters4, &input).unwrap();
+
+		assert_eq!(expected_nullifier[0], computed_nullifier, "{} != {}", expected_nullifier[0], computed_nullifier);
 	}
 }
