@@ -20,18 +20,18 @@ impl<F: PrimeField> Private<F> {
 	}
 }
 
-struct BasicLeaf<F: PrimeField, H: CRH> {
+pub struct BasicLeaf<F: PrimeField, H: CRH> {
 	_field: PhantomData<F>,
 	_hasher: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: CRH> BasicLeaf<F, H> {
-	fn create_leaf(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
+	pub fn create_leaf(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
 		let bytes = to_bytes![private.r, private.nullifier]?;
 		H::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier_hash(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
+	pub fn create_nullifier(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
 		let bytes = to_bytes![private.nullifier, private.nullifier]?;
 		H::evaluate(h, &bytes)
 	}

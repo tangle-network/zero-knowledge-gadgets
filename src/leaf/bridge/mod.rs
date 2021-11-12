@@ -47,11 +47,7 @@ impl<F: PrimeField, H: CRH> BridgeLeaf<F, H> {
 		H::evaluate(h, &input_bytes)
 	}
 
-	pub fn create_nullifier(
-		private: &Private<F>,
-		public: &Public<F>,
-		h: &H::Parameters,
-	) -> Result<H::Output, Error> {
+	pub fn create_nullifier(private: &Private<F>, h: &H::Parameters) -> Result<H::Output, Error> {
 		let nullifier_bytes = to_bytes![private.nullifier, private.nullifier]?;
 		H::evaluate(h, &nullifier_bytes)
 	}
@@ -102,7 +98,7 @@ mod test {
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 
 		let leaf_hash = Leaf::create_leaf(&private, &public, &params).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&private, &public, &params).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&private, &params).unwrap();
 		assert_eq!(leaf_res, leaf_hash);
 		assert_eq!(nullifier_res, nullifier_hash);
 	}

@@ -52,7 +52,6 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> BridgeLeafGadget<F, H, HG> {
 
 	pub fn create_nullifier(
 		private: &PrivateVar<F>,
-		public: &PublicVar<F>,
 		h: &HG::ParametersVar,
 	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut nullifier_hash_bytes = Vec::new();
@@ -143,7 +142,7 @@ mod test {
 		let public = Public::new(chain_id);
 		let private = Private::generate(rng);
 		let leaf_hash = Leaf::create_leaf(&private, &public, &params).unwrap();
-		let nullifier = Leaf::create_nullifier(&private, &public, &params).unwrap();
+		let nullifier = Leaf::create_nullifier(&private, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(
@@ -157,8 +156,7 @@ mod test {
 		let private_var = PrivateVar::new_witness(cs.clone(), || Ok(&private)).unwrap();
 		let leaf_hash_var =
 			LeafGadget::create_leaf(&private_var, &public_var, &params_var).unwrap();
-		let nullifier_var =
-			LeafGadget::create_nullifier(&private_var, &public_var, &params_var).unwrap();
+		let nullifier_var = LeafGadget::create_nullifier(&private_var, &params_var).unwrap();
 
 		// Checking equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf_hash)).unwrap();

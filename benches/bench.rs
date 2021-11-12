@@ -96,7 +96,7 @@ macro_rules! setup_circuit {
 		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 		// Creating the leaf
 		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &leaf_public, &params5).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
 
 		let fee = <$test_field>::rand(rng);
 		let refund = <$test_field>::rand(rng);

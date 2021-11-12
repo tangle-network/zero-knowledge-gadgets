@@ -142,7 +142,6 @@ macro_rules! impl_setup_bridge_leaf {
 				).unwrap();
 				let nullifier_hash = BridgeLeaf::<F, $leaf_crh_ty<F>>::create_nullifier(
 					&leaf_private,
-					&leaf_public,
 					params
 				).unwrap();
 				(leaf_private, leaf_public, leaf_hash, nullifier_hash)

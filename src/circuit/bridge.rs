@@ -168,11 +168,8 @@ where
 			&leaf_public_var,
 			&hasher_params_var,
 		)?;
-		let bridge_nullifier = BridgeLeafGadget::<F, H, HG>::create_nullifier(
-			&leaf_private_var,
-			&leaf_public_var,
-			&hasher_params_var,
-		)?;
+		let bridge_nullifier =
+			BridgeLeafGadget::<F, H, HG>::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let is_member =
 			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &bridge_leaf)?;
 		// Check if target root is in set

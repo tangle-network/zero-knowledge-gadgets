@@ -31,7 +31,7 @@ pub struct BasicLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 }
 
 impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> BasicLeafGadget<F, H, HG> {
-	fn create_leaf(
+	pub fn create_leaf(
 		private: &PrivateVar<F>,
 		h: &HG::ParametersVar,
 	) -> Result<HG::OutputVar, SynthesisError> {
@@ -41,7 +41,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> BasicLeafGadget<F, H, HG> {
 		HG::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier(
+	pub fn create_nullifier(
 		private: &PrivateVar<F>,
 		h: &HG::ParametersVar,
 	) -> Result<HG::OutputVar, SynthesisError> {
