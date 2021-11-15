@@ -1,12 +1,10 @@
-use super::{Input, MixerData};
-use crate::arbitrary::constraints::ArbitraryGadget;
+use super::Input;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
 	fields::fp::FpVar,
 	prelude::{AllocVar, AllocationMode},
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
-use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
 
 #[derive(Clone)]
@@ -26,20 +24,12 @@ impl<F: PrimeField> InputVar<F> {
 			refund,
 		}
 	}
-}
 
-pub struct MixerDataGadget<F: PrimeField> {
-	field: PhantomData<F>,
-}
-
-impl<F: PrimeField> ArbitraryGadget<F, MixerData<F>> for MixerDataGadget<F> {
-	type InputVar = InputVar<F>;
-
-	fn constrain(inputs: &Self::InputVar) -> Result<(), SynthesisError> {
-		let _ = &inputs.recipient * &inputs.recipient;
-		let _ = &inputs.relayer * &inputs.relayer;
-		let _ = &inputs.fee * &inputs.fee;
-		let _ = &inputs.refund * &inputs.refund;
+	pub fn constrain(&self) -> Result<(), SynthesisError> {
+		let _ = &self.recipient * &self.recipient;
+		let _ = &self.relayer * &self.relayer;
+		let _ = &self.fee * &self.fee;
+		let _ = &self.refund * &self.refund;
 		Ok(())
 	}
 }
@@ -81,7 +71,6 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	type TestMixerDataGadget = MixerDataGadget<Fq>;
 	#[test]
 	fn should_enforce_constraints() {
 		let rng = &mut test_rng();
@@ -95,7 +84,7 @@ mod test {
 		let input = Input::new(recipient, relayer, fee, refund);
 		let input_var = InputVar::new_input(cs.clone(), || Ok(&input)).unwrap();
 
-		TestMixerDataGadget::constrain(&input_var).unwrap();
+		input_var.constrain().unwrap();
 
 		assert!(cs.is_satisfied().unwrap());
 	}

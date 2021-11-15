@@ -1,4 +1,3 @@
-use super::Set;
 use ark_crypto_primitives::Error;
 use ark_ff::{bytes::ToBytes, fields::PrimeField, to_bytes};
 use ark_std::marker::PhantomData;
@@ -31,10 +30,8 @@ pub struct SetMembership<F: PrimeField, const M: usize> {
 	field: PhantomData<F>,
 }
 
-impl<F: PrimeField, const M: usize> Set<F, M> for SetMembership<F, M> {
-	type Private = Private<F, M>;
-
-	fn generate_secrets<T: ToBytes>(target: &T, set: &[F; M]) -> Result<Self::Private, Error> {
+impl<F: PrimeField, const M: usize> SetMembership<F, M> {
+	pub fn generate_secrets<T: ToBytes>(target: &T, set: &[F; M]) -> Result<Private<F, M>, Error> {
 		let target_bytes = to_bytes![target]?;
 		let t = F::read(target_bytes.as_slice())?;
 		let mut diffs = [F::default(); M];
@@ -44,7 +41,7 @@ impl<F: PrimeField, const M: usize> Set<F, M> for SetMembership<F, M> {
 		Ok(Private::new(&diffs))
 	}
 
-	fn check<T: ToBytes>(target: &T, set: &[F; M], s: &Self::Private) -> Result<bool, Error> {
+	pub fn check<T: ToBytes>(target: &T, set: &[F; M], s: &Private<F, M>) -> Result<bool, Error> {
 		let target_bytes = to_bytes![target]?;
 		let target = F::read(target_bytes.as_slice())?;
 		let mut product = target.clone();

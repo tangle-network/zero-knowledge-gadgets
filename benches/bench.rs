@@ -8,18 +8,14 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
-	arbitrary::bridge_data::{constraints::BridgeDataGadget, BridgeData, Input as BridgeDataInput},
+	arbitrary::bridge_data::Input as BridgeDataInput,
 	circuit::bridge::BridgeCircuit,
-	leaf::{
-		bridge::{constraints::BridgeLeafGadget, BridgeLeaf, Public as LeafPublic},
-		LeafCreation,
+	leaf::bridge::{
+		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-	set::{
-		membership::{constraints::SetMembershipGadget, SetMembership},
-		Set,
-	},
+	set::membership::{constraints::SetMembershipGadget, SetMembership},
 	utils::{
 		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
 		get_rounds_poseidon_bn254_x5_5,
@@ -32,8 +28,6 @@ macro_rules! setup_circuit {
 		const M: usize = 4;
 		const N: usize = 30;
 
-		type BridgeConstraintData = BridgeData<$test_field>;
-		type BridgeConstraintDataGadget = BridgeDataGadget<$test_field>;
 		#[derive(Default, Clone)]
 		struct PoseidonRounds5;
 
@@ -61,7 +55,7 @@ macro_rules! setup_circuit {
 		type PoseidonCRH3Gadget = CRHGadget<$test_field, PoseidonRounds3>;
 
 		type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
-		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget>;
 
 		#[derive(Clone)]
 		struct BridgeTreeConfig;
@@ -79,25 +73,19 @@ macro_rules! setup_circuit {
 
 		type Circuit = BridgeCircuit<
 			$test_field,
-			BridgeConstraintData,
-			BridgeConstraintDataGadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
 			BridgeTreeConfig,
 			PoseidonCRH3Gadget,
 			PoseidonCRH3Gadget,
-			Leaf,
-			LeafGadget,
-			TestSetMembership,
-			TestSetMembershipGadget,
-			M,
 			N,
+			M,
 		>;
 
 		let rng = &mut test_rng();
 
 		// Secret inputs for the leaf
-		let leaf_private = Leaf::generate_secrets(rng).unwrap();
+		let leaf_private = LeafPrivate::generate(rng);
 		// Public inputs for the leaf
 		let chain_id = <$test_field>::one();
 		let leaf_public = LeafPublic::new(chain_id);
@@ -107,15 +95,16 @@ macro_rules! setup_circuit {
 		let mds5 = get_mds_poseidon_bn254_x5_5::<$test_field>();
 		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
 		// Creating the leaf
-		let leaf = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
-		let nullifier_hash = Leaf::create_nullifier_hash(&leaf_private, &params5).unwrap();
+		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
 
 		let fee = <$test_field>::rand(rng);
 		let refund = <$test_field>::rand(rng);
 		let recipient = <$test_field>::rand(rng);
 		let relayer = <$test_field>::rand(rng);
+		let commitment = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund);
+		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund, commitment);
 
 		// Making params for poseidon in merkle tree
 		let rounds3 = get_rounds_poseidon_bn254_x5_3::<$test_field>();
@@ -124,7 +113,7 @@ macro_rules! setup_circuit {
 		let leaves = vec![
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
-			leaf,
+			leaf_hash,
 			<$test_field>::rand(rng),
 		];
 		let inner_params = Rc::new(params3.clone());
@@ -161,6 +150,8 @@ macro_rules! setup_circuit {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
+		public_inputs.push(arbitrary_input.refund);
+		public_inputs.push(arbitrary_input.commitment);
 		(public_inputs, mc)
 	}};
 }
@@ -190,7 +181,7 @@ macro_rules! benchmark_marlin {
 
 		// Setup
 		let srs = measure!(
-			{ <$marlin>::universal_setup($nc, $nv, $nv, rng).unwrap() },
+			{ <$marlin>::universal_setup($nc, $nv, 3 * $nv, rng).unwrap() },
 			$name,
 			"setup",
 			$num_iter
@@ -279,8 +270,8 @@ fn benchmark_marlin_ipa_pc(nc: usize, nv: usize, num_iter: u32) {
 }
 
 fn main() {
-	let nc = 36000;
-	let nv = 36000;
+	let nc = 65536;
+	let nv = 65536;
 	let num_iter = 5;
 
 	// Groth16
@@ -290,5 +281,5 @@ fn main() {
 	// Sonic
 	benchmark_marlin_sonic(nc, nv, num_iter);
 	// IPA
-	benchmark_marlin_ipa_pc(nc, nv, num_iter);
+	// benchmark_marlin_ipa_pc(nc, nv, num_iter);
 }

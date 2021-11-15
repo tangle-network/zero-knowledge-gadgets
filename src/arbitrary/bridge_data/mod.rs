@@ -1,6 +1,4 @@
-use super::Arbitrary;
 use ark_ff::fields::PrimeField;
-use ark_std::marker::PhantomData;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -24,12 +22,4 @@ impl<F: PrimeField> Input<F> {
 			commitment,
 		}
 	}
-}
-
-pub struct BridgeData<F: PrimeField> {
-	field: PhantomData<F>,
-}
-
-impl<F: PrimeField> Arbitrary for BridgeData<F> {
-	type Input = Input<F>;
 }

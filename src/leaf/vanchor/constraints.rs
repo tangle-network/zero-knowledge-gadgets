@@ -1,8 +1,5 @@
-use super::{Private, Public, VanchorLeaf};
-use crate::{
-	leaf::{VanchorLeafCreation, VanchorLeafCreationGadget},
-	Vec,
-};
+use super::{Private, Public, VAnchorLeaf};
+use crate::Vec;
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
@@ -46,7 +43,7 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct VanchorLeafGadget<
+pub struct VAnchorLeafGadget<
 	F: PrimeField,
 	H2: CRH,
 	HG2: CRHGadget<H2, F>,
@@ -54,7 +51,6 @@ pub struct VanchorLeafGadget<
 	HG4: CRHGadget<H4, F>,
 	H5: CRH,
 	HG5: CRHGadget<H5, F>,
-	L: VanchorLeafCreation<F, H2, H4, H5>,
 > {
 	field: PhantomData<F>,
 	hasher2: PhantomData<H2>,
@@ -63,7 +59,6 @@ pub struct VanchorLeafGadget<
 	hasher_gadget4: PhantomData<HG4>,
 	hasher5: PhantomData<H5>,
 	hasher_gadget5: PhantomData<HG5>,
-	leaf_creation: PhantomData<L>,
 }
 
 impl<
@@ -74,14 +69,8 @@ impl<
 		HG4: CRHGadget<H4, F>,
 		H5: CRH,
 		HG5: CRHGadget<H5, F>,
-	> VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, VanchorLeaf<F, H2, H4, H5>>
-	for VanchorLeafGadget<F, H2, HG2, H4, HG4, H5, HG5, VanchorLeaf<F, H2, H4, H5>>
+	> VAnchorLeafGadget<F, H2, HG2, H4, HG4, H5, HG5>
 {
-	type LeafVar = HG5::OutputVar;
-	type NullifierVar = HG4::OutputVar;
-	type PrivateVar = PrivateVar<F>;
-	type PublicVar = PublicVar<F>;
-
 	fn create_leaf(
 		s: &Self::PrivateVar,
 		p: &Self::PublicVar,
@@ -235,8 +224,8 @@ mod test {
 	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
-	type Leaf = VanchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
-	type LeafGadget = VanchorLeafGadget<
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type LeafGadget = VAnchorLeafGadget<
 		Fq,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,

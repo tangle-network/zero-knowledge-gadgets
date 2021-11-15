@@ -1,4 +1,3 @@
-use crate::leaf::VanchorLeafCreation;
 use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes};
 
@@ -20,6 +19,7 @@ pub struct Private<F: PrimeField> {
 pub struct Public<F: PrimeField> {
 	chain_id: F,
 }
+
 impl<F: PrimeField> Public<F> {
 	pub fn new(chain_id: F) -> Self {
 		Self { chain_id }
@@ -36,16 +36,14 @@ impl<F: PrimeField> Private<F> {
 	}
 }
 
-pub struct VanchorLeaf<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> {
+pub struct VAnchorLeaf<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> {
 	field: PhantomData<F>,
 	hasher2: PhantomData<H2>,
 	hasher4: PhantomData<H4>,
 	hasher5: PhantomData<H5>,
 }
 
-impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VanchorLeafCreation<F, H2, H4, H5>
-	for VanchorLeaf<F, H2, H4, H5>
-{
+impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 	// Commitment = hash(chain_id, amount, pubKey, blinding)
 	type Leaf = H5::Output;
 	// Nullifier = hash(commitment, pathIndices, privKey)
@@ -146,7 +144,7 @@ mod test {
 	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
 
-	type Leaf = VanchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
 
 	#[test]
 	fn should_create_leaf() {
