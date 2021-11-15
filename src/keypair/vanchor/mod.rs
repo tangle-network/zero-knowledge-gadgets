@@ -1,27 +1,25 @@
 use std::marker::PhantomData;
 
 use ark_crypto_primitives::{Error, CRH};
-use ark_ff::{ToBytes, fields::PrimeField, to_bytes};
+use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
 
 use crate::leaf::vanchor::{Private, VAnchorLeaf};
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
 #[derive(Default, Clone)]
-pub struct Keypair<B: Clone+ ToBytes, H2: CRH, H4: CRH, H5: CRH>
-{
+pub struct Keypair<B: Clone + ToBytes, H2: CRH, H4: CRH, H5: CRH> {
 	private_key: B,
 	_h2: PhantomData<H2>,
 	_h4: PhantomData<H4>,
 	_h5: PhantomData<H5>,
 }
 
-impl<B:  Clone+ ToBytes, H2: CRH, H4: CRH, H5: CRH>
-	 Keypair<B, H2, H4, H5>
-{
+impl<B: Clone + ToBytes, H2: CRH, H4: CRH, H5: CRH> Keypair<B, H2, H4, H5> {
 	fn new(h: &H2::Parameters, private_key: B) -> Result<Self, Error> {
-		//let privkey = VAnchorLeaf::<F, H2, H4, H5>::get_private_key(&secrets).unwrap();
-		
+		//let privkey = VAnchorLeaf::<F, H2, H4,
+		// H5>::get_private_key(&secrets).unwrap();
+
 		Ok(Keypair {
 			private_key,
 			_h2: PhantomData,
@@ -45,10 +43,14 @@ impl<B:  Clone+ ToBytes, H2: CRH, H4: CRH, H5: CRH>
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use crate::{leaf::vanchor::{Private, VAnchorLeaf}, poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH}, utils::{
+	use crate::{
+		leaf::vanchor::{Private, VAnchorLeaf},
+		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		utils::{
 			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2,
 			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
-		}};
+		},
+	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;
@@ -107,9 +109,11 @@ mod test {
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
 
-		let keypair =
-			Keypair::<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>::new(&params, private_key.clone())
-				.unwrap();
+		let keypair = Keypair::<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>::new(
+			&params,
+			private_key.clone(),
+		)
+		.unwrap();
 		let new_pubkey = keypair.public_key(&params).unwrap();
 
 		assert_eq!(new_pubkey, pubkey)

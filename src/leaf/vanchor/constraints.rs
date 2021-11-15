@@ -34,10 +34,7 @@ impl<F: PrimeField> PublicVar<F> {
 
 impl<F: PrimeField> PrivateVar<F> {
 	pub fn new(amount: FpVar<F>, blinding: FpVar<F>) -> Self {
-		Self {
-			amount,
-			blinding,
-		}
+		Self { amount, blinding }
 	}
 }
 
@@ -71,14 +68,11 @@ impl<
 {
 	pub fn create_leaf<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
-		private_key: &BG,
+		public_key: &BG,
 		public: &PublicVar<F>,
-		h_w2: &HG2::ParametersVar,
 		h_w5: &HG5::ParametersVar,
 	) -> Result<HG5::OutputVar, SynthesisError> {
-		let mut bytes_p = Vec::new();
-		bytes_p.extend(private_key.to_bytes()?);
-		let pubkey = HG2::evaluate(&h_w2, &bytes_p)?;
+		let pubkey = public_key;
 
 		let mut bytes = Vec::new();
 		bytes.extend(public.chain_id.to_bytes()?);
@@ -89,7 +83,6 @@ impl<
 	}
 
 	pub fn create_nullifier<BG: ToBytesGadget<F>>(
-		private: &PrivateVar<F>,
 		private_key: &BG,
 		commitment: &HG5::OutputVar,
 		h_w4: &HG4::ParametersVar,
@@ -228,8 +221,7 @@ mod test {
 		PoseidonCRH5,
 		PoseidonCRH5Gadget,
 	>;
-	use crate::ark_std::One;
-	use crate::ark_std::UniformRand;
+	use crate::ark_std::{One, UniformRand};
 	#[test]
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
@@ -249,7 +241,8 @@ mod test {
 		let private_key = Fq::rand(rng);
 
 		//TODO Change the parameters
-		let leaf = Leaf::create_leaf(&secrets, &private_key, &public, &params5_2, &params5_5).unwrap();
+		let leaf =
+			Leaf::create_leaf(&secrets, &private_key, &public, &params5_2, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -271,7 +264,7 @@ mod test {
 
 		//TODO Change the parameters
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &private_key_var, &public_var, &params_var5_2, &params_var5_5)
+			LeafGadget::create_leaf(&secrets_var, &private_key_var, &public_var, &params_var5_5)
 				.unwrap();
 
 		// Check equality
@@ -295,7 +288,7 @@ mod test {
 
 		// Constraints version
 		let nullifier_var =
-			LeafGadget::create_nullifier(&secrets_var, &private_key_var, &leaf_var, &params_var5_4, &index_var)
+			LeafGadget::create_nullifier(&private_key_var, &leaf_var, &params_var5_4, &index_var)
 				.unwrap();
 
 		// Check equality
