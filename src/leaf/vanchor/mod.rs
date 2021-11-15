@@ -50,12 +50,7 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 		h_w2: &H2::Parameters,
 		h_w5: &H5::Parameters,
 	) -> Result<H5::Output, Error> {
-		let bytes = to_bytes![
-			public.chain_id,
-			private.amount,
-			public_key,
-			private.blinding
-		]?;
+		let bytes = to_bytes![public.chain_id, private.amount, public_key, private.blinding]?;
 		H5::evaluate(h_w5, &bytes)
 	}
 
@@ -70,13 +65,6 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 		H4::evaluate(h_w4, &bytes)
 	}
 
-	fn gen_public_key<B: ToBytes>(
-		private_key: &B,
-		h_w2: &H2::Parameters,
-	) -> Result<H2::Output, Error> {
-		let bytes = to_bytes![private_key]?;
-		H2::evaluate(h_w2, &bytes)
-	}
 }
 
 #[cfg(feature = "default_poseidon")]
