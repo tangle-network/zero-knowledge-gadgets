@@ -59,7 +59,7 @@ impl<F: PrimeField, const M: usize> SetMembership<F, M> {
 	fn check_is_enabled<T: ToBytes>(
 		target: &T,
 		set: &[F; M],
-		s: &Self::Private,
+		s: &Private<F , M>,
 		enabled: &F,
 	) -> Result<bool, Error> {
 		let target_bytes = to_bytes![target]?;

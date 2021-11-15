@@ -1,7 +1,7 @@
 use crate::{
 	leaf::{
-		vanchor::{Private as LeafPrivate, Public as LeafPublic, VanchorLeaf},
-		VanchorLeafCreation,
+		vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
+		
 	},
 	merkle_tree::{Config, Node, Path},
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, Rounds, CRH},
@@ -42,12 +42,12 @@ pub fn generate_vanchor_leaf_rng<
 ) -> (
 	LeafPrivate<F>,
 	LeafPublic<F>,
-	<VanchorLeaf<F, H2, H4, H5> as VanchorLeafCreation<F, H2, H4, H5>>::Leaf,
+	H5::Output,
 ) {
 	let leaf_private = LeafPrivate::generate(rng);
 	let leaf_public = LeafPublic::new(chain_id);
 	let leaf_hash =
-		VanchorLeaf::<F, H2, H4, H5>::create_leaf(&leaf_private, &leaf_public, h_w2, h_w5).unwrap();
+		VAnchorLeaf::<F, H2, H4, H5>::create_leaf(&leaf_private, &leaf_public, h_w2, h_w5).unwrap();
 
 	(leaf_private, leaf_public, leaf_hash)
 }

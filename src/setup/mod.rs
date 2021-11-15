@@ -9,5 +9,5 @@ pub mod common;
 #[cfg(feature = "default_poseidon")]
 pub mod mixer;
 
-#[cfg(feature = "default_poseidon")]
-pub mod vanchor;
+// #[cfg(feature = "default_poseidon")]
+// pub mod vanchor;

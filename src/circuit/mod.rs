@@ -2,4 +2,4 @@ pub mod basic;
 pub mod bridge;
 pub mod mixer;
 pub mod poseidon;
-//pub mod vanchor;
+pub mod vanchor;

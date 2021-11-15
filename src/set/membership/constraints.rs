@@ -46,10 +46,10 @@ impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 		Ok(product.is_eq(&FpVar::<F>::zero())?)
 	}
 
-	fn check_is_enabled<T: ToBytesGadget<F>>(
+	pub fn check_is_enabled<T: ToBytesGadget<F>>(
 		target: &T,
 		set: &Vec<FpVar<F>>,
-		private: &Self::PrivateVar,
+		private: &PrivateVar<F,M>,
 		is_enabled: &FpVar<F>,
 	) -> Result<Boolean<F>, SynthesisError> {
 		assert_eq!(set.len(), M); // FIXME Should we enforce it in constrain system?

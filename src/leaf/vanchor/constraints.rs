@@ -71,43 +71,43 @@ impl<
 		HG5: CRHGadget<H5, F>,
 	> VAnchorLeafGadget<F, H2, HG2, H4, HG4, H5, HG5>
 {
-	fn create_leaf(
-		s: &Self::PrivateVar,
-		p: &Self::PublicVar,
+	pub fn create_leaf(
+		private: &PrivateVar<F>,
+		public: &PublicVar<F>,
 		h_w2: &HG2::ParametersVar,
 		h_w5: &HG5::ParametersVar,
-	) -> Result<Self::LeafVar, SynthesisError> {
+	) -> Result<HG5::OutputVar, SynthesisError> {
 		let mut bytes_p = Vec::new();
-		bytes_p.extend(s.priv_key.to_bytes()?);
+		bytes_p.extend(private.priv_key.to_bytes()?);
 		let pubkey = HG2::evaluate(&h_w2, &bytes_p)?;
 
 		let mut bytes = Vec::new();
-		bytes.extend(p.chain_id.to_bytes()?);
-		bytes.extend(s.amount.to_bytes()?);
+		bytes.extend(public.chain_id.to_bytes()?);
+		bytes.extend(private.amount.to_bytes()?);
 		bytes.extend(pubkey.to_bytes()?);
-		bytes.extend(s.blinding.to_bytes()?);
+		bytes.extend(private.blinding.to_bytes()?);
 		HG5::evaluate(h_w5, &bytes)
 	}
 
-	fn create_nullifier(
-		s: &Self::PrivateVar,
-		c: &Self::LeafVar,
+	pub fn create_nullifier(
+		private: &PrivateVar<F>,
+		commitment: &HG5::OutputVar,
 		h_w4: &HG4::ParametersVar,
 		i: &FpVar<F>,
-	) -> Result<Self::NullifierVar, SynthesisError> {
+	) -> Result<HG4::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(c.to_bytes()?);
+		bytes.extend(commitment.to_bytes()?);
 		bytes.extend(i.to_bytes()?);
-		bytes.extend(s.priv_key.to_bytes()?);
+		bytes.extend(private.priv_key.to_bytes()?);
 		HG4::evaluate(h_w4, &bytes)
 	}
 
-	fn get_private_key(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
+	pub fn get_private_key(s: &PrivateVar<F>) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.priv_key.clone())
 	}
 
-	fn gen_public_key(
-		s: &Self::PrivateVar,
+	pub fn gen_public_key(
+		s: &PrivateVar<F>,
 		h_w2: &HG2::ParametersVar,
 	) -> Result<HG2::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
@@ -115,15 +115,15 @@ impl<
 		HG2::evaluate(h_w2, &bytes)
 	}
 
-	fn get_amount(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
+	pub fn get_amount(s: &PrivateVar<F>) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.amount.clone())
 	}
 
-	fn get_blinding(s: &Self::PrivateVar) -> Result<FpVar<F>, SynthesisError> {
+	pub fn get_blinding(s: &PrivateVar<F>) -> Result<FpVar<F>, SynthesisError> {
 		Ok(s.blinding.clone())
 	}
 
-	fn get_chain_id(p: &Self::PublicVar) -> Result<FpVar<F>, SynthesisError> {
+	pub fn get_chain_id(p: &PublicVar<F>) -> Result<FpVar<F>, SynthesisError> {
 		Ok(p.chain_id.clone())
 	}
 }
@@ -233,7 +233,6 @@ mod test {
 		PoseidonCRH4Gadget,
 		PoseidonCRH5,
 		PoseidonCRH5Gadget,
-		Leaf,
 	>;
 	use crate::ark_std::One;
 	#[test]
@@ -251,7 +250,7 @@ mod test {
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);
-		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let secrets = Private::generate(rng);
 
 		//TODO Change the parameters
 		let leaf = Leaf::create_leaf(&secrets, &public, &params5_2, &params5_5).unwrap();

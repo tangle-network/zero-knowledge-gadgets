@@ -1,25 +1,22 @@
-use crate::{
-	arbitrary::{constraints::ArbitraryGadget, Arbitrary},
-	keypair::{constraints::KeypairCreationGadget, vanchor::constraints::KeypairVar},
-	leaf::{constraints::VanchorLeafCreationGadget, VanchorLeafCreation},
-	merkle_tree::{
+use crate::{Vec, arbitrary::bridge_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput}, keypair::vanchor::{Keypair, constraints::KeypairVar}, leaf::vanchor::{
+		constraints::{
+			VAnchorLeafGadget, PrivateVar as LeafPrivateInputsVar, PublicVar as LeafPublicInputsVar,
+		},
+		Private as LeafPrivateInputs, Public as LeafPublicInputs,
+	}, merkle_tree::{
 		constraints::{NodeVar, PathVar},
 		Config as MerkleConfig, Path,
-	},
-	set::{Set, SetGadget},
-	Vec,
-};
+	}, set::membership::{
+		constraints::{PrivateVar as SetPrivateInputsVar, SetMembershipGadget},
+		Private as SetPrivateInputs,
+	}};
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::{cmp::Ordering::Less, marker::PhantomData};
-
 pub struct VanchorCircuit<
 	F: PrimeField,
-	// Arbitrary data constraints
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	// Hasher for the leaf creation,  Nullifier, Public key generation
 	H2: CRH,
 	HG2: CRHGadget<H2, F>,
@@ -31,28 +28,22 @@ pub struct VanchorCircuit<
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	// Type of leaf creation
-	L: VanchorLeafCreation<F, H2, H4, H5>,
-	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
-	// Set of merkle roots
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 	const N: usize,
 	const M: usize,
 > {
 	public_amount: F,
-	ext_data_hash: A::Input,
+	ext_data_hash: ArbitraryInput<F>,
 
-	leaf_private_inputs: Vec<L::Private>, // amount, blinding, privkey
-	leaf_public_inputs: L::Public,        // chain_id
-	set_private_inputs: Vec<S::Private>,  // diffs
+	leaf_private_inputs: Vec<LeafPrivateInputs<F>>, // amount, blinding, privkey
+	leaf_public_inputs: LeafPublicInputs<F>,        // chain_id
+	set_private_inputs: Vec<SetPrivateInputs<F, M>>,  // diffs
 	root_set: [F; M],
 	hasher_params_w2: H2::Parameters,
 	hasher_params_w4: H4::Parameters,
 	hasher_params_w5: H5::Parameters,
 	path: Vec<Path<C, N>>,
 	index: Vec<F>, // TODO: Temporary, we may need to compute it from path
-	nullifier_hash: Vec<L::Nullifier>,
+	nullifier_hash: Vec<H4::Output>,
 
 	output_commitment: Vec<H5::Output>,
 	out_chain_id: Vec<F>,
@@ -60,7 +51,6 @@ pub struct VanchorCircuit<
 	out_pubkey: Vec<F>,
 	out_blinding: Vec<F>,
 
-	_arbitrary_gadget: PhantomData<AG>,
 	_hasher2: PhantomData<H2>,
 	_hasher2_gadget: PhantomData<HG2>,
 	_hasher4: PhantomData<H4>,
@@ -69,19 +59,13 @@ pub struct VanchorCircuit<
 	_hasher5_gadget: PhantomData<HG5>,
 	_leaf_hasher_gadget: PhantomData<LHGT>,
 	_tree_hasher_gadget: PhantomData<HGT>,
-	_leaf_creation: PhantomData<L>,
-	_leaf_creation_gadget: PhantomData<LG>,
-	_set: PhantomData<S>,
-	_set_gadget: PhantomData<SG>,
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	VanchorCircuit<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT,const N: usize, const M: usize>
+	VanchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H2: CRH,
 	HG2: CRHGadget<H2, F>,
 	H4: CRH,
@@ -91,24 +75,20 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<F, H2, H4, H5>,
-	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 {
 	pub fn new(
 		public_amount: F,
-		ext_data_hash: A::Input,
-		leaf_private_inputs: Vec<L::Private>,
-		leaf_public_inputs: L::Public,
-		set_private_inputs: Vec<S::Private>,
+		ext_data_hash: ArbitraryInput<F>,
+		leaf_private_inputs: Vec<LeafPrivateInputs<F>>,
+		leaf_public_inputs:LeafPublicInputs<F>,
+		set_private_inputs: Vec<SetPrivateInputs<F, M>>,
 		root_set: [F; M],
 		hasher_params_w2: H2::Parameters,
 		hasher_params_w4: H4::Parameters,
 		hasher_params_w5: H5::Parameters,
 		path: Vec<Path<C, N>>,
 		index: Vec<F>,
-		nullifier_hash: Vec<L::Nullifier>,
+		nullifier_hash: Vec<H4::Output>,
 		output_commitment: Vec<H5::Output>,
 		out_chain_id: Vec<F>,
 		out_amount: Vec<F>,
@@ -133,7 +113,6 @@ where
 			out_amount,
 			out_pubkey,
 			out_blinding,
-			_arbitrary_gadget: PhantomData,
 			_hasher2: PhantomData,
 			_hasher2_gadget: PhantomData,
 			_hasher4: PhantomData,
@@ -142,10 +121,6 @@ where
 			_hasher5_gadget: PhantomData,
 			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
-			_leaf_creation: PhantomData,
-			_leaf_creation_gadget: PhantomData,
-			_set: PhantomData,
-			_set_gadget: PhantomData,
 			_merkle_config: PhantomData,
 		}
 	}
@@ -155,28 +130,27 @@ where
 		hasher_params_w2_var: &HG2::ParametersVar,
 		hasher_params_w4_var: &HG4::ParametersVar,
 		hasher_params_w5_var: &HG5::ParametersVar,
-		leaf_private_var: &Vec<LG::PrivateVar>,
-		leaf_public_var: &LG::PublicVar, //TODO: this doesn't need to be Vec
+		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
+		leaf_public_var: &LeafPublicInputsVar<F>, 
+		key_pairs_inputs_var: &Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>>,
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
-		in_nullifier_var: &Vec<LG::NullifierVar>,
+		in_nullifier_var: &Vec<HG4::OutputVar>,
 		root_set_var: &Vec<FpVar<F>>,
-		set_input_private_var: &Vec<SG::PrivateVar>,
+		set_input_private_var: &Vec<SetPrivateInputsVar<F,M>>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
-		let mut in_utxo_hasher_var: Vec<LG::LeafVar> = Vec::with_capacity(N);
-		let mut nullifier_hash: Vec<LG::NullifierVar> = Vec::with_capacity(N);
+		let mut in_utxo_hasher_var: Vec<HG5::OutputVar> = Vec::with_capacity(N);
+		let mut nullifier_hash: Vec<HG4::OutputVar> = Vec::with_capacity(N);
 		let mut in_amount_tx: FpVar<F>;
-
-		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5, L, LG>> = Vec::with_capacity(N);
+		//let keypairs
+		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> = Vec::with_capacity(N);
 		for tx in 0..N {
-			inkeypair[tx] = KeypairCreationGadget::<F, H2, HG2, H4, HG4, H5, HG5, L, LG>::new_from_key(
-				&hasher_params_w2_var,
-				&LG::get_private_key(&leaf_private_var[tx]).unwrap(),
-			)
-			.unwrap();
+			//inkeypair[tx] = key_pairs_inputs_var[tx].clone(); // TODO: change it in the next PR
+
 			// Computing the hash
-			in_utxo_hasher_var[tx] = LG::create_leaf(
+			// TODO: Remove private key from Private and fed it here as input using keypairs:
+			in_utxo_hasher_var[tx] = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 				&leaf_private_var[tx],
 				&leaf_public_var,
 				&hasher_params_w2_var,
@@ -185,7 +159,7 @@ where
 			// End of computing the hash
 
 			// Nullifier
-			nullifier_hash[tx] = LG::create_nullifier(
+			nullifier_hash[tx] = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_nullifier(
 				&leaf_private_var[tx],
 				&in_utxo_hasher_var[tx],
 				&hasher_params_w4_var,
@@ -197,8 +171,8 @@ where
 			// TODO:
 			let roothash =
 				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
-			in_amount_tx = LG::get_amount(&leaf_private_var[tx]).unwrap();
-			let check = SG::check_is_enabled(
+			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(&leaf_private_var[tx]).unwrap();
+			let check = SetMembershipGadget::check_is_enabled(
 				&roothash,
 				&root_set_var,
 				&set_input_private_var[tx],
@@ -246,9 +220,9 @@ where
 	//TODO: Check that there are no same nullifiers among all inputs
 	pub fn verify_no_same_nul(
 		&self,
-		in_nullifier_var: &Vec<LG::NullifierVar>,
+		in_nullifier_var: &Vec<HG4::OutputVar>,
 	) -> Result<(), SynthesisError> {
-		let mut same_nullifiers: Vec<LG::NullifierVar> = Vec::with_capacity(2);
+		let mut same_nullifiers: Vec<HG4::OutputVar> = Vec::with_capacity(2);
 		for i in 0..N {
 			for j in i..N {
 				same_nullifiers[0] = in_nullifier_var[i].clone();
@@ -273,12 +247,10 @@ where
 	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
 }
 
-impl<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize> Clone
-	for VanchorCircuit<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize> Clone
+	for VanchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H2: CRH,
 	HG2: CRHGadget<H2, F>,
 	H4: CRH,
@@ -288,10 +260,6 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<F, H2, H4, H5>,
-	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 {
 	fn clone(&self) -> Self {
 		let public_amount = self.public_amount.clone();
@@ -334,12 +302,10 @@ where
 	}
 }
 
-impl<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, const N: usize, const M: usize>
-	ConstraintSynthesizer<F> for VanchorCircuit<F, A, AG, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, L, LG, S, SG, N, M>
+impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT,const N: usize, const M: usize>
+	ConstraintSynthesizer<F> for VanchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
-	A: Arbitrary,
-	AG: ArbitraryGadget<F, A>,
 	H2: CRH,
 	HG2: CRHGadget<H2, F>,
 	H4: CRH,
@@ -349,10 +315,6 @@ where
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	L: VanchorLeafCreation<F, H2, H4, H5>,
-	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
-	S: Set<F, M>,
-	SG: SetGadget<F, S, M>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let public_amount = self.public_amount.clone();
@@ -384,15 +346,15 @@ where
 		// Generating vars
 		// Public inputs
 		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
-		let leaf_public_var = LG::PublicVar::new_input(cs.clone(), || Ok(leaf_public.clone()))?;
+		let leaf_public_var = LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public.clone()))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let mut set_input_private_var: Vec<SG::PrivateVar> = Vec::with_capacity(N);
+		let mut set_input_private_var: Vec<SetPrivateInputsVar<F,M>> = Vec::with_capacity(N);
 
-		let mut in_nullifier_var: Vec<LG::NullifierVar> = Vec::with_capacity(N);
+		let mut in_nullifier_var: Vec<HG4::OutputVar> = Vec::with_capacity(N);
 
 		//let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let arbitrary_input_var = AG::InputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
+		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 
 		// Constants
 		let hasher_params_w2_var = HG2::ParametersVar::new_constant(cs.clone(), hasher_params_w2)?;
@@ -400,7 +362,7 @@ where
 		let hasher_params_w5_var = HG5::ParametersVar::new_constant(cs.clone(), hasher_params_w5)?;
 
 		// Private inputs
-		let mut leaf_private_var: Vec<LG::PrivateVar> = Vec::with_capacity(N);
+		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N);
 		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, N>> = Vec::with_capacity(N);
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 
@@ -413,12 +375,12 @@ where
 
 		for i in 0..N {
 			set_input_private_var[i] =
-				SG::PrivateVar::new_witness(cs.clone(), || Ok(set_private[i].clone()))?;
+				SetPrivateInputsVar::new_witness(cs.clone(), || Ok(set_private[i].clone()))?;
 
 			leaf_private_var[i] =
-				LG::PrivateVar::new_input(cs.clone(), || Ok(leaf_private[i].clone()))?;
+				LeafPrivateInputsVar::new_input(cs.clone(), || Ok(leaf_private[i].clone()))?;
 			in_nullifier_var[i] =
-				LG::NullifierVar::new_input(cs.clone(), || Ok(nullifier_hash[i].clone()))?;
+				HG4::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash[i].clone()))?;
 
 			in_path_elements_var[i] =
 				PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path[i].clone()))?;
@@ -434,6 +396,9 @@ where
 				HG5::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
 		}
 
+		//TODO: Change this one
+		let key_pairs_inputs_var: Vec<KeypairVar<F,H2,HG2,H4,HG4,H5,HG5>> = Vec::with_capacity(N);
+
 		// verify correctness of transaction inputs
 		let sum_ins_var = self
 			.verify_input_var(
@@ -442,6 +407,7 @@ where
 				&hasher_params_w5_var,
 				&leaf_private_var,
 				&leaf_public_var,
+				&key_pairs_inputs_var,
 				&in_path_indices_var,
 				&in_path_elements_var,
 				&in_nullifier_var,
@@ -472,7 +438,7 @@ where
 		// Check if target root is in set
 
 		// optional safety constraint to make sure extDataHash cannot be changed
-		AG::constrain(&arbitrary_input_var)?;
+		ArbitraryInputVar::constrain(&arbitrary_input_var)?;
 
 		Ok(())
 	}
@@ -482,7 +448,7 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{ark_std::{One, Zero}, leaf::vanchor::{VanchorLeaf, constraints::VanchorLeafGadget}, poseidon::{CRH as PCRH, PoseidonParameters, Rounds, sbox::PoseidonSbox, constraints::CRHGadget as PCRHGadget}, setup::{bridge::*, common::*, vanchor::generate_vanchor_leaf_rng}};
+	use crate::{ark_std::{One, Zero}, leaf::vanchor::{VAnchorLeaf, constraints::VAnchorLeafGadget}, poseidon::{CRH as PCRH, PoseidonParameters, Rounds, sbox::PoseidonSbox, constraints::CRHGadget as PCRHGadget}, setup::{bridge::*, common::*}};
 	use ark_bn254::{Bn254, Fq as BnFq, Fr as BnFr};
 	use ark_ff::UniformRand;
 	use ark_groth16::{Groth16, create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof};
@@ -534,8 +500,8 @@ mod test {
 	type PoseidonCRH4Gadget = PCRHGadget<BnFq, PoseidonRounds4>;
 	type PoseidonCRH5Gadget = PCRHGadget<BnFq, PoseidonRounds5>;
 
-	type Leaf = VanchorLeaf<BnFq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
-	type LeafGadget = VanchorLeafGadget<
+	type Leaf = VAnchorLeaf<BnFq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type LeafGadget = VAnchorLeafGadget<
 		BnFq,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -543,7 +509,6 @@ mod test {
 		PoseidonCRH4Gadget,
 		PoseidonCRH5,
 		PoseidonCRH5Gadget,
-		Leaf,
 	>;
 	#[test]
 	fn test_2_to_248() {
@@ -600,6 +565,7 @@ mod test {
 		assert!(!cs.is_satisfied().unwrap());
 	}
 	use crate::prelude::ark_crypto_primitives::crh::poseidon::Poseidon;
+	/* TODO: Incomplete Test
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
@@ -670,5 +636,6 @@ mod test {
 		let vk = prepare_verifying_key(&pk.vk);
 		let res = verify_proof(&vk, &proof, &public_inputs).unwrap();
 		assert!(res);
-	}
+	} 
+	*/
 }

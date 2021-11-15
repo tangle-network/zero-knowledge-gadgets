@@ -5,10 +5,7 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::SynthesisError;
 use ark_std::marker::PhantomData;
 
-use crate::{
-	keypair::constraints::KeypairCreationGadget,
-	leaf::{VanchorLeafCreation, VanchorLeafCreationGadget},
-};
+use crate::leaf::vanchor::constraints::{PrivateVar, VAnchorLeafGadget};
 
 #[derive(Clone)]
 pub struct KeypairVar<
@@ -19,13 +16,10 @@ pub struct KeypairVar<
 	HG4: CRHGadget<H4, F>,
 	H5: CRH,
 	HG5: CRHGadget<H5, F>,
-	L: VanchorLeafCreation<F, H2, H4, H5>,
-	LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
 > {
 	pubkey_var: <HG2 as CRHGadget<H2, F>>::OutputVar,
 	privkey_var: FpVar<F>,
-	_leaf_creation: PhantomData<L>,
-	_leaf_creation_gadget: PhantomData<LG>,
+
 	_h4: PhantomData<H4>,
 	_hg4: PhantomData<HG4>,
 	_h5: PhantomData<H5>,
@@ -40,24 +34,19 @@ impl<
 		HG4: CRHGadget<H4, F>,
 		H5: CRH,
 		HG5: CRHGadget<H5, F>,
-		L: VanchorLeafCreation<F, H2, H4, H5>,
-		LG: VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>,
-	> KeypairCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L, LG>
-	for KeypairVar<F, H2, HG2, H4, HG4, H5, HG5, L, LG>
+	> KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>
 {
 	fn new(
 		h: &HG2::ParametersVar,
-		secrets: &<LG as VanchorLeafCreationGadget<F, H2, HG2, H4, HG4, H5, HG5, L>>::PrivateVar,
+		secrets: &PrivateVar<F>,
 	) -> Result<Self, SynthesisError> {
-		let privkey_var = LG::get_private_key(&secrets).unwrap();
+		let privkey_var = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_private_key(&secrets).unwrap();
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(privkey_var.to_bytes().unwrap());
 		let pubkey_var = HG2::evaluate(&h, &bytes).unwrap();
 		Ok(Self {
 			pubkey_var,
 			privkey_var,
-			_leaf_creation: PhantomData,
-			_leaf_creation_gadget: PhantomData,
 			_h4: PhantomData,
 			_hg4: PhantomData,
 			_h5: PhantomData,
@@ -73,8 +62,6 @@ impl<
 		Ok(Self {
 			pubkey_var,
 			privkey_var,
-			_leaf_creation: PhantomData,
-			_leaf_creation_gadget: PhantomData,
 			_h4: PhantomData,
 			_hg4: PhantomData,
 			_h5: PhantomData,
@@ -95,21 +82,16 @@ impl<
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		leaf::vanchor::{
-			constraints::{PrivateVar, VanchorLeafGadget},
-			VanchorLeaf,
-		},
-		poseidon::{
+	use crate::{leaf::vanchor::{Private,
+			constraints::PrivateVar,VAnchorLeaf,
+		}, poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
-		},
-		utils::{
+		}, utils::{
 			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2,
 			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
-		},
-	};
+		}};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
@@ -160,8 +142,8 @@ mod test {
 	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
-	type Leaf = VanchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
-	type LeafGadget = VanchorLeafGadget<
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type LeafGadget = VAnchorLeafGadget<
 		Fq,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -169,7 +151,6 @@ mod test {
 		PoseidonCRH4Gadget,
 		PoseidonCRH5,
 		PoseidonCRH5Gadget,
-		Leaf,
 	>;
 	#[test]
 	fn should_crate_new_public_key_var() {
@@ -180,7 +161,7 @@ mod test {
 		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
 		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let secrets = Leaf::generate_secrets(rng).unwrap();
+		let secrets = Private::generate(rng);
 		let prk = Leaf::get_private_key(&secrets).unwrap();
 		let privkey = to_bytes![prk].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
@@ -201,8 +182,6 @@ mod test {
 			PoseidonCRH4Gadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
-			Leaf,
-			LeafGadget,
 		>::new(&params_var, &secrets_var)
 		.unwrap();
 		let new_pubkey_var = keypair.pubkey_var;
