@@ -9,10 +9,14 @@ use crate::Vec;
 pub mod bn254_x17_3;
 #[cfg(feature = "poseidon_bn254_x17_5")]
 pub mod bn254_x17_5;
+#[cfg(feature = "poseidon_bn254_x5_2")]
+pub mod bn254_x5_2;
 #[cfg(feature = "poseidon_bn254_x5_3")]
 pub mod bn254_x5_3;
 #[cfg(feature = "poseidon_bn254_x5_3")]
 pub mod bn254_x5_3_result;
+#[cfg(feature = "poseidon_bn254_x5_4")]
+pub mod bn254_x5_4;
 #[cfg(feature = "poseidon_bn254_x5_5")]
 pub mod bn254_x5_5;
 #[cfg(feature = "poseidon_bn254_x5_5")]

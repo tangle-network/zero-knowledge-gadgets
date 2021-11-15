@@ -1,7 +1,7 @@
 const MIMC_ROUNDS: usize = 220;
 
 // generated from https://github.com/iden3/circomlib/blob/4b2989a4431f332e2d1d494882c6f52f2d423558/src/mimcsponge_printconstants.js
-#[rustfmt::ignore]
+#[rustfmt::skip]
 pub const CONSTANTS: [&str; MIMC_ROUNDS] = [
 	"0x0000000000000000000000000000000000000000000000000000000000000000",
 	"0x0fbe43c36a80e36d7c7c584d4f8f3759fb51f0d66065d8a227b688d12488c5d4",
