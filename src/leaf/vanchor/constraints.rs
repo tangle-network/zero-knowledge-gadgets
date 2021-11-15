@@ -11,7 +11,6 @@ use core::borrow::Borrow;
 pub struct PrivateVar<F: PrimeField> {
 	amount: FpVar<F>,
 	blinding: FpVar<F>,
-	priv_key: FpVar<F>,
 }
 
 #[derive(Clone)]
@@ -34,11 +33,10 @@ impl<F: PrimeField> PublicVar<F> {
 }
 
 impl<F: PrimeField> PrivateVar<F> {
-	pub fn new(amount: FpVar<F>, blinding: FpVar<F>, priv_key: FpVar<F>) -> Self {
+	pub fn new(amount: FpVar<F>, blinding: FpVar<F>) -> Self {
 		Self {
 			amount,
 			blinding,
-			priv_key,
 		}
 	}
 }
@@ -71,14 +69,15 @@ impl<
 		HG5: CRHGadget<H5, F>,
 	> VAnchorLeafGadget<F, H2, HG2, H4, HG4, H5, HG5>
 {
-	pub fn create_leaf(
+	pub fn create_leaf<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
+		private_key: &BG,
 		public: &PublicVar<F>,
 		h_w2: &HG2::ParametersVar,
 		h_w5: &HG5::ParametersVar,
 	) -> Result<HG5::OutputVar, SynthesisError> {
 		let mut bytes_p = Vec::new();
-		bytes_p.extend(private.priv_key.to_bytes()?);
+		bytes_p.extend(private_key.to_bytes()?);
 		let pubkey = HG2::evaluate(&h_w2, &bytes_p)?;
 
 		let mut bytes = Vec::new();
@@ -89,8 +88,9 @@ impl<
 		HG5::evaluate(h_w5, &bytes)
 	}
 
-	pub fn create_nullifier(
+	pub fn create_nullifier<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
+		private_key: &BG,
 		commitment: &HG5::OutputVar,
 		h_w4: &HG4::ParametersVar,
 		i: &FpVar<F>,
@@ -98,20 +98,16 @@ impl<
 		let mut bytes = Vec::new();
 		bytes.extend(commitment.to_bytes()?);
 		bytes.extend(i.to_bytes()?);
-		bytes.extend(private.priv_key.to_bytes()?);
+		bytes.extend(private_key.to_bytes()?);
 		HG4::evaluate(h_w4, &bytes)
 	}
 
-	pub fn get_private_key(s: &PrivateVar<F>) -> Result<FpVar<F>, SynthesisError> {
-		Ok(s.priv_key.clone())
-	}
-
-	pub fn gen_public_key(
-		s: &PrivateVar<F>,
+	pub fn gen_public_key<BG: ToBytesGadget<F>>(
+		private_key: &BG,
 		h_w2: &HG2::ParametersVar,
 	) -> Result<HG2::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(s.priv_key.to_bytes()?);
+		bytes.extend(private_key.to_bytes()?);
 		HG2::evaluate(h_w2, &bytes)
 	}
 
@@ -140,12 +136,10 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 
 		let amount = secrets.amount;
 		let blinding = secrets.blinding;
-		let priv_key = secrets.priv_key;
 
 		let amount_var = FpVar::new_variable(cs.clone(), || Ok(amount), mode)?;
 		let blinding_var = FpVar::new_variable(cs.clone(), || Ok(blinding), mode)?;
-		let priv_key_var = FpVar::new_variable(cs.clone(), || Ok(priv_key), mode)?;
-		Ok(PrivateVar::new(amount_var, blinding_var, priv_key_var))
+		Ok(PrivateVar::new(amount_var, blinding_var))
 	}
 }
 
@@ -235,6 +229,7 @@ mod test {
 		PoseidonCRH5Gadget,
 	>;
 	use crate::ark_std::One;
+	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
@@ -251,14 +246,16 @@ mod test {
 		let index = Fq::one();
 		let public = Public::new(chain_id);
 		let secrets = Private::generate(rng);
+		let private_key = Fq::rand(rng);
 
 		//TODO Change the parameters
-		let leaf = Leaf::create_leaf(&secrets, &public, &params5_2, &params5_5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &private_key, &public, &params5_2, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
+		let private_key_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&private_key)).unwrap();
 		let params_var5_5 = PoseidonParametersVar::new_variable(
 			cs.clone(),
 			|| Ok(&params5_5),
@@ -274,7 +271,7 @@ mod test {
 
 		//TODO Change the parameters
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_var, &params_var5_2, &params_var5_5)
+			LeafGadget::create_leaf(&secrets_var, &private_key_var, &public_var, &params_var5_2, &params_var5_5)
 				.unwrap();
 
 		// Check equality
@@ -294,11 +291,11 @@ mod test {
 			AllocationMode::Constant,
 		)
 		.unwrap();
-		let nullifier = Leaf::create_nullifier(&secrets, &leaf, &params5_4, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&private_key, &leaf, &params5_4, &index).unwrap();
 
 		// Constraints version
 		let nullifier_var =
-			LeafGadget::create_nullifier(&secrets_var, &leaf_var, &params_var5_4, &index_var)
+			LeafGadget::create_nullifier(&secrets_var, &private_key_var, &leaf_var, &params_var5_4, &index_var)
 				.unwrap();
 
 		// Check equality

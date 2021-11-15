@@ -10,6 +10,7 @@ use crate::leaf::vanchor::constraints::{PrivateVar, VAnchorLeafGadget};
 #[derive(Clone)]
 pub struct KeypairVar<
 	F: PrimeField,
+	BG: ToBytesGadget<F>+Clone,
 	H2: CRH,
 	HG2: CRHGadget<H2, F>,
 	H4: CRH,
@@ -17,9 +18,11 @@ pub struct KeypairVar<
 	H5: CRH,
 	HG5: CRHGadget<H5, F>,
 > {
-	pubkey_var: <HG2 as CRHGadget<H2, F>>::OutputVar,
-	privkey_var: FpVar<F>,
+	private_key:BG,
 
+	_d: PhantomData<F>,
+	_h2: PhantomData<H2>,
+	_hg2: PhantomData<HG2>,
 	_h4: PhantomData<H4>,
 	_hg4: PhantomData<HG4>,
 	_h5: PhantomData<H5>,
@@ -28,25 +31,24 @@ pub struct KeypairVar<
 
 impl<
 		F: PrimeField,
+		BG:  ToBytesGadget<F> + Clone,
 		H2: CRH,
 		HG2: CRHGadget<H2, F>,
 		H4: CRH,
 		HG4: CRHGadget<H4, F>,
 		H5: CRH,
 		HG5: CRHGadget<H5, F>,
-	> KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>
+	> KeypairVar<F, BG, H2, HG2, H4, HG4, H5, HG5>
 {
 	fn new(
-		h: &HG2::ParametersVar,
-		secrets: &PrivateVar<F>,
+		private_key: BG,
 	) -> Result<Self, SynthesisError> {
-		let privkey_var = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_private_key(&secrets).unwrap();
-		let mut bytes = Vec::<UInt8<F>>::new();
-		bytes.extend(privkey_var.to_bytes().unwrap());
-		let pubkey_var = HG2::evaluate(&h, &bytes).unwrap();
+		
 		Ok(Self {
-			pubkey_var,
-			privkey_var,
+			private_key,
+			_d: PhantomData,
+			_h2: PhantomData,
+			_hg2: PhantomData,
 			_h4: PhantomData,
 			_hg4: PhantomData,
 			_h5: PhantomData,
@@ -54,27 +56,16 @@ impl<
 		})
 	}
 
-	fn new_from_key(h: &HG2::ParametersVar, privkey: &FpVar<F>) -> Result<Self, SynthesisError> {
-		let privkey_var = privkey.clone();
+	fn public_key(&self, hg2: &HG2::ParametersVar) -> Result<<HG2 as CRHGadget<H2, F>>::OutputVar, SynthesisError> {
+		let privkey_var = &self.private_key;
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(privkey_var.to_bytes().unwrap());
-		let pubkey_var = HG2::evaluate(&h, &bytes).unwrap();
-		Ok(Self {
-			pubkey_var,
-			privkey_var,
-			_h4: PhantomData,
-			_hg4: PhantomData,
-			_h5: PhantomData,
-			_hg5: PhantomData,
-		})
+		let pubkey_var = HG2::evaluate(&hg2, &bytes).unwrap();
+		Ok(pubkey_var)
 	}
 
-	fn public_key_var(&self) -> Result<<HG2 as CRHGadget<H2, F>>::OutputVar, SynthesisError> {
-		Ok(self.pubkey_var.clone())
-	}
-
-	fn private_key_var(&self) -> Result<FpVar<F>, SynthesisError> {
-		Ok(self.privkey_var.clone())
+	fn private_key(&self) -> Result<&BG, SynthesisError> {
+		Ok(&self.private_key)
 	}
 }
 
@@ -82,15 +73,13 @@ impl<
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{leaf::vanchor::{Private,
-			constraints::PrivateVar,VAnchorLeaf,
-		}, poseidon::{
+	use crate::{poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
 		}, utils::{
-			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2,
-			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
+			 get_mds_poseidon_bn254_x5_2,
+			 get_rounds_poseidon_bn254_x5_2,
 		}};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
@@ -142,16 +131,7 @@ mod test {
 	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
-	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
-	type LeafGadget = VAnchorLeafGadget<
-		Fq,
-		PoseidonCRH2,
-		PoseidonCRH2Gadget,
-		PoseidonCRH4,
-		PoseidonCRH4Gadget,
-		PoseidonCRH5,
-		PoseidonCRH5Gadget,
-	>;
+	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_crate_new_public_key_var() {
 		let rng = &mut test_rng();
@@ -161,35 +141,41 @@ mod test {
 		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
 		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-		let secrets = Private::generate(rng);
-		let prk = Leaf::get_private_key(&secrets).unwrap();
-		let privkey = to_bytes![prk].unwrap();
-		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
+		let private_key = Fq::rand(rng);
 
+		let privkey = to_bytes![private_key].unwrap();
+		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
 		// Constraints version
-		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let bytes = to_bytes![Leaf::get_private_key(&secrets).unwrap()].unwrap();
-		let privkey_var = Vec::<UInt8<Fq>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
+		let bytes = to_bytes![private_key].unwrap();
+		let privkey_var = Vec::<UInt8<Fq>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();		
 		let params_var =
-			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
+			PoseidonParametersVar::new_variable(cs.clone(), || Ok(&params), AllocationMode::Constant)
 				.unwrap();
 		let pubkey_var = PoseidonCRH2Gadget::evaluate(&params_var, &privkey_var).unwrap();
-		let keypair = KeypairVar::<
+		let privkey_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(private_key)).unwrap();		
+		let keypair_var = KeypairVar::<
 			Fq,
+			FpVar<Fq>,
 			PoseidonCRH2,
 			PoseidonCRH2Gadget,
 			PoseidonCRH4,
 			PoseidonCRH4Gadget,
 			PoseidonCRH5,
 			PoseidonCRH5Gadget,
-		>::new(&params_var, &secrets_var)
+		>::new( privkey_var.clone())
 		.unwrap();
-		let new_pubkey_var = keypair.pubkey_var;
+		let new_pubkey_var = keypair_var.public_key(&params_var).unwrap();
 		let res = pubkey_var.is_eq(&new_pubkey_var).unwrap();
 
 		// Check equality
 		assert!(res.value().unwrap());
 		assert_eq!(pubkey, new_pubkey_var.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());
+
+		let new_private_key = keypair_var.private_key().unwrap();
+		let res2 = new_private_key.is_eq(&privkey_var).unwrap();
+		assert!(res2.value().unwrap());
+		assert_eq!(private_key, new_private_key.value().unwrap());
+		assert!(res2.cs().is_satisfied().unwrap());
 	}
 }
