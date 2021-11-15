@@ -1,12 +1,9 @@
-use super::{BridgeLeaf, Output, Private, Public};
-use crate::{
-	leaf::{LeafCreation, LeafCreationGadget},
-	Vec,
-};
+use super::{Private, Public};
+use crate::Vec;
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*, R1CSVar};
-use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
+use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
+use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
 
@@ -33,101 +30,33 @@ impl<F: PrimeField> PublicVar<F> {
 	}
 }
 
-#[derive(Clone, Debug)]
-pub struct OutputVar<F: PrimeField> {
-	leaf: FpVar<F>,
-	nullifier_hash: FpVar<F>,
-}
-
-impl<F: PrimeField> OutputVar<F> {
-	pub fn new(leaf: FpVar<F>, nullifier_hash: FpVar<F>) -> Self {
-		Self {
-			leaf,
-			nullifier_hash,
-		}
-	}
-}
-
-impl<F: PrimeField> R1CSVar<F> for OutputVar<F> {
-	type Value = Output<F>;
-
-	fn cs(&self) -> ConstraintSystemRef<F> {
-		self.to_bytes().unwrap().cs()
-	}
-
-	fn value(&self) -> Result<Self::Value, SynthesisError> {
-		Ok(Output {
-			leaf: self.leaf.value()?,
-			nullifier_hash: self.nullifier_hash.value()?,
-		})
-	}
-}
-
-impl<F: PrimeField> CondSelectGadget<F> for OutputVar<F> {
-	fn conditionally_select(
-		cond: &Boolean<F>,
-		true_val: &Self,
-		false_val: &Self,
-	) -> Result<Self, SynthesisError> {
-		match cond.value()? {
-			true => Ok(true_val.clone()),
-			false => Ok(false_val.clone()),
-		}
-	}
-}
-
-impl<F: PrimeField> EqGadget<F> for OutputVar<F> {
-	fn is_eq(&self, other: &Self) -> Result<Boolean<F>, SynthesisError> {
-		self.leaf
-			.is_eq(&other.leaf)
-			.and(self.nullifier_hash.is_eq(&other.nullifier_hash))
-	}
-}
-
-impl<F: PrimeField> ToBytesGadget<F> for OutputVar<F> {
-	fn to_bytes(&self) -> Result<Vec<UInt8<F>>, SynthesisError> {
-		let mut bytes = Vec::new();
-		bytes.extend(self.leaf.to_bytes()?);
-		bytes.extend(self.nullifier_hash.to_bytes()?);
-		Ok(bytes)
-	}
-}
-
-pub struct BridgeLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>, L: LeafCreation<H>> {
+pub struct BridgeLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
-	leaf_creation: PhantomData<L>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> LeafCreationGadget<F, H, HG, BridgeLeaf<F, H>>
-	for BridgeLeafGadget<F, H, HG, BridgeLeaf<F, H>>
-{
-	type LeafVar = HG::OutputVar;
-	type NullifierVar = HG::OutputVar;
-	type PrivateVar = PrivateVar<F>;
-	type PublicVar = PublicVar<F>;
-
-	fn create_leaf(
-		s: &Self::PrivateVar,
-		p: &Self::PublicVar,
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> BridgeLeafGadget<F, H, HG> {
+	pub fn create_leaf(
+		private: &PrivateVar<F>,
+		public: &PublicVar<F>,
 		h: &HG::ParametersVar,
-	) -> Result<Self::LeafVar, SynthesisError> {
+	) -> Result<HG::OutputVar, SynthesisError> {
 		// leaf
 		let mut leaf_bytes = Vec::new();
-		leaf_bytes.extend(s.r.to_bytes()?);
-		leaf_bytes.extend(s.nullifier.to_bytes()?);
-		leaf_bytes.extend(p.chain_id.to_bytes()?);
+		leaf_bytes.extend(private.r.to_bytes()?);
+		leaf_bytes.extend(private.nullifier.to_bytes()?);
+		leaf_bytes.extend(public.chain_id.to_bytes()?);
 		HG::evaluate(h, &leaf_bytes)
 	}
 
-	fn create_nullifier(
-		s: &Self::PrivateVar,
+	pub fn create_nullifier(
+		private: &PrivateVar<F>,
 		h: &HG::ParametersVar,
-	) -> Result<Self::NullifierVar, SynthesisError> {
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut nullifier_hash_bytes = Vec::new();
-		nullifier_hash_bytes.extend(s.nullifier.to_bytes()?);
-		nullifier_hash_bytes.extend(s.nullifier.to_bytes()?);
+		nullifier_hash_bytes.extend(private.nullifier.to_bytes()?);
+		nullifier_hash_bytes.extend(private.nullifier.to_bytes()?);
 		HG::evaluate(h, &nullifier_hash_bytes)
 	}
 }
@@ -164,24 +93,12 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 	}
 }
 
-impl<F: PrimeField> AllocVar<Output<F>, F> for OutputVar<F> {
-	fn new_variable<T: Borrow<Output<F>>>(
-		cs: impl Into<Namespace<F>>,
-		f: impl FnOnce() -> Result<T, SynthesisError>,
-		_: AllocationMode,
-	) -> Result<Self, SynthesisError> {
-		let output = f()?.borrow().clone();
-		let leaf = FpVar::new_witness(cs, || Ok(output.leaf))?;
-		let nullifier_hash = FpVar::new_input(leaf.cs(), || Ok(output.nullifier_hash))?;
-		Ok(OutputVar::new(leaf, nullifier_hash))
-	}
-}
-
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;
 	use crate::{
+		leaf::bridge::BridgeLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
@@ -209,7 +126,7 @@ mod test {
 	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
-	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget, Leaf>;
+	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget>;
 	#[test]
 	fn should_create_bridge_leaf_constraints() {
 		let rng = &mut test_rng();
@@ -223,9 +140,9 @@ mod test {
 		let chain_id = Fq::one();
 
 		let public = Public::new(chain_id);
-		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &public, &params).unwrap();
-		let nullifier = Leaf::create_nullifier_hash(&secrets, &params).unwrap();
+		let private = Private::generate(rng);
+		let leaf_hash = Leaf::create_leaf(&private, &public, &params).unwrap();
+		let nullifier = Leaf::create_nullifier(&private, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(
@@ -236,14 +153,15 @@ mod test {
 		.unwrap();
 
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
-		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let leaf_var = LeafGadget::create_leaf(&secrets_var, &public_var, &params_var).unwrap();
-		let nullifier_var = LeafGadget::create_nullifier(&secrets_var, &params_var).unwrap();
+		let private_var = PrivateVar::new_witness(cs.clone(), || Ok(&private)).unwrap();
+		let leaf_hash_var =
+			LeafGadget::create_leaf(&private_var, &public_var, &params_var).unwrap();
+		let nullifier_var = LeafGadget::create_nullifier(&private_var, &params_var).unwrap();
 
 		// Checking equality
-		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf)).unwrap();
+		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf_hash)).unwrap();
 		let nullifier_new_var = FpVar::<Fq>::new_witness(cs, || Ok(&nullifier)).unwrap();
-		let leaf_res = leaf_var.is_eq(&leaf_new_var).unwrap();
+		let leaf_res = leaf_hash_var.is_eq(&leaf_new_var).unwrap();
 		let nullifier_res = nullifier_var.is_eq(&nullifier_new_var).unwrap();
 		assert!(leaf_res.value().unwrap());
 		assert!(leaf_res.cs().is_satisfied().unwrap());

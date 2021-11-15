@@ -1,8 +1,5 @@
-use super::{NewLeaf, Private, Public};
-use crate::{
-	leaf::{NewLeafCreation, NewLeafCreationGadget},
-	Vec,
-};
+use super::{Private, Public};
+use crate::Vec;
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
@@ -46,45 +43,46 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct NewLeafGadget<F: PrimeField, H1: CRH, HG1: CRHGadget<H1, F>, L: NewLeafCreation<H1>> {
-	field: PhantomData<F>,
-	hasher1: PhantomData<H1>,
-	hasher_gadget1: PhantomData<HG1>,
-	leaf_creation: PhantomData<L>,
+pub struct NewLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
+	private: PrivateVar<F>,
+	public: PublicVar<F>,
+	hasher: PhantomData<H>,
+	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafCreationGadget<F, H, HG, NewLeaf<F, H>>
-	for NewLeafGadget<F, H, HG, NewLeaf<F, H>>
-{
-	type LeafVar = HG::OutputVar;
-	type NullifierVar = HG::OutputVar;
-	type PrivateVar = PrivateVar<F>;
-	type PublicVar = PublicVar<F>;
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> NewLeafGadget<F, H, HG> {
+	pub fn new(private: PrivateVar<F>, public: PublicVar<F>) -> Self {
+		Self {
+			private,
+			public,
+			hasher: PhantomData,
+			hasher_gadget: PhantomData,
+		}
+	}
 
-	fn create_leaf(
-		s: &Self::PrivateVar,
-		p: &Self::PublicVar,
-		pubkey: &<HG as CRHGadget<H, F>>::OutputVar,
+	pub fn create_leaf(
+		&self,
+		pubkey: &HG::OutputVar,
 		h: &HG::ParametersVar,
-	) -> Result<Self::LeafVar, SynthesisError> {
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(p.chain_id.to_bytes()?);
-		bytes.extend(s.amount.to_bytes()?);
+		bytes.extend(self.public.chain_id.to_bytes()?);
+		bytes.extend(self.private.amount.to_bytes()?);
 		bytes.extend(pubkey.to_bytes()?);
-		bytes.extend(s.blinding.to_bytes()?);
+		bytes.extend(self.private.blinding.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
 
-	fn create_nullifier(
-		s: &Self::PrivateVar,
-		c: &Self::LeafVar,
+	pub fn create_nullifier(
+		&self,
+		leaf: &HG::OutputVar,
 		h: &HG::ParametersVar,
-		i: &FpVar<F>,
-	) -> Result<Self::LeafVar, SynthesisError> {
+		index: &FpVar<F>,
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
-		bytes.extend(c.to_bytes()?);
-		bytes.extend(i.to_bytes()?);
-		bytes.extend(s.priv_key.to_bytes()?);
+		bytes.extend(leaf.to_bytes()?);
+		bytes.extend(index.to_bytes()?);
+		bytes.extend(self.private.priv_key.to_bytes()?);
 		HG::evaluate(h, &bytes)
 	}
 }
@@ -129,6 +127,7 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 mod test {
 	use super::*;
 	use crate::{
+		leaf::newleaf::NewLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
@@ -155,7 +154,7 @@ mod test {
 	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
 
 	type Leaf = NewLeaf<Fq, PoseidonCRH3>;
-	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget, Leaf>;
+	type LeafGadget = NewLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget>;
 	use crate::ark_std::One;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
@@ -169,39 +168,43 @@ mod test {
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);
-		let secrets = Leaf::generate_secrets(rng).unwrap();
-		let privkey = to_bytes![secrets.priv_key].unwrap();
+		let private = Private::generate(rng);
+		let privkey = to_bytes![private.priv_key].unwrap();
 		let pubkey = PoseidonCRH3::evaluate(&params, &privkey).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &public, &pubkey, &params).unwrap();
+		let leaf_hash = Leaf::create_leaf(&private, &public, &pubkey, &params).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
-		let secrets_var = PrivateVar::new_witness(cs.clone(), || Ok(&secrets)).unwrap();
-		let bytes = to_bytes![secrets.priv_key].unwrap();
+		let private_var = PrivateVar::new_witness(cs.clone(), || Ok(&private)).unwrap();
+		let bytes = to_bytes![private.priv_key].unwrap();
 		let privkey_var = Vec::<UInt8<Fq>>::new_witness(cs.clone(), || Ok(bytes)).unwrap();
-		let params_var =
-			PoseidonParametersVar::new_variable(cs, || Ok(&params), AllocationMode::Constant)
-				.unwrap();
+		let params_var = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(&params),
+			AllocationMode::Constant,
+		)
+		.unwrap();
 		let pubkey_var = PoseidonCRH3Gadget::evaluate(&params_var, &privkey_var).unwrap();
 
-		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_var, &pubkey_var, &params_var).unwrap();
+		let leaf_var = LeafGadget::new(private_var, public_var);
+		let leaf_hash_var = leaf_var.create_leaf(&pubkey_var, &params_var).unwrap();
 
 		// Check equality
-		let leaf_new_var = FpVar::<Fq>::new_witness(leaf_var.cs(), || Ok(leaf)).unwrap();
-		let res = leaf_var.is_eq(&leaf_new_var).unwrap();
+		let leaf_new_hash_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(leaf_hash)).unwrap();
+		let res = leaf_hash_var.is_eq(&leaf_new_hash_var).unwrap();
 		assert!(res.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());
 
 		// Test Nullifier
 		// Native version
-		let nullifier = Leaf::create_nullifier(&secrets, &leaf, &params, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&private, &leaf_hash, &params, &index).unwrap();
 
 		// Constraints version
-		let nullifier_var =
-			LeafGadget::create_nullifier(&secrets_var, &leaf_var, &params_var, &index_var).unwrap();
+		let nullifier_var = leaf_var
+			.create_nullifier(&leaf_hash_var, &params_var, &index_var)
+			.unwrap();
 
 		// Check equality
 		let nullifier_new_var =

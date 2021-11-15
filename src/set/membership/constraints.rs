@@ -1,4 +1,4 @@
-use super::{Private, SetMembership};
+use super::Private;
 use crate::Vec;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{
@@ -9,8 +9,6 @@ use ark_r1cs_std::{
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, panic};
 use core::{borrow::Borrow, convert::TryInto};
-
-use crate::set::constraints::SetGadget;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField, const M: usize> {
@@ -31,15 +29,11 @@ pub struct SetMembershipGadget<F: PrimeField, const M: usize> {
 	field: PhantomData<F>,
 }
 
-impl<F: PrimeField, const M: usize> SetGadget<F, SetMembership<F, M>, M>
-	for SetMembershipGadget<F, M>
-{
-	type PrivateVar = PrivateVar<F, M>;
-
-	fn check<T: ToBytesGadget<F>>(
+impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
+	pub fn check<T: ToBytesGadget<F>>(
 		target: &T,
 		set: &Vec<FpVar<F>>,
-		private: &Self::PrivateVar,
+		private: &PrivateVar<F, M>,
 	) -> Result<Boolean<F>, SynthesisError> {
 		assert_eq!(set.len(), M); // FIXME Should we enforce it in constrain system?
 		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
@@ -68,7 +62,7 @@ impl<F: PrimeField, const M: usize> AllocVar<Private<F, M>, F> for PrivateVar<F,
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::set::Set;
+	use crate::set::membership::SetMembership;
 	use ark_bls12_381::Fq;
 	use ark_ff::UniformRand;
 	use ark_relations::r1cs::ConstraintSystem;
