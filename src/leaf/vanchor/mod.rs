@@ -164,25 +164,30 @@ mod test {
 		let publics = Public::new(chain_id);
 		let index = Fq::zero();
 		let private_key = Fq::rand(rng);
-
+		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
+		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
 		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
 		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params4 = PoseidonParameters::<Fq>::new(rounds, mds);
+		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
 		let privkey = to_bytes![private_key].unwrap();
-		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
+		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
 		// Since Commitment = hash(chainID, amount, blinding, pubKey)
 		let inputs_leaf =
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
-		let commitment = PoseidonCRH5::evaluate(&params, &inputs_leaf).unwrap();
+		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
 		//TODO: change the params
-		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
 		let inputs_null = to_bytes![commitment, index, private_key].unwrap();
-		let ev_res = PoseidonCRH4::evaluate(&params, &inputs_null).unwrap();
-		let nullifier = Leaf::create_nullifier(&private_key, &commitment, &params, &index).unwrap();
+		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_null).unwrap();
+		let nullifier = Leaf::create_nullifier(&private_key, &commitment, &params4, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 
