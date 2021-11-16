@@ -50,7 +50,7 @@ pub struct VAnchorCircuit<
 	hasher_params_w4: H4::Parameters,
 	hasher_params_w5: H5::Parameters,
 	path: Vec<Path<C, N>>,
-	index: Vec<F>, // TODO: Temporary, we may need to compute it from path
+	index: Vec<F>,
 	nullifier_hash: Vec<H4::Output>,
 
 	output_commitment: Vec<H5::Output>,
@@ -162,8 +162,6 @@ where
 					.unwrap();
 
 			// Computing the hash
-			// TODO: Remove private key from Private and fed it here as input using
-			// keypairs:
 			in_utxo_hasher_var[tx] =
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 					//<FpVar<F>>
@@ -185,7 +183,6 @@ where
 
 			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
 			// add the roots and diffs signals to the vanchor circuit
-			// TODO:
 			let roothash =
 				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
 			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
@@ -199,12 +196,12 @@ where
 				&in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-			sums_ins_var = sums_ins_var + in_amount_tx; // TODo: inamount
+			sums_ins_var = sums_ins_var + in_amount_tx; 
 		}
 		Ok(sums_ins_var)
 	}
 
-	//TODO: Verify correctness of transaction outputs
+	// Verify correctness of transaction outputs
 	pub fn verify_output_var(
 		&self,
 		hasher_params_w5_var: &HG5::ParametersVar,
@@ -237,7 +234,7 @@ where
 		Ok(sums_outs_var)
 	}
 
-	//TODO: Check that there are no same nullifiers among all inputs
+	//Check that there are no same nullifiers among all inputs
 	pub fn verify_no_same_nul(
 		&self,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
@@ -253,7 +250,7 @@ where
 		Ok(())
 	}
 
-	//TODO: Verify amount invariant
+	// Verify amount invariant
 	pub fn verify_input_invariant(
 		&self,
 		public_amount_var: &FpVar<F>,
@@ -343,8 +340,8 @@ where
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding
 		let private_key_inputs = self.private_key_inputs.clone();
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
-		let set_private = self.set_private_inputs.clone(); // TODO
-		let root_set = self.root_set.clone(); // TODO
+		let set_private = self.set_private_inputs.clone(); 
+		let root_set = self.root_set.clone(); 
 		let hasher_params_w2 = self.hasher_params_w2.clone();
 		let hasher_params_w4 = self.hasher_params_w4.clone();
 		let hasher_params_w5 = self.hasher_params_w5.clone();
@@ -424,10 +421,6 @@ where
 				HG5::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
 		}
 
-		//TODO: Change this one
-		// let key_pairs_inputs_var: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
-		// 	Vec::with_capacity(N);
-
 		// verify correctness of transaction inputs
 		let sum_ins_var = self
 			.verify_input_var(
@@ -437,7 +430,6 @@ where
 				&leaf_private_var,
 				&private_key_inputs_var,
 				&leaf_public_var,
-				//&key_pairs_inputs_var,
 				&in_path_indices_var,
 				&in_path_elements_var,
 				&in_nullifier_var,
@@ -465,9 +457,9 @@ where
 		// verify amount invariant
 		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
 			.unwrap();
-		// Check if target root is in set
 
 		// optional safety constraint to make sure extDataHash cannot be changed
+		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor 
 		ArbitraryInputVar::constrain(&arbitrary_input_var)?;
 
 		Ok(())
@@ -581,13 +573,13 @@ mod test {
 		let recipient = BnFr::rand(rng);
 		let fee = BnFr::rand(rng);
 		let refund = BnFr::rand(rng);
-		let commitment = BnFr::rand(rng); //TODO: Change to VanchorLeaf
 		let leaf_private = LeafPrivateInputs::<BnFr>::generate(rng);
 		let leaf_public = LeafPublicInputs::<BnFr>::new(chain_id);
 		let private_key = BnFr::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
 		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2).unwrap();
+		let commitment= leaf.clone();
 
 		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_N>(&[leaf], 0, &params3);
 		let public_amount = BnFr::rand(rng);
