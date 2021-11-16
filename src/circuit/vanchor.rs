@@ -587,7 +587,7 @@ mod test {
 		let private_key = BnFr::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2, &params2)
+		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2)
 			.unwrap();
 
 		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_N>(&[leaf], 0, &params3);

@@ -1,8 +1,7 @@
-use std::marker::PhantomData;
-
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
-
+use ark_std::vec::Vec;
+use ark_std::marker::PhantomData;
 use crate::leaf::vanchor::{Private, VAnchorLeaf};
 #[cfg(feature = "r1cs")]
 pub mod constraints;

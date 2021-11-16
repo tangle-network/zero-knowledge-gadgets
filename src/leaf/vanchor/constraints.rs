@@ -242,7 +242,7 @@ mod test {
 
 		//TODO Change the parameters
 		let leaf =
-			Leaf::create_leaf(&secrets, &private_key, &public, &params5_2, &params5_5).unwrap();
+			Leaf::create_leaf(&secrets, &private_key, &public, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();

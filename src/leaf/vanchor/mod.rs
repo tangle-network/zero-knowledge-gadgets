@@ -47,7 +47,6 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 		private: &Private<F>,
 		public_key: &B,
 		public: &Public<F>,
-		h_w2: &H2::Parameters,
 		h_w5: &H5::Parameters,
 	) -> Result<H5::Output, Error> {
 		let bytes = to_bytes![
@@ -146,7 +145,7 @@ mod test {
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
 		//TODO: change the params
-		let leaf = Leaf::create_leaf(&secrets, &private_key, &publics, &params2, &params5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &private_key, &publics, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
@@ -170,7 +169,7 @@ mod test {
 		let commitment = PoseidonCRH5::evaluate(&params, &inputs_leaf).unwrap();
 
 		//TODO: change the params
-		let leaf = Leaf::create_leaf(&secrets, &private_key, &publics, &params, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &private_key, &publics, &params).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)

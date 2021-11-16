@@ -35,7 +35,6 @@ pub fn generate_vanchor_leaf_rng<
 		&leaf_private,
 		&public_key,
 		&leaf_public,
-		h_w2,
 		h_w5,
 	)
 	.unwrap();

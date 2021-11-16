@@ -4,6 +4,7 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 
 use ark_relations::r1cs::SynthesisError;
 use ark_std::marker::PhantomData;
+use ark_std::vec::Vec;
 
 use crate::leaf::vanchor::constraints::{PrivateVar, VAnchorLeafGadget};
 
