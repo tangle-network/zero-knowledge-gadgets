@@ -268,7 +268,7 @@ mod test {
 			"0x15206d966a7fb3e3fbbb7f4d7b623ca1c7c9b5c6e6d0a3348df428189441a1e4",
 		]);
 
-		// Computing the leaf without the vanchorleaf
+		// Computing the leaf without vanchorleaf
 		let mut input = chain_id[0].into_repr().to_bytes_le();
 		let mut tmp = amount[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
@@ -278,7 +278,7 @@ mod test {
 		input.append(&mut tmp);
 		let computed_leaf_without_vanchorleaf = PoseidonCircomCRH5::evaluate(&parameters5, &input).unwrap();
 
-		// Computing the leaf with the vanchorleaf
+		// Computing the leaf with vanchorleaf
 		let private = Private::new(&amount[0], &blinding[0]);
 		let public = Public::new(chain_id[0]);
 		let leaf_from_vanchorleaf =
@@ -304,7 +304,7 @@ mod test {
 			"0x21423c7374ce5b3574f04f92243449359ae3865bb8e34cb2b7b5e4187ba01fca",
 		]);
 
-		// Computing the nullifier without the vanchorleaf
+		// Computing the nullifier without vanchorleaf
 		let mut input = expected_leaf[0].into_repr().to_bytes_le();
 		let mut tmp = path_index[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
@@ -314,7 +314,7 @@ mod test {
 
 		let computed_nullifier_without_vanchorleaf = PoseidonCircomCRH4::evaluate(&parameters4, &input).unwrap();
 
-		// Computing the nullifier with the vanchorleaf
+		// Computing the nullifier with vanchorleaf
 		let nullifier_from_vanchorleaf = LeafCircom::create_nullifier(
 			&private_key,
 			&leaf_from_vanchorleaf,
