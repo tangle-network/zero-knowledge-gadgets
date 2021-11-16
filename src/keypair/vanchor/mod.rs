@@ -42,10 +42,7 @@ impl<B: Clone + ToBytes, H2: CRH, H4: CRH, H5: CRH> Keypair<B, H2, H4, H5> {
 mod test {
 	use crate::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{
-			get_mds_poseidon_bn254_x5_2,
-			get_rounds_poseidon_bn254_x5_2,
-		},
+		utils::{get_mds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_2},
 	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
@@ -105,10 +102,9 @@ mod test {
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
 
-		let keypair = Keypair::<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>::new(
-			private_key.clone(),
-		)
-		.unwrap();
+		let keypair =
+			Keypair::<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>::new(private_key.clone())
+				.unwrap();
 		let new_pubkey = keypair.public_key(&params).unwrap();
 
 		assert_eq!(new_pubkey, pubkey)

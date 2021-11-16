@@ -3,8 +3,7 @@ use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 
 use ark_relations::r1cs::SynthesisError;
-use ark_std::marker::PhantomData;
-use ark_std::vec::Vec;
+use ark_std::{marker::PhantomData, vec::Vec};
 
 #[derive(Clone)]
 pub struct KeypairVar<

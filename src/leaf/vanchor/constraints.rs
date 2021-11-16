@@ -170,10 +170,10 @@ mod test {
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
+	use ark_crypto_primitives::crh::{CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
 	use ark_ff::to_bytes;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
-	use ark_crypto_primitives::crh::{CRH as CRHTrait, CRHGadget as CRHGadgetTrait};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds2;
@@ -244,8 +244,7 @@ mod test {
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params5_2, &privkey).unwrap();
 		//TODO Change the parameters
-		let leaf =
-			Leaf::create_leaf(&secrets, &public_key, &public, &params5_5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public_key, &public, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -268,7 +267,6 @@ mod test {
 		let mut bytes = Vec::new();
 		bytes.extend(private_key_var.to_bytes().unwrap());
 		let public_key_var = PoseidonCRH2Gadget::evaluate(&params_var5_2, &bytes).unwrap();
-	
 
 		//TODO Change the parameters
 		let leaf_var =

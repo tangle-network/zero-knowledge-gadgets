@@ -31,13 +31,9 @@ pub fn generate_vanchor_leaf_rng<
 ) -> (LeafPrivate<F>, LeafPublic<F>, H5::Output) {
 	let leaf_private = LeafPrivate::generate(rng);
 	let leaf_public = LeafPublic::new(chain_id);
-	let leaf_hash = VAnchorLeaf::<F, H2, H4, H5>::create_leaf(
-		&leaf_private,
-		&public_key,
-		&leaf_public,
-		h_w5,
-	)
-	.unwrap();
+	let leaf_hash =
+		VAnchorLeaf::<F, H2, H4, H5>::create_leaf(&leaf_private, &public_key, &leaf_public, h_w5)
+			.unwrap();
 
 	(leaf_private, leaf_public, leaf_hash)
 }

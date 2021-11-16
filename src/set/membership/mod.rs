@@ -56,7 +56,7 @@ impl<F: PrimeField, const M: usize> SetMembership<F, M> {
 		Ok(product == F::zero())
 	}
 
-	fn check_is_enabled<T: ToBytes>(
+	pub fn check_is_enabled<T: ToBytes>(
 		target: &T,
 		set: &[F; M],
 		s: &Private<F, M>,

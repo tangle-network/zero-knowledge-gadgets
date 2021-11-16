@@ -32,6 +32,12 @@ impl<F: PrimeField> Private<F> {
 			blinding: F::rand(rng),
 		}
 	}
+
+	pub fn new(amount: &F, blinding: &F) -> Self {
+		let amount = amount.clone();
+		let blinding = blinding.clone();
+		Self { amount, blinding }
+	}
 }
 
 pub struct VAnchorLeaf<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> {
@@ -75,18 +81,19 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 mod test {
 	use super::*;
 	use crate::{
-		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+		poseidon::{circom::CircomCRH, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 		utils::{
-			 get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_5,
-			 get_rounds_poseidon_bn254_x5_2,
-			get_rounds_poseidon_bn254_x5_5,
+			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
+			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
+			get_rounds_poseidon_bn254_x5_5, parse_vec,
 		},
 	};
 	//use ark_bls12_381::Fq;
-	use ark_bn254::Fq;
+	//use ark_bn254::Fq;
+	use ark_ed_on_bn254::Fq;
 
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
-	use ark_ff::to_bytes;
+	use ark_ff::{to_bytes, BigInteger};
 	use ark_std::test_rng;
 
 	#[derive(Default, Clone)]
@@ -104,7 +111,7 @@ mod test {
 
 	impl Rounds for PoseidonRounds4 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 59;
+		const PARTIAL_ROUNDS: usize = 56;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 4;
 	}
@@ -158,8 +165,8 @@ mod test {
 		let index = Fq::zero();
 		let private_key = Fq::rand(rng);
 
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
 		let params = PoseidonParameters::<Fq>::new(rounds, mds);
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
@@ -177,5 +184,155 @@ mod test {
 		let ev_res = PoseidonCRH4::evaluate(&params, &inputs_null).unwrap();
 		let nullifier = Leaf::create_nullifier(&private_key, &commitment, &params, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
+	}
+
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds2;
+	impl Rounds for PoseidonCircomRounds2 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 56;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 2;
+	}
+
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds4;
+	impl Rounds for PoseidonCircomRounds4 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 56;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 4;
+	}
+
+	#[derive(Default, Clone)]
+	struct PoseidonCircomRounds5;
+	impl Rounds for PoseidonCircomRounds5 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 60;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 5;
+	}
+
+	type PoseidonCircomCRH4 = CircomCRH<Fq, PoseidonCircomRounds4>;
+	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
+	type PoseidonCircomCRH5 = CircomCRH<Fq, PoseidonCircomRounds5>;
+
+	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH2, PoseidonCircomCRH4, PoseidonCircomCRH5>;
+
+	#[test]
+	fn should_be_the_same_as_circom() {
+		let round_keys = get_rounds_poseidon_bn254_x5_2::<Fq>();
+		let mds_matrix = get_mds_poseidon_bn254_x5_2::<Fq>();
+		let parameters2 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+
+		let round_keys = get_rounds_poseidon_bn254_x5_4::<Fq>();
+		let mds_matrix = get_mds_poseidon_bn254_x5_4::<Fq>();
+		let parameters4 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+
+		let round_keys = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds_matrix = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let parameters5 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+
+		let private_key: Vec<Fq> = parse_vec(vec![
+			"0xb2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046",
+		]);
+
+		// Expected public key (from CIRCOM)
+		let expected_public_key: Vec<Fq> = parse_vec(vec![
+			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
+		]);
+
+		let input = private_key[0].into_repr().to_bytes_le();
+
+		let computed_public_key = PoseidonCircomCRH2::evaluate(&parameters2, &input).unwrap();
+
+		assert_eq!(
+			expected_public_key[0], computed_public_key,
+			"{} != {}",
+			expected_public_key[0], computed_public_key
+		);
+
+		// Creat Leaf (Commitment)
+		let chain_id: Vec<Fq> = parse_vec(vec![
+			"0x0000000000000000000000000000000000000000000000000000000000007a69",
+		]);
+		let amount: Vec<Fq> = parse_vec(vec![
+			"0x0000000000000000000000000000000000000000000000000000000000989680",
+		]);
+		let blinding: Vec<Fq> = parse_vec(vec![
+			"0x00a668ba0dcb34960aca597f433d0d3289c753046afa26d97e1613148c05f2c0",
+		]);
+
+		// Expected commitment (from CIRCOM)
+		let expected_leaf: Vec<Fq> = parse_vec(vec![
+			"0x15206d966a7fb3e3fbbb7f4d7b623ca1c7c9b5c6e6d0a3348df428189441a1e4",
+		]);
+
+		// Computing the leaf without the vanchorleaf
+		let mut input = chain_id[0].into_repr().to_bytes_le();
+		let mut tmp = amount[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+		let mut tmp = expected_public_key[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+		let mut tmp = blinding[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+		let computed_leaf_without_vanchorleaf = PoseidonCircomCRH5::evaluate(&parameters5, &input).unwrap();
+
+		// Computing the leaf with the vanchorleaf
+		let private = Private::new(&amount[0], &blinding[0]);
+		let public = Public::new(chain_id[0]);
+		let leaf_from_vanchorleaf =
+			LeafCircom::create_leaf(&private, &computed_public_key, &public, &parameters5).unwrap();
+
+		assert_eq!(
+			expected_leaf[0], computed_leaf_without_vanchorleaf,
+			"{} != {}",
+			expected_leaf[0], computed_leaf_without_vanchorleaf
+		);
+
+		assert_eq!(
+			expected_leaf[0], leaf_from_vanchorleaf,
+			"{} != {}",
+			expected_leaf[0], leaf_from_vanchorleaf
+		);
+
+		let path_index: Vec<Fq> = parse_vec(vec![
+			"0x0000000000000000000000000000000000000000000000000000000000000000",
+		]);
+		// Expected nullifier (from CIRCOM)
+		let expected_nullifier: Vec<Fq> = parse_vec(vec![
+			"0x21423c7374ce5b3574f04f92243449359ae3865bb8e34cb2b7b5e4187ba01fca",
+		]);
+
+		// Computing the nullifier without the vanchorleaf
+		let mut input = expected_leaf[0].into_repr().to_bytes_le();
+		let mut tmp = path_index[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+
+		let mut tmp = private_key[0].into_repr().to_bytes_le();
+		input.append(&mut tmp);
+
+		let computed_nullifier_without_vanchorleaf = PoseidonCircomCRH4::evaluate(&parameters4, &input).unwrap();
+
+		// Computing the nullifier with the vanchorleaf
+		let nullifier_from_vanchorleaf = LeafCircom::create_nullifier(
+			&private_key,
+			&leaf_from_vanchorleaf,
+			&parameters4,
+			&path_index[0],
+		)
+		.unwrap();
+
+		assert_eq!(
+			expected_nullifier[0], computed_nullifier_without_vanchorleaf,
+			"{} != {}",
+			expected_nullifier[0], computed_nullifier_without_vanchorleaf
+		);
+
+		assert_eq!(
+			expected_nullifier[0], nullifier_from_vanchorleaf,
+			"{} != {}",
+			expected_nullifier[0], nullifier_from_vanchorleaf
+		);
 	}
 }
