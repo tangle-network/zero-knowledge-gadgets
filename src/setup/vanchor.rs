@@ -16,15 +16,7 @@ use ark_std::{
 	vec::Vec,
 };
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_5;
 
-impl Rounds for PoseidonRounds_x5_5 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 60;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 5;
-}
 pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
 pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
 
@@ -36,6 +28,7 @@ pub fn generate_vanchor_leaf_rng<
 	R: Rng,
 >(
 	chain_id: F,
+	public_key: H2::Output,
 	h_w2: &H2::Parameters,
 	h_w5: &H5::Parameters,
 	rng: &mut R,
@@ -47,7 +40,7 @@ pub fn generate_vanchor_leaf_rng<
 	let leaf_private = LeafPrivate::generate(rng);
 	let leaf_public = LeafPublic::new(chain_id);
 	let leaf_hash =
-		VAnchorLeaf::<F, H2, H4, H5>::create_leaf(&leaf_private, &leaf_public, h_w2, h_w5).unwrap();
+		VAnchorLeaf::<F, H2, H4, H5>::create_leaf(&leaf_private, &public_key, &leaf_public, h_w2, h_w5).unwrap();
 
 	(leaf_private, leaf_public, leaf_hash)
 }

@@ -55,7 +55,7 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 	}
 
 	// Computes the nullifier = hash(commitment, pathIndices, privKey)
-	fn create_nullifier<B: ToBytes>(
+	pub fn create_nullifier<B: ToBytes>(
 		private_key: &B,
 		commitment: &H5::Output,
 		h_w4: &H4::Parameters,

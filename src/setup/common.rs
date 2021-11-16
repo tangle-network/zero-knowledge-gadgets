@@ -63,6 +63,17 @@ impl Rounds for PoseidonRounds_x5_5 {
 }
 
 #[derive(Default, Clone)]
+pub struct PoseidonRounds_x5_4;
+
+impl Rounds for PoseidonRounds_x5_4 {
+	const FULL_ROUNDS: usize = 8;
+	const PARTIAL_ROUNDS: usize = 56;
+	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+	const WIDTH: usize = 4;
+}
+
+
+#[derive(Default, Clone)]
 pub struct PoseidonRounds_x5_3;
 
 impl Rounds for PoseidonRounds_x5_3 {
@@ -71,6 +82,17 @@ impl Rounds for PoseidonRounds_x5_3 {
 	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 	const WIDTH: usize = 3;
 }
+
+#[derive(Default, Clone)]
+pub struct PoseidonRounds_x5_2;
+
+impl Rounds for PoseidonRounds_x5_2 {
+	const FULL_ROUNDS: usize = 8;
+	const PARTIAL_ROUNDS: usize = 56;
+	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+	const WIDTH: usize = 2;
+}
+
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds_x17_5;
@@ -104,8 +126,14 @@ pub type PoseidonCRH_x5_3Gadget<F> = CRHGadget<F, PoseidonRounds_x5_3>;
 pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
 pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
 
+pub type PoseidonCRH_x5_4<F> = CRH<F, PoseidonRounds_x5_4>;
+pub type PoseidonCRH_x5_4Gadget<F> = CRHGadget<F, PoseidonRounds_x5_4>;
+
 pub type PoseidonCircomCRH_x5_3<F> = CircomCRH<F, PoseidonRounds_x5_3>;
 pub type PoseidonCircomCRH_x5_3Gadget<F> = CircomCRHGadget<F, PoseidonRounds_x5_3>;
+
+pub type PoseidonCRH_x5_2<F> = CRH<F, PoseidonRounds_x5_2>;
+pub type PoseidonCRH_x5_2Gadget<F> = CRHGadget<F, PoseidonRounds_x5_2>;
 
 pub type PoseidonCircomCRH_x5_5<F> = CircomCRH<F, PoseidonRounds_x5_5>;
 pub type PoseidonCircomCRH_x5_5Gadget<F> = CircomCRHGadget<F, PoseidonRounds_x5_5>;

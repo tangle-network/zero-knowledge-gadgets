@@ -22,7 +22,7 @@ use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::{cmp::Ordering::Less, marker::PhantomData};
-pub struct VanchorCircuit<
+pub struct VAnchorCircuit<
 	F: PrimeField,
 	// Hasher for the leaf creation,  Nullifier, Public key generation
 	H2: CRH,
@@ -71,7 +71,7 @@ pub struct VanchorCircuit<
 }
 
 impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize>
-	VanchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
+	VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -268,7 +268,7 @@ where
 }
 
 impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize> Clone
-	for VanchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
+	for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -324,7 +324,7 @@ where
 }
 
 impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize>
-	ConstraintSynthesizer<F> for VanchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
+	ConstraintSynthesizer<F> for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -501,7 +501,7 @@ mod test {
 	use std::str::FromStr;
 
 	pub const TEST_N: usize = 30;
-	pub const TEST_M: usize = 2;
+	pub const TEST_M: usize = 1;
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds2;
@@ -533,17 +533,17 @@ mod test {
 		const WIDTH: usize = 5;
 	}
 
-	type PoseidonCRH2 = PCRH<BnFq, PoseidonRounds2>;
-	type PoseidonCRH4 = PCRH<BnFq, PoseidonRounds4>;
-	type PoseidonCRH5 = PCRH<BnFq, PoseidonRounds5>;
+	type PoseidonCRH2 = PCRH<BnFr, PoseidonRounds2>;
+	type PoseidonCRH4 = PCRH<BnFr, PoseidonRounds4>;
+	type PoseidonCRH5 = PCRH<BnFr, PoseidonRounds5>;
 
-	type PoseidonCRH2Gadget = PCRHGadget<BnFq, PoseidonRounds2>;
-	type PoseidonCRH4Gadget = PCRHGadget<BnFq, PoseidonRounds4>;
-	type PoseidonCRH5Gadget = PCRHGadget<BnFq, PoseidonRounds5>;
+	type PoseidonCRH2Gadget = PCRHGadget<BnFr, PoseidonRounds2>;
+	type PoseidonCRH4Gadget = PCRHGadget<BnFr, PoseidonRounds4>;
+	type PoseidonCRH5Gadget = PCRHGadget<BnFr, PoseidonRounds5>;
 
-	type Leaf = VAnchorLeaf<BnFq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type Leaf = VAnchorLeaf<BnFr, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
 	type LeafGadget = VAnchorLeafGadget<
-		BnFq,
+		BnFr,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
 		PoseidonCRH4,
@@ -551,103 +551,70 @@ mod test {
 		PoseidonCRH5,
 		PoseidonCRH5Gadget,
 	>;
-	#[test]
-	fn test_2_to_248() {
-		use ark_std::cmp::Ordering::{Greater, Less};
-		let limit: BnFq = BnFq::from_str(
-			"452312848583266388373324160190187140051835877600158453279131187530910662656",
-		)
-		.unwrap_or_default();
-		// check the previous conversion is done correctly
-		assert_ne!(limit, BnFq::default());
-
-		let cs = ConstraintSystem::<BnFq>::new_ref();
-
-		let limit_var: FpVar<BnFq> = FpVar::<BnFq>::new_constant(cs.clone(), limit).unwrap();
-		let less_value: BnFq = BnFq::from_str(
-			"452312848583266388373324160190187140051835877600158453279131187530910662655",
-		)
-		.unwrap_or_default();
-		let greater_value: BnFq = BnFq::from_str(
-			"452312848583266388373324160190187140051835877600158453279131187530910662657",
-		)
-		.unwrap_or_default();
-
-		let greater_value2: BnFq = BnFq::from_str(
-			"452312848583266388373324160190187140051835877600158453279131187530910662657",
-		)
-		.unwrap_or_default();
-		let less_value_var: FpVar<BnFq> =
-			FpVar::<BnFq>::new_input(cs.clone(), || Ok(less_value)).unwrap();
-
-		let great_value_var: FpVar<BnFq> =
-			FpVar::<BnFq>::new_input(cs.clone(), || Ok(greater_value)).unwrap();
-
-		let great_value2_var: FpVar<BnFq> =
-			FpVar::<BnFq>::new_input(cs.clone(), || Ok(greater_value2)).unwrap();
-		let _res1 = less_value_var
-			.enforce_cmp_unchecked(&limit_var, Less, false)
-			.unwrap();
-		assert!(cs.is_satisfied().unwrap());
-
-		let _res2 = great_value_var
-			.enforce_cmp_unchecked(&limit_var, Greater, false)
-			.unwrap();
-		assert!(cs.is_satisfied().unwrap());
-
-		let _res3 = great_value_var
-			.enforce_cmp_unchecked(&great_value2_var, Less, true)
-			.unwrap();
-		assert!(cs.is_satisfied().unwrap());
-
-		let _res4 = less_value_var
-			.enforce_cmp_unchecked(&limit_var, Greater, false)
-			.unwrap();
-		assert!(!cs.is_satisfied().unwrap());
-	}
+	
+	type VACircuit = VAnchorCircuit<
+		BnFr,
+		PoseidonCRH2,
+		PoseidonCRH2Gadget,
+		PoseidonCRH4,
+		PoseidonCRH4Gadget,
+		PoseidonCRH5,
+		PoseidonCRH5Gadget,
+		TreeConfig_x5<BnFr>,
+		LeafCRHGadget<BnFr>,
+		PoseidonCRH_x5_3Gadget<BnFr>,
+		TEST_N,
+		TEST_M,
+		>;
+	
 	use crate::prelude::ark_crypto_primitives::crh::poseidon::Poseidon;
-	/* TODO: Incomplete Test
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let params5: PoseidonParameters<BnFq> = setup_params_x5_5(curve);
-		let params4: PoseidonParameters<BnFq> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFq> = setup_params_x5_3(curve);
-		let params2: PoseidonParameters<BnFq> = setup_params_x5_2(curve); // TODO: Change it
-		let chain_id = BnFq::zero();
-		let relayer = BnFq::rand(rng);
-		let recipient = BnFq::rand(rng);
-		let fee = BnFq::rand(rng);
-		let refund = BnFq::rand(rng);
-		let commitment = BnFq::rand(rng); //TODO: Change to VanchorLeaf
-		let (leaf_private, leaf_public, leaf) =
-			generate_vanchor_leaf_rng::<BnFq,PoseidonCRH2,PoseidonCRH4,PoseidonCRH5,_ >(chain_id, &params2, &params5, rng);
-		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFq, TEST_N>(&[leaf], 0, &params3);
-		let public_amount = BnFq::rand(rng);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve); 
+		let chain_id = BnFr::zero();
+		let relayer = BnFr::rand(rng);
+		let recipient = BnFr::rand(rng);
+		let fee = BnFr::rand(rng);
+		let refund = BnFr::rand(rng);
+		let commitment = BnFr::rand(rng); //TODO: Change to VanchorLeaf
+		let leaf_private = LeafPrivateInputs::<BnFr>::generate(rng);
+		let leaf_public = LeafPublicInputs::<BnFr>::new(chain_id);
+		let private_key = BnFr::rand(rng);
+		let privkey = to_bytes![private_key].unwrap();
+		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
+		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2, &params2).unwrap();
+		
+		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_N>(&[leaf], 0, &params3);
+		let public_amount = BnFr::rand(rng);
 		//TODO: Change aritrary data
 		let ext_data_hash = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let root = BnFq::rand(rng);
+		let root = BnFr::rand(rng);
 		let root_set = [root; TEST_M];
-		let leaves = vec![leaf, BnFq::rand(rng), BnFq::rand(rng)];
-		let index: BnFq = path.get_index(&tree.root(), &leaves[0 as usize]).unwrap();
+		let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
+		let index: BnFr = path.get_index(&tree.root(), &leaves[0 as usize]).unwrap();
 		let nullifier_hash =
-			Leaf::create_nullifier(&leaf_private, &leaf, &params4, &index).unwrap();
+			Leaf::create_nullifier(&private_key, &leaf, &params4, &index).unwrap();
 		let set_private_inputs = setup_set(&root, &root_set);
 
-		let out_chain_id = BnFq::one();
-		let out_amount = BnFq::one() + BnFq::one();
-		let out_pubkey = BnFq::rand(rng);
-		let out_blinding = BnFq::rand(rng);
+		let out_chain_id = BnFr::one();
+		let out_amount = BnFr::one() + BnFr::one();
+		let out_pubkey = BnFr::rand(rng);
+		let out_blinding = BnFr::rand(rng);
 		let mut bytes = to_bytes![out_chain_id, out_amount, out_pubkey, out_blinding].unwrap();
 		let out_commitment = PoseidonCRH5::evaluate(&params4, &bytes).unwrap();
 
-		let circuit = VanchorCircuit::new(
+		let circuit = VACircuit::new(
 			public_amount,
 			ext_data_hash.clone(),
 			vec![leaf_private],
-			vec![leaf_public],
+			vec![private_key],
+			leaf_public,
 			vec![set_private_inputs],
 			root_set,
 			params2,
@@ -672,11 +639,12 @@ mod test {
 		public_inputs.push(ext_data_hash.relayer);
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.commitment);
-		let pk = generate_random_parameters(circuit.clone(),rng).unwrap();
-		let proof =     create_random_proof(circuit, &pk, &mut rng).unwrap();
-		let vk = prepare_verifying_key(&pk.vk);
-		let res = verify_proof(&vk, &proof, &public_inputs).unwrap();
-		assert!(res);
+		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
+		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),&mut rng).unwrap();
+		 let proof =    Groth16::<Bn254>::prove(&pk, circuit, rng).unwrap();
+		 //let vk = prepare_verifying_key(&pk.vk);
+		 let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		 assert!(res);
 	}
-	*/
+	
 }
