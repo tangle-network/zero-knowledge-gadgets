@@ -170,8 +170,10 @@ mod test {
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
+	use ark_ff::to_bytes;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
+	use ark_crypto_primitives::crh::{CRH as CRHTrait, CRHGadget as CRHGadgetTrait};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds2;
@@ -239,10 +241,11 @@ mod test {
 		let public = Public::new(chain_id);
 		let secrets = Private::generate(rng);
 		let private_key = Fq::rand(rng);
-
+		let privkey = to_bytes![private_key].unwrap();
+		let public_key = PoseidonCRH2::evaluate(&params5_2, &privkey).unwrap();
 		//TODO Change the parameters
 		let leaf =
-			Leaf::create_leaf(&secrets, &private_key, &public, &params5_5).unwrap();
+			Leaf::create_leaf(&secrets, &public_key, &public, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -262,9 +265,14 @@ mod test {
 		)
 		.unwrap();
 
+		let mut bytes = Vec::new();
+		bytes.extend(private_key_var.to_bytes().unwrap());
+		let public_key_var = PoseidonCRH2Gadget::evaluate(&params_var5_2, &bytes).unwrap();
+	
+
 		//TODO Change the parameters
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &private_key_var, &public_var, &params_var5_5)
+			LeafGadget::create_leaf(&secrets_var, &public_key_var, &public_var, &params_var5_5)
 				.unwrap();
 
 		// Check equality

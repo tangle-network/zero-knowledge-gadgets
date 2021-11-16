@@ -77,8 +77,8 @@ mod test {
 	use crate::{
 		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
 		utils::{
-			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_5,
-			get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x5_2,
+			 get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_5,
+			 get_rounds_poseidon_bn254_x5_2,
 			get_rounds_poseidon_bn254_x5_5,
 		},
 	};
@@ -145,7 +145,7 @@ mod test {
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
 		//TODO: change the params
-		let leaf = Leaf::create_leaf(&secrets, &private_key, &publics, &params5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
@@ -169,7 +169,7 @@ mod test {
 		let commitment = PoseidonCRH5::evaluate(&params, &inputs_leaf).unwrap();
 
 		//TODO: change the params
-		let leaf = Leaf::create_leaf(&secrets, &private_key, &publics, &params).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
