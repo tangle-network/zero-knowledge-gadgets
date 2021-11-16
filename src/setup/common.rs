@@ -72,7 +72,6 @@ impl Rounds for PoseidonRounds_x5_4 {
 	const WIDTH: usize = 4;
 }
 
-
 #[derive(Default, Clone)]
 pub struct PoseidonRounds_x5_3;
 
@@ -92,7 +91,6 @@ impl Rounds for PoseidonRounds_x5_2 {
 	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 	const WIDTH: usize = 2;
 }
-
 
 #[derive(Default, Clone)]
 pub struct PoseidonRounds_x17_5;

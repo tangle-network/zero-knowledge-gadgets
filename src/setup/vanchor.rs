@@ -1,8 +1,5 @@
 use crate::{
-	leaf::{
-		vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
-		
-	},
+	leaf::vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
 	merkle_tree::{Config, Node, Path},
 	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, Rounds, CRH},
 	setup::common::*,
@@ -15,7 +12,6 @@ use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
 	vec::Vec,
 };
-
 
 pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
 pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
@@ -32,15 +28,17 @@ pub fn generate_vanchor_leaf_rng<
 	h_w2: &H2::Parameters,
 	h_w5: &H5::Parameters,
 	rng: &mut R,
-) -> (
-	LeafPrivate<F>,
-	LeafPublic<F>,
-	H5::Output,
-) {
+) -> (LeafPrivate<F>, LeafPublic<F>, H5::Output) {
 	let leaf_private = LeafPrivate::generate(rng);
 	let leaf_public = LeafPublic::new(chain_id);
-	let leaf_hash =
-		VAnchorLeaf::<F, H2, H4, H5>::create_leaf(&leaf_private, &public_key, &leaf_public, h_w2, h_w5).unwrap();
+	let leaf_hash = VAnchorLeaf::<F, H2, H4, H5>::create_leaf(
+		&leaf_private,
+		&public_key,
+		&leaf_public,
+		h_w2,
+		h_w5,
+	)
+	.unwrap();
 
 	(leaf_private, leaf_public, leaf_hash)
 }

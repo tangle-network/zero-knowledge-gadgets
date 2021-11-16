@@ -425,8 +425,8 @@ where
 		}
 
 		//TODO: Change this one
-		let key_pairs_inputs_var: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
-			Vec::with_capacity(N);
+		// let key_pairs_inputs_var: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
+		// 	Vec::with_capacity(N);
 
 		// verify correctness of transaction inputs
 		let sum_ins_var = self
@@ -487,7 +487,7 @@ mod test {
 		},
 		setup::{bridge::*, common::*},
 	};
-	use ark_bn254::{Bn254, Fq as BnFq, Fr as BnFr};
+	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::UniformRand;
 	use ark_groth16::{
 		create_random_proof, generate_random_parameters, prepare_verifying_key, verify_proof,
@@ -542,16 +542,16 @@ mod test {
 	type PoseidonCRH5Gadget = PCRHGadget<BnFr, PoseidonRounds5>;
 
 	type Leaf = VAnchorLeaf<BnFr, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
-	type LeafGadget = VAnchorLeafGadget<
-		BnFr,
-		PoseidonCRH2,
-		PoseidonCRH2Gadget,
-		PoseidonCRH4,
-		PoseidonCRH4Gadget,
-		PoseidonCRH5,
-		PoseidonCRH5Gadget,
-	>;
-	
+	// type LeafGadget = VAnchorLeafGadget<
+	// 	BnFr,
+	// 	PoseidonCRH2,
+	// 	PoseidonCRH2Gadget,
+	// 	PoseidonCRH4,
+	// 	PoseidonCRH4Gadget,
+	// 	PoseidonCRH5,
+	// 	PoseidonCRH5Gadget,
+	// >;
+
 	type VACircuit = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
@@ -565,9 +565,8 @@ mod test {
 		PoseidonCRH_x5_3Gadget<BnFr>,
 		TEST_N,
 		TEST_M,
-		>;
-	
-	use crate::prelude::ark_crypto_primitives::crh::poseidon::Poseidon;
+	>;
+
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
@@ -576,7 +575,7 @@ mod test {
 		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
 		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve); 
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
 		let relayer = BnFr::rand(rng);
 		let recipient = BnFr::rand(rng);
@@ -588,8 +587,9 @@ mod test {
 		let private_key = BnFr::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2, &params2).unwrap();
-		
+		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2, &params2)
+			.unwrap();
+
 		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_N>(&[leaf], 0, &params3);
 		let public_amount = BnFr::rand(rng);
 		//TODO: Change aritrary data
@@ -598,15 +598,14 @@ mod test {
 		let root_set = [root; TEST_M];
 		let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index: BnFr = path.get_index(&tree.root(), &leaves[0 as usize]).unwrap();
-		let nullifier_hash =
-			Leaf::create_nullifier(&private_key, &leaf, &params4, &index).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&private_key, &leaf, &params4, &index).unwrap();
 		let set_private_inputs = setup_set(&root, &root_set);
 
 		let out_chain_id = BnFr::one();
 		let out_amount = BnFr::one() + BnFr::one();
 		let out_pubkey = BnFr::rand(rng);
 		let out_blinding = BnFr::rand(rng);
-		let mut bytes = to_bytes![out_chain_id, out_amount, out_pubkey, out_blinding].unwrap();
+		let bytes = to_bytes![out_chain_id, out_amount, out_pubkey, out_blinding].unwrap();
 		let out_commitment = PoseidonCRH5::evaluate(&params4, &bytes).unwrap();
 
 		let circuit = VACircuit::new(
@@ -640,11 +639,11 @@ mod test {
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.commitment);
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),&mut rng).unwrap();
-		 let proof =    Groth16::<Bn254>::prove(&pk, circuit, rng).unwrap();
-		 //let vk = prepare_verifying_key(&pk.vk);
-		 let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-		 assert!(res);
+		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),&mut
+		// rng).unwrap();
+		let proof = Groth16::<Bn254>::prove(&pk, circuit, rng).unwrap();
+		//let vk = prepare_verifying_key(&pk.vk);
+		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		assert!(res);
 	}
-	
 }
