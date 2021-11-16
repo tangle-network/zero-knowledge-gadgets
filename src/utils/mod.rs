@@ -168,9 +168,19 @@ pub fn get_rounds_poseidon_bn254_x5_5<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_5::ROUND_CONSTS.to_vec())
 }
 
+#[cfg(feature = "poseidon_bn254_x5_4")]
+pub fn get_rounds_poseidon_bn254_x5_4<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_x5_4::ROUND_CONSTS.to_vec())
+}
+
 #[cfg(feature = "poseidon_bn254_x5_3")]
 pub fn get_rounds_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_3::ROUND_CONSTS.to_vec())
+}
+
+#[cfg(feature = "poseidon_bn254_x5_2")]
+pub fn get_rounds_poseidon_bn254_x5_2<F: PrimeField>() -> Vec<F> {
+	parse_vec(bn254_x5_2::ROUND_CONSTS.to_vec())
 }
 
 #[cfg(feature = "poseidon_bn254_x3_3")]
@@ -223,10 +233,30 @@ pub fn get_mds_poseidon_bn254_x5_5<F: PrimeField>() -> Vec<Vec<F>> {
 	)
 }
 
+#[cfg(feature = "poseidon_bn254_x5_4")]
+pub fn get_mds_poseidon_bn254_x5_4<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_x5_4::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
 #[cfg(feature = "poseidon_bn254_x5_3")]
 pub fn get_mds_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<Vec<F>> {
 	parse_matrix(
 		bn254_x5_3::MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_bn254_x5_2")]
+pub fn get_mds_poseidon_bn254_x5_2<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		bn254_x5_2::MDS_ENTRIES
 			.iter()
 			.map(|x| x.to_vec())
 			.collect::<Vec<_>>(),

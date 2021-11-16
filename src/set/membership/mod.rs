@@ -55,6 +55,26 @@ impl<F: PrimeField, const M: usize> SetMembership<F, M> {
 
 		Ok(product == F::zero())
 	}
+
+	pub fn check_is_enabled<T: ToBytes>(
+		target: &T,
+		set: &[F; M],
+		s: &Private<F, M>,
+		enabled: &F,
+	) -> Result<bool, Error> {
+		let target_bytes = to_bytes![target]?;
+		let target = F::read(target_bytes.as_slice())?;
+		let mut product = target.clone();
+		let z = F::zero();
+		for (diff, real) in s.diffs.iter().zip(set.iter()) {
+			if z != ((*real - *diff - target) * enabled) {
+				return Ok(false);
+			}
+			product *= diff;
+		}
+		let result = product * enabled;
+		Ok(result == F::zero())
+	}
 }
 
 #[cfg(test)]
@@ -78,6 +98,27 @@ mod test {
 
 		assert!(is_member);
 	}
+	use crate::ark_std::Zero;
+	#[test]
+	fn should_test_membership_with_is_enabled() {
+		let rng = &mut test_rng();
+		let root = Fq::rand(rng);
+		let mut set = [Fq::rand(rng); TEST_M];
+		set[0] = root;
+		let not_enabled = Fq::zero();
+		let random_element = Fq::rand(rng);
+
+		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
+		let is_member =
+			TestSetMembership::check_is_enabled(&random_element, &set, &s, &not_enabled).unwrap();
+
+		assert!(is_member);
+
+		let is_enabled = Fq::rand(rng);
+		let is_member = TestSetMembership::check_is_enabled(&root, &set, &s, &is_enabled).unwrap();
+
+		assert!(is_member);
+	}
 
 	#[test]
 	fn should_not_test_membership() {
@@ -89,6 +130,24 @@ mod test {
 		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
 		let random_element = Fq::rand(rng);
 		let is_member = TestSetMembership::check(&random_element, &set, &s).unwrap();
+
+		assert!(!is_member);
+	}
+
+	#[test]
+	fn should_not_test_membership_is_enabled() {
+		let rng = &mut test_rng();
+		let root = Fq::rand(rng);
+		let mut set = [Fq::rand(rng); TEST_M];
+		set[0] = root;
+
+		//let not_enabled = Fq::zero();
+		let is_enabled = Fq::rand(rng);
+
+		let s = TestSetMembership::generate_secrets(&root, &set).unwrap();
+		let random_element = Fq::rand(rng);
+		let is_member =
+			TestSetMembership::check_is_enabled(&random_element, &set, &s, &is_enabled).unwrap();
 
 		assert!(!is_member);
 	}

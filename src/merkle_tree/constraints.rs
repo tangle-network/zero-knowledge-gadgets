@@ -143,6 +143,15 @@ where
 		root: &NodeVar<F, P, HG, LHG>,
 		leaf: L,
 	) -> Result<Boolean<F>, SynthesisError> {
+		let computed_root = self.root_hash(&leaf)?;
+
+		root.is_eq(&computed_root)
+	}
+
+	pub fn root_hash<L: ToBytesGadget<F>>(
+		&self,
+		leaf: &L,
+	) -> Result<NodeVar<F, P, HG, LHG>, SynthesisError> {
 		assert_eq!(self.path.len(), P::HEIGHT as usize);
 		// Check that the hash of the given leaf matches the leaf hash in the membership
 		// proof.
@@ -176,7 +185,7 @@ where
 			)?;
 		}
 
-		root.is_eq(&previous_hash)
+		Ok(previous_hash)
 	}
 
 	pub fn get_index<L: ToBytesGadget<F>>(

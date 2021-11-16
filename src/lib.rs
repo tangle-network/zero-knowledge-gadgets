@@ -10,6 +10,7 @@ pub mod arbitrary;
 #[cfg(feature = "r1cs")]
 pub mod circuit;
 pub mod identity;
+pub mod keypair;
 pub mod leaf;
 pub mod merkle_tree;
 pub mod mimc;
