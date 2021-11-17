@@ -131,7 +131,7 @@ impl VAnchorArbitraryData {
 		match encrypted_output2 {
 			Token::Bytes(_bytes) => {}
 			_ => {
-				panic!("encrypted_output1 is not valid");
+				panic!("encrypted_output2 is not valid");
 			}
 		}
 	}
