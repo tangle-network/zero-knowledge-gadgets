@@ -1,6 +1,6 @@
+use ark_ff::vec::Vec;
 use ethabi::{encode, Token};
 use tiny_keccak::{Hasher, Keccak};
-use ark_ff::vec::Vec;
 #[derive(Clone)]
 pub struct VAnchorArbitraryData {
 	pub recipient: Token,
@@ -101,7 +101,7 @@ impl VAnchorArbitraryData {
 		match recipient {
 			Token::Address(_address) => {}
 			_ => {
-				panic!("reciepent address is not valid");
+				panic!("recipient address is not valid");
 			}
 		}
 		match ext_amount {
