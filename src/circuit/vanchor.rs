@@ -35,7 +35,6 @@ pub struct VAnchorCircuit<
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
-	const K: usize,
 	const N: usize,
 	const M: usize,
 > {
@@ -50,7 +49,7 @@ pub struct VAnchorCircuit<
 	hasher_params_w2: H2::Parameters,
 	hasher_params_w4: H4::Parameters,
 	hasher_params_w5: H5::Parameters,
-	path: Vec<Path<C, K>>,
+	path: Vec<Path<C, M>>,
 	index: Vec<F>,
 	nullifier_hash: Vec<H4::Output>,
 
@@ -82,10 +81,9 @@ impl<
 		C,
 		LHGT,
 		HGT,
-		const K: usize,
 		const N: usize,
 		const M: usize,
-	> VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N, M>
+	> VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT,  N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -109,7 +107,7 @@ where
 		hasher_params_w2: H2::Parameters,
 		hasher_params_w4: H4::Parameters,
 		hasher_params_w5: H5::Parameters,
-		path: Vec<Path<C, K>>,
+		path: Vec<Path<C, M>>,
 		index: Vec<F>,
 		nullifier_hash: Vec<H4::Output>,
 		output_commitment: Vec<H5::Output>,
@@ -159,7 +157,7 @@ where
 		leaf_public_var: &LeafPublicInputsVar<F>,
 		//key_pairs_inputs_var: &Vec<KeypairVar<F, BG, H2, HG2, H4, HG4, H5, HG5>>,
 		in_path_indices_var: &Vec<FpVar<F>>,
-		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, K>>,
+		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, M>>,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
 		root_set_var: &Vec<FpVar<F>>,
 		set_input_private_var: &Vec<SetPrivateInputsVar<F, M>>,
@@ -202,7 +200,7 @@ where
 
 			// add the roots and diffs signals to the vanchor circuit
 			let roothash =
-				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
+				&in_path_elements_var[tx].root_hash(&in_utxo_hasher_var[tx]).unwrap();
 			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
 				&leaf_private_var[tx],
 			)
@@ -211,14 +209,14 @@ where
 				&roothash,
 				&root_set_var,
 				&set_input_private_var[tx],
-				&FpVar::<F>::zero(),
+				&in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-			if !nullifier_hash[tx].cs().is_in_setup_mode() {
+			/* if !nullifier_hash[tx].cs().is_in_setup_mode() {
 				println!("here0");
 				assert!(nullifier_hash[tx].cs().is_satisfied().unwrap());
 				println!("here1");
-			}
+			} */
 			sums_ins_var = sums_ins_var + in_amount_tx;
 		}
 		Ok(sums_ins_var)
@@ -262,18 +260,17 @@ where
 		&self,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
 	) -> Result<(), SynthesisError> {
-		if N > 1 {
-			let mut same_nullifiers: Vec<HG4::OutputVar> = Vec::with_capacity(2);
-			for i in 0..N {
-				if i < N - 1 {
-					for j in i..N {
-						same_nullifiers.push(in_nullifier_var[i].clone());
-						same_nullifiers.push(in_nullifier_var[j].clone());
-						same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
-					}
-				}
+		
+		let mut same_nullifiers: Vec<HG4::OutputVar> = Vec::with_capacity(2);
+		for i in 0..N-1 {
+			for j in (i+1)..N {
+				same_nullifiers.push(in_nullifier_var[i].clone());
+				same_nullifiers.push(in_nullifier_var[j].clone());
+				same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
 			}
+		
 		}
+	
 		Ok(())
 	}
 
@@ -285,7 +282,7 @@ where
 		sum_outs_var: &FpVar<F>,
 	) -> Result<(), SynthesisError> {
 		let res = sum_ins_var + public_amount_var.clone();
-		//res.enforce_equal(&sum_outs_var).unwrap();
+		res.enforce_equal(&sum_outs_var).unwrap();
 		Ok(())
 	}
 	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
@@ -302,10 +299,9 @@ impl<
 		C,
 		LHGT,
 		HGT,
-		const K: usize,
 		const N: usize,
 		const M: usize,
-	> Clone for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N, M>
+	> Clone for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -371,10 +367,9 @@ impl<
 		C,
 		LHGT,
 		HGT,
-		const K: usize,
 		const N: usize,
 		const M: usize,
-	> ConstraintSynthesizer<F> for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N, M>
+	> ConstraintSynthesizer<F> for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -438,7 +433,7 @@ where
 		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N);
 		let mut private_key_inputs_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 
-		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, K>> = Vec::with_capacity(N);
+		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, M>> = Vec::with_capacity(N);
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 
 		// Outputs
@@ -457,14 +452,14 @@ where
 				Ok(private_key_inputs[i].clone())
 			})?);
 
-			leaf_private_var.push(LeafPrivateInputsVar::new_input(cs.clone(), || {
+			leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
 				Ok(leaf_private[i].clone())
 			})?);
 			in_nullifier_var.push(HG4::OutputVar::new_input(cs.clone(), || {
 				Ok(nullifier_hash[i].clone())
 			})?);
 
-			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, K>::new_witness(
+			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, M>::new_witness(
 				cs.clone(),
 				|| Ok(path[i].clone()),
 			)?);
@@ -506,7 +501,9 @@ where
 				&set_input_private_var,
 			)
 			.unwrap();
-
+		if !cs.is_in_setup_mode(){
+			assert!(cs.is_satisfied().unwrap());
+		}
 		// verify correctness of transaction outputs
 		let sum_outs_var = self
 			.verify_output_var(
@@ -519,18 +516,26 @@ where
 				&limit_var,
 			)
 			.unwrap();
-
+		if !cs.is_in_setup_mode(){
+			assert!(cs.is_satisfied().unwrap());
+		}
 		// check that there are no same nullifiers among all inputs
 		self.verify_no_same_nul(&in_nullifier_var).unwrap();
-
+		if !cs.is_in_setup_mode(){
+			assert!(cs.is_satisfied().unwrap());
+		}
 		// verify amount invariant
 		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
 			.unwrap();
-
+		if !cs.is_in_setup_mode(){
+			assert!(cs.is_satisfied().unwrap());
+		}
 		// optional safety constraint to make sure extDataHash cannot be changed
 		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor
 		ArbitraryInputVar::constrain(&arbitrary_input_var)?;
-
+		if !cs.is_in_setup_mode(){
+			assert!(cs.is_satisfied().unwrap());
+		}
 		Ok(())
 	}
 }
@@ -546,6 +551,7 @@ mod test {
 			constraints::CRHGadget as PCRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds,
 			CRH as PCRH,
 		},
+		merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
 		setup::{bridge::*, common::*},
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
@@ -559,10 +565,10 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_snark::SNARK;
 	use ark_std::{rand::Rng, test_rng};
-	use std::str::FromStr;
+	use std::{rc::Rc, str::FromStr};
 
 	pub const TEST_K: usize = 30;
-	pub const TEST_N: usize = 1;
+	pub const TEST_N: usize = 2;
 	pub const TEST_M: usize = 2;
 
 	#[derive(Default, Clone)]
@@ -604,6 +610,17 @@ mod test {
 	type PoseidonCRH5Gadget = PCRHGadget<BnFr, PoseidonRounds5>;
 
 	type Leaf = VAnchorLeaf<BnFr, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+
+	#[derive(Clone, PartialEq)]
+	pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
+	impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
+		type H = PoseidonCRH_x5_3<F>;
+		type LeafH = LeafCRH<F>;
+
+		const HEIGHT: u8 = 2;
+	}
+	pub type Tree_x5<BnFr> = SparseMerkleTree<TreeConfig_x5<BnFr>>;
+
 	// type LeafGadget = VAnchorLeafGadget<
 	// 	BnFr,
 	// 	PoseidonCRH2,
@@ -625,14 +642,12 @@ mod test {
 		TreeConfig_x5<BnFr>,
 		LeafCRHGadget<BnFr>,
 		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
 		TEST_N,
 		TEST_M,
 	>;
 
-	#[should_panic]
 	#[test]
-	fn should_fail_with_invalid_root() {
+	fn should_create_circuit_and_proves_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
@@ -644,68 +659,121 @@ mod test {
 		let recipient = BnFr::rand(rng);
 		let fee = BnFr::rand(rng);
 		let refund = BnFr::rand(rng);
-		let leaf_private = LeafPrivateInputs::<BnFr>::generate(rng);
-		let leaf_public = LeafPublicInputs::<BnFr>::new(chain_id);
-		let private_key = BnFr::rand(rng);
-		let privkey = to_bytes![private_key].unwrap();
-		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params5).unwrap();
-		let commitment = leaf.clone();
 
-		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_K>(&[leaf], 0, &params3);
-		let public_amount = BnFr::rand(rng);
+		let in_amount_1 = BnFr::one();
+		let blinding_1 = BnFr::rand(rng);
+		let in_amount_2 = BnFr::one() + BnFr::one();
+		let blinding_2 = BnFr::rand(rng);
+		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&in_amount_1, &blinding_1);
+		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&in_amount_2, &blinding_2);
+		let leaf_privates = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+
+		let leaf_public = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+
+		let private_key_1 = BnFr::rand(rng);
+		let privkey = to_bytes![private_key_1].unwrap();
+		let public_key_1 = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
+		let private_key_2 = BnFr::rand(rng);
+		let privkey = to_bytes![private_key_2].unwrap();
+		let public_key_2 = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
+		let private_keys = 	vec![private_key_1.clone(), private_key_2.clone()];
+
+		let leaf_1 = Leaf::create_leaf(&leaf_private_1, &public_key_1, &leaf_public, &params5).unwrap();
+		let commitment_1 = leaf_1.clone();
+		let leaf_2 = Leaf::create_leaf(&leaf_private_2, &public_key_2, &leaf_public, &params5).unwrap();
+		let commitment_2 = leaf_2.clone();
+
+		let inner_params = Rc::new(params3.clone());
+		let leaves = [leaf_1, leaf_2];
+		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		//let (tree_1, path_1) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_M>(&[leaf_1], 0, &params3);
+		//let (tree_2, path_2) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_M>(&[leaf_1], 0, &params3);
+		
+		let path_1 = tree.generate_membership_proof(0);
+		let path_2 = tree.generate_membership_proof(1);
+		let paths = vec![path_1.clone(), path_2.clone()];
+		
+		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let root = BnFr::rand(rng);
-		let root_set = [root; TEST_M];
-		let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
-		let index: BnFr = path.get_index(&tree.root(), &leaves[0 as usize]).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&private_key, &leaf, &params4, &index).unwrap();
-		let set_private_inputs = setup_set(&root, &root_set);
+		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_2);
+		let ext_data_hash = ext_data_hash_1;// TODO: change it with new Arbitrary values
+		let root = tree.root().inner();
 
-		let out_chain_id = BnFr::one();
-		let out_amount = BnFr::one();
-		let out_pubkey = BnFr::rand(rng);
-		let out_blinding = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id, out_amount, out_pubkey, out_blinding].unwrap();
-		let out_commitment = PoseidonCRH5::evaluate(&params5, &bytes).unwrap();
+		let mut root_set = [BnFr::rand(rng); TEST_M];
+		root_set[0] = root;
+		assert_eq!(root_set.len(),TEST_M);
+		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
+		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
+		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
+		assert_eq!(index_0, BnFr::zero());
+		assert_eq!(index_1, BnFr::one());
+		let indices = vec![index_0, index_1];
 
+		let nullifier_hash_1 = Leaf::create_nullifier(&private_key_1, &leaf_1, &params4, &index_0).unwrap();
+		let nullifier_hash_2 = Leaf::create_nullifier(&private_key_2, &leaf_2, &params4, &index_1).unwrap();
+		let nullifier_hash= vec![nullifier_hash_1, nullifier_hash_2];
+		assert_ne!(nullifier_hash_1,nullifier_hash_2);
+
+		let set_private_inputs_1 = setup_set(&root, &root_set);
+		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
+		let out_chain_id_1 = BnFr::one();
+		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
+		let out_pubkey_1 = BnFr::rand(rng);
+		let out_blinding_1 = BnFr::rand(rng);
+		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
+		let out_commitment_1 = PoseidonCRH5::evaluate(&params5, &bytes).unwrap();
+
+		let out_chain_id_2 = BnFr::one();
+		let out_amount_2 =  leaf_private_2.get_amount().unwrap();
+		let out_pubkey_2 = BnFr::rand(rng);
+		let out_blinding_2 = BnFr::rand(rng);
+		let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
+		let out_commitment_2 = PoseidonCRH5::evaluate(&params5, &bytes).unwrap();
+
+		let out_chain_id = vec![out_chain_id_1, out_chain_id_2];
+		let out_amount = vec![out_amount_1, out_amount_2];
+		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
+		let out_blinding = vec![out_blinding_1, out_blinding_2];
+		let out_commitment= vec![out_commitment_1, out_commitment_2];
 		let circuit = VACircuit::new(
-			public_amount,
+			public_amount.clone(),
 			ext_data_hash.clone(),
-			vec![leaf_private],
-			vec![private_key],
+			leaf_privates,
+			private_keys,
 			leaf_public,
-			vec![set_private_inputs],
-			root_set,
+			set_private_inputs,
+			root_set.clone(),
 			params2,
 			params4,
 			params5,
-			vec![path],
-			vec![index],
-			vec![nullifier_hash],
-			vec![out_commitment],
-			vec![out_chain_id],
-			vec![out_amount],
-			vec![out_pubkey],
-			vec![out_blinding],
+			paths,
+			indices,
+			nullifier_hash.clone(),
+			out_commitment.clone(),
+			out_chain_id,
+			out_amount,
+			out_pubkey,
+			out_blinding,
 		);
 
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
-		public_inputs.push(nullifier_hash);
-		public_inputs.extend(&root_set);
-		public_inputs.push(root);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
+		public_inputs.extend( nullifier_hash);
+		public_inputs.extend(root_set);
+		public_inputs.extend(out_commitment);
+		public_inputs.push(public_amount);
+		//public_inputs.push(ext_data_hash.recipient);
+		//public_inputs.push(ext_data_hash.relayer);
+		//public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.commitment);
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),&mut
-		// rng).unwrap();
+
+		//let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
+		let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit, rng).unwrap();
-		//let vk = prepare_verifying_key(&pk.vk);
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let pvk = prepare_verifying_key(&pk.vk);
+		//let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let res =     verify_proof(&pvk, &proof, &public_inputs).unwrap();
 		assert!(res);
 	}
 }

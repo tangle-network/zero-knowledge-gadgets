@@ -38,6 +38,9 @@ impl<F: PrimeField> Private<F> {
 		let blinding = blinding.clone();
 		Self { amount, blinding }
 	}
+	pub fn get_amount(&self) -> Result<F, Error> {
+		Ok(self.amount.clone())
+	}
 }
 
 pub struct VAnchorLeaf<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> {
@@ -73,6 +76,10 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 	) -> Result<H4::Output, Error> {
 		let bytes = to_bytes![commitment, index, private_key]?;
 		H4::evaluate(h_w4, &bytes)
+	}
+
+	pub fn get_amount(s: &Private<F>) -> Result<F, Error> {
+		Ok(s.amount.clone())
 	}
 }
 
