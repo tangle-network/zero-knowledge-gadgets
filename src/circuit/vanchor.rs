@@ -171,7 +171,8 @@ where
 		let mut nullifier_hash: Vec<HG4::OutputVar> = Vec::with_capacity(N_INS);
 		let mut in_amount_tx: FpVar<F>;
 		//let keypairs
-		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> = Vec::with_capacity(N_INS);
+		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
+			Vec::with_capacity(N_INS);
 		for tx in 0..N_INS {
 			inkeypair.push(
 				KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new(&private_key_inputs_var[tx])
@@ -376,7 +377,8 @@ impl<
 		const N_INS: usize,
 		const N_OUTS: usize,
 		const M: usize,
-	> ConstraintSynthesizer<F> for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N_INS, N_OUTS, M>
+	> ConstraintSynthesizer<F>
+	for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N_INS, N_OUTS, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -428,7 +430,6 @@ where
 			in_nullifier_var.push(HG4::OutputVar::new_input(cs.clone(), || {
 				Ok(nullifier_hash[i].clone())
 			})?);
-
 		}
 		let mut output_commitment_var: Vec<HG5::OutputVar> = Vec::with_capacity(N_INS);
 		for i in 0..N_OUTS {
@@ -447,8 +448,8 @@ where
 		// Private inputs
 		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N_INS);
 		let mut private_key_inputs_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
-		
-		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N_INS);	
+
+		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N_INS);
 		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, K>> = Vec::with_capacity(N_INS);
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
 
@@ -493,7 +494,6 @@ where
 			out_blinding_var.push(FpVar::<F>::new_witness(cs.clone(), || {
 				Ok(out_blinding[i].clone())
 			})?);
-			
 		}
 
 		// verify correctness of transaction inputs
@@ -788,7 +788,7 @@ mod test {
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.refund);
 		public_inputs.push(ext_data_hash.commitment);
-		
+
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),
 		// rng).unwrap();
@@ -797,7 +797,7 @@ mod test {
 
 		assert!(res);
 	}
-	
+
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
@@ -925,7 +925,7 @@ mod test {
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.refund);
 		public_inputs.push(ext_data_hash.commitment);
-		
+
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),
 		// rng).unwrap();
@@ -1063,7 +1063,7 @@ mod test {
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.refund);
 		public_inputs.push(ext_data_hash.commitment);
-		
+
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),
 		// rng).unwrap();
@@ -1072,6 +1072,7 @@ mod test {
 
 		assert!(res);
 	}
+
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_nullifier() {
@@ -1141,7 +1142,7 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
-		let nullifier_hash_1 =  BnFr::rand(rng); //Leaf::create_nullifier(&private_key_1, &leaf_1, &params4, &index_0).unwrap();
+		let nullifier_hash_1 = BnFr::rand(rng); //Leaf::create_nullifier(&private_key_1, &leaf_1, &params4, &index_0).unwrap();
 		let nullifier_hash_2 =
 			Leaf::create_nullifier(&private_key_2, &leaf_2, &params4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
@@ -1200,7 +1201,7 @@ mod test {
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.refund);
 		public_inputs.push(ext_data_hash.commitment);
-		
+
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),
 		// rng).unwrap();
