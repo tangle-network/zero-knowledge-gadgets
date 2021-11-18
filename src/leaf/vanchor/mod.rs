@@ -38,6 +38,7 @@ impl<F: PrimeField> Private<F> {
 		let blinding = blinding.clone();
 		Self { amount, blinding }
 	}
+
 	pub fn get_amount(&self) -> Result<F, Error> {
 		Ok(self.amount.clone())
 	}
