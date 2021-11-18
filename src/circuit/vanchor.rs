@@ -35,6 +35,7 @@ pub struct VAnchorCircuit<
 	C: MerkleConfig,
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
+	const K: usize,
 	const N: usize,
 	const M: usize,
 > {
@@ -49,7 +50,7 @@ pub struct VAnchorCircuit<
 	hasher_params_w2: H2::Parameters,
 	hasher_params_w4: H4::Parameters,
 	hasher_params_w5: H5::Parameters,
-	path: Vec<Path<C, N>>,
+	path: Vec<Path<C, K>>,
 	index: Vec<F>,
 	nullifier_hash: Vec<H4::Output>,
 
@@ -70,8 +71,21 @@ pub struct VAnchorCircuit<
 	_merkle_config: PhantomData<C>,
 }
 
-impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize>
-	VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
+impl<
+		F,
+		H2,
+		HG2,
+		H4,
+		HG4,
+		H5,
+		HG5,
+		C,
+		LHGT,
+		HGT,
+		const K: usize,
+		const N: usize,
+		const M: usize,
+	> VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -95,7 +109,7 @@ where
 		hasher_params_w2: H2::Parameters,
 		hasher_params_w4: H4::Parameters,
 		hasher_params_w5: H5::Parameters,
-		path: Vec<Path<C, N>>,
+		path: Vec<Path<C, K>>,
 		index: Vec<F>,
 		nullifier_hash: Vec<H4::Output>,
 		output_commitment: Vec<H5::Output>,
@@ -145,7 +159,7 @@ where
 		leaf_public_var: &LeafPublicInputsVar<F>,
 		//key_pairs_inputs_var: &Vec<KeypairVar<F, BG, H2, HG2, H4, HG4, H5, HG5>>,
 		in_path_indices_var: &Vec<FpVar<F>>,
-		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, N>>,
+		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, K>>,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
 		root_set_var: &Vec<FpVar<F>>,
 		set_input_private_var: &Vec<SetPrivateInputsVar<F, M>>,
@@ -157,31 +171,35 @@ where
 		//let keypairs
 		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> = Vec::with_capacity(N);
 		for tx in 0..N {
-			inkeypair[tx] =
+			inkeypair.push(
 				KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new(&private_key_inputs_var[tx])
-					.unwrap();
+					.unwrap(),
+			);
 
 			// Computing the hash
-			in_utxo_hasher_var[tx] =
+			in_utxo_hasher_var.push(
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 					//<FpVar<F>>
 					&leaf_private_var[tx],
 					&inkeypair[tx].public_key(hasher_params_w2_var).unwrap(),
 					&leaf_public_var,
 					&hasher_params_w5_var,
-				)?;
+				)?,
+			);
 			// End of computing the hash
 
 			// Nullifier
-			nullifier_hash[tx] =
+			nullifier_hash.push(
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_nullifier(
 					&inkeypair[tx].private_key().unwrap(),
 					&in_utxo_hasher_var[tx],
 					&hasher_params_w4_var,
 					&in_path_indices_var[tx],
-				)?;
+				)?,
+			);
 
 			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
+
 			// add the roots and diffs signals to the vanchor circuit
 			let roothash =
 				PathVar::root_hash(&in_path_elements_var[tx], &in_utxo_hasher_var[tx]).unwrap();
@@ -193,10 +211,15 @@ where
 				&roothash,
 				&root_set_var,
 				&set_input_private_var[tx],
-				&in_amount_tx,
+				&FpVar::<F>::zero(),
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-			sums_ins_var = sums_ins_var + in_amount_tx; 
+			if !nullifier_hash[tx].cs().is_in_setup_mode() {
+				println!("here0");
+				assert!(nullifier_hash[tx].cs().is_satisfied().unwrap());
+				println!("here1");
+			}
+			sums_ins_var = sums_ins_var + in_amount_tx;
 		}
 		Ok(sums_ins_var)
 	}
@@ -221,7 +244,7 @@ where
 			bytes.extend(out_amount_var[tx].to_bytes()?);
 			bytes.extend(out_pubkey_var[tx].to_bytes()?);
 			bytes.extend(out_blinding_var[tx].to_bytes()?);
-			in_utxo_hasher_var_out[tx] = HG5::evaluate(&hasher_params_w5_var, &bytes)?;
+			in_utxo_hasher_var_out.push(HG5::evaluate(&hasher_params_w5_var, &bytes)?);
 			// End of computing the hash
 			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
 
@@ -239,12 +262,16 @@ where
 		&self,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
 	) -> Result<(), SynthesisError> {
-		let mut same_nullifiers: Vec<HG4::OutputVar> = Vec::with_capacity(2);
-		for i in 0..N {
-			for j in i..N {
-				same_nullifiers[0] = in_nullifier_var[i].clone();
-				same_nullifiers[1] = in_nullifier_var[j].clone();
-				same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
+		if N > 1 {
+			let mut same_nullifiers: Vec<HG4::OutputVar> = Vec::with_capacity(2);
+			for i in 0..N {
+				if i < N - 1 {
+					for j in i..N {
+						same_nullifiers.push(in_nullifier_var[i].clone());
+						same_nullifiers.push(in_nullifier_var[j].clone());
+						same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
+					}
+				}
 			}
 		}
 		Ok(())
@@ -258,14 +285,27 @@ where
 		sum_outs_var: &FpVar<F>,
 	) -> Result<(), SynthesisError> {
 		let res = sum_ins_var + public_amount_var.clone();
-		res.enforce_equal(&sum_outs_var).unwrap();
+		//res.enforce_equal(&sum_outs_var).unwrap();
 		Ok(())
 	}
 	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
 }
 
-impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize> Clone
-	for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
+impl<
+		F,
+		H2,
+		HG2,
+		H4,
+		HG4,
+		H5,
+		HG5,
+		C,
+		LHGT,
+		HGT,
+		const K: usize,
+		const N: usize,
+		const M: usize,
+	> Clone for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -320,8 +360,21 @@ where
 	}
 }
 
-impl<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, const N: usize, const M: usize>
-	ConstraintSynthesizer<F> for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, N, M>
+impl<
+		F,
+		H2,
+		HG2,
+		H4,
+		HG4,
+		H5,
+		HG5,
+		C,
+		LHGT,
+		HGT,
+		const K: usize,
+		const N: usize,
+		const M: usize,
+	> ConstraintSynthesizer<F> for VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, C, LHGT, HGT, K, N, M>
 where
 	F: PrimeField,
 	H2: CRH,
@@ -340,8 +393,8 @@ where
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding
 		let private_key_inputs = self.private_key_inputs.clone();
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
-		let set_private = self.set_private_inputs.clone(); 
-		let root_set = self.root_set.clone(); 
+		let set_private = self.set_private_inputs.clone();
+		let root_set = self.root_set.clone();
 		let hasher_params_w2 = self.hasher_params_w2.clone();
 		let hasher_params_w4 = self.hasher_params_w4.clone();
 		let hasher_params_w5 = self.hasher_params_w5.clone();
@@ -385,7 +438,7 @@ where
 		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N);
 		let mut private_key_inputs_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 
-		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, N>> = Vec::with_capacity(N);
+		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, K>> = Vec::with_capacity(N);
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 
 		// Outputs
@@ -396,29 +449,45 @@ where
 		let mut output_commitment_var: Vec<HG5::OutputVar> = Vec::with_capacity(N);
 
 		for i in 0..N {
-			set_input_private_var[i] =
-				SetPrivateInputsVar::new_witness(cs.clone(), || Ok(set_private[i].clone()))?;
+			set_input_private_var.push(SetPrivateInputsVar::new_witness(cs.clone(), || {
+				Ok(set_private[i].clone())
+			})?);
 
-			private_key_inputs_var[i] =
-				FpVar::<F>::new_witness(cs.clone(), || Ok(private_key_inputs[i].clone()))?;
+			private_key_inputs_var.push(FpVar::<F>::new_witness(cs.clone(), || {
+				Ok(private_key_inputs[i].clone())
+			})?);
 
-			leaf_private_var[i] =
-				LeafPrivateInputsVar::new_input(cs.clone(), || Ok(leaf_private[i].clone()))?;
-			in_nullifier_var[i] =
-				HG4::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash[i].clone()))?;
+			leaf_private_var.push(LeafPrivateInputsVar::new_input(cs.clone(), || {
+				Ok(leaf_private[i].clone())
+			})?);
+			in_nullifier_var.push(HG4::OutputVar::new_input(cs.clone(), || {
+				Ok(nullifier_hash[i].clone())
+			})?);
 
-			in_path_elements_var[i] =
-				PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path[i].clone()))?;
-			in_path_indices_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(index[i].clone()))?;
+			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, K>::new_witness(
+				cs.clone(),
+				|| Ok(path[i].clone()),
+			)?);
+			in_path_indices_var.push(FpVar::<F>::new_witness(
+				cs.clone(),
+				|| Ok(index[i].clone()),
+			)?);
 
-			out_amount_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(out_amount[i].clone()))?;
-			out_chain_id_var[i] =
-				FpVar::<F>::new_witness(cs.clone(), || Ok(out_chain_id[i].clone()))?;
-			out_pubkey_var[i] = FpVar::<F>::new_witness(cs.clone(), || Ok(out_pubkey[i].clone()))?;
-			out_blinding_var[i] =
-				FpVar::<F>::new_witness(cs.clone(), || Ok(out_blinding[i].clone()))?;
-			output_commitment_var[i] =
-				HG5::OutputVar::new_witness(cs.clone(), || Ok(output_commitment[i].clone()))?;
+			out_amount_var.push(FpVar::<F>::new_witness(cs.clone(), || {
+				Ok(out_amount[i].clone())
+			})?);
+			out_chain_id_var.push(FpVar::<F>::new_witness(cs.clone(), || {
+				Ok(out_chain_id[i].clone())
+			})?);
+			out_pubkey_var.push(FpVar::<F>::new_witness(cs.clone(), || {
+				Ok(out_pubkey[i].clone())
+			})?);
+			out_blinding_var.push(FpVar::<F>::new_witness(cs.clone(), || {
+				Ok(out_blinding[i].clone())
+			})?);
+			output_commitment_var.push(HG5::OutputVar::new_witness(cs.clone(), || {
+				Ok(output_commitment[i].clone())
+			})?);
 		}
 
 		// verify correctness of transaction inputs
@@ -459,7 +528,7 @@ where
 			.unwrap();
 
 		// optional safety constraint to make sure extDataHash cannot be changed
-		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor 
+		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor
 		ArbitraryInputVar::constrain(&arbitrary_input_var)?;
 
 		Ok(())
@@ -492,15 +561,16 @@ mod test {
 	use ark_std::{rand::Rng, test_rng};
 	use std::str::FromStr;
 
-	pub const TEST_N: usize = 30;
-	pub const TEST_M: usize = 1;
+	pub const TEST_K: usize = 30;
+	pub const TEST_N: usize = 1;
+	pub const TEST_M: usize = 2;
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds2;
 
 	impl Rounds for PoseidonRounds2 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
+		const PARTIAL_ROUNDS: usize = 56;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 2;
 	}
@@ -510,7 +580,7 @@ mod test {
 
 	impl Rounds for PoseidonRounds4 {
 		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 59;
+		const PARTIAL_ROUNDS: usize = 56;
 		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 		const WIDTH: usize = 4;
 	}
@@ -555,6 +625,7 @@ mod test {
 		TreeConfig_x5<BnFr>,
 		LeafCRHGadget<BnFr>,
 		PoseidonCRH_x5_3Gadget<BnFr>,
+		TEST_K,
 		TEST_N,
 		TEST_M,
 	>;
@@ -578,10 +649,10 @@ mod test {
 		let private_key = BnFr::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2).unwrap();
-		let commitment= leaf.clone();
+		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params5).unwrap();
+		let commitment = leaf.clone();
 
-		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_N>(&[leaf], 0, &params3);
+		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_K>(&[leaf], 0, &params3);
 		let public_amount = BnFr::rand(rng);
 		//TODO: Change aritrary data
 		let ext_data_hash = setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
@@ -593,11 +664,11 @@ mod test {
 		let set_private_inputs = setup_set(&root, &root_set);
 
 		let out_chain_id = BnFr::one();
-		let out_amount = BnFr::one() + BnFr::one();
+		let out_amount = BnFr::one();
 		let out_pubkey = BnFr::rand(rng);
 		let out_blinding = BnFr::rand(rng);
 		let bytes = to_bytes![out_chain_id, out_amount, out_pubkey, out_blinding].unwrap();
-		let out_commitment = PoseidonCRH5::evaluate(&params4, &bytes).unwrap();
+		let out_commitment = PoseidonCRH5::evaluate(&params5, &bytes).unwrap();
 
 		let circuit = VACircuit::new(
 			public_amount,
@@ -615,7 +686,7 @@ mod test {
 			vec![nullifier_hash],
 			vec![out_commitment],
 			vec![out_chain_id],
-			vec![out_chain_id],
+			vec![out_amount],
 			vec![out_pubkey],
 			vec![out_blinding],
 		);

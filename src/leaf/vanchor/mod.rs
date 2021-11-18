@@ -187,7 +187,8 @@ mod test {
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
 		let inputs_null = to_bytes![commitment, index, private_key].unwrap();
 		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_null).unwrap();
-		let nullifier = Leaf::create_nullifier(&private_key, &commitment, &params4, &index).unwrap();
+		let nullifier =
+			Leaf::create_nullifier(&private_key, &commitment, &params4, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 
@@ -281,7 +282,8 @@ mod test {
 		input.append(&mut tmp);
 		let mut tmp = blinding[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
-		let computed_leaf_without_vanchorleaf = PoseidonCircomCRH5::evaluate(&parameters5, &input).unwrap();
+		let computed_leaf_without_vanchorleaf =
+			PoseidonCircomCRH5::evaluate(&parameters5, &input).unwrap();
 
 		// Computing the leaf with vanchorleaf
 		let private = Private::new(&amount[0], &blinding[0]);
@@ -317,7 +319,8 @@ mod test {
 		let mut tmp = private_key[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
 
-		let computed_nullifier_without_vanchorleaf = PoseidonCircomCRH4::evaluate(&parameters4, &input).unwrap();
+		let computed_nullifier_without_vanchorleaf =
+			PoseidonCircomCRH4::evaluate(&parameters4, &input).unwrap();
 
 		// Computing the nullifier with vanchorleaf
 		let nullifier_from_vanchorleaf = LeafCircom::create_nullifier(
