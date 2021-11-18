@@ -415,19 +415,27 @@ where
 
 		// Generating vars
 		// Public inputs
-		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
 		let leaf_public_var =
 			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public.clone()))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N);
-
 		let mut in_nullifier_var: Vec<HG4::OutputVar> = Vec::with_capacity(N);
+		for i in 0..N {
+			in_nullifier_var.push(HG4::OutputVar::new_input(cs.clone(), || {
+				Ok(nullifier_hash[i].clone())
+			})?);
 
-		//let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
+		}
+		let mut output_commitment_var: Vec<HG5::OutputVar> = Vec::with_capacity(N);
+		for i in 0..N {
+			output_commitment_var.push(HG5::OutputVar::new_input(cs.clone(), || {
+				Ok(output_commitment[i].clone())
+			})?);
+		}
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 
 		// Constants
+		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
 		let hasher_params_w2_var = HG2::ParametersVar::new_constant(cs.clone(), hasher_params_w2)?;
 		let hasher_params_w4_var = HG4::ParametersVar::new_constant(cs.clone(), hasher_params_w4)?;
 		let hasher_params_w5_var = HG5::ParametersVar::new_constant(cs.clone(), hasher_params_w5)?;
@@ -435,7 +443,8 @@ where
 		// Private inputs
 		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N);
 		let mut private_key_inputs_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-
+		
+		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N);	
 		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, K>> = Vec::with_capacity(N);
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 
@@ -444,7 +453,6 @@ where
 		let mut out_chain_id_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N);
 		let mut out_blinding_var: Vec<FpVar<F>> = Vec::with_capacity(N);
-		let mut output_commitment_var: Vec<HG5::OutputVar> = Vec::with_capacity(N);
 
 		for i in 0..N {
 			set_input_private_var.push(SetPrivateInputsVar::new_witness(cs.clone(), || {
@@ -457,9 +465,6 @@ where
 
 			leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
 				Ok(leaf_private[i].clone())
-			})?);
-			in_nullifier_var.push(HG4::OutputVar::new_input(cs.clone(), || {
-				Ok(nullifier_hash[i].clone())
 			})?);
 
 			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, K>::new_witness(
@@ -483,9 +488,7 @@ where
 			out_blinding_var.push(FpVar::<F>::new_witness(cs.clone(), || {
 				Ok(out_blinding[i].clone())
 			})?);
-			output_commitment_var.push(HG5::OutputVar::new_witness(cs.clone(), || {
-				Ok(output_commitment[i].clone())
-			})?);
+			
 		}
 
 		// verify correctness of transaction inputs
@@ -769,15 +772,15 @@ mod test {
 
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(root_set);
-		public_inputs.extend(out_commitment);
 		public_inputs.push(public_amount);
-		//public_inputs.push(ext_data_hash.recipient);
-		//public_inputs.push(ext_data_hash.relayer);
-		//public_inputs.push(ext_data_hash.fee);
+		public_inputs.extend(root_set);
+		public_inputs.extend(nullifier_hash);
+		public_inputs.extend(out_commitment);
+		public_inputs.push(ext_data_hash.recipient);
+		public_inputs.push(ext_data_hash.relayer);
+		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.commitment);
-
+		
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		//let pk = generate_random_parameters::<Bn254,_,_>(circuit.clone(),
 		// rng).unwrap();
