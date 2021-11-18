@@ -779,6 +779,7 @@ mod test {
 		public_inputs.push(ext_data_hash.recipient);
 		public_inputs.push(ext_data_hash.relayer);
 		public_inputs.push(ext_data_hash.fee);
+		public_inputs.push(ext_data_hash.refund);
 		public_inputs.push(ext_data_hash.commitment);
 		
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
