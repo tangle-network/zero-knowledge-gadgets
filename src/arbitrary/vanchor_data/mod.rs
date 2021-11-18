@@ -71,7 +71,7 @@ impl VAnchorArbitraryData {
 		res.to_vec()
 	}
 
-	pub fn hash_data_self(&self) -> Vec<u8> {
+	pub fn hash(&self) -> Vec<u8> {
 		let tuple = [Token::Tuple(vec![
 			self.recipient.clone(),
 			self.ext_amount.clone(),
@@ -173,7 +173,7 @@ mod test {
 			encrypted_output1.clone(),
 			encrypted_output2.clone(),
 		);
-		let res = arbitrary.hash_data_self();
+		let res = arbitrary.hash();
 		let expected_ext_data_hash =
 			"0xaecceec52df7aa343dfbea873e1c984c26879df91d1ae3a7bcb641377669a79c";
 		let expected_ext_data_hash = decode_hex(expected_ext_data_hash);
