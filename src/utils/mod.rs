@@ -462,8 +462,12 @@ pub fn vanchor_arbitrary_hash(
 	])];
 	let encoded_input = encode(&tuple);
 	let bytes: &[u8] = &encoded_input;
+	keccak_256(bytes)
+}
+
+pub fn keccak_256(input: &[u8]) -> Vec<u8> {
 	let mut hasher = Keccak::v256();
-	hasher.update(bytes);
+	hasher.update(input);
 	let mut res: [u8; 32] = [0; 32];
 	hasher.finalize(&mut res);
 	res.to_vec()
