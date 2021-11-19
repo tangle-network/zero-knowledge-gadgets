@@ -10,16 +10,12 @@ use super::VAnchorArbitraryData;
 
 #[derive(Clone)]
 pub struct VAnchorArbitraryDataGadget<F: PrimeField> {
-	ext_data: FpVar<F>
+	ext_data: FpVar<F>,
 }
 
 impl<F: PrimeField> VAnchorArbitraryDataGadget<F> {
-	pub fn new(ext_data: FpVar<F>)->Self{
-
-		Self{
-			ext_data
-		}
-
+	pub fn new(ext_data: FpVar<F>) -> Self {
+		Self { ext_data }
 	}
 
 	pub fn constrain(&self) -> Result<(), SynthesisError> {
@@ -27,7 +23,6 @@ impl<F: PrimeField> VAnchorArbitraryDataGadget<F> {
 		Ok(())
 	}
 }
-
 
 impl<F: PrimeField> AllocVar<VAnchorArbitraryData<F>, F> for VAnchorArbitraryDataGadget<F> {
 	fn new_variable<T: Borrow<VAnchorArbitraryData<F>>>(
@@ -41,40 +36,37 @@ impl<F: PrimeField> AllocVar<VAnchorArbitraryData<F>, F> for VAnchorArbitraryDat
 
 		let ext_data = input.ext_data.clone();
 
-
 		let ext_data = FpVar::new_variable(cs.clone(), || Ok(&ext_data), mode)?;
 
-		Ok(VAnchorArbitraryDataGadget::new(
-			ext_data
-		))
+		Ok(VAnchorArbitraryDataGadget::new(ext_data))
 	}
 }
 
 #[cfg(test)]
 mod test {
 
-	use crate::{arbitrary::vanchor_data::VAnchorArbitraryData};
+	use crate::arbitrary::vanchor_data::VAnchorArbitraryData;
 
-    use ark_relations::r1cs::ConstraintSystem;
-    use ark_std::test_rng;
-   
+	use ark_relations::r1cs::ConstraintSystem;
+	use ark_std::test_rng;
+
+	use super::VAnchorArbitraryDataGadget;
 	use crate::ark_std::UniformRand;
-    use ark_bn254::Fq;
+	use ark_bn254::Fq;
 	use ark_r1cs_std::alloc::AllocVar;
-    use super::VAnchorArbitraryDataGadget;
 	#[test]
 	fn should_enforce_constraints() {
 		let rng = &mut test_rng();
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let ext_data= Fq::rand(rng);
+		let ext_data = Fq::rand(rng);
 
-		let extdatahash = VAnchorArbitraryData::new(ext_data); 
-		let extdatahash_var = VAnchorArbitraryDataGadget::new_input(cs.clone(), || Ok(&extdatahash)).unwrap();
+		let extdatahash = VAnchorArbitraryData::new(ext_data);
+		let extdatahash_var =
+			VAnchorArbitraryDataGadget::new_input(cs.clone(), || Ok(&extdatahash)).unwrap();
 
 		extdatahash_var.constrain().unwrap();
 
 		assert!(cs.is_satisfied().unwrap());
-
 	}
 }

@@ -2,8 +2,8 @@ use ark_crypto_primitives::Error;
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
-use ethabi::{Token, encode};
-use tiny_keccak::{Keccak, Hasher};
+use ethabi::{encode, Token};
+use tiny_keccak::{Hasher, Keccak};
 
 use crate::Vec;
 
@@ -106,7 +106,6 @@ pub fn decode_hex(s: &str) -> Vec<u8> {
 
 	vec
 }
-
 
 pub fn get_bytes_array_from_hex(hex_str: &str) -> [u8; 32] {
 	let bytes = decode_hex(hex_str);
