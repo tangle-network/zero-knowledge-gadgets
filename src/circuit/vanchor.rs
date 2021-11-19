@@ -196,7 +196,7 @@ where
 				&in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-			sums_ins_var = sums_ins_var + in_amount_tx; 
+			sums_ins_var = sums_ins_var + in_amount_tx;
 		}
 		Ok(sums_ins_var)
 	}
@@ -340,8 +340,8 @@ where
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding
 		let private_key_inputs = self.private_key_inputs.clone();
 		let leaf_public = self.leaf_public_inputs.clone(); // chain id
-		let set_private = self.set_private_inputs.clone(); 
-		let root_set = self.root_set.clone(); 
+		let set_private = self.set_private_inputs.clone();
+		let root_set = self.root_set.clone();
 		let hasher_params_w2 = self.hasher_params_w2.clone();
 		let hasher_params_w4 = self.hasher_params_w4.clone();
 		let hasher_params_w5 = self.hasher_params_w5.clone();
@@ -459,7 +459,7 @@ where
 			.unwrap();
 
 		// optional safety constraint to make sure extDataHash cannot be changed
-		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor 
+		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor
 		ArbitraryInputVar::constrain(&arbitrary_input_var)?;
 
 		Ok(())
@@ -579,7 +579,7 @@ mod test {
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
 		let leaf = Leaf::create_leaf(&leaf_private, &public_key, &leaf_public, &params2).unwrap();
-		let commitment= leaf.clone();
+		let commitment = leaf.clone();
 
 		let (tree, path) = setup_tree_and_create_path_tree_x5::<BnFr, TEST_N>(&[leaf], 0, &params3);
 		let public_amount = BnFr::rand(rng);
