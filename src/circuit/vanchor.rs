@@ -2256,6 +2256,8 @@ mod test {
 		TEST_N_OUTS_8,
 		TEST_M,
 	>;
+	// This test considers two different batch of inputs from two different 
+	// chains. Therefore two different trees are used
 	#[test]
 	fn should_create_circuit_and_prove_groth16_8_input_8_output() {
 		let rng = &mut test_rng();
@@ -2403,17 +2405,19 @@ mod test {
 		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2, leaf_3, leaf_4, leaf_5, leaf_6, leaf_7, leaf_8,];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4,];
+		let leaves_on_chain_2= [leaf_5, leaf_6, leaf_7, leaf_8,];
+		let tree_1 = Tree_x5::new_sequential(inner_params.clone(), Rc::new(()), &leaves_on_chain_1).unwrap();
+		let tree_2 = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves_on_chain_2).unwrap();
 
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let path_3 = tree.generate_membership_proof(2);
-		let path_4 = tree.generate_membership_proof(3);
-		let path_5 = tree.generate_membership_proof(4);
-		let path_6 = tree.generate_membership_proof(5);
-		let path_7 = tree.generate_membership_proof(6);
-		let path_8 = tree.generate_membership_proof(7);
+		let path_1 = tree_1.generate_membership_proof(0);
+		let path_2 = tree_1.generate_membership_proof(1);
+		let path_3 = tree_1.generate_membership_proof(2);
+		let path_4 = tree_1.generate_membership_proof(3);
+		let path_5 = tree_2.generate_membership_proof(0);
+		let path_6 = tree_2.generate_membership_proof(1);
+		let path_7 = tree_2.generate_membership_proof(2);
+		let path_8 = tree_2.generate_membership_proof(3);
 		let paths = vec![
 			path_1.clone(), 
 			path_2.clone(),
@@ -2431,20 +2435,22 @@ mod test {
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
-		let root = tree.root().inner();
+		let root_1 = tree_1.root().inner();
+		let root_2 = tree_2.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
+		root_set[0] = root_1;
+		root_set[1] = root_2;
 		assert_eq!(root_set.len(), TEST_M);
 		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_2.get_index(&tree.root(), &leaf_2).unwrap();
-		let index_2: BnFr = path_3.get_index(&tree.root(), &leaf_3).unwrap();
-		let index_3: BnFr = path_4.get_index(&tree.root(), &leaf_4).unwrap();
-		let index_4: BnFr = path_5.get_index(&tree.root(), &leaf_5).unwrap();
-		let index_5: BnFr = path_6.get_index(&tree.root(), &leaf_6).unwrap();
-		let index_6: BnFr = path_7.get_index(&tree.root(), &leaf_7).unwrap();
-		let index_7: BnFr = path_8.get_index(&tree.root(), &leaf_8).unwrap();
+		let index_0: BnFr = path_1.get_index(&tree_1.root(), &leaf_1).unwrap();
+		let index_1: BnFr = path_2.get_index(&tree_1.root(), &leaf_2).unwrap();
+		let index_2: BnFr = path_3.get_index(&tree_1.root(), &leaf_3).unwrap();
+		let index_3: BnFr = path_4.get_index(&tree_1.root(), &leaf_4).unwrap();
+		let index_4: BnFr = path_5.get_index(&tree_2.root(), &leaf_5).unwrap();
+		let index_5: BnFr = path_6.get_index(&tree_2.root(), &leaf_6).unwrap();
+		let index_6: BnFr = path_7.get_index(&tree_2.root(), &leaf_7).unwrap();
+		let index_7: BnFr = path_8.get_index(&tree_2.root(), &leaf_8).unwrap();
 		let indices = vec![index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7];
 
 		let nullifier_hash_1 =
@@ -2475,16 +2481,17 @@ mod test {
 			nullifier_hash_8,
 			];
 
-		let set_private_inputs_1 = setup_set(&root, &root_set);
+		let set_private_inputs_1 = setup_set(&root_1, &root_set);
+		let set_private_inputs_2 = setup_set(&root_2, &root_set);
 		let set_private_inputs = vec![
 			set_private_inputs_1.clone(), 
 			set_private_inputs_1.clone(),
 			set_private_inputs_1.clone(), 
 			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(),
+			set_private_inputs_2.clone(), 
+			set_private_inputs_2.clone(), 
+			set_private_inputs_2.clone(), 
+			set_private_inputs_2.clone(),
 			 ];
 
 		let out_chain_id_1 = BnFr::one();
