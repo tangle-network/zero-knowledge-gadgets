@@ -2256,7 +2256,7 @@ mod test {
 		TEST_N_OUTS_8,
 		TEST_M,
 	>;
-	// This test considers two different batch of inputs from two different 
+	// This test considers two different batch of inputs from two different
 	// chains. Therefore two different trees are used
 	#[test]
 	fn should_create_circuit_and_prove_groth16_8_input_8_output() {
@@ -2276,24 +2276,24 @@ mod test {
 		let blinding_1 = BnFr::rand(rng);
 		let in_amount_2 = BnFr::one() + BnFr::one();
 		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&in_amount_1, &blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&in_amount_2, &blinding_2);
 		let in_amount_3 = BnFr::one();
 		let blinding_3 = BnFr::rand(rng);
 		let in_amount_4 = BnFr::one() + BnFr::one();
 		let blinding_4 = BnFr::rand(rng);
-		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(&in_amount_3, &blinding_3);
-		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(&in_amount_4, &blinding_4);
 		let in_amount_5 = BnFr::one();
 		let blinding_5 = BnFr::rand(rng);
 		let in_amount_6 = BnFr::one() + BnFr::one();
 		let blinding_6 = BnFr::rand(rng);
-		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(&in_amount_5, &blinding_5);
-		let leaf_private_6 = LeafPrivateInputs::<BnFr>::new(&in_amount_6, &blinding_6);
 		let in_amount_7 = BnFr::one();
 		let blinding_7 = BnFr::rand(rng);
 		let in_amount_8 = BnFr::one() + BnFr::one();
 		let blinding_8 = BnFr::rand(rng);
+		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&in_amount_1, &blinding_1);
+		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&in_amount_2, &blinding_2);
+		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(&in_amount_3, &blinding_3);
+		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(&in_amount_4, &blinding_4);
+		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(&in_amount_5, &blinding_5);
+		let leaf_private_6 = LeafPrivateInputs::<BnFr>::new(&in_amount_6, &blinding_6);
 		let leaf_private_7 = LeafPrivateInputs::<BnFr>::new(&in_amount_7, &blinding_7);
 		let leaf_private_8 = LeafPrivateInputs::<BnFr>::new(&in_amount_8, &blinding_8);
 		let leaf_private_inputs = vec![
@@ -2305,7 +2305,7 @@ mod test {
 			leaf_private_6.clone(),
 			leaf_private_7.clone(),
 			leaf_private_8.clone(),
-			];
+		];
 
 		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
 
@@ -2334,15 +2334,15 @@ mod test {
 		let privkey = to_bytes![private_key_8].unwrap();
 		let public_key_8 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
 		let private_key_inputs = vec![
-			private_key_1.clone(), 
+			private_key_1.clone(),
 			private_key_2.clone(),
-			private_key_3.clone(), 
+			private_key_3.clone(),
 			private_key_4.clone(),
-			private_key_5.clone(), 
+			private_key_5.clone(),
 			private_key_6.clone(),
-			private_key_7.clone(), 
+			private_key_7.clone(),
 			private_key_8.clone(),
-			];
+		];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -2405,10 +2405,12 @@ mod test {
 		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
-		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4,];
-		let leaves_on_chain_2= [leaf_5, leaf_6, leaf_7, leaf_8,];
-		let tree_1 = Tree_x5::new_sequential(inner_params.clone(), Rc::new(()), &leaves_on_chain_1).unwrap();
-		let tree_2 = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves_on_chain_2).unwrap();
+		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4];
+		let leaves_on_chain_2 = [leaf_5, leaf_6, leaf_7, leaf_8];
+		let tree_1 =
+			Tree_x5::new_sequential(inner_params.clone(), Rc::new(()), &leaves_on_chain_1).unwrap();
+		let tree_2 =
+			Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves_on_chain_2).unwrap();
 
 		let path_1 = tree_1.generate_membership_proof(0);
 		let path_2 = tree_1.generate_membership_proof(1);
@@ -2419,15 +2421,15 @@ mod test {
 		let path_7 = tree_2.generate_membership_proof(2);
 		let path_8 = tree_2.generate_membership_proof(3);
 		let paths = vec![
-			path_1.clone(), 
+			path_1.clone(),
 			path_2.clone(),
-			path_3.clone(), 
+			path_3.clone(),
 			path_4.clone(),
-			path_5.clone(), 
+			path_5.clone(),
 			path_6.clone(),
-			path_7.clone(), 
+			path_7.clone(),
 			path_8.clone(),
-			];
+		];
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
@@ -2451,7 +2453,9 @@ mod test {
 		let index_5: BnFr = path_6.get_index(&tree_2.root(), &leaf_6).unwrap();
 		let index_6: BnFr = path_7.get_index(&tree_2.root(), &leaf_7).unwrap();
 		let index_7: BnFr = path_8.get_index(&tree_2.root(), &leaf_8).unwrap();
-		let indices = vec![index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7];
+		let indices = vec![
+			index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7,
+		];
 
 		let nullifier_hash_1 =
 			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
@@ -2469,34 +2473,33 @@ mod test {
 			Leaf::create_nullifier(&private_key_7, &leaf_7, &hasher_params_w4, &index_6).unwrap();
 		let nullifier_hash_8 =
 			Leaf::create_nullifier(&private_key_8, &leaf_8, &hasher_params_w4, &index_7).unwrap();
-			
+
 		let nullifier_hash = vec![
-			nullifier_hash_1, 
+			nullifier_hash_1,
 			nullifier_hash_2,
-			nullifier_hash_3, 
+			nullifier_hash_3,
 			nullifier_hash_4,
-			nullifier_hash_5, 
+			nullifier_hash_5,
 			nullifier_hash_6,
-			nullifier_hash_7, 
+			nullifier_hash_7,
 			nullifier_hash_8,
-			];
+		];
 
 		let set_private_inputs_1 = setup_set(&root_1, &root_set);
 		let set_private_inputs_2 = setup_set(&root_2, &root_set);
 		let set_private_inputs = vec![
-			set_private_inputs_1.clone(), 
 			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_2.clone(), 
-			set_private_inputs_2.clone(), 
-			set_private_inputs_2.clone(), 
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
 			set_private_inputs_2.clone(),
-			 ];
+			set_private_inputs_2.clone(),
+			set_private_inputs_2.clone(),
+			set_private_inputs_2.clone(),
+		];
 
 		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount
-			+ leaf_private_1.get_amount().unwrap();
+		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
 		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
@@ -2551,7 +2554,6 @@ mod test {
 		let bytes = to_bytes![out_chain_id_8, out_amount_8, out_pubkey_8, out_blinding_8].unwrap();
 		let output_commitment_8 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
-
 		let out_chain_id = vec![
 			out_chain_id_1,
 			out_chain_id_2,
@@ -2561,7 +2563,7 @@ mod test {
 			out_chain_id_6,
 			out_chain_id_7,
 			out_chain_id_8,
-			];
+		];
 		let out_amount = vec![
 			out_amount_1,
 			out_amount_2,
@@ -2571,7 +2573,7 @@ mod test {
 			out_amount_6,
 			out_amount_7,
 			out_amount_8,
-			];
+		];
 		let out_pubkey = vec![
 			out_pubkey_1,
 			out_pubkey_2,
@@ -2581,7 +2583,7 @@ mod test {
 			out_pubkey_6,
 			out_pubkey_7,
 			out_pubkey_8,
-			];
+		];
 		let out_blinding = vec![
 			out_blinding_1,
 			out_blinding_2,
@@ -2591,7 +2593,7 @@ mod test {
 			out_blinding_6,
 			out_blinding_7,
 			out_blinding_8,
-			];
+		];
 		let output_commitment = vec![
 			output_commitment_1,
 			output_commitment_2,
@@ -2601,7 +2603,7 @@ mod test {
 			output_commitment_6,
 			output_commitment_7,
 			output_commitment_8,
-			];
+		];
 		let circuit = VACircuit_8_8::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
@@ -2678,24 +2680,24 @@ mod test {
 		let blinding_1 = BnFr::rand(rng);
 		let in_amount_2 = BnFr::one() + BnFr::one();
 		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&in_amount_1, &blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&in_amount_2, &blinding_2);
 		let in_amount_3 = BnFr::one();
 		let blinding_3 = BnFr::rand(rng);
 		let in_amount_4 = BnFr::one() + BnFr::one();
 		let blinding_4 = BnFr::rand(rng);
-		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(&in_amount_3, &blinding_3);
-		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(&in_amount_4, &blinding_4);
 		let in_amount_5 = BnFr::one();
 		let blinding_5 = BnFr::rand(rng);
 		let in_amount_6 = BnFr::one() + BnFr::one();
 		let blinding_6 = BnFr::rand(rng);
-		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(&in_amount_5, &blinding_5);
-		let leaf_private_6 = LeafPrivateInputs::<BnFr>::new(&in_amount_6, &blinding_6);
 		let in_amount_7 = BnFr::one();
 		let blinding_7 = BnFr::rand(rng);
 		let in_amount_8 = BnFr::one() + BnFr::one();
 		let blinding_8 = BnFr::rand(rng);
+		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&in_amount_1, &blinding_1);
+		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&in_amount_2, &blinding_2);
+		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(&in_amount_3, &blinding_3);
+		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(&in_amount_4, &blinding_4);
+		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(&in_amount_5, &blinding_5);
+		let leaf_private_6 = LeafPrivateInputs::<BnFr>::new(&in_amount_6, &blinding_6);
 		let leaf_private_7 = LeafPrivateInputs::<BnFr>::new(&in_amount_7, &blinding_7);
 		let leaf_private_8 = LeafPrivateInputs::<BnFr>::new(&in_amount_8, &blinding_8);
 		let leaf_private_inputs = vec![
@@ -2707,7 +2709,7 @@ mod test {
 			leaf_private_6.clone(),
 			leaf_private_7.clone(),
 			leaf_private_8.clone(),
-			];
+		];
 
 		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
 
@@ -2736,15 +2738,15 @@ mod test {
 		let privkey = to_bytes![private_key_8].unwrap();
 		let public_key_8 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
 		let private_key_inputs = vec![
-			private_key_1.clone(), 
+			private_key_1.clone(),
 			private_key_2.clone(),
-			private_key_3.clone(), 
+			private_key_3.clone(),
 			private_key_4.clone(),
-			private_key_5.clone(), 
+			private_key_5.clone(),
 			private_key_6.clone(),
-			private_key_7.clone(), 
+			private_key_7.clone(),
 			private_key_8.clone(),
-			];
+		];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -2807,7 +2809,9 @@ mod test {
 		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2, leaf_3, leaf_4, leaf_5, leaf_6, leaf_7, leaf_8,];
+		let leaves = [
+			leaf_1, leaf_2, leaf_3, leaf_4, leaf_5, leaf_6, leaf_7, leaf_8,
+		];
 		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
 
 		let path_1 = tree.generate_membership_proof(0);
@@ -2819,15 +2823,15 @@ mod test {
 		let path_7 = tree.generate_membership_proof(6);
 		let path_8 = tree.generate_membership_proof(7);
 		let paths = vec![
-			path_1.clone(), 
+			path_1.clone(),
 			path_2.clone(),
-			path_3.clone(), 
+			path_3.clone(),
 			path_4.clone(),
-			path_5.clone(), 
+			path_5.clone(),
 			path_6.clone(),
-			path_7.clone(), 
+			path_7.clone(),
 			path_8.clone(),
-			];
+		];
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
@@ -2849,7 +2853,9 @@ mod test {
 		let index_5: BnFr = path_6.get_index(&tree.root(), &leaf_6).unwrap();
 		let index_6: BnFr = path_7.get_index(&tree.root(), &leaf_7).unwrap();
 		let index_7: BnFr = path_8.get_index(&tree.root(), &leaf_8).unwrap();
-		let indices = vec![index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7];
+		let indices = vec![
+			index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7,
+		];
 
 		let nullifier_hash_1 =
 			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
@@ -2867,33 +2873,32 @@ mod test {
 			Leaf::create_nullifier(&private_key_7, &leaf_7, &hasher_params_w4, &index_6).unwrap();
 		let nullifier_hash_8 =
 			Leaf::create_nullifier(&private_key_8, &leaf_8, &hasher_params_w4, &index_7).unwrap();
-			
+
 		let nullifier_hash = vec![
-			nullifier_hash_1, 
+			nullifier_hash_1,
 			nullifier_hash_2,
-			nullifier_hash_3, 
+			nullifier_hash_3,
 			nullifier_hash_4,
-			nullifier_hash_5, 
+			nullifier_hash_5,
 			nullifier_hash_6,
-			nullifier_hash_7, 
+			nullifier_hash_7,
 			nullifier_hash_8,
-			];
+		];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
 		let set_private_inputs = vec![
-			set_private_inputs_1.clone(), 
 			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
-			set_private_inputs_1.clone(), 
 			set_private_inputs_1.clone(),
-			 ];
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
+			set_private_inputs_1.clone(),
+		];
 
 		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount
-			+ leaf_private_1.get_amount().unwrap();
+		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
 		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
@@ -2924,37 +2929,26 @@ mod test {
 		let bytes = to_bytes![out_chain_id_4, out_amount_4, out_pubkey_4, out_blinding_4].unwrap();
 		let output_commitment_4 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
-
 		let out_chain_id = vec![
 			out_chain_id_1,
 			out_chain_id_2,
 			out_chain_id_3,
 			out_chain_id_4,
-			];
-		let out_amount = vec![
-			out_amount_1,
-			out_amount_2,
-			out_amount_3,
-			out_amount_4,
-			];
-		let out_pubkey = vec![
-			out_pubkey_1,
-			out_pubkey_2,
-			out_pubkey_3,
-			out_pubkey_4,
-			];
+		];
+		let out_amount = vec![out_amount_1, out_amount_2, out_amount_3, out_amount_4];
+		let out_pubkey = vec![out_pubkey_1, out_pubkey_2, out_pubkey_3, out_pubkey_4];
 		let out_blinding = vec![
 			out_blinding_1,
 			out_blinding_2,
 			out_blinding_3,
 			out_blinding_4,
-			];
+		];
 		let output_commitment = vec![
 			output_commitment_1,
 			output_commitment_2,
 			output_commitment_3,
 			output_commitment_4,
-			];
+		];
 		let circuit = VACircuit_8_4::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
