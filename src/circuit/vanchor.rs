@@ -15,7 +15,7 @@ use crate::{
 	Vec,
 };
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
-use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
+use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::{cmp::Ordering::Less, marker::PhantomData};
@@ -154,7 +154,7 @@ where
 		hasher_params_w4_var: &HG4::ParametersVar,
 		hasher_params_w5_var: &HG5::ParametersVar,
 		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
-		inkeypair_var: &Vec<KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>>,
+		inkeypair_var: &Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>>,
 		leaf_public_input_var: &LeafPublicInputsVar<F>,
 		//key_pairs_inputs_var: &Vec<KeypairVar<F, BG, H2, HG2, H4, HG4, H5, HG5>>,
 		in_path_indices_var: &Vec<FpVar<F>>,
@@ -166,11 +166,10 @@ where
 		let mut sums_ins_var = FpVar::<F>::zero();
 		let mut in_amount_tx: FpVar<F>;
 		//let keypairs
-		
-		for tx in 0..N_INS {
 
+		for tx in 0..N_INS {
 			// Computing the hash
-			let in_utxo_hasher_var = 
+			let in_utxo_hasher_var =
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 					//<FpVar<F>>
 					&leaf_private_var[tx],
@@ -181,7 +180,7 @@ where
 			// End of computing the hash
 
 			// Nullifier
-			 let nullifier_hash = 
+			let nullifier_hash =
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_nullifier(
 					&inkeypair_var[tx].private_key().unwrap(),
 					&in_utxo_hasher_var,
@@ -224,7 +223,8 @@ where
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
-		//let mut in_utxo_hasher_var_out: Vec<HG5::OutputVar> = Vec::with_capacity(N_INS);
+		//let mut in_utxo_hasher_var_out: Vec<HG5::OutputVar> =
+		// Vec::with_capacity(N_INS);
 		for tx in 0..N_OUTS {
 			// Computing the hash
 			let mut bytes = Vec::new();
@@ -542,7 +542,7 @@ mod test {
 		setup::{bridge::*, common::*},
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
-	use ark_ff::UniformRand;
+	use ark_ff::{to_bytes, UniformRand};
 	use ark_groth16::Groth16;
 
 	use ark_snark::SNARK;
@@ -1799,7 +1799,7 @@ mod test {
 	}
 	pub const TEST_N_INS_1: usize = 1;
 	pub const TEST_N_OUTS_1: usize = 1;
-	type VACircuit_1_1 = VAnchorCircuit<
+	type VACircuit1_1 = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -1894,7 +1894,7 @@ mod test {
 		let out_pubkey = vec![out_pubkey_1];
 		let out_blinding = vec![out_blinding_1];
 		let output_commitment = vec![output_commitment_1];
-		let circuit = VACircuit_1_1::new(
+		let circuit = VACircuit1_1::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
 			leaf_private_inputs,
@@ -1934,7 +1934,7 @@ mod test {
 		assert!(res);
 	}
 
-	type VACircuit_1_2 = VAnchorCircuit<
+	type VACircuit1_2 = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -2037,7 +2037,7 @@ mod test {
 		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
 		let out_blinding = vec![out_blinding_1, out_blinding_2];
 		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit_1_2::new(
+		let circuit = VACircuit1_2::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
 			leaf_private_inputs,
@@ -2077,7 +2077,7 @@ mod test {
 		assert!(res);
 	}
 
-	type VACircuit_2_1 = VAnchorCircuit<
+	type VACircuit2_1 = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -2192,7 +2192,7 @@ mod test {
 		let out_pubkey = vec![out_pubkey_1];
 		let out_blinding = vec![out_blinding_1];
 		let output_commitment = vec![output_commitment_1];
-		let circuit = VACircuit_2_1::new(
+		let circuit = VACircuit2_1::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
 			leaf_private_inputs,
@@ -2234,7 +2234,7 @@ mod test {
 	pub const TEST_N_INS_8: usize = 8;
 	pub const TEST_N_OUTS_8: usize = 8;
 
-	type VACircuit_8_8 = VAnchorCircuit<
+	type VACircuit8_8 = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -2598,7 +2598,7 @@ mod test {
 			output_commitment_7,
 			output_commitment_8,
 		];
-		let circuit = VACircuit_8_8::new(
+		let circuit = VACircuit8_8::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
 			leaf_private_inputs,
@@ -2640,7 +2640,7 @@ mod test {
 
 	pub const TEST_N_OUTS_4: usize = 4;
 
-	type VACircuit_8_4 = VAnchorCircuit<
+	type VACircuit8_4 = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
 		PoseidonCRH2Gadget,
@@ -2943,7 +2943,7 @@ mod test {
 			output_commitment_3,
 			output_commitment_4,
 		];
-		let circuit = VACircuit_8_4::new(
+		let circuit = VACircuit8_4::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
 			leaf_private_inputs,
