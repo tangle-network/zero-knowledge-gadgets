@@ -196,7 +196,7 @@ where
 				&in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-
+      
 			sums_ins_var = sums_ins_var + in_amount_tx;
 		}
 		Ok(sums_ins_var)
@@ -741,7 +741,6 @@ mod test {
 		let recipient = BnFr::rand(rng);
 		let fee = BnFr::rand(rng);
 		let refund = BnFr::rand(rng);
-
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
 		let in_amount_2 = BnFr::one() + BnFr::one();
