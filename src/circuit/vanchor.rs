@@ -1703,7 +1703,6 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
@@ -1717,7 +1716,7 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -1774,7 +1773,6 @@ mod test {
 
 		assert!(res);
 	}
-
 
 	#[should_panic]
 	#[test]
@@ -1869,7 +1867,6 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
@@ -1883,7 +1880,7 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -1933,7 +1930,7 @@ mod test {
 		public_inputs.push(ext_data_hash.fee);
 		public_inputs.push(ext_data_hash.refund);
 		public_inputs.push(ext_data_hash.commitment);
-		
+
 		let truncated_public_inputs = public_inputs[2..].to_vec();
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1960,7 +1957,7 @@ mod test {
 		TEST_N_OUTS_1,
 		TEST_M,
 	>;
-	
+
 	#[test]
 	fn should_create_circuit_and_prove_groth16_1_input_1_output() {
 		let rng = &mut test_rng();
@@ -2032,13 +2029,13 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		
+
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private = vec![out_leaf_private_1.clone()];
 
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public = vec![out_leaf_public_1.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -2087,8 +2084,6 @@ mod test {
 
 		assert!(res);
 	}
-
-
 
 	type VACircuit1_2 = VAnchorCircuit<
 		BnFr,
@@ -2177,7 +2172,6 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap() - BnFr::one();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = BnFr::one();
@@ -2191,7 +2185,7 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -2249,7 +2243,6 @@ mod test {
 		assert!(res);
 	}
 
-			
 	type VACircuit2_1 = VAnchorCircuit<
 		BnFr,
 		PoseidonCRH2,
@@ -2367,7 +2360,7 @@ mod test {
 
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public = vec![out_leaf_public_1.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -2417,7 +2410,6 @@ mod test {
 		assert!(res);
 	}
 
-	
 	pub const TEST_N_INS_8: usize = 8;
 	pub const TEST_N_OUTS_8: usize = 8;
 
@@ -2523,15 +2515,8 @@ mod test {
 		let keypair_7 = KeyPair::new(private_key_7.clone()).unwrap();
 		let keypair_8 = KeyPair::new(private_key_8.clone()).unwrap();
 		let keypair_inputs = vec![
-			keypair_1, 
-			keypair_2,
-			keypair_3,
-			keypair_4,
-			keypair_5,
-			keypair_6,
-			keypair_7,
-			keypair_8,
-			];
+			keypair_1, keypair_2, keypair_3, keypair_4, keypair_5, keypair_6, keypair_7, keypair_8,
+		];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -2752,15 +2737,15 @@ mod test {
 		let out_leaf_private_7 = LeafPrivateInputs::<BnFr>::new(&out_amount_7, &out_blinding_7);
 		let out_leaf_private_8 = LeafPrivateInputs::<BnFr>::new(&out_amount_8, &out_blinding_8);
 		let out_leaf_private = vec![
-			out_leaf_private_1.clone(), 
+			out_leaf_private_1.clone(),
 			out_leaf_private_2.clone(),
-			out_leaf_private_3.clone(), 
+			out_leaf_private_3.clone(),
 			out_leaf_private_4.clone(),
-			out_leaf_private_5.clone(), 
+			out_leaf_private_5.clone(),
 			out_leaf_private_6.clone(),
-			out_leaf_private_7.clone(), 
+			out_leaf_private_7.clone(),
 			out_leaf_private_8.clone(),
-			];
+		];
 
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
@@ -2771,15 +2756,15 @@ mod test {
 		let out_leaf_public_7 = LeafPublicInputs::<BnFr>::new(out_chain_id_7);
 		let out_leaf_public_8 = LeafPublicInputs::<BnFr>::new(out_chain_id_8);
 		let out_leaf_public = vec![
-			out_leaf_public_1.clone(), 
+			out_leaf_public_1.clone(),
 			out_leaf_public_2.clone(),
-			out_leaf_public_3.clone(), 
+			out_leaf_public_3.clone(),
 			out_leaf_public_4.clone(),
-			out_leaf_public_5.clone(), 
+			out_leaf_public_5.clone(),
 			out_leaf_public_6.clone(),
-			out_leaf_public_7.clone(), 
+			out_leaf_public_7.clone(),
 			out_leaf_public_8.clone(),
-			];
+		];
 
 		let out_pubkey = vec![
 			out_pubkey_1,
@@ -2791,7 +2776,7 @@ mod test {
 			out_pubkey_7,
 			out_pubkey_8,
 		];
-		
+
 		let output_commitment = vec![
 			output_commitment_1,
 			output_commitment_2,
@@ -2841,8 +2826,6 @@ mod test {
 		assert!(res);
 	}
 
-	
-	
 	pub const TEST_N_OUTS_4: usize = 4;
 
 	type VACircuit8_4 = VAnchorCircuit<
@@ -2945,15 +2928,8 @@ mod test {
 		let keypair_7 = KeyPair::new(private_key_7.clone()).unwrap();
 		let keypair_8 = KeyPair::new(private_key_8.clone()).unwrap();
 		let keypair_inputs = vec![
-			keypair_1, 
-			keypair_2,
-			keypair_3,
-			keypair_4,
-			keypair_5,
-			keypair_6,
-			keypair_7,
-			keypair_8,
-			];
+			keypair_1, keypair_2, keypair_3, keypair_4, keypair_5, keypair_6, keypair_7, keypair_8,
+		];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -3146,30 +3122,25 @@ mod test {
 		let out_leaf_private_3 = LeafPrivateInputs::<BnFr>::new(&out_amount_3, &out_blinding_3);
 		let out_leaf_private_4 = LeafPrivateInputs::<BnFr>::new(&out_amount_4, &out_blinding_4);
 		let out_leaf_private = vec![
-			out_leaf_private_1.clone(), 
+			out_leaf_private_1.clone(),
 			out_leaf_private_2.clone(),
-			out_leaf_private_3.clone(), 
+			out_leaf_private_3.clone(),
 			out_leaf_private_4.clone(),
-			];
+		];
 
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public_3 = LeafPublicInputs::<BnFr>::new(out_chain_id_3);
 		let out_leaf_public_4 = LeafPublicInputs::<BnFr>::new(out_chain_id_4);
 		let out_leaf_public = vec![
-			out_leaf_public_1.clone(), 
+			out_leaf_public_1.clone(),
 			out_leaf_public_2.clone(),
-			out_leaf_public_3.clone(), 
+			out_leaf_public_3.clone(),
 			out_leaf_public_4.clone(),
-			];
-
-		let out_pubkey = vec![
-			out_pubkey_1,
-			out_pubkey_2,
-			out_pubkey_3,
-			out_pubkey_4,
 		];
-		
+
+		let out_pubkey = vec![out_pubkey_1, out_pubkey_2, out_pubkey_3, out_pubkey_4];
+
 		let output_commitment = vec![
 			output_commitment_1,
 			output_commitment_2,
@@ -3214,5 +3185,4 @@ mod test {
 
 		assert!(res);
 	}
-	 
 }
