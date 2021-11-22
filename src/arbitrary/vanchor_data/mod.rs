@@ -5,7 +5,7 @@ pub mod constraints;
 
 #[derive(Clone, Default)]
 pub struct VAnchorArbitraryData<F: PrimeField> {
-	ext_data: F,
+	pub ext_data: F,
 }
 
 impl<F: PrimeField> VAnchorArbitraryData<F> {

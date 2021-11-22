@@ -1,5 +1,5 @@
 use crate::{
-	arbitrary::bridge_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
+	arbitrary::vanchor_data::{constraints::VAnchorArbitraryDataVar as ArbitraryInputVar, VAnchorArbitraryData as ArbitraryInput},
 	keypair::vanchor::{constraints::KeypairVar, Keypair},
 	leaf::vanchor::{
 		constraints::{
@@ -462,8 +462,7 @@ where
 		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)?;
 
 		// optional safety constraint to make sure extDataHash cannot be changed
-		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor
-		ArbitraryInputVar::constrain(&arbitrary_input_var)?;
+		arbitrary_input_var.constrain()?;
 
 		Ok(())
 	}
@@ -473,17 +472,10 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		ark_std::{One, Zero},
-		keypair::vanchor::Keypair,
-		leaf::vanchor::VAnchorLeaf,
-		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-		poseidon::{
+	use crate::{ark_std::{One, Zero}, keypair::vanchor::Keypair, leaf::vanchor::VAnchorLeaf, merkle_tree::{Config as MerkleConfig, SparseMerkleTree}, poseidon::{
 			constraints::CRHGadget as PCRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds,
 			CRH as PCRH,
-		},
-		setup::{bridge::*, common::*},
-	};
+		}, setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data}};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
 	use ark_groth16::Groth16;
@@ -575,10 +567,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -628,7 +617,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -714,11 +703,7 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -737,10 +722,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
 		let in_amount_2 = BnFr::one() + BnFr::one();
@@ -789,7 +771,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -874,11 +856,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -897,10 +876,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -950,7 +926,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -1036,11 +1012,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1059,10 +1032,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1112,7 +1082,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -1197,11 +1167,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1220,10 +1187,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1273,7 +1237,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -1357,11 +1321,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1380,10 +1341,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1433,7 +1391,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -1523,11 +1481,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1546,10 +1501,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let limit: BnFr = BnFr::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662656",
@@ -1606,7 +1558,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -1693,11 +1645,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1716,10 +1665,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::one();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1769,7 +1715,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -1856,11 +1802,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let truncated_public_inputs = public_inputs[2..].to_vec();
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
@@ -1898,10 +1841,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1936,7 +1876,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -2002,11 +1942,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2040,10 +1977,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2078,7 +2012,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -2159,11 +2093,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2198,10 +2129,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2251,7 +2179,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -2325,11 +2253,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2368,10 +2293,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2535,7 +2457,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -2740,11 +2662,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2780,10 +2699,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		let relayer = BnFr::rand(rng);
-		let recipient = BnFr::rand(rng);
-		let fee = BnFr::rand(rng);
-		let refund = BnFr::rand(rng);
+		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2947,7 +2863,7 @@ mod test {
 
 		let public_amount = BnFr::one();
 		//TODO: Change aritrary data
-		let ext_data_hash_1 = setup_arbitrary_data(recipient, relayer, fee, refund, commitment_1);
+		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
 		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
 		// commitment_2);
 		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
@@ -3099,11 +3015,8 @@ mod test {
 		public_inputs.extend(root_set);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.recipient);
-		public_inputs.push(ext_data_hash.relayer);
-		public_inputs.push(ext_data_hash.fee);
-		public_inputs.push(ext_data_hash.refund);
-		public_inputs.push(ext_data_hash.commitment);
+		public_inputs.push(ext_data_hash.ext_data);
+
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
