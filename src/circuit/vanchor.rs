@@ -236,9 +236,7 @@ where
 				&leaf_private_var[tx],
 			)?;
 			out_utxo_hasher_var.enforce_equal(&output_commitment_var[tx])?;
-			if !out_utxo_hasher_var.cs().is_in_setup_mode(){
-				assert!(out_utxo_hasher_var.cs().is_satisfied().unwrap());
-			}
+
 			// Check that amount is less than 2^248 in the field (to prevent overflow)
 			out_amount_var.enforce_cmp_unchecked(&limit_var, Less, false)?;
 
@@ -717,15 +715,11 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
-		let output_commitment_1 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
-		let output_commitment_2 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
@@ -734,7 +728,22 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
+		let output_commitment_1 = Leaf::create_leaf(
+			&out_leaf_private_1,
+			&out_pubkey_1,
+			&out_leaf_public_1,
+			&hasher_params_w5,
+		)
+		.unwrap();
+
+		let output_commitment_2 = Leaf::create_leaf(
+			&out_leaf_private_2,
+			&out_pubkey_2,
+			&out_leaf_public_2,
+			&hasher_params_w5,
+		)
+		.unwrap();
 
 		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
 		let output_commitment = vec![output_commitment_1, output_commitment_2];
