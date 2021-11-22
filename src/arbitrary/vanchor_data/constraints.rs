@@ -9,11 +9,11 @@ use core::borrow::Borrow;
 use super::VAnchorArbitraryData;
 
 #[derive(Clone)]
-pub struct VAnchorArbitraryDataGadget<F: PrimeField> {
+pub struct VAnchorArbitraryDataVar<F: PrimeField> {
 	ext_data: FpVar<F>,
 }
 
-impl<F: PrimeField> VAnchorArbitraryDataGadget<F> {
+impl<F: PrimeField> VAnchorArbitraryDataVar<F> {
 	pub fn new(ext_data: FpVar<F>) -> Self {
 		Self { ext_data }
 	}
@@ -24,7 +24,7 @@ impl<F: PrimeField> VAnchorArbitraryDataGadget<F> {
 	}
 }
 
-impl<F: PrimeField> AllocVar<VAnchorArbitraryData<F>, F> for VAnchorArbitraryDataGadget<F> {
+impl<F: PrimeField> AllocVar<VAnchorArbitraryData<F>, F> for VAnchorArbitraryDataVar<F> {
 	fn new_variable<T: Borrow<VAnchorArbitraryData<F>>>(
 		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
@@ -38,7 +38,7 @@ impl<F: PrimeField> AllocVar<VAnchorArbitraryData<F>, F> for VAnchorArbitraryDat
 
 		let ext_data = FpVar::new_variable(cs.clone(), || Ok(&ext_data), mode)?;
 
-		Ok(VAnchorArbitraryDataGadget::new(ext_data))
+		Ok(VAnchorArbitraryDataVar::new(ext_data))
 	}
 }
 
@@ -50,7 +50,7 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	use super::VAnchorArbitraryDataGadget;
+	use super::VAnchorArbitraryDataVar;
 	use crate::ark_std::UniformRand;
 	use ark_bn254::Fq;
 	use ark_r1cs_std::alloc::AllocVar;
@@ -63,7 +63,7 @@ mod test {
 
 		let extdatahash = VAnchorArbitraryData::new(ext_data);
 		let extdatahash_var =
-			VAnchorArbitraryDataGadget::new_input(cs.clone(), || Ok(&extdatahash)).unwrap();
+			VAnchorArbitraryDataVar::new_input(cs.clone(), || Ok(&extdatahash)).unwrap();
 
 		extdatahash_var.constrain().unwrap();
 
