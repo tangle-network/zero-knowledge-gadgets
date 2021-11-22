@@ -2,8 +2,11 @@ use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
 
-use ark_relations::r1cs::SynthesisError;
+use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
+use core::borrow::Borrow;
+
+use super::Keypair;
 
 #[derive(Clone)]
 pub struct KeypairVar<
@@ -61,6 +64,27 @@ impl<
 
 	pub fn private_key(&self) -> Result<FpVar<F>, SynthesisError> {
 		Ok(self.private_key.clone())
+	}
+}
+
+impl<
+		F: PrimeField,
+		H2: CRH,
+		HG2: CRHGadget<H2, F>,
+		H4: CRH,
+		HG4: CRHGadget<H4, F>,
+		H5: CRH,
+		HG5: CRHGadget<H5, F>,
+	> AllocVar<Keypair<F, H2, H4, H5>, F> for KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>
+{
+	fn new_variable<T: Borrow<Keypair<F, H2, H4, H5>>>(
+		into_ns: impl Into<Namespace<F>>,
+		f: impl FnOnce() -> Result<T, SynthesisError>,
+		mode: AllocationMode,
+	) -> Result<Self, SynthesisError> {
+		let inp = f()?.borrow().clone();
+		let private_key_in = FpVar::<F>::new_variable(into_ns, || Ok(inp.private_key), mode)?;
+		Ok(KeypairVar::new(&private_key_in)?)
 	}
 }
 

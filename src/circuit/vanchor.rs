@@ -1,6 +1,6 @@
 use crate::{
 	arbitrary::bridge_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
-	keypair::vanchor::constraints::KeypairVar,
+	keypair::vanchor::{constraints::KeypairVar, Keypair},
 	leaf::vanchor::{
 		constraints::{
 			PrivateVar as LeafPrivateInputsVar, PublicVar as LeafPublicInputsVar, VAnchorLeafGadget,
@@ -41,7 +41,7 @@ pub struct VAnchorCircuit<
 	ext_data_hash: ArbitraryInput<F>,
 
 	leaf_private_inputs: Vec<LeafPrivateInputs<F>>, // amount, blinding
-	private_key_inputs: Vec<F>,
+	keypair_inputs: Vec<Keypair<F, H2, H4, H5>>,
 	leaf_public_input: LeafPublicInputs<F>,          // chain_id
 	set_private_inputs: Vec<SetPrivateInputs<F, M>>, // diffs
 	root_set: [F; M],
@@ -53,10 +53,9 @@ pub struct VAnchorCircuit<
 	nullifier_hash: Vec<H4::Output>,
 
 	output_commitment: Vec<H5::Output>,
-	out_chain_id: Vec<F>,
-	out_amount: Vec<F>,
+	out_leaf_private: Vec<LeafPrivateInputs<F>>,
+	out_leaf_public: Vec<LeafPublicInputs<F>>,
 	out_pubkey: Vec<F>,
-	out_blinding: Vec<F>,
 
 	_hasher2: PhantomData<H2>,
 	_hasher2_gadget: PhantomData<HG2>,
@@ -101,7 +100,7 @@ where
 		public_amount: F,
 		ext_data_hash: ArbitraryInput<F>,
 		leaf_private_inputs: Vec<LeafPrivateInputs<F>>,
-		private_key_inputs: Vec<F>,
+		keypair_inputs: Vec<Keypair<F, H2, H4, H5>>,
 		leaf_public_input: LeafPublicInputs<F>,
 		set_private_inputs: Vec<SetPrivateInputs<F, M>>,
 		root_set: [F; M],
@@ -112,16 +111,15 @@ where
 		indices: Vec<F>,
 		nullifier_hash: Vec<H4::Output>,
 		output_commitment: Vec<H5::Output>,
-		out_chain_id: Vec<F>,
-		out_amount: Vec<F>,
+		out_leaf_private: Vec<LeafPrivateInputs<F>>,
+		out_leaf_public: Vec<LeafPublicInputs<F>>,
 		out_pubkey: Vec<F>,
-		out_blinding: Vec<F>,
 	) -> Self {
 		Self {
 			public_amount,
 			ext_data_hash,
 			leaf_private_inputs,
-			private_key_inputs,
+			keypair_inputs,
 			leaf_public_input,
 			set_private_inputs,
 			root_set,
@@ -132,10 +130,9 @@ where
 			indices,
 			nullifier_hash,
 			output_commitment,
-			out_chain_id,
-			out_amount,
+			out_leaf_private,
+			out_leaf_public,
 			out_pubkey,
-			out_blinding,
 			_hasher2: PhantomData,
 			_hasher2_gadget: PhantomData,
 			_hasher4: PhantomData,
@@ -216,10 +213,9 @@ where
 		&self,
 		hasher_params_w5_var: &HG5::ParametersVar,
 		output_commitment_var: &Vec<HG5::OutputVar>,
-		out_chain_id_var: &Vec<FpVar<F>>,
-		out_amount_var: &Vec<FpVar<F>>,
+		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
+		leaf_public_var: &Vec<LeafPublicInputsVar<F>>,
 		out_pubkey_var: &Vec<FpVar<F>>,
-		out_blinding_var: &Vec<FpVar<F>>,
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
@@ -227,19 +223,25 @@ where
 		// Vec::with_capacity(N_INS);
 		for tx in 0..N_OUTS {
 			// Computing the hash
-			let mut bytes = Vec::new();
-			bytes.extend(out_chain_id_var[tx].to_bytes()?);
-			bytes.extend(out_amount_var[tx].to_bytes()?);
-			bytes.extend(out_pubkey_var[tx].to_bytes()?);
-			bytes.extend(out_blinding_var[tx].to_bytes()?);
-			let in_utxo_hasher_var_out = HG5::evaluate(&hasher_params_w5_var, &bytes)?;
+			let out_utxo_hasher_var =
+				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
+					//<FpVar<F>>
+					&leaf_private_var[tx],
+					&out_pubkey_var[tx],
+					&leaf_public_var[tx],
+					&hasher_params_w5_var,
+				)?;
 			// End of computing the hash
-			in_utxo_hasher_var_out.enforce_equal(&output_commitment_var[tx])?;
+			let out_amount_var = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
+				&leaf_private_var[tx],
+			)
+			.unwrap();
+			out_utxo_hasher_var.enforce_equal(&output_commitment_var[tx])?;
 
 			// Check that amount is less than 2^248 in the field (to prevent overflow)
-			out_amount_var[tx].enforce_cmp_unchecked(&limit_var, Less, false)?;
+			out_amount_var.enforce_cmp_unchecked(&limit_var, Less, false)?;
 
-			sums_outs_var = sums_outs_var + out_amount_var[tx].clone();
+			sums_outs_var = sums_outs_var + out_amount_var;
 			//...
 		}
 		Ok(sums_outs_var)
@@ -314,17 +316,17 @@ where
 		let paths = self.paths.clone();
 		let indices = self.indices.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
-		let private_key_inputs = self.private_key_inputs.clone();
+		let keypair_inputs = self.keypair_inputs.clone();
 		let output_commitment = self.output_commitment.clone();
-		let out_chain_id = self.out_chain_id.clone();
-		let out_amount = self.out_amount.clone();
+		let out_leaf_private = self.out_leaf_private.clone();
+		let out_leaf_public = self.out_leaf_public.clone();
 		let out_pubkey = self.out_pubkey.clone();
-		let out_blinding = self.out_blinding.clone();
+
 		Self::new(
 			public_amount,
 			ext_data_hash,
 			leaf_private_inputs,
-			private_key_inputs,
+			keypair_inputs,
 			leaf_public_input,
 			set_private_inputs,
 			root_set,
@@ -335,10 +337,9 @@ where
 			indices,
 			nullifier_hash,
 			output_commitment,
-			out_chain_id,
-			out_amount,
+			out_leaf_private,
+			out_leaf_public,
 			out_pubkey,
-			out_blinding,
 		)
 	}
 }
@@ -376,7 +377,7 @@ where
 		let public_amount = self.public_amount.clone();
 		let ext_data_hash = self.ext_data_hash.clone();
 		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding
-		let private_key_inputs = self.private_key_inputs.clone();
+		let keypair_inputs = self.keypair_inputs.clone();
 		let leaf_public_input = self.leaf_public_input.clone(); // chain id
 		let set_private = self.set_private_inputs.clone();
 		let root_set = self.root_set.clone();
@@ -388,10 +389,9 @@ where
 		let nullifier_hash = self.nullifier_hash.clone();
 
 		let output_commitment = self.output_commitment.clone();
-		let out_chain_id = self.out_chain_id.clone();
-		let out_amount = self.out_amount.clone();
+		let out_leaf_private = self.out_leaf_private.clone();
+		let out_leaf_public = self.out_leaf_public.clone();
 		let out_pubkey = self.out_pubkey.clone();
-		let out_blinding = self.out_blinding.clone();
 		// 2^248
 		let limit: F = F::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662656",
@@ -428,7 +428,6 @@ where
 
 		// Private inputs
 		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N_INS);
-		let mut private_key_inputs_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
 		let mut inkeypair_var: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
 			Vec::with_capacity(N_INS);
 		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N_INS);
@@ -436,28 +435,23 @@ where
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
 
 		// Outputs
-		let mut out_amount_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
-		let mut out_chain_id_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
-		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
-		let mut out_blinding_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
+		let mut out_leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N_OUTS);
+		let mut out_leaf_public_var: Vec<LeafPublicInputsVar<F>> = Vec::with_capacity(N_OUTS);
+		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N_OUTS);
 
 		for i in 0..N_INS {
 			set_input_private_var.push(SetPrivateInputsVar::new_witness(cs.clone(), || {
 				Ok(set_private[i].clone())
 			})?);
 
-			private_key_inputs_var.push(FpVar::<F>::new_witness(cs.clone(), || {
-				Ok(private_key_inputs[i].clone())
-			})?);
+			inkeypair_var.push(KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new_witness(
+				cs.clone(),
+				|| Ok(keypair_inputs[i].clone()),
+			)?);
 
 			leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
 				Ok(leaf_private[i].clone())
 			})?);
-
-			inkeypair_var.push(
-				KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new(&private_key_inputs_var[i])
-					.unwrap(),
-			);
 
 			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, K>::new_witness(
 				cs.clone(),
@@ -468,17 +462,14 @@ where
 			})?);
 		}
 		for i in 0..N_OUTS {
-			out_amount_var.push(FpVar::<F>::new_witness(cs.clone(), || {
-				Ok(out_amount[i].clone())
+			out_leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
+				Ok(out_leaf_private[i].clone())
 			})?);
-			out_chain_id_var.push(FpVar::<F>::new_witness(cs.clone(), || {
-				Ok(out_chain_id[i].clone())
+			out_leaf_public_var.push(LeafPublicInputsVar::new_witness(cs.clone(), || {
+				Ok(out_leaf_public[i].clone())
 			})?);
 			out_pubkey_var.push(FpVar::<F>::new_witness(cs.clone(), || {
 				Ok(out_pubkey[i].clone())
-			})?);
-			out_blinding_var.push(FpVar::<F>::new_witness(cs.clone(), || {
-				Ok(out_blinding[i].clone())
 			})?);
 		}
 
@@ -504,10 +495,9 @@ where
 			.verify_output_var(
 				&hasher_params_w5_var,
 				&output_commitment_var,
-				&out_chain_id_var,
-				&out_amount_var,
+				&out_leaf_private_var,
+				&out_leaf_public_var,
 				&out_pubkey_var,
-				&out_blinding_var,
 				&limit_var,
 			)
 			.unwrap();
@@ -533,6 +523,7 @@ mod test {
 	use super::*;
 	use crate::{
 		ark_std::{One, Zero},
+		keypair::vanchor::Keypair,
 		leaf::vanchor::VAnchorLeaf,
 		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 		poseidon::{
@@ -592,6 +583,7 @@ mod test {
 	type PoseidonCRH4Gadget = PCRHGadget<BnFr, PoseidonRounds4>;
 	type PoseidonCRH5Gadget = PCRHGadget<BnFr, PoseidonRounds5>;
 
+	type KeyPair = Keypair<BnFr, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
 	type Leaf = VAnchorLeaf<BnFr, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
 	#[allow(non_camel_case_types)]
 	#[derive(Clone, PartialEq)]
@@ -657,12 +649,14 @@ mod test {
 		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
 
 		let private_key_1 = BnFr::rand(rng);
+		let keypair_1 = KeyPair::new(private_key_1.clone()).unwrap();
 		let privkey = to_bytes![private_key_1].unwrap();
 		let public_key_1 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
 		let private_key_2 = BnFr::rand(rng);
+		let keypair_2 = KeyPair::new(private_key_2.clone()).unwrap();
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_inputs = vec![private_key_1.clone(), private_key_2.clone()];
+		let keypair_inputs = vec![keypair_1, keypair_2];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -717,30 +711,47 @@ mod test {
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
 		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
+
 		let out_chain_id_1 = BnFr::one();
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
-		let output_commitment_1 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
-		let output_commitment_2 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
-		let out_chain_id = vec![out_chain_id_1, out_chain_id_2];
-		let out_amount = vec![out_amount_1, out_amount_2];
+		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
+		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
+		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
+
+		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
+		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
+		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
+		let output_commitment_1 = Leaf::create_leaf(
+			&out_leaf_private_1,
+			&out_pubkey_1,
+			&out_leaf_public_1,
+			&hasher_params_w5,
+		)
+		.unwrap();
+
+		let output_commitment_2 = Leaf::create_leaf(
+			&leaf_private_2,
+			&out_pubkey_2,
+			&out_leaf_public_2,
+			&hasher_params_w5,
+		)
+		.unwrap();
+
 		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let out_blinding = vec![out_blinding_1, out_blinding_2];
 		let output_commitment = vec![output_commitment_1, output_commitment_2];
 		let circuit = VACircuit::new(
 			public_amount.clone(),
 			ext_data_hash.clone(),
 			leaf_private_inputs,
-			private_key_inputs,
+			keypair_inputs,
 			leaf_public_input,
 			set_private_inputs,
 			root_set.clone(),
@@ -751,10 +762,9 @@ mod test {
 			indices,
 			nullifier_hash.clone(),
 			output_commitment.clone(),
-			out_chain_id,
-			out_amount,
+			out_leaf_private,
+			out_leaf_public,
 			out_pubkey,
-			out_blinding,
 		);
 
 		let mut public_inputs = Vec::new();
@@ -775,7 +785,7 @@ mod test {
 
 		assert!(res);
 	}
-
+	/*
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
@@ -2982,4 +2992,5 @@ mod test {
 
 		assert!(res);
 	}
+	 */
 }
