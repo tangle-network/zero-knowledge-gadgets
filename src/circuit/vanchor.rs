@@ -154,7 +154,7 @@ where
 		hasher_params_w4_var: &HG4::ParametersVar,
 		hasher_params_w5_var: &HG5::ParametersVar,
 		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
-		private_key_inputs_var: &Vec<FpVar<F>>,
+		inkeypair_var: &Vec<KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>>,
 		leaf_public_input_var: &LeafPublicInputsVar<F>,
 		//key_pairs_inputs_var: &Vec<KeypairVar<F, BG, H2, HG2, H4, HG4, H5, HG5>>,
 		in_path_indices_var: &Vec<FpVar<F>>,
@@ -168,20 +168,15 @@ where
 		let mut nullifier_hash: Vec<HG4::OutputVar> = Vec::with_capacity(N_INS);
 		let mut in_amount_tx: FpVar<F>;
 		//let keypairs
-		let mut inkeypair: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
-			Vec::with_capacity(N_INS);
+		
 		for tx in 0..N_INS {
-			inkeypair.push(
-				KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new(&private_key_inputs_var[tx])
-					.unwrap(),
-			);
 
 			// Computing the hash
 			in_utxo_hasher_var.push(
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 					//<FpVar<F>>
 					&leaf_private_var[tx],
-					&inkeypair[tx].public_key(hasher_params_w2_var).unwrap(),
+					&inkeypair_var[tx].public_key(hasher_params_w2_var).unwrap(),
 					&leaf_public_input_var,
 					&hasher_params_w5_var,
 				)?,
@@ -191,7 +186,7 @@ where
 			// Nullifier
 			nullifier_hash.push(
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_nullifier(
-					&inkeypair[tx].private_key().unwrap(),
+					&inkeypair_var[tx].private_key().unwrap(),
 					&in_utxo_hasher_var[tx],
 					&hasher_params_w4_var,
 					&in_path_indices_var[tx],
@@ -441,7 +436,8 @@ where
 		// Private inputs
 		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N_INS);
 		let mut private_key_inputs_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
-
+		let mut inkeypair_var: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
+			Vec::with_capacity(N_INS);
 		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N_INS);
 		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, K>> = Vec::with_capacity(N_INS);
 		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
@@ -464,6 +460,11 @@ where
 			leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
 				Ok(leaf_private[i].clone())
 			})?);
+
+			inkeypair_var.push(
+				KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new(&private_key_inputs_var[i])
+					.unwrap(),
+			);
 
 			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, K>::new_witness(
 				cs.clone(),
@@ -495,7 +496,7 @@ where
 				&hasher_params_w4_var,
 				&hasher_params_w5_var,
 				&leaf_private_var,
-				&private_key_inputs_var,
+				&inkeypair_var,
 				&leaf_public_input_var,
 				&in_path_indices_var,
 				&in_path_elements_var,
