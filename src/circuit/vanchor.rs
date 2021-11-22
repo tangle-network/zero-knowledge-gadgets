@@ -170,7 +170,7 @@ where
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 					//<FpVar<F>>
 					&leaf_private_var[tx],
-					&inkeypair_var[tx].public_key(hasher_params_w2_var).unwrap(),
+					&inkeypair_var[tx].public_key(hasher_params_w2_var)?,
 					&leaf_public_input_var,
 					&hasher_params_w5_var,
 				)?;
@@ -179,7 +179,7 @@ where
 			// Nullifier
 			let nullifier_hash =
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_nullifier(
-					&inkeypair_var[tx].private_key().unwrap(),
+					&inkeypair_var[tx].private_key()?,
 					&in_utxo_hasher_var,
 					&hasher_params_w4_var,
 					&in_path_indices_var[tx],
@@ -189,12 +189,11 @@ where
 
 			// add the roots and diffs signals to the vanchor circuit
 			let roothash = &in_path_elements_var[tx]
-				.root_hash(&in_utxo_hasher_var)
-				.unwrap();
+				.root_hash(&in_utxo_hasher_var)?;
 			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
 				&leaf_private_var[tx],
 			)
-			.unwrap();
+			?;
 			let check = SetMembershipGadget::check_is_enabled(
 				&roothash,
 				&root_set_var,
@@ -487,7 +486,7 @@ where
 				&root_set_var,
 				&set_input_private_var,
 			)
-			.unwrap();
+			?;
 
 		// verify correctness of transaction outputs
 		let sum_outs_var = self
@@ -499,14 +498,14 @@ where
 				&out_pubkey_var,
 				&limit_var,
 			)
-			.unwrap();
+			?;
 
 		// check that there are no same nullifiers among all inputs
-		self.verify_no_same_nul(&in_nullifier_var).unwrap();
+		self.verify_no_same_nul(&in_nullifier_var)?;
 
 		// verify amount invariant
 		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
-			.unwrap();
+			?;
 
 		// optional safety constraint to make sure extDataHash cannot be changed
 		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor
