@@ -785,7 +785,7 @@ mod test {
 
 		assert!(res);
 	}
-	
+
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
@@ -878,15 +878,11 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
-		//let output_commitment_1 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
-		//let output_commitment_2 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
@@ -895,7 +891,7 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -1046,15 +1042,11 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
-		//let output_commitment_1 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
-		//let output_commitment_2 = PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
@@ -1063,7 +1055,7 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
@@ -1121,7 +1113,6 @@ mod test {
 		assert!(res);
 	}
 
-	
 	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_nullifier() {
@@ -1201,7 +1192,8 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
-		let nullifier_hash_1 = BnFr::rand(rng);// Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let nullifier_hash_1 = BnFr::rand(rng); // Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4,
+										// &index_0).unwrap();
 		let nullifier_hash_2 =
 			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
@@ -1215,12 +1207,10 @@ mod test {
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
 
-
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-
 
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
@@ -1229,7 +1219,7 @@ mod test {
 		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
 		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
 		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-		
+
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
 			&out_pubkey_1,
