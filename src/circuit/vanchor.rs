@@ -153,7 +153,6 @@ where
 		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
 		inkeypair_var: &Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>>,
 		leaf_public_input_var: &LeafPublicInputsVar<F>,
-		//key_pairs_inputs_var: &Vec<KeypairVar<F, BG, H2, HG2, H4, HG4, H5, HG5>>,
 		in_path_indices_var: &Vec<FpVar<F>>,
 		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, K>>,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
@@ -162,13 +161,11 @@ where
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
 		let mut in_amount_tx: FpVar<F>;
-		//let keypairs
 
 		for tx in 0..N_INS {
 			// Computing the hash
 			let in_utxo_hasher_var =
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
-					//<FpVar<F>>
 					&leaf_private_var[tx],
 					&inkeypair_var[tx].public_key(hasher_params_w2_var)?,
 					&leaf_public_input_var,
@@ -187,7 +184,7 @@ where
 
 			nullifier_hash.enforce_equal(&in_nullifier_var[tx])?;
 
-			// add the roots and diffs signals to the vanchor circuit
+			// Add the roots and diffs signals to the vanchor circuit
 			let roothash = &in_path_elements_var[tx]
 				.root_hash(&in_utxo_hasher_var)?;
 			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
@@ -218,13 +215,11 @@ where
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
-		//let mut in_utxo_hasher_var_out: Vec<HG5::OutputVar> =
-		// Vec::with_capacity(N_INS);
+		
 		for tx in 0..N_OUTS {
 			// Computing the hash
 			let out_utxo_hasher_var =
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
-					//<FpVar<F>>
 					&leaf_private_var[tx],
 					&out_pubkey_var[tx],
 					&leaf_public_var[tx],
@@ -240,7 +235,6 @@ where
 			out_amount_var.enforce_cmp_unchecked(&limit_var, Less, false)?;
 
 			sums_outs_var = sums_outs_var + out_amount_var;
-			//...
 		}
 		Ok(sums_outs_var)
 	}
@@ -683,7 +677,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -845,7 +838,6 @@ mod test {
 
 		let root_set = [root; TEST_M];
 
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -1008,7 +1000,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -1171,15 +1162,13 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
-		let nullifier_hash_1 = BnFr::rand(rng); // Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4,
-										// &index_0).unwrap();
+		let nullifier_hash_1 = BnFr::rand(rng);
 		let nullifier_hash_2 =
 			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
@@ -1334,7 +1323,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -1352,17 +1340,11 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.get_amount().unwrap();
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1,
-		// out_blinding_1].unwrap(); let output_commitment_1 =
-		// PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2,
-		// out_blinding_2].unwrap(); let output_commitment_2 =
-		// PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
@@ -1501,7 +1483,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -1525,17 +1506,11 @@ mod test {
 		//
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1,
-		// out_blinding_1].unwrap(); let output_commitment_1 =
-		// PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_chain_id_2 = BnFr::one();
 		let out_amount_2 = leaf_private_2.get_amount().unwrap();
 		let out_pubkey_2 = BnFr::rand(rng);
 		let out_blinding_2 = BnFr::rand(rng);
-		//let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2,
-		// out_blinding_2].unwrap(); let output_commitment_2 =
-		// PoseidonCRH5::evaluate(&hasher_params_w5, &bytes).unwrap();
 
 		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(&out_amount_1, &out_blinding_1);
 		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(&out_amount_2, &out_blinding_2);
@@ -1681,7 +1656,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -1845,7 +1819,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -2013,7 +1986,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let indices = vec![index_0];
 
@@ -2156,7 +2128,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let indices = vec![index_0];
 
@@ -2330,7 +2301,6 @@ mod test {
 		let mut root_set = [BnFr::rand(rng); TEST_M];
 		root_set[0] = root;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
 		assert_eq!(index_0, BnFr::zero());
@@ -2617,7 +2587,6 @@ mod test {
 		root_set[0] = root_1;
 		root_set[1] = root_2;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree_1.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_2.get_index(&tree_1.root(), &leaf_2).unwrap();
 		let index_2: BnFr = path_3.get_index(&tree_1.root(), &leaf_3).unwrap();
@@ -3030,7 +2999,6 @@ mod test {
 		root_set[0] = root_1;
 		root_set[1] = root_2;
 		assert_eq!(root_set.len(), TEST_M);
-		//let leaves = vec![leaf, BnFr::rand(rng), BnFr::rand(rng)];
 		let index_0: BnFr = path_1.get_index(&tree_1.root(), &leaf_1).unwrap();
 		let index_1: BnFr = path_2.get_index(&tree_1.root(), &leaf_2).unwrap();
 		let index_2: BnFr = path_3.get_index(&tree_1.root(), &leaf_3).unwrap();
