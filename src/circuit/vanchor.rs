@@ -164,40 +164,36 @@ where
 		set_input_private_var: &Vec<SetPrivateInputsVar<F, M>>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
-		let mut in_utxo_hasher_var: Vec<HG5::OutputVar> = Vec::with_capacity(N_INS);
-		let mut nullifier_hash: Vec<HG4::OutputVar> = Vec::with_capacity(N_INS);
 		let mut in_amount_tx: FpVar<F>;
 		//let keypairs
 		
 		for tx in 0..N_INS {
 
 			// Computing the hash
-			in_utxo_hasher_var.push(
+			let in_utxo_hasher_var = 
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_leaf(
 					//<FpVar<F>>
 					&leaf_private_var[tx],
 					&inkeypair_var[tx].public_key(hasher_params_w2_var).unwrap(),
 					&leaf_public_input_var,
 					&hasher_params_w5_var,
-				)?,
-			);
+				)?;
 			// End of computing the hash
 
 			// Nullifier
-			nullifier_hash.push(
+			 let nullifier_hash = 
 				VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::create_nullifier(
 					&inkeypair_var[tx].private_key().unwrap(),
-					&in_utxo_hasher_var[tx],
+					&in_utxo_hasher_var,
 					&hasher_params_w4_var,
 					&in_path_indices_var[tx],
-				)?,
-			);
+				)?;
 
-			nullifier_hash[tx].enforce_equal(&in_nullifier_var[tx])?;
+			nullifier_hash.enforce_equal(&in_nullifier_var[tx])?;
 
 			// add the roots and diffs signals to the vanchor circuit
 			let roothash = &in_path_elements_var[tx]
-				.root_hash(&in_utxo_hasher_var[tx])
+				.root_hash(&in_utxo_hasher_var)
 				.unwrap();
 			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
 				&leaf_private_var[tx],
@@ -228,7 +224,7 @@ where
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
-		let mut in_utxo_hasher_var_out: Vec<HG5::OutputVar> = Vec::with_capacity(N_INS);
+		//let mut in_utxo_hasher_var_out: Vec<HG5::OutputVar> = Vec::with_capacity(N_INS);
 		for tx in 0..N_OUTS {
 			// Computing the hash
 			let mut bytes = Vec::new();
@@ -236,9 +232,9 @@ where
 			bytes.extend(out_amount_var[tx].to_bytes()?);
 			bytes.extend(out_pubkey_var[tx].to_bytes()?);
 			bytes.extend(out_blinding_var[tx].to_bytes()?);
-			in_utxo_hasher_var_out.push(HG5::evaluate(&hasher_params_w5_var, &bytes)?);
+			let in_utxo_hasher_var_out = HG5::evaluate(&hasher_params_w5_var, &bytes)?;
 			// End of computing the hash
-			in_utxo_hasher_var_out[tx].enforce_equal(&output_commitment_var[tx])?;
+			in_utxo_hasher_var_out.enforce_equal(&output_commitment_var[tx])?;
 
 			// Check that amount is less than 2^248 in the field (to prevent overflow)
 			out_amount_var[tx].enforce_cmp_unchecked(&limit_var, Less, false)?;
@@ -254,12 +250,9 @@ where
 		&self,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
 	) -> Result<(), SynthesisError> {
-		let mut same_nullifiers: Vec<HG4::OutputVar> = Vec::with_capacity(2);
 		for i in 0..N_INS - 1 {
 			for j in (i + 1)..N_INS {
-				same_nullifiers.push(in_nullifier_var[i].clone());
-				same_nullifiers.push(in_nullifier_var[j].clone());
-				same_nullifiers[0].enforce_not_equal(&same_nullifiers[1])?;
+				in_nullifier_var[i].enforce_not_equal(&in_nullifier_var[j])?;
 			}
 		}
 
