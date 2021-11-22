@@ -185,12 +185,10 @@ where
 			nullifier_hash.enforce_equal(&in_nullifier_var[tx])?;
 
 			// Add the roots and diffs signals to the vanchor circuit
-			let roothash = &in_path_elements_var[tx]
-				.root_hash(&in_utxo_hasher_var)?;
+			let roothash = &in_path_elements_var[tx].root_hash(&in_utxo_hasher_var)?;
 			in_amount_tx = VAnchorLeafGadget::<F, H2, HG2, H4, HG4, H5, HG5>::get_amount(
 				&leaf_private_var[tx],
-			)
-			?;
+			)?;
 			let check = SetMembershipGadget::check_is_enabled(
 				&roothash,
 				&root_set_var,
@@ -215,7 +213,7 @@ where
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
-		
+
 		for tx in 0..N_OUTS {
 			// Computing the hash
 			let out_utxo_hasher_var =
@@ -398,18 +396,11 @@ where
 			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input.clone()))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let mut in_nullifier_var: Vec<HG4::OutputVar> = Vec::with_capacity(N_INS);
-		for i in 0..N_INS {
-			in_nullifier_var.push(HG4::OutputVar::new_input(cs.clone(), || {
-				Ok(nullifier_hash[i].clone())
-			})?);
-		}
-		let mut output_commitment_var: Vec<HG5::OutputVar> = Vec::with_capacity(N_INS);
-		for i in 0..N_OUTS {
-			output_commitment_var.push(HG5::OutputVar::new_input(cs.clone(), || {
-				Ok(output_commitment[i].clone())
-			})?);
-		}
+		let in_nullifier_var =
+			Vec::<HG4::OutputVar>::new_input(cs.clone(), || Ok(nullifier_hash.clone()))?;
+		let output_commitment_var =
+			Vec::<HG5::OutputVar>::new_input(cs.clone(), || Ok(output_commitment.clone()))?;
+
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 
 		// Constants
@@ -419,87 +410,56 @@ where
 		let hasher_params_w5_var = HG5::ParametersVar::new_constant(cs.clone(), hasher_params_w5)?;
 
 		// Private inputs
-		let mut leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N_INS);
-		let mut inkeypair_var: Vec<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>> =
-			Vec::with_capacity(N_INS);
-		let mut set_input_private_var: Vec<SetPrivateInputsVar<F, M>> = Vec::with_capacity(N_INS);
-		let mut in_path_elements_var: Vec<PathVar<F, C, HGT, LHGT, K>> = Vec::with_capacity(N_INS);
-		let mut in_path_indices_var: Vec<FpVar<F>> = Vec::with_capacity(N_INS);
+		let leaf_private_var =
+			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(leaf_private.clone()))?;
+		let inkeypair_var =
+			Vec::<KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>>::new_witness(cs.clone(), || {
+				Ok(keypair_inputs.clone())
+			})?;
+		let set_input_private_var =
+			Vec::<SetPrivateInputsVar<F, M>>::new_witness(cs.clone(), || Ok(set_private.clone()))?;
+		let in_path_elements_var =
+			Vec::<PathVar<F, C, HGT, LHGT, K>>::new_witness(cs.clone(), || Ok(paths.clone()))?;
+		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices.clone()))?;
 
 		// Outputs
-		let mut out_leaf_private_var: Vec<LeafPrivateInputsVar<F>> = Vec::with_capacity(N_OUTS);
-		let mut out_leaf_public_var: Vec<LeafPublicInputsVar<F>> = Vec::with_capacity(N_OUTS);
-		let mut out_pubkey_var: Vec<FpVar<F>> = Vec::with_capacity(N_OUTS);
-
-		for i in 0..N_INS {
-			set_input_private_var.push(SetPrivateInputsVar::new_witness(cs.clone(), || {
-				Ok(set_private[i].clone())
-			})?);
-
-			inkeypair_var.push(KeypairVar::<F, H2, HG2, H4, HG4, H5, HG5>::new_witness(
-				cs.clone(),
-				|| Ok(keypair_inputs[i].clone()),
-			)?);
-
-			leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
-				Ok(leaf_private[i].clone())
-			})?);
-
-			in_path_elements_var.push(PathVar::<F, C, HGT, LHGT, K>::new_witness(
-				cs.clone(),
-				|| Ok(paths[i].clone()),
-			)?);
-			in_path_indices_var.push(FpVar::<F>::new_witness(cs.clone(), || {
-				Ok(indices[i].clone())
-			})?);
-		}
-		for i in 0..N_OUTS {
-			out_leaf_private_var.push(LeafPrivateInputsVar::new_witness(cs.clone(), || {
-				Ok(out_leaf_private[i].clone())
-			})?);
-			out_leaf_public_var.push(LeafPublicInputsVar::new_witness(cs.clone(), || {
-				Ok(out_leaf_public[i].clone())
-			})?);
-			out_pubkey_var.push(FpVar::<F>::new_witness(cs.clone(), || {
-				Ok(out_pubkey[i].clone())
-			})?);
-		}
+		let out_leaf_private_var = Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || {
+			Ok(out_leaf_private.clone())
+		})?;
+		let out_leaf_public_var =
+			Vec::<LeafPublicInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_public.clone()))?;
+		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_pubkey.clone()))?;
 
 		// verify correctness of transaction inputs
-		let sum_ins_var = self
-			.verify_input_var(
-				&hasher_params_w2_var,
-				&hasher_params_w4_var,
-				&hasher_params_w5_var,
-				&leaf_private_var,
-				&inkeypair_var,
-				&leaf_public_input_var,
-				&in_path_indices_var,
-				&in_path_elements_var,
-				&in_nullifier_var,
-				&root_set_var,
-				&set_input_private_var,
-			)
-			?;
+		let sum_ins_var = self.verify_input_var(
+			&hasher_params_w2_var,
+			&hasher_params_w4_var,
+			&hasher_params_w5_var,
+			&leaf_private_var,
+			&inkeypair_var,
+			&leaf_public_input_var,
+			&in_path_indices_var,
+			&in_path_elements_var,
+			&in_nullifier_var,
+			&root_set_var,
+			&set_input_private_var,
+		)?;
 
 		// verify correctness of transaction outputs
-		let sum_outs_var = self
-			.verify_output_var(
-				&hasher_params_w5_var,
-				&output_commitment_var,
-				&out_leaf_private_var,
-				&out_leaf_public_var,
-				&out_pubkey_var,
-				&limit_var,
-			)
-			?;
+		let sum_outs_var = self.verify_output_var(
+			&hasher_params_w5_var,
+			&output_commitment_var,
+			&out_leaf_private_var,
+			&out_leaf_public_var,
+			&out_pubkey_var,
+			&limit_var,
+		)?;
 
 		// check that there are no same nullifiers among all inputs
 		self.verify_no_same_nul(&in_nullifier_var)?;
 
 		// verify amount invariant
-		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)
-			?;
+		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)?;
 
 		// optional safety constraint to make sure extDataHash cannot be changed
 		// TODO: Modify it when the Arbitrary gadget is Implemened for VAnchor
