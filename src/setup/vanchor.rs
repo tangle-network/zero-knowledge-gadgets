@@ -1,4 +1,10 @@
-use crate::{arbitrary::vanchor_data::VAnchorArbitraryData, leaf::vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf}, merkle_tree::{Config, Node, Path}, poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, Rounds, CRH}, setup::common::*};
+use crate::{
+	arbitrary::vanchor_data::VAnchorArbitraryData,
+	leaf::vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
+	merkle_tree::{Config, Node, Path},
+	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, Rounds, CRH},
+	setup::common::*,
+};
 use ark_crypto_primitives::CRH as CRHTrait;
 use paste::paste;
 
@@ -33,10 +39,7 @@ pub fn generate_vanchor_leaf_rng<
 	(leaf_private, leaf_public, leaf_hash)
 }
 
-
-pub fn setup_vanchor_arbitrary_data<F: PrimeField>(
-	ext_data: F,
-) -> VAnchorArbitraryData<F> {
+pub fn setup_vanchor_arbitrary_data<F: PrimeField>(ext_data: F) -> VAnchorArbitraryData<F> {
 	VAnchorArbitraryData::new(ext_data)
 }
 

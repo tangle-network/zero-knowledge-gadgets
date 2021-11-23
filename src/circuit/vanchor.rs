@@ -1,5 +1,8 @@
 use crate::{
-	arbitrary::vanchor_data::{constraints::VAnchorArbitraryDataVar as ArbitraryInputVar, VAnchorArbitraryData as ArbitraryInput},
+	arbitrary::vanchor_data::{
+		constraints::VAnchorArbitraryDataVar as ArbitraryInputVar,
+		VAnchorArbitraryData as ArbitraryInput,
+	},
 	keypair::vanchor::{constraints::KeypairVar, Keypair},
 	leaf::vanchor::{
 		constraints::{
@@ -196,7 +199,7 @@ where
 				&in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
-      
+
 			sums_ins_var = sums_ins_var + in_amount_tx;
 		}
 		Ok(sums_ins_var)
@@ -472,10 +475,17 @@ where
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{ark_std::{One, Zero}, keypair::vanchor::Keypair, leaf::vanchor::VAnchorLeaf, merkle_tree::{Config as MerkleConfig, SparseMerkleTree}, poseidon::{
+	use crate::{
+		ark_std::{One, Zero},
+		keypair::vanchor::Keypair,
+		leaf::vanchor::VAnchorLeaf,
+		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
+		poseidon::{
 			constraints::CRHGadget as PCRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds,
 			CRH as PCRH,
-		}, setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data}};
+		},
+		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+	};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
 	use ark_groth16::Groth16;
@@ -567,7 +577,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -722,7 +731,7 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
+
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
 		let in_amount_2 = BnFr::one() + BnFr::one();
@@ -858,7 +867,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -876,7 +884,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1014,7 +1021,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -1032,7 +1038,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1169,7 +1174,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -1187,7 +1191,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1323,7 +1326,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -1341,7 +1343,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1483,7 +1484,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -1501,7 +1501,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let limit: BnFr = BnFr::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662656",
@@ -1647,7 +1646,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -1665,7 +1663,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::one();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1804,7 +1801,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let truncated_public_inputs = public_inputs[2..].to_vec();
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1841,7 +1837,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -1944,7 +1939,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -1977,7 +1971,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2095,7 +2088,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -2129,7 +2121,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2255,7 +2246,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -2293,7 +2283,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -2664,7 +2653,6 @@ mod test {
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
 
-
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
 		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
@@ -2699,7 +2687,6 @@ mod test {
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
 		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let chain_id = BnFr::zero();
-		
 
 		let in_amount_1 = BnFr::one();
 		let blinding_1 = BnFr::rand(rng);
@@ -3016,7 +3003,6 @@ mod test {
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
 		public_inputs.push(ext_data_hash.ext_data);
-
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();

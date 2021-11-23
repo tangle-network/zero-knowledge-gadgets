@@ -20,6 +20,9 @@ pub mod set;
 pub mod setup;
 pub mod utils;
 
+#[cfg(feature = "plonk")]
+pub mod plonk;
+
 pub type Error = Box<dyn ark_std::error::Error>;
 
 pub mod prelude {
