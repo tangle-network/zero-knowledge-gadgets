@@ -1,3 +1,10 @@
+use crate::poseidon::sbox::PoseidonSbox;
+
+pub const FULL_ROUNDS: usize = 8;
+pub const PARTIAL_ROUNDS: usize = 60;
+pub const WIDTH: usize = 5;
+pub const EXPONENTIOATION: PoseidonSbox = PoseidonSbox::Exponentiation(17);
+
 pub const ROUND_CONSTS: [&str; 215] = [
 	"0x2f519d236ff3908aeed8bc12b6e3204820c18780cda2aa9bf32a675722a943e7",
 	"0x0d463eca09295bbf17ecbd6c0f1a2ae22e9e971abf332b50f6dc652948130ac9",

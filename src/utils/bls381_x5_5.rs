@@ -11,6 +11,13 @@
 // Sage script command:
 // sage generate_parameters_grain.sage 1 0 255 5 8 60
 // 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+use crate::poseidon::sbox::PoseidonSbox;
+
+pub const FULL_ROUNDS: usize = 8;
+pub const PARTIAL_ROUNDS: usize = 60;
+pub const WIDTH: usize = 5;
+pub const EXPONENTIOATION: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+
 pub const ROUND_CONSTS: [&str; 340] = [
 	"0x5ee52b2f39e240a4006e97a15a7609dce42fa9aa510d11586a56db98fa925158",
 	"0x3e92829ce321755f769c6fd0d51e98262d7747ad553b028dbbe98b5274b9c8e1",

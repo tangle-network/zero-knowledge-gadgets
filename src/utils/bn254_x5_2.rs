@@ -1,3 +1,10 @@
+use crate::poseidon::sbox::PoseidonSbox;
+
+pub const FULL_ROUNDS: usize = 8;
+pub const PARTIAL_ROUNDS: usize = 56;
+pub const WIDTH: usize = 2;
+pub const EXPONENTIOATION: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+
 pub const ROUND_CONSTS: [&str; 128] = [
 	"0x09c46e9ec68e9bd4fe1faaba294cba38a71aa177534cdd1b6c7dc0dbd0abd7a7",
 	"0x0c0356530896eec42a97ed937f3135cfc5142b3ae405b8343c1d83ffa604cb81",
@@ -138,3 +145,16 @@ pub const MDS_ENTRIES: [[&str; 2]; 2] = [
 		"0x1274e649a32ed355a31a6ed69724e1adade857e86eb5c3a121bcd147943203c8",
 	],
 ];
+
+/* 
+#[derive(Default, Clone)]
+struct PoseidonRounds2;
+
+impl Rounds for PoseidonRounds2 {
+	const FULL_ROUNDS: usize = 8;
+	const PARTIAL_ROUNDS: usize = 56;
+	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+	const WIDTH: usize = 2;
+} */
+
+
