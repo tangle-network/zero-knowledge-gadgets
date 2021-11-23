@@ -20,9 +20,8 @@ impl<B: Clone + ToBytes, H2: CRH> Keypair<B, H2> {
 	}
 
 	pub fn public_key(&self, h: &H2::Parameters) -> Result<H2::Output, Error> {
-		let bytes = to_bytes![&self.private_key].unwrap();
-		let pubkey = H2::evaluate(&h, &bytes).unwrap();
-		Ok(pubkey)
+		let bytes = to_bytes![&self.private_key]?;
+		H2::evaluate(&h, &bytes)
 	}
 }
 

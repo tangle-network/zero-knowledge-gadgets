@@ -30,11 +30,9 @@ impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> KeypairVar<F, H2, HG2> {
 		&self,
 		hg2: &HG2::ParametersVar,
 	) -> Result<<HG2 as CRHGadget<H2, F>>::OutputVar, SynthesisError> {
-		let privkey_var = self.private_key.clone();
 		let mut bytes = Vec::<UInt8<F>>::new();
-		bytes.extend(privkey_var.to_bytes().unwrap());
-		let pubkey_var = HG2::evaluate(&hg2, &bytes).unwrap();
-		Ok(pubkey_var)
+		bytes.extend(self.private_key.to_bytes()?);
+		HG2::evaluate(&hg2, &bytes)
 	}
 }
 
