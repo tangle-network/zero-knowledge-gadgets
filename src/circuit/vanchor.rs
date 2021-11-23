@@ -172,7 +172,7 @@ where
 				&leaf_public_input_var,
 				&hasher_params_w5_var,
 			)?;
-			// End of computing the hash
+
 			let signature = inkeypair_var[tx].signature::<FpVar<F>, H4, HG4, H5, HG5>(
 				&in_utxo_hasher_var,
 				&in_path_indices_var[tx],
@@ -224,7 +224,7 @@ where
 				&leaf_public_var[tx],
 				&hasher_params_w5_var,
 			)?;
-			// End of computing the hash
+
 			let out_amount_var = &leaf_private_var[tx].amount;
 			out_utxo_hasher_var.enforce_equal(&output_commitment_var[tx])?;
 
@@ -261,7 +261,6 @@ where
 		res.enforce_equal(&sum_outs_var)?;
 		Ok(())
 	}
-	//TODO: Optional safety constraint to make sure extDataHash cannot be changed
 }
 
 impl<
@@ -607,8 +606,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -619,11 +616,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -767,8 +762,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -779,11 +772,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = BnFr::rand(rng);
 
 		let root_set = [root; TEST_M];
@@ -926,8 +917,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -938,11 +927,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = BnFr::rand(rng);
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1086,8 +1073,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -1098,11 +1083,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1242,8 +1225,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -1254,11 +1235,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1397,8 +1376,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -1409,11 +1386,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1568,8 +1543,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -1580,11 +1553,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1729,8 +1700,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -1741,11 +1710,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1895,8 +1862,6 @@ mod test {
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1];
@@ -1906,11 +1871,9 @@ mod test {
 		let paths = vec![path_1.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -2032,8 +1995,6 @@ mod test {
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1];
@@ -2043,11 +2004,9 @@ mod test {
 		let paths = vec![path_1.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -2199,8 +2158,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves = [leaf_1, leaf_2];
@@ -2211,11 +2168,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -2467,8 +2422,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4];
@@ -2498,11 +2451,9 @@ mod test {
 		];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root_1 = tree_1.root().inner();
 		let root_2 = tree_2.root().inner();
 
@@ -2901,8 +2852,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4];
@@ -2932,11 +2881,9 @@ mod test {
 		];
 
 		let public_amount = BnFr::one();
-		//TODO: Change aritrary data
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		//let ext_data_hash_2 = setup_arbitrary_data(recipient, relayer, fee, refund,
-		// commitment_2);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root_1 = tree_1.root().inner();
 		let root_2 = tree_2.root().inner();
 

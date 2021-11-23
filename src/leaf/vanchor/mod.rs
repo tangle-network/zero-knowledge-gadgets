@@ -144,7 +144,6 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
@@ -173,7 +172,6 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(leaf, commitment);
 
