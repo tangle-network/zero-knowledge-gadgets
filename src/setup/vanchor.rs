@@ -42,52 +42,5 @@ pub fn setup_vanchor_arbitrary_data<F: PrimeField>(ext_data: F) -> VAnchorArbitr
 	VAnchorArbitraryData::new(ext_data)
 }
 
-/*
-// Generate code for leaf setup function: `setup_<leaf>`
-macro_rules! impl_setup_bridge_leaf {
-	(
-		leaf: $leaf_ty:ident, // leaf type
-		crh: $leaf_crh_ty:ident, // crh type
-		params: $leaf_crh_param_ty:ident // crh params type
-	) => {
-		paste! {
-			pub fn [<setup_ $leaf_ty:lower>]<R: Rng, F: PrimeField>(
-				chain_id: F,
-				params: &$leaf_crh_param_ty<F>,
-				rng: &mut R,
-			) -> (
-				LeafPrivate<F>,
-				LeafPublic<F>,
-				<$leaf_ty<F> as LeafCreation<$leaf_crh_ty<F>>>::Leaf,
-				<$leaf_ty<F> as LeafCreation<$leaf_crh_ty<F>>>::Nullifier,
-			) {
-				// Secret inputs for the leaf
-				let leaf_private = $leaf_ty::generate_secrets(rng).unwrap();
-				// Public inputs for the leaf
-				let leaf_public = LeafPublic::new(chain_id);
-
-				// Creating the leaf
-				let leaf = $leaf_ty::create_leaf(&leaf_private, &leaf_public, params).unwrap();
-				let nullifier_hash = $leaf_ty::create_nullifier_hash(&leaf_private, params).unwrap();
-				(leaf_private, leaf_public, leaf, nullifier_hash)
-			}
-		}
-	};
-}
-
-impl_setup_bridge_leaf!(
-	leaf: Leaf_x5,
-	crh: PoseidonCRH_x5_5,
-	params: PoseidonParameters
-);
-impl_setup_bridge_leaf!(
-	leaf: Leaf_Circomx5,
-	crh: PoseidonCircomCRH_x5_5,
-	params: PoseidonParameters
-);
-impl_setup_bridge_leaf!(
-	leaf: Leaf_x17,
-	crh: PoseidonCRH_x17_5,
-	params: PoseidonParameters
-);
-*/
+// pub struct VAnchorPoverSetup<F: PrimeField, H2: CRHTrait, H4: CRHTrait, H5:
+// CRHTrait, R: Rng> {}

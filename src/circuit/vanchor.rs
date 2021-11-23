@@ -2231,8 +2231,8 @@ mod test {
 		let blinding_7 = BnFr::rand(rng);
 		let in_amount_8 = BnFr::one() + BnFr::one();
 		let blinding_8 = BnFr::rand(rng);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
 		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
+		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
 		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(in_amount_3, blinding_3);
 		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(in_amount_4, blinding_4);
 		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(in_amount_5, blinding_5);
