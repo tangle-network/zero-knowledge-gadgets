@@ -9,45 +9,20 @@ use core::borrow::Borrow;
 use super::Keypair;
 
 #[derive(Clone)]
-pub struct KeypairVar<
-	F: PrimeField,
-	H2: CRH,
-	HG2: CRHGadget<H2, F>,
-	H4: CRH,
-	HG4: CRHGadget<H4, F>,
-	H5: CRH,
-	HG5: CRHGadget<H5, F>,
-> {
-	private_key: FpVar<F>,
+pub struct KeypairVar<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> {
+	pub private_key: FpVar<F>,
 
 	_h2: PhantomData<H2>,
 	_hg2: PhantomData<HG2>,
-	_h4: PhantomData<H4>,
-	_hg4: PhantomData<HG4>,
-	_h5: PhantomData<H5>,
-	_hg5: PhantomData<HG5>,
 }
 
-impl<
-		F: PrimeField,
-		H2: CRH,
-		HG2: CRHGadget<H2, F>,
-		H4: CRH,
-		HG4: CRHGadget<H4, F>,
-		H5: CRH,
-		HG5: CRHGadget<H5, F>,
-	> KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>
-{
+impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> KeypairVar<F, H2, HG2> {
 	pub fn new(private_key_in: &FpVar<F>) -> Result<Self, SynthesisError> {
 		let private_key = private_key_in.clone();
 		Ok(Self {
 			private_key,
 			_h2: PhantomData,
 			_hg2: PhantomData,
-			_h4: PhantomData,
-			_hg4: PhantomData,
-			_h5: PhantomData,
-			_hg5: PhantomData,
 		})
 	}
 
@@ -61,23 +36,12 @@ impl<
 		let pubkey_var = HG2::evaluate(&hg2, &bytes).unwrap();
 		Ok(pubkey_var)
 	}
-
-	pub fn private_key(&self) -> Result<FpVar<F>, SynthesisError> {
-		Ok(self.private_key.clone())
-	}
 }
 
-impl<
-		F: PrimeField,
-		H2: CRH,
-		HG2: CRHGadget<H2, F>,
-		H4: CRH,
-		HG4: CRHGadget<H4, F>,
-		H5: CRH,
-		HG5: CRHGadget<H5, F>,
-	> AllocVar<Keypair<F, H2, H4, H5>, F> for KeypairVar<F, H2, HG2, H4, HG4, H5, HG5>
+impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> AllocVar<Keypair<F, H2>, F>
+	for KeypairVar<F, H2, HG2>
 {
-	fn new_variable<T: Borrow<Keypair<F, H2, H4, H5>>>(
+	fn new_variable<T: Borrow<Keypair<F, H2>>>(
 		into_ns: impl Into<Namespace<F>>,
 		f: impl FnOnce() -> Result<T, SynthesisError>,
 		mode: AllocationMode,
@@ -122,33 +86,8 @@ mod test {
 		const WIDTH: usize = 2;
 	}
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds4;
-
-	impl Rounds for PoseidonRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
 	type PoseidonCRH2 = CRH<Fq, PoseidonRounds2>;
-	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
-
 	type PoseidonCRH2Gadget = CRHGadget<Fq, PoseidonRounds2>;
-	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
-	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
 	use crate::ark_std::UniformRand;
 	#[test]
@@ -175,16 +114,8 @@ mod test {
 		.unwrap();
 		let pubkey_var = PoseidonCRH2Gadget::evaluate(&params_var, &privkey_var).unwrap();
 		let privkey_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(private_key)).unwrap();
-		let keypair_var = KeypairVar::<
-			Fq,
-			PoseidonCRH2,
-			PoseidonCRH2Gadget,
-			PoseidonCRH4,
-			PoseidonCRH4Gadget,
-			PoseidonCRH5,
-			PoseidonCRH5Gadget,
-		>::new(&privkey_var)
-		.unwrap();
+		let keypair_var =
+			KeypairVar::<Fq, PoseidonCRH2, PoseidonCRH2Gadget>::new(&privkey_var).unwrap();
 		let new_pubkey_var = keypair_var.public_key(&params_var).unwrap();
 		let res = pubkey_var.is_eq(&new_pubkey_var).unwrap();
 
@@ -193,7 +124,7 @@ mod test {
 		assert_eq!(pubkey, new_pubkey_var.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());
 
-		let new_private_key = keypair_var.private_key().unwrap();
+		let new_private_key = keypair_var.private_key;
 		let res2 = new_private_key.is_eq(&privkey_var).unwrap();
 		assert!(res2.value().unwrap());
 		assert_eq!(private_key, new_private_key.value().unwrap());

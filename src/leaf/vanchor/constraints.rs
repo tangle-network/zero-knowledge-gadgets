@@ -9,7 +9,7 @@ use core::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
-	amount: FpVar<F>,
+	pub amount: FpVar<F>,
 	blinding: FpVar<F>,
 }
 
@@ -23,7 +23,7 @@ impl<F: PrimeField> PublicVar<F> {
 		let chain_id = F::zero();
 
 		Self {
-			chain_id: ark_r1cs_std::fields::fp::FpVar::Constant(chain_id),
+			chain_id: FpVar::Constant(chain_id),
 		}
 	}
 
@@ -40,31 +40,20 @@ impl<F: PrimeField> PrivateVar<F> {
 
 pub struct VAnchorLeafGadget<
 	F: PrimeField,
-	H2: CRH,
-	HG2: CRHGadget<H2, F>,
 	H4: CRH,
 	HG4: CRHGadget<H4, F>,
 	H5: CRH,
 	HG5: CRHGadget<H5, F>,
 > {
 	field: PhantomData<F>,
-	hasher2: PhantomData<H2>,
-	hasher_gadget2: PhantomData<HG2>,
 	hasher4: PhantomData<H4>,
 	hasher_gadget4: PhantomData<HG4>,
 	hasher5: PhantomData<H5>,
 	hasher_gadget5: PhantomData<HG5>,
 }
 
-impl<
-		F: PrimeField,
-		H2: CRH,
-		HG2: CRHGadget<H2, F>,
-		H4: CRH,
-		HG4: CRHGadget<H4, F>,
-		H5: CRH,
-		HG5: CRHGadget<H5, F>,
-	> VAnchorLeafGadget<F, H2, HG2, H4, HG4, H5, HG5>
+impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, F>>
+	VAnchorLeafGadget<F, H4, HG4, H5, HG5>
 {
 	pub fn create_leaf<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
@@ -93,27 +82,6 @@ impl<
 		bytes.extend(i.to_bytes()?);
 		bytes.extend(private_key.to_bytes()?);
 		HG4::evaluate(h_w4, &bytes)
-	}
-
-	pub fn gen_public_key<BG: ToBytesGadget<F>>(
-		private_key: &BG,
-		h_w2: &HG2::ParametersVar,
-	) -> Result<HG2::OutputVar, SynthesisError> {
-		let mut bytes = Vec::new();
-		bytes.extend(private_key.to_bytes()?);
-		HG2::evaluate(h_w2, &bytes)
-	}
-
-	pub fn get_amount(s: &PrivateVar<F>) -> Result<FpVar<F>, SynthesisError> {
-		Ok(s.amount.clone())
-	}
-
-	pub fn get_blinding(s: &PrivateVar<F>) -> Result<FpVar<F>, SynthesisError> {
-		Ok(s.blinding.clone())
-	}
-
-	pub fn get_chain_id(p: &PublicVar<F>) -> Result<FpVar<F>, SynthesisError> {
-		Ok(p.chain_id.clone())
 	}
 }
 
@@ -213,16 +181,9 @@ mod test {
 	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
 
-	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
-	type LeafGadget = VAnchorLeafGadget<
-		Fq,
-		PoseidonCRH2,
-		PoseidonCRH2Gadget,
-		PoseidonCRH4,
-		PoseidonCRH4Gadget,
-		PoseidonCRH5,
-		PoseidonCRH5Gadget,
-	>;
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH4, PoseidonCRH5>;
+	type LeafGadget =
+		VAnchorLeafGadget<Fq, PoseidonCRH4, PoseidonCRH4Gadget, PoseidonCRH5, PoseidonCRH5Gadget>;
 	use crate::ark_std::{One, UniformRand};
 	#[test]
 	fn should_crate_new_leaf_constraints() {

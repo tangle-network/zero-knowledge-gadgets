@@ -2,15 +2,13 @@ use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
 
 use ark_std::{marker::PhantomData, rand::Rng};
-//use std::convert::TryInto;
-//use std::vec::Vec;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
 #[derive(Clone)]
 pub struct Private<F: PrimeField> {
-	amount: F,
+	pub amount: F,
 	blinding: F,
 }
 
@@ -33,25 +31,18 @@ impl<F: PrimeField> Private<F> {
 		}
 	}
 
-	pub fn new(amount: &F, blinding: &F) -> Self {
-		let amount = amount.clone();
-		let blinding = blinding.clone();
+	pub fn new(amount: F, blinding: F) -> Self {
 		Self { amount, blinding }
-	}
-
-	pub fn get_amount(&self) -> Result<F, Error> {
-		Ok(self.amount.clone())
 	}
 }
 
-pub struct VAnchorLeaf<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> {
+pub struct VAnchorLeaf<F: PrimeField, H4: CRH, H5: CRH> {
 	field: PhantomData<F>,
-	hasher2: PhantomData<H2>,
 	hasher4: PhantomData<H4>,
 	hasher5: PhantomData<H5>,
 }
 
-impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
+impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 	// Commits to the values = hash(chain_id, amount, pubKey, blinding)
 	pub fn create_leaf<B: ToBytes>(
 		private: &Private<F>,
@@ -78,10 +69,6 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 		let bytes = to_bytes![commitment, index, private_key]?;
 		H4::evaluate(h_w4, &bytes)
 	}
-
-	pub fn get_amount(s: &Private<F>) -> Result<F, Error> {
-		Ok(s.amount.clone())
-	}
 }
 
 #[cfg(feature = "default_poseidon")]
@@ -96,8 +83,6 @@ mod test {
 			get_rounds_poseidon_bn254_x5_5, parse_vec,
 		},
 	};
-	//use ark_bls12_381::Fq;
-	//use ark_bn254::Fq;
 	use ark_ed_on_bn254::Fq;
 
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
@@ -138,7 +123,7 @@ mod test {
 	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
 
-	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH4, PoseidonCRH5>;
 	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_create_leaf() {
@@ -231,7 +216,7 @@ mod test {
 	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
 	type PoseidonCircomCRH5 = CircomCRH<Fq, PoseidonCircomRounds5>;
 
-	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH2, PoseidonCircomCRH4, PoseidonCircomCRH5>;
+	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH4, PoseidonCircomCRH5>;
 
 	#[test]
 	fn should_be_the_same_as_circom() {
@@ -294,7 +279,7 @@ mod test {
 			PoseidonCircomCRH5::evaluate(&parameters5, &input).unwrap();
 
 		// Computing the leaf with vanchorleaf
-		let private = Private::new(&amount[0], &blinding[0]);
+		let private = Private::new(amount[0], blinding[0]);
 		let public = Public::new(chain_id[0]);
 		let leaf_from_vanchorleaf =
 			LeafCircom::create_leaf(&private, &computed_public_key, &public, &parameters5).unwrap();
