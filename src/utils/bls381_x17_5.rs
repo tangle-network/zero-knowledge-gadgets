@@ -16,7 +16,7 @@ use crate::poseidon::sbox::PoseidonSbox;
 pub const FULL_ROUNDS: usize = 8;
 pub const PARTIAL_ROUNDS: usize = 60;
 pub const WIDTH: usize = 5;
-pub const EXPONENTIOATION: PoseidonSbox = PoseidonSbox::Exponentiation(17);
+pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
 
 pub const ROUND_CONSTS: [&str; 215] = [
 	"0x6da1b0517f41142fbe00add56ac4f2ba585377e76655b9d103d8bac398a742a3",

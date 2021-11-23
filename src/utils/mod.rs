@@ -4,6 +4,7 @@ use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
 use ethabi::{encode, Token};
 use tiny_keccak::{Hasher, Keccak};
+use crate::poseidon::sbox::PoseidonSbox;
 
 use crate::Vec;
 
@@ -340,12 +341,120 @@ pub fn get_width_poseidon_bn254_x17_5<F: PrimeField>() -> usize {
 
 
 //
-// End of width
+// PARTIAL_ROUNDS
 //
 #[cfg(feature = "poseidon_bn254_x3_3")]
-pub fn get_full_rounds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
-	parse_vec(bn254_x3_3::FULL_ROUNDS.to_vec())
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x3_3<F: PrimeField>() -> usize {
+	bn254_x3_3::PARTIAL_ROUNDS
 }
+
+#[cfg(feature = "poseidon_bn254_x3_5")]
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x3_5<F: PrimeField>() -> usize {
+	bn254_x3_5::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_2")]
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x5_2<F: PrimeField>() -> usize {
+	bn254_x5_2::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_3")]
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x5_3<F: PrimeField>() -> usize {
+	bn254_x5_3::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_4")]
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x5_4<F: PrimeField>() -> usize {
+	bn254_x5_4::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_5")]
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x5_5<F: PrimeField>() -> usize {
+	bn254_x5_5::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub fn get_PARTIAL_ROUNDS_poseidon_bn254_x17_3<F: PrimeField>() -> usize {
+	bn254_x17_3::PARTIAL_ROUNDS
+}
+
+//
+// Partial_Rounds
+//
+
+#[cfg(feature = "poseidon_bn254_x3_3")]
+pub fn get_partial_rounds_poseidon_bn254_x3_3<F: PrimeField>() -> usize {
+	bn254_x3_3::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x3_5")]
+pub fn get_partial_rounds_poseidon_bn254_x3_5<F: PrimeField>() -> usize {
+	bn254_x3_5::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_2")]
+pub fn get_partial_rounds_poseidon_bn254_x5_2<F: PrimeField>() -> usize {
+	bn254_x5_2::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_3")]
+pub fn get_partial_rounds_poseidon_bn254_x5_3<F: PrimeField>() -> usize {
+	bn254_x5_3::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_4")]
+pub fn get_partial_rounds_poseidon_bn254_x5_4<F: PrimeField>() -> usize {
+	bn254_x5_4::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x5_5")]
+pub fn get_partial_rounds_poseidon_bn254_x5_5<F: PrimeField>() -> usize {
+	bn254_x5_5::PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub fn get_partial_rounds_poseidon_bn254_x17_3<F: PrimeField>() -> usize {
+	bn254_x17_3::PARTIAL_ROUNDS
+}
+//
+// SBOX
+//
+#[cfg(feature = "poseidon_bn254_x3_3")]
+pub fn get_sbox_poseidon_bn254_x3_3<F: PrimeField>() -> PoseidonSbox {
+	bn254_x3_3::SBOX
+}
+
+#[cfg(feature = "poseidon_bn254_x3_5")]
+pub fn get_sbox_poseidon_bn254_x3_5<F: PrimeField>() -> PoseidonSbox {
+	bn254_x3_5::SBOX
+}
+
+#[cfg(feature = "poseidon_bn254_x5_2")]
+pub fn get_sbox_poseidon_bn254_x5_2<F: PrimeField>() -> PoseidonSbox {
+	bn254_x5_2::SBOX
+}
+
+#[cfg(feature = "poseidon_bn254_x5_3")]
+pub fn get_sbox_poseidon_bn254_x5_3<F: PrimeField>() -> PoseidonSbox {
+	bn254_x5_3::SBOX
+}
+
+#[cfg(feature = "poseidon_bn254_x5_4")]
+pub fn get_sbox_poseidon_bn254_x5_4<F: PrimeField>() -> PoseidonSbox {
+	bn254_x5_4::SBOX
+}
+
+#[cfg(feature = "poseidon_bn254_x5_5")]
+pub fn get_sbox_poseidon_bn254_x5_5<F: PrimeField>() -> PoseidonSbox {
+	bn254_x5_5::SBOX
+}
+
+#[cfg(feature = "poseidon_bn254_x17_3")]
+pub fn get_sbox_poseidon_bn254_x17_3<F: PrimeField>() -> PoseidonSbox {
+	bn254_x17_3::SBOX
+}
+
+
 
 #[cfg(feature = "poseidon_bls381_x3_3")]
 pub fn get_rounds_poseidon_bls381_x3_3<F: PrimeField>() -> Vec<F> {
