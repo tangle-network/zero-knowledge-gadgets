@@ -32,6 +32,7 @@ pub enum Node<P: Config> {
 	Inner(InnerNode<P>),
 }
 
+// TODO: Improve error handling
 impl<P: Config> Node<P> {
 	pub fn inner(self) -> InnerNode<P> {
 		match self {
@@ -80,7 +81,7 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		root_hash: &Node<P>,
 		leaf: &L,
 	) -> Result<F, Error> {
-		if !self.check_membership(root_hash, leaf).unwrap() {
+		if !self.check_membership(root_hash, leaf)? {
 			panic!("Leaf is not in the path");
 		}
 
@@ -139,6 +140,7 @@ pub struct SparseMerkleTree<P: Config> {
 	inner_params: Rc<<P::H as CRH>::Parameters>,
 }
 
+// TODO: Improve error handling
 impl<P: Config> SparseMerkleTree<P> {
 	/// obtain an empty tree
 	pub fn blank(inner_params: Rc<InnerParameters<P>>, leaf_params: Rc<LeafParameters<P>>) -> Self {
