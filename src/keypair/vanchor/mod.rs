@@ -24,6 +24,7 @@ impl<B: Clone + ToBytes, H2: CRH> Keypair<B, H2> {
 		Ok(pubkey)
 	}
 
+	// Computes the signature = hash(privKey, commitment, pathIndices)
 	pub fn signature<H4: CRH, H5: CRH>(
 		&self,
 		commitment: &H5::Output,

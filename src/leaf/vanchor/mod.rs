@@ -59,17 +59,6 @@ impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 		H5::evaluate(h_w5, &bytes)
 	}
 
-	// Computes the signature = hash(privKey, commitment, pathIndices)
-	pub fn create_signature<B: ToBytes>(
-		private_key: &B,
-		commitment: &H5::Output,
-		index: &F,
-		h_w4: &H4::Parameters,
-	) -> Result<H4::Output, Error> {
-		let bytes = to_bytes![private_key, commitment, index]?;
-		H4::evaluate(&h_w4, &bytes)
-	}
-
 	// Computes the nullifier = hash(commitment, pathIndices, signature)
 	pub fn create_nullifier<B: ToBytes>(
 		signature: &B,
@@ -150,52 +139,16 @@ mod test {
 		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-
 		// Commitment = hash(chainID, amount, blinding, pubKey)
 		let inputs_leaf =
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
+		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
-	#[test]
-	fn should_create_signature() {
-		let rng = &mut test_rng();
-		let secrets = Private::generate(rng);
-		let chain_id = Fq::zero();
-		let publics = Public::new(chain_id);
-		let index = Fq::zero();
-		let private_key = Fq::rand(rng);
-		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
-		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let params4 = PoseidonParameters::<Fq>::new(rounds, mds);
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
-		let privkey = to_bytes![private_key].unwrap();
-		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-
-		// Commitment = hash(chainID, amount, blinding, pubKey)
-		let inputs_leaf =
-			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
-		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
-
-		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
-		assert_eq!(leaf, commitment);
-
-		// Signature = hash(privKey, commitment, pathIndices)
-		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
-		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_signature).unwrap();
-		let signature =
-			Leaf::create_signature(&private_key, &commitment, &index, &params4).unwrap();
-		assert_eq!(ev_res, signature);
-	}
-
 	#[test]
 	fn should_create_nullifier() {
 		let rng = &mut test_rng();
@@ -215,23 +168,17 @@ mod test {
 		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-
-		// Commitment = hash(chainID, amount, blinding, pubKey)
+		// Since Commitment = hash(chainID, amount, blinding, pubKey)
 		let inputs_leaf =
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
+		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(leaf, commitment);
 
-		// Signature = hash(privKey, commitment, pathIndices)
-		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
-		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_signature).unwrap();
-		let signature =
-			Leaf::create_signature(&private_key, &commitment, &index, &params4).unwrap();
-		assert_eq!(ev_res, signature);
-
-		// Nullifier = hash(signature, commitment, pathIndices)
+		// Since Nullifier = hash(commitment, pathIndices, privKey)
+		let signature = Fq::rand(rng);
 		let inputs_null = to_bytes![commitment, index, signature].unwrap();
 		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_null).unwrap();
 		let nullifier = Leaf::create_nullifier(&signature, &commitment, &params4, &index).unwrap();

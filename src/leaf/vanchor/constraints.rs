@@ -71,19 +71,6 @@ impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, 
 		HG5::evaluate(h_w5, &bytes)
 	}
 
-	pub fn create_signature<BG: ToBytesGadget<F>>(
-		private_key: &BG,
-		commitment: &HG5::OutputVar,
-		index: &FpVar<F>,
-		h_w4: &HG4::ParametersVar,
-	) -> Result<HG4::OutputVar, SynthesisError> {
-		let mut bytes = Vec::new();
-		bytes.extend(private_key.to_bytes()?);
-		bytes.extend(commitment.to_bytes()?);
-		bytes.extend(index.to_bytes()?);
-		HG4::evaluate(h_w4, &bytes)
-	}
-	
 	pub fn create_nullifier<BG: ToBytesGadget<F>>(
 		signature: &BG,
 		commitment: &HG5::OutputVar,
@@ -96,7 +83,6 @@ impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, 
 		bytes.extend(signature.to_bytes()?);
 		HG4::evaluate(h_w4, &bytes)
 	}
-
 }
 
 impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
@@ -136,15 +122,20 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{leaf::vanchor::VAnchorLeaf, poseidon::{
+	use crate::{
+		leaf::vanchor::VAnchorLeaf,
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
-		}, utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4,
-			get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
+		},
+		utils::{
+			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
+			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
 			get_rounds_poseidon_bn254_x5_5,
-		}};
+		},
+	};
+	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
 	use ark_crypto_primitives::crh::{CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
@@ -206,7 +197,6 @@ mod test {
 		let rounds5_2 = get_rounds_poseidon_bn254_x5_2::<Fq>();
 		let mds5_2 = get_mds_poseidon_bn254_x5_2::<Fq>();
 		let params5_2 = PoseidonParameters::<Fq>::new(rounds5_2, mds5_2);
-
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);
@@ -248,9 +238,8 @@ mod test {
 		assert!(res.value().unwrap());
 		assert!(res.cs().is_satisfied().unwrap());
 
-		// Test Signature
+		// Test Nullifier
 		// Native version
-
 		let rounds5_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
 		let mds5_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
 		let params5_4 = PoseidonParameters::<Fq>::new(rounds5_4, mds5_4);
@@ -260,44 +249,14 @@ mod test {
 			AllocationMode::Constant,
 		)
 		.unwrap();
-
-		let commitment = leaf;
-		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
-		let ev_res = PoseidonCRH4::evaluate(&params5_4, &inputs_signature).unwrap();
-		let signature =
-			Leaf::create_signature(&private_key, &commitment, &index, &params5_4).unwrap();
-		assert_eq!(ev_res, signature);
-		
-		// Constraints version
-		let commitment_var = leaf_var.clone();
-		let signature_var = LeafGadget::create_signature(
-			&private_key_var,
-			&commitment_var,
-			&index_var,
-			&params_var5_4,
-		)
-		.unwrap();
-
-		let signature_new_var =
-			FpVar::<Fq>::new_witness(signature_var.cs(), || Ok(signature)).unwrap();
-		let res_sig = signature_var.is_eq(&signature_new_var).unwrap();
-		assert!(res_sig.value().unwrap());
-		assert!(res_sig.cs().is_satisfied().unwrap());
-
-		// Test Nullifier
-		// Native version
-
-		let nullifier =
-			Leaf::create_nullifier(&signature, &commitment, &params5_4, &index).unwrap();
+		let signature = Fq::rand(rng);
+		let nullifier = Leaf::create_nullifier(&signature, &leaf, &params5_4, &index).unwrap();
 
 		// Constraints version
-		let nullifier_var = LeafGadget::create_nullifier(
-			&signature_var,
-			&commitment_var,
-			&params_var5_4,
-			&index_var,
-		)
-		.unwrap();
+		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&signature)).unwrap();
+		let nullifier_var =
+			LeafGadget::create_nullifier(&signature_var, &leaf_var, &params_var5_4, &index_var)
+				.unwrap();
 
 		// Check equality
 		let nullifier_new_var =
@@ -306,5 +265,4 @@ mod test {
 		assert!(res_nul.value().unwrap());
 		assert!(res_nul.cs().is_satisfied().unwrap());
 	}
-
 }
