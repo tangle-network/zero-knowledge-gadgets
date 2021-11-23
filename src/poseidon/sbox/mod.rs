@@ -12,7 +12,9 @@ pub enum PoseidonSbox {
 }
 
 impl Default for PoseidonSbox {
-    fn default() -> Self { PoseidonSbox::Exponentiation(5) }
+	fn default() -> Self {
+		PoseidonSbox::Exponentiation(5)
+	}
 }
 
 impl PoseidonSbox {

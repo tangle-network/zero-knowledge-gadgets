@@ -56,7 +56,7 @@ pub struct PoseidonParameters<F> {
 	pub round_keys: Vec<F>,
 	/// The MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<F>>,
-	/// The size of the permutation, in field elements.	
+	/// The size of the permutation, in field elements.
 	pub width: usize,
 	/// Number of full SBox rounds
 	pub full_rounds: usize,
@@ -68,7 +68,7 @@ pub struct PoseidonParameters<F> {
 
 impl<F: PrimeField> PoseidonParameters<F> {
 	pub fn new(
-		round_keys: Vec<F>, 
+		round_keys: Vec<F>,
 		mds_matrix: Vec<Vec<F>>,
 		width: usize,
 		full_rounds: usize,
@@ -81,7 +81,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 			width,
 			full_rounds,
 			partial_rounds,
-			sbox
+			sbox,
 		}
 	}
 
@@ -131,7 +131,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		let mut width_u8 = [0u8; 8];
 		bytes.read_exact(&mut width_u8)?;
 		let width: usize = usize::from_be_bytes(width_u8);
-		
+
 		let mut full_rounds_u8 = [0u8; 8];
 		bytes.read_exact(&mut full_rounds_u8)?;
 		let full_rounds: usize = usize::from_be_bytes(full_rounds_u8);
@@ -207,7 +207,7 @@ impl<F: PrimeField> CRH<F> {
 			}
 			// partial Sbox layer, apply Sbox to only 1 element of the state.
 			// Here the last one is chosen but the choice is arbitrary.
-			state[0] =params.sbox.apply_sbox(state[0])?;
+			state[0] = params.sbox.apply_sbox(state[0])?;
 			// linear layer
 			state = Self::apply_linear_layer(&state, &params.mds_matrix);
 		}

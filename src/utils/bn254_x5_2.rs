@@ -146,7 +146,7 @@ pub const MDS_ENTRIES: [[&str; 2]; 2] = [
 	],
 ];
 
-/* 
+/*
 #[derive(Default, Clone)]
 struct PoseidonRounds2;
 
@@ -156,5 +156,3 @@ impl Rounds for PoseidonRounds2 {
 	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 	const WIDTH: usize = 2;
 } */
-
-
