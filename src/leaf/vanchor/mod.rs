@@ -2,15 +2,13 @@ use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes, ToBytes};
 
 use ark_std::{marker::PhantomData, rand::Rng};
-//use std::convert::TryInto;
-//use std::vec::Vec;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
 #[derive(Clone)]
 pub struct Private<F: PrimeField> {
-	amount: F,
+	pub amount: F,
 	blinding: F,
 }
 
@@ -33,25 +31,18 @@ impl<F: PrimeField> Private<F> {
 		}
 	}
 
-	pub fn new(amount: &F, blinding: &F) -> Self {
-		let amount = amount.clone();
-		let blinding = blinding.clone();
+	pub fn new(amount: F, blinding: F) -> Self {
 		Self { amount, blinding }
-	}
-
-	pub fn get_amount(&self) -> Result<F, Error> {
-		Ok(self.amount.clone())
 	}
 }
 
-pub struct VAnchorLeaf<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> {
+pub struct VAnchorLeaf<F: PrimeField, H4: CRH, H5: CRH> {
 	field: PhantomData<F>,
-	hasher2: PhantomData<H2>,
 	hasher4: PhantomData<H4>,
 	hasher5: PhantomData<H5>,
 }
 
-impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
+impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 	// Commits to the values = hash(chain_id, amount, pubKey, blinding)
 	pub fn create_leaf<B: ToBytes>(
 		private: &Private<F>,
@@ -68,19 +59,26 @@ impl<F: PrimeField, H2: CRH, H4: CRH, H5: CRH> VAnchorLeaf<F, H2, H4, H5> {
 		H5::evaluate(h_w5, &bytes)
 	}
 
-	// Computes the nullifier = hash(commitment, pathIndices, privKey)
-	pub fn create_nullifier<B: ToBytes>(
+	// Computes the signature = hash(privKey, commitment, pathIndices)
+	pub fn create_signature<B: ToBytes>(
 		private_key: &B,
+		commitment: &H5::Output,
+		index: &F,
+		h_w4: &H4::Parameters,
+	) -> Result<H4::Output, Error> {
+		let bytes = to_bytes![private_key, commitment, index]?;
+		H4::evaluate(&h_w4, &bytes)
+	}
+
+	// Computes the nullifier = hash(commitment, pathIndices, signature)
+	pub fn create_nullifier<B: ToBytes>(
+		signature: &B,
 		commitment: &H5::Output,
 		h_w4: &H4::Parameters,
 		index: &F,
 	) -> Result<H4::Output, Error> {
-		let bytes = to_bytes![commitment, index, private_key]?;
+		let bytes = to_bytes![commitment, index, signature]?;
 		H4::evaluate(h_w4, &bytes)
-	}
-
-	pub fn get_amount(s: &Private<F>) -> Result<F, Error> {
-		Ok(s.amount.clone())
 	}
 }
 
@@ -96,8 +94,6 @@ mod test {
 			get_rounds_poseidon_bn254_x5_5, parse_vec,
 		},
 	};
-	//use ark_bls12_381::Fq;
-	//use ark_bn254::Fq;
 	use ark_ed_on_bn254::Fq;
 
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
@@ -138,7 +134,7 @@ mod test {
 	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
 	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
 
-	type Leaf = VAnchorLeaf<Fq, PoseidonCRH2, PoseidonCRH4, PoseidonCRH5>;
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH4, PoseidonCRH5>;
 	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_create_leaf() {
@@ -154,16 +150,52 @@ mod test {
 		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
+
 		// Commitment = hash(chainID, amount, blinding, pubKey)
 		let inputs_leaf =
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
+	#[test]
+	fn should_create_signature() {
+		let rng = &mut test_rng();
+		let secrets = Private::generate(rng);
+		let chain_id = Fq::zero();
+		let publics = Public::new(chain_id);
+		let index = Fq::zero();
+		let private_key = Fq::rand(rng);
+		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
+		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
+		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
+		let params4 = PoseidonParameters::<Fq>::new(rounds, mds);
+		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
+		let privkey = to_bytes![private_key].unwrap();
+		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
+
+		// Commitment = hash(chainID, amount, blinding, pubKey)
+		let inputs_leaf =
+			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
+		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
+
+		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
+		assert_eq!(leaf, commitment);
+
+		// Signature = hash(privKey, commitment, pathIndices)
+		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
+		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_signature).unwrap();
+		let signature =
+			Leaf::create_signature(&private_key, &commitment, &index, &params4).unwrap();
+		assert_eq!(ev_res, signature);
+	}
+
 	#[test]
 	fn should_create_nullifier() {
 		let rng = &mut test_rng();
@@ -183,20 +215,26 @@ mod test {
 		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
-		// Since Commitment = hash(chainID, amount, blinding, pubKey)
+
+		// Commitment = hash(chainID, amount, blinding, pubKey)
 		let inputs_leaf =
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(leaf, commitment);
 
-		// Since Nullifier = hash(commitment, pathIndices, privKey)
-		let inputs_null = to_bytes![commitment, index, private_key].unwrap();
+		// Signature = hash(privKey, commitment, pathIndices)
+		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
+		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_signature).unwrap();
+		let signature =
+			Leaf::create_signature(&private_key, &commitment, &index, &params4).unwrap();
+		assert_eq!(ev_res, signature);
+
+		// Nullifier = hash(signature, commitment, pathIndices)
+		let inputs_null = to_bytes![commitment, index, signature].unwrap();
 		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_null).unwrap();
-		let nullifier =
-			Leaf::create_nullifier(&private_key, &commitment, &params4, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&signature, &commitment, &params4, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 
@@ -231,7 +269,7 @@ mod test {
 	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
 	type PoseidonCircomCRH5 = CircomCRH<Fq, PoseidonCircomRounds5>;
 
-	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH2, PoseidonCircomCRH4, PoseidonCircomCRH5>;
+	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH4, PoseidonCircomCRH5>;
 
 	#[test]
 	fn should_be_the_same_as_circom() {
@@ -294,7 +332,7 @@ mod test {
 			PoseidonCircomCRH5::evaluate(&parameters5, &input).unwrap();
 
 		// Computing the leaf with vanchorleaf
-		let private = Private::new(&amount[0], &blinding[0]);
+		let private = Private::new(amount[0], blinding[0]);
 		let public = Public::new(chain_id[0]);
 		let leaf_from_vanchorleaf =
 			LeafCircom::create_leaf(&private, &computed_public_key, &public, &parameters5).unwrap();
