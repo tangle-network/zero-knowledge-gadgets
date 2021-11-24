@@ -80,17 +80,15 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, R: Rounds> Circu
 		let mut state = vec![a, b];
 		let nr = R::FULL_ROUNDS + R::PARTIAL_ROUNDS;
 		for r in 0..nr {
-			state.iter_mut().enumerate().for_each(|(i, a)| {
+			state.iter_mut().enumerate().for_each(|(i, mut a)| {
 				let c_temp = params.round_keys[(r * R::WIDTH + i)];
 				// a = a + c_temp
-				let mut add_result = composer.add(
+				a = &mut composer.add(
 					(E::Fr::one(), *a),
 					(E::Fr::one(), c_temp),
 					E::Fr::zero(),
 					None,
 				);
-
-				a = &mut add_result;
 			});
 
 			let half_rounds = R::FULL_ROUNDS / 2;
