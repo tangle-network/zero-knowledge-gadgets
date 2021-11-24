@@ -72,31 +72,17 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		leaf::mixer::MixerLeaf,
-		poseidon::{
+	use crate::{leaf::mixer::MixerLeaf, poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			sbox::PoseidonSbox,
-			PoseidonParameters, Rounds, CRH,
-		},
-		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
-	};
+			CRH,
+		}, setup::common::{Curve, setup_params_x5_5}};
 	use ark_bls12_381::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
-	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
+	
+	type PoseidonCRH5 = CRH<Fq>;
+	type PoseidonCRH5Gadget = CRHGadget<Fq>;
 
 	type Leaf = MixerLeaf<Fq, PoseidonCRH5>;
 	type LeafGadget = MixerLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget>;
@@ -105,11 +91,10 @@ mod test {
 		let rng = &mut test_rng();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
+		let curve = Curve::Bls381;
 
 		// Native version
-		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_5(curve);
 
 		let private = Private::generate(rng);
 		let leaf_hash = Leaf::create_leaf(&private, &params).unwrap();

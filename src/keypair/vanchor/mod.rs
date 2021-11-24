@@ -45,7 +45,10 @@ impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use crate::{poseidon::CRH, setup::common::{Curve, setup_params_x5_2, setup_params_x5_4}};
+	use crate::{
+		poseidon::CRH,
+		setup::common::{setup_params_x5_2, setup_params_x5_4, Curve},
+	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;

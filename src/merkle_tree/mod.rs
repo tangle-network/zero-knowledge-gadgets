@@ -404,7 +404,10 @@ pub fn gen_empty_hashes<P: Config>(
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};
-	use crate::{poseidon::{CRH as PoseidonCRH}, setup::common::{Curve, setup_params_x5_3}};
+	use crate::{
+		poseidon::CRH as PoseidonCRH,
+		setup::common::{setup_params_x5_3, Curve},
+	};
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::{ToBytes, UniformRand};

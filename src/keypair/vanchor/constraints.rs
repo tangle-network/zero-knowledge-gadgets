@@ -75,10 +75,14 @@ impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> AllocVar<Keypair<F, H2>, F>
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{ark_std::Zero, poseidon::{
+	use crate::{
+		ark_std::Zero,
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
-		}, setup::common::{Curve, setup_params_x5_2, setup_params_x5_4}};
+		},
+		setup::common::{setup_params_x5_2, setup_params_x5_4, Curve},
+	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
 	use ark_ff::to_bytes;

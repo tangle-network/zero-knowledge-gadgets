@@ -11,7 +11,7 @@ pub mod arbitrary;
 //pub mod circuit;
 pub mod identity;
 pub mod keypair;
-//pub mod leaf;
+pub mod leaf;
 pub mod merkle_tree;
 pub mod mimc;
 pub mod poseidon;

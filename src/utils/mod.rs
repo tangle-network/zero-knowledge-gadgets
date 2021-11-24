@@ -148,7 +148,6 @@ pub fn get_results_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
 	parse_vec(bn254_x5_3_result::RESULT.to_vec())
 }
 
-
 #[cfg(feature = "mimc_220_ed_on_bn254")]
 pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
 	parse_vec(crate::utils::mimc::CONSTANTS.to_vec())

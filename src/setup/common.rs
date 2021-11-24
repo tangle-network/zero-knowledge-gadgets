@@ -168,8 +168,10 @@ pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let round_keys_3 = crate::utils::bls381_x3_3::get_rounds_poseidon_bls381_x3_3::<F>();
 			let mds_matrix_3 = crate::utils::bls381_x3_3::get_mds_poseidon_bls381_x3_3::<F>();
-			let full_rounds_3 = crate::utils::bls381_x3_3::get_full_rounds_poseidon_bls381_x3_3::<F>();
-			let partial_rounds_3 = crate::utils::bls381_x3_3::get_partial_rounds_poseidon_bls381_x3_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bls381_x3_3::get_full_rounds_poseidon_bls381_x3_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bls381_x3_3::get_partial_rounds_poseidon_bls381_x3_3::<F>();
 			let width_3 = crate::utils::bls381_x3_3::get_width_poseidon_bls381_x3_3::<F>();
 			let sbox_3 = crate::utils::bls381_x3_3::get_sbox_poseidon_bls381_x3_3::<F>();
 			PoseidonParameters::<F>::new(
@@ -184,8 +186,10 @@ pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => {
 			let round_keys_3 = crate::utils::bn254_x3_3::get_rounds_poseidon_bn254_x3_3::<F>();
 			let mds_matrix_3 = crate::utils::bn254_x3_3::get_mds_poseidon_bn254_x3_3::<F>();
-			let full_rounds_3 = crate::utils::bn254_x3_3::get_full_rounds_poseidon_bn254_x3_3::<F>();
-			let partial_rounds_3 = crate::utils::bn254_x3_3::get_partial_rounds_poseidon_bn254_x3_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bn254_x3_3::get_full_rounds_poseidon_bn254_x3_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bn254_x3_3::get_partial_rounds_poseidon_bn254_x3_3::<F>();
 			let width_3 = crate::utils::bn254_x3_3::get_width_poseidon_bn254_x3_3::<F>();
 			let sbox_3 = crate::utils::bn254_x3_3::get_sbox_poseidon_bn254_x3_3::<F>();
 			PoseidonParameters::<F>::new(
@@ -205,8 +209,10 @@ pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let round_keys_5 = crate::utils::bls381_x3_5::get_rounds_poseidon_bls381_x3_5::<F>();
 			let mds_matrix_5 = crate::utils::bls381_x3_5::get_mds_poseidon_bls381_x3_5::<F>();
-			let full_rounds_5 = crate::utils::bls381_x3_5::get_full_rounds_poseidon_bls381_x3_5::<F>();
-			let partial_rounds_5 = crate::utils::bls381_x3_5::get_partial_rounds_poseidon_bls381_x3_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bls381_x3_5::get_full_rounds_poseidon_bls381_x3_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bls381_x3_5::get_partial_rounds_poseidon_bls381_x3_5::<F>();
 			let width_5 = crate::utils::bls381_x3_5::get_width_poseidon_bls381_x3_5::<F>();
 			let sbox_5 = crate::utils::bls381_x3_5::get_sbox_poseidon_bls381_x3_5::<F>();
 			PoseidonParameters::<F>::new(
@@ -221,8 +227,10 @@ pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => {
 			let round_keys_5 = crate::utils::bn254_x3_5::get_rounds_poseidon_bn254_x3_5::<F>();
 			let mds_matrix_5 = crate::utils::bn254_x3_5::get_mds_poseidon_bn254_x3_5::<F>();
-			let full_rounds_5 = crate::utils::bn254_x3_5::get_full_rounds_poseidon_bn254_x3_5::<F>();
-			let partial_rounds_5 = crate::utils::bn254_x3_5::get_partial_rounds_poseidon_bn254_x3_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bn254_x3_5::get_full_rounds_poseidon_bn254_x3_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bn254_x3_5::get_partial_rounds_poseidon_bn254_x3_5::<F>();
 			let width_5 = crate::utils::bn254_x3_5::get_width_poseidon_bn254_x3_5::<F>();
 			let sbox_5 = crate::utils::bn254_x3_5::get_sbox_poseidon_bn254_x3_5::<F>();
 			PoseidonParameters::<F>::new(
@@ -243,8 +251,10 @@ pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let round_keys_3 = crate::utils::bls381_x5_3::get_rounds_poseidon_bls381_x5_3::<F>();
 			let mds_matrix_3 = crate::utils::bls381_x5_3::get_mds_poseidon_bls381_x5_3::<F>();
-			let full_rounds_3 = crate::utils::bls381_x5_3::get_full_rounds_poseidon_bls381_x5_3::<F>();
-			let partial_rounds_3 = crate::utils::bls381_x5_3::get_partial_rounds_poseidon_bls381_x5_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bls381_x5_3::get_full_rounds_poseidon_bls381_x5_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bls381_x5_3::get_partial_rounds_poseidon_bls381_x5_3::<F>();
 			let width_3 = crate::utils::bls381_x5_3::get_width_poseidon_bls381_x5_3::<F>();
 			let sbox_3 = crate::utils::bls381_x5_3::get_sbox_poseidon_bls381_x5_3::<F>();
 			PoseidonParameters::<F>::new(
@@ -259,8 +269,10 @@ pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => {
 			let round_keys_3 = crate::utils::bn254_x5_3::get_rounds_poseidon_bn254_x5_3::<F>();
 			let mds_matrix_3 = crate::utils::bn254_x5_3::get_mds_poseidon_bn254_x5_3::<F>();
-			let full_rounds_3 = crate::utils::bn254_x5_3::get_full_rounds_poseidon_bn254_x5_3::<F>();
-			let partial_rounds_3 = crate::utils::bn254_x5_3::get_partial_rounds_poseidon_bn254_x5_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bn254_x5_3::get_full_rounds_poseidon_bn254_x5_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bn254_x5_3::get_partial_rounds_poseidon_bn254_x5_3::<F>();
 			let width_3 = crate::utils::bn254_x5_3::get_width_poseidon_bn254_x5_3::<F>();
 			let sbox_3 = crate::utils::bn254_x5_3::get_sbox_poseidon_bn254_x5_3::<F>();
 			PoseidonParameters::<F>::new(
@@ -284,8 +296,10 @@ pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => {
 			let round_keys_2 = crate::utils::bn254_x5_2::get_rounds_poseidon_bn254_x5_2::<F>();
 			let mds_matrix_2 = crate::utils::bn254_x5_2::get_mds_poseidon_bn254_x5_2::<F>();
-			let full_rounds_2 = crate::utils::bn254_x5_2::get_full_rounds_poseidon_bn254_x5_2::<F>();
-			let partial_rounds_2 = crate::utils::bn254_x5_2::get_partial_rounds_poseidon_bn254_x5_2::<F>();
+			let full_rounds_2 =
+				crate::utils::bn254_x5_2::get_full_rounds_poseidon_bn254_x5_2::<F>();
+			let partial_rounds_2 =
+				crate::utils::bn254_x5_2::get_partial_rounds_poseidon_bn254_x5_2::<F>();
 			let width_2 = crate::utils::bn254_x5_2::get_width_poseidon_bn254_x5_2::<F>();
 			let sbox_2 = crate::utils::bn254_x5_2::get_sbox_poseidon_bn254_x5_2::<F>();
 			PoseidonParameters::<F>::new(
@@ -307,12 +321,19 @@ pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParamete
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
 		Curve::Bn254 => {
-			let round_keys_3 = crate::utils::bn254_circom_x5_3::get_rounds_poseidon_circom_bn254_x5_3::<F>();
-			let mds_matrix_3 = crate::utils::bn254_circom_x5_3::get_mds_poseidon_circom_bn254_x5_3::<F>();
-			let full_rounds_3 = crate::utils::bn254_circom_x5_3::get_full_rounds_poseidon_circom_bn254_x5_3::<F>();
-			let partial_rounds_3 = crate::utils::bn254_circom_x5_3::get_partial_rounds_poseidon_circom_bn254_x5_3::<F>();
-			let width_3 = crate::utils::bn254_circom_x5_3::get_width_poseidon_circom_bn254_x5_3::<F>();
-			let sbox_3 = crate::utils::bn254_circom_x5_3::get_sbox_poseidon_circom_bn254_x5_3::<F>();
+			let round_keys_3 =
+				crate::utils::bn254_circom_x5_3::get_rounds_poseidon_circom_bn254_x5_3::<F>();
+			let mds_matrix_3 =
+				crate::utils::bn254_circom_x5_3::get_mds_poseidon_circom_bn254_x5_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bn254_circom_x5_3::get_full_rounds_poseidon_circom_bn254_x5_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bn254_circom_x5_3::get_partial_rounds_poseidon_circom_bn254_x5_3::<F>(
+				);
+			let width_3 =
+				crate::utils::bn254_circom_x5_3::get_width_poseidon_circom_bn254_x5_3::<F>();
+			let sbox_3 =
+				crate::utils::bn254_circom_x5_3::get_sbox_poseidon_circom_bn254_x5_3::<F>();
 			PoseidonParameters::<F>::new(
 				round_keys_3,
 				mds_matrix_3,
@@ -334,8 +355,10 @@ pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => {
 			let round_keys_4 = crate::utils::bn254_x5_4::get_rounds_poseidon_bn254_x5_4::<F>();
 			let mds_matrix_4 = crate::utils::bn254_x5_4::get_mds_poseidon_bn254_x5_4::<F>();
-			let full_rounds_4 = crate::utils::bn254_x5_4::get_full_rounds_poseidon_bn254_x5_4::<F>();
-			let partial_rounds_4 = crate::utils::bn254_x5_4::get_partial_rounds_poseidon_bn254_x5_4::<F>();
+			let full_rounds_4 =
+				crate::utils::bn254_x5_4::get_full_rounds_poseidon_bn254_x5_4::<F>();
+			let partial_rounds_4 =
+				crate::utils::bn254_x5_4::get_partial_rounds_poseidon_bn254_x5_4::<F>();
 			let width_4 = crate::utils::bn254_x5_4::get_width_poseidon_bn254_x5_4::<F>();
 			let sbox_4 = crate::utils::bn254_x5_4::get_sbox_poseidon_bn254_x5_4::<F>();
 			PoseidonParameters::<F>::new(
@@ -356,8 +379,10 @@ pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			let round_keys_5 = crate::utils::bls381_x5_5::get_rounds_poseidon_bls381_x5_5::<F>();
 			let mds_matrix_5 = crate::utils::bls381_x5_5::get_mds_poseidon_bls381_x5_5::<F>();
-			let full_rounds_5 = crate::utils::bls381_x5_5::get_full_rounds_poseidon_bls381_x5_5::<F>();
-			let partial_rounds_5 = crate::utils::bls381_x5_5::get_partial_rounds_poseidon_bls381_x5_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bls381_x5_5::get_full_rounds_poseidon_bls381_x5_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bls381_x5_5::get_partial_rounds_poseidon_bls381_x5_5::<F>();
 			let width_5 = crate::utils::bls381_x5_5::get_width_poseidon_bls381_x5_5::<F>();
 			let sbox_5 = crate::utils::bls381_x5_5::get_sbox_poseidon_bls381_x5_5::<F>();
 			PoseidonParameters::<F>::new(
@@ -372,8 +397,10 @@ pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => {
 			let round_keys_5 = crate::utils::bn254_x5_5::get_rounds_poseidon_bn254_x5_5::<F>();
 			let mds_matrix_5 = crate::utils::bn254_x5_5::get_mds_poseidon_bn254_x5_5::<F>();
-			let full_rounds_5 = crate::utils::bn254_x5_5::get_full_rounds_poseidon_bn254_x5_5::<F>();
-			let partial_rounds_5 = crate::utils::bn254_x5_5::get_partial_rounds_poseidon_bn254_x5_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bn254_x5_5::get_full_rounds_poseidon_bn254_x5_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bn254_x5_5::get_partial_rounds_poseidon_bn254_x5_5::<F>();
 			let width_5 = crate::utils::bn254_x5_5::get_width_poseidon_bn254_x5_5::<F>();
 			let sbox_5 = crate::utils::bn254_x5_5::get_sbox_poseidon_bn254_x5_5::<F>();
 			PoseidonParameters::<F>::new(
@@ -395,12 +422,19 @@ pub fn setup_circom_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParamete
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
 		Curve::Bn254 => {
-			let round_keys_5 = crate::utils::bn254_circom_x5_5::get_rounds_poseidon_circom_bn254_x5_5::<F>();
-			let mds_matrix_5 = crate::utils::bn254_circom_x5_5::get_mds_poseidon_circom_bn254_x5_5::<F>();
-			let full_rounds_5 = crate::utils::bn254_circom_x5_5::get_full_rounds_poseidon_circom_bn254_x5_5::<F>();
-			let partial_rounds_5 = crate::utils::bn254_circom_x5_5::get_partial_rounds_poseidon_circom_bn254_x5_5::<F>();
-			let width_5 = crate::utils::bn254_circom_x5_5::get_width_poseidon_circom_bn254_x5_5::<F>();
-			let sbox_5 = crate::utils::bn254_circom_x5_5::get_sbox_poseidon_circom_bn254_x5_5::<F>();
+			let round_keys_5 =
+				crate::utils::bn254_circom_x5_5::get_rounds_poseidon_circom_bn254_x5_5::<F>();
+			let mds_matrix_5 =
+				crate::utils::bn254_circom_x5_5::get_mds_poseidon_circom_bn254_x5_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bn254_circom_x5_5::get_full_rounds_poseidon_circom_bn254_x5_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bn254_circom_x5_5::get_partial_rounds_poseidon_circom_bn254_x5_5::<F>(
+				);
+			let width_5 =
+				crate::utils::bn254_circom_x5_5::get_width_poseidon_circom_bn254_x5_5::<F>();
+			let sbox_5 =
+				crate::utils::bn254_circom_x5_5::get_sbox_poseidon_circom_bn254_x5_5::<F>();
 			PoseidonParameters::<F>::new(
 				round_keys_5,
 				mds_matrix_5,
@@ -419,8 +453,10 @@ pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 		Curve::Bls381 => {
 			let round_keys_3 = crate::utils::bls381_x17_3::get_rounds_poseidon_bls381_x17_3::<F>();
 			let mds_matrix_3 = crate::utils::bls381_x17_3::get_mds_poseidon_bls381_x17_3::<F>();
-			let full_rounds_3 = crate::utils::bls381_x17_3::get_full_rounds_poseidon_bls381_x17_3::<F>();
-			let partial_rounds_3 = crate::utils::bls381_x17_3::get_partial_rounds_poseidon_bls381_x17_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bls381_x17_3::get_full_rounds_poseidon_bls381_x17_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bls381_x17_3::get_partial_rounds_poseidon_bls381_x17_3::<F>();
 			let width_3 = crate::utils::bls381_x17_3::get_width_poseidon_bls381_x17_3::<F>();
 			let sbox_3 = crate::utils::bls381_x17_3::get_sbox_poseidon_bls381_x17_3::<F>();
 			PoseidonParameters::<F>::new(
@@ -435,8 +471,10 @@ pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 		Curve::Bn254 => {
 			let round_keys_3 = crate::utils::bn254_x17_3::get_rounds_poseidon_bn254_x17_3::<F>();
 			let mds_matrix_3 = crate::utils::bn254_x17_3::get_mds_poseidon_bn254_x17_3::<F>();
-			let full_rounds_3 = crate::utils::bn254_x17_3::get_full_rounds_poseidon_bn254_x17_3::<F>();
-			let partial_rounds_3 = crate::utils::bn254_x17_3::get_partial_rounds_poseidon_bn254_x17_3::<F>();
+			let full_rounds_3 =
+				crate::utils::bn254_x17_3::get_full_rounds_poseidon_bn254_x17_3::<F>();
+			let partial_rounds_3 =
+				crate::utils::bn254_x17_3::get_partial_rounds_poseidon_bn254_x17_3::<F>();
 			let width_3 = crate::utils::bn254_x17_3::get_width_poseidon_bn254_x17_3::<F>();
 			let sbox_3 = crate::utils::bn254_x17_3::get_sbox_poseidon_bn254_x17_3::<F>();
 			PoseidonParameters::<F>::new(
@@ -457,8 +495,10 @@ pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 		Curve::Bls381 => {
 			let round_keys_5 = crate::utils::bls381_x17_5::get_rounds_poseidon_bls381_x17_5::<F>();
 			let mds_matrix_5 = crate::utils::bls381_x17_5::get_mds_poseidon_bls381_x17_5::<F>();
-			let full_rounds_5 = crate::utils::bls381_x17_5::get_full_rounds_poseidon_bls381_x17_5::<F>();
-			let partial_rounds_5 = crate::utils::bls381_x17_5::get_partial_rounds_poseidon_bls381_x17_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bls381_x17_5::get_full_rounds_poseidon_bls381_x17_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bls381_x17_5::get_partial_rounds_poseidon_bls381_x17_5::<F>();
 			let width_5 = crate::utils::bls381_x17_5::get_width_poseidon_bls381_x17_5::<F>();
 			let sbox_5 = crate::utils::bls381_x17_5::get_sbox_poseidon_bls381_x17_5::<F>();
 			PoseidonParameters::<F>::new(
@@ -473,8 +513,10 @@ pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 		Curve::Bn254 => {
 			let round_keys_5 = crate::utils::bn254_x17_5::get_rounds_poseidon_bn254_x17_5::<F>();
 			let mds_matrix_5 = crate::utils::bn254_x17_5::get_mds_poseidon_bn254_x17_5::<F>();
-			let full_rounds_5 = crate::utils::bn254_x17_5::get_full_rounds_poseidon_bn254_x17_5::<F>();
-			let partial_rounds_5 = crate::utils::bn254_x17_5::get_partial_rounds_poseidon_bn254_x17_5::<F>();
+			let full_rounds_5 =
+				crate::utils::bn254_x17_5::get_full_rounds_poseidon_bn254_x17_5::<F>();
+			let partial_rounds_5 =
+				crate::utils::bn254_x17_5::get_partial_rounds_poseidon_bn254_x17_5::<F>();
 			let width_5 = crate::utils::bn254_x17_5::get_width_poseidon_bn254_x17_5::<F>();
 			let sbox_5 = crate::utils::bn254_x17_5::get_sbox_poseidon_bn254_x17_5::<F>();
 			PoseidonParameters::<F>::new(

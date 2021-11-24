@@ -1,6 +1,6 @@
 use crate::utils::PoseidonSbox;
-use ark_std::vec::Vec;
 use ark_ff::fields::PrimeField;
+use ark_std::vec::Vec;
 
 /// The Poseidon permutation.
 #[derive(Default, Clone)]

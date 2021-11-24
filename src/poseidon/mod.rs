@@ -1,4 +1,7 @@
-use crate::{poseidon::sbox::PoseidonSbox, utils::{PoseidonParameters, from_field_elements, to_field_elements}};
+use crate::{
+	poseidon::sbox::PoseidonSbox,
+	utils::{from_field_elements, to_field_elements, PoseidonParameters},
+};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_serialize::Read;
@@ -46,8 +49,6 @@ pub const ZERO_CONST: u64 = 0;
 	const SBOX: PoseidonSbox;
 } */
 
-
-
 impl<F: PrimeField> PoseidonParameters<F> {
 	pub fn new(
 		round_keys: Vec<F>,
@@ -60,7 +61,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		Self {
 			round_keys,
 			mds_matrix,
-			width: width as usize ,
+			width: width as usize,
 			full_rounds: full_rounds as usize,
 			partial_rounds: partial_rounds as usize,
 			sbox,
@@ -228,7 +229,9 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
 
-	const INPUT_SIZE_BITS: usize = 0;// F::BigInt::NUM_LIMBS * 8 * PoseidonParameters::width * 8;
+	const INPUT_SIZE_BITS: usize = 0;
+
+	// F::BigInt::NUM_LIMBS * 8 * PoseidonParameters::width * 8;
 
 	// Not sure what's the purpose of this function of we are going to pass
 	// parameters
@@ -297,26 +300,29 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
-	use crate::{setup::common::{Curve, setup_params_x5_3, setup_params_x5_5}, utils::{get_results_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_5}};
+	use crate::{
+		setup::common::{setup_params_x5_3, setup_params_x5_5, Curve},
+		utils::{get_results_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_5},
+	};
 
 	type PoseidonCRH = CRH<Fq>;
-	
-//TODO
-	/* #[test]
-	fn test_parameter_to_and_from_bytes() {
-		let round_keys_3 = get_rounds_poseidon_bn254_x5_3::<Fq>();
-		let mds_matrix_3 = get_mds_poseidon_bn254_x5_3::<Fq>();
-		let full_rounds_3 = get_full_rounds_poseidon_bn254_x5_3::<Fq>();
-		let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x5_3::<Fq>();
-		let width_3 = get_width_poseidon_bn254_x5_3::<Fq>();
-		let sbox_3 = get_sbox_poseidon_bn254_x5_3::<Fq>();
-		let	params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 
-		let bytes = params.to_bytes();
-		let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
-		assert_eq!(bytes, new_params.to_bytes());
-	}
- */
+	//TODO
+	/* #[test]
+	   fn test_parameter_to_and_from_bytes() {
+		   let round_keys_3 = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		   let mds_matrix_3 = get_mds_poseidon_bn254_x5_3::<Fq>();
+		   let full_rounds_3 = get_full_rounds_poseidon_bn254_x5_3::<Fq>();
+		   let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x5_3::<Fq>();
+		   let width_3 = get_width_poseidon_bn254_x5_3::<Fq>();
+		   let sbox_3 = get_sbox_poseidon_bn254_x5_3::<Fq>();
+		   let	params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
+
+		   let bytes = params.to_bytes();
+		   let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
+		   assert_eq!(bytes, new_params.to_bytes());
+	   }
+	*/
 	#[test]
 	fn test_width_3_bn_254() {
 		let curve = Curve::Bn254;
@@ -324,7 +330,7 @@ mod test {
 		let params = setup_params_x5_3(curve);
 
 		let res = get_results_poseidon_bn254_x5_3::<Fq>();
-		
+
 		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 
 		let poseidon_res = <PoseidonCRH as CRHTrait>::evaluate(&params, &inp).unwrap();
@@ -338,8 +344,6 @@ mod test {
 		let params = setup_params_x5_5(curve);
 
 		let res = get_results_poseidon_bn254_x5_5::<Fq>();
-
-		
 
 		let inp = to_bytes![
 			Fq::zero(),

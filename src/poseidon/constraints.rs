@@ -1,5 +1,5 @@
 use super::{sbox::constraints::SboxConstraints, PoseidonParameters, CRH};
-use crate::utils::to_field_var_elements;
+use crate::{poseidon::PoseidonSbox, utils::to_field_var_elements};
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -8,7 +8,6 @@ use ark_r1cs_std::{
 	prelude::*,
 	uint8::UInt8,
 };
-use crate::poseidon::PoseidonSbox;
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
 use core::borrow::Borrow;
@@ -69,7 +68,7 @@ impl<F: PrimeField> CRHGadget<F> {
 		}
 
 		// last full Sbox rounds
-		for _ in 0..(parameters.full_rounds/ 2) {
+		for _ in 0..(parameters.full_rounds / 2) {
 			// Substitution (S-box) layer
 			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
@@ -170,29 +169,27 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 		let width = params.width;
 		let sbox = params.sbox;
 
-
 		Ok(Self {
 			round_keys: round_keys_var,
 			mds_matrix: mds_var,
 			full_rounds,
 			partial_rounds,
 			width,
-			sbox
+			sbox,
 		})
 	}
 }
 
 #[cfg(test)]
 mod test {
-	use crate::setup::common::{Curve, setup_params_x5_3};
+	use crate::setup::common::{setup_params_x5_3, Curve};
 
-use super::*;
+	use super::*;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
-	
 	type PoseidonCRH3 = CRH<Fq>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq>;
 

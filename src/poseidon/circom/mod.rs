@@ -1,7 +1,7 @@
 use crate::poseidon::{PoseidonError, PoseidonParameters};
 
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
-use ark_ff::{fields::PrimeField};
+use ark_ff::fields::PrimeField;
 use ark_std::{marker::PhantomData, rand::Rng, vec::Vec};
 
 #[cfg(feature = "r1cs")]
@@ -111,7 +111,9 @@ impl<F: PrimeField> TwoToOneCRH for CircomCRH<F> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::{setup::common::{Curve, setup_circom_params_x5_3, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5}};
+	use crate::setup::common::{
+		setup_circom_params_x5_3, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
+	};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 

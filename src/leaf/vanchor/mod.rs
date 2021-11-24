@@ -75,11 +75,11 @@ impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{poseidon::{circom::CircomCRH, sbox::PoseidonSbox, PoseidonParameters, CRH}, setup::common::{Curve, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5}, utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
-			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
-			get_rounds_poseidon_bn254_x5_5, parse_vec,
-		}};
+	use crate::{
+		poseidon::{circom::CircomCRH, CRH},
+		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
+		utils::{parse_vec, PoseidonParameters},
+	};
 	use ark_ed_on_bn254::Fq;
 
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
@@ -147,7 +147,6 @@ mod test {
 		let nullifier = Leaf::create_nullifier(&signature, &commitment, &params4, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
-
 
 	type PoseidonCircomCRH4 = CircomCRH<Fq>;
 	type PoseidonCircomCRH2 = CircomCRH<Fq>;

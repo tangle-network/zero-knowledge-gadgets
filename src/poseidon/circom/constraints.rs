@@ -25,7 +25,7 @@ impl<F: PrimeField> CircomCRHGadget<F> {
 				a.add_assign(c);
 			});
 
-			let half_rounds = (params.full_rounds as usize)/ 2;
+			let half_rounds = (params.full_rounds as usize) / 2;
 			if r < half_rounds || r >= half_rounds + (params.partial_rounds as usize) {
 				state
 					.iter_mut()
@@ -103,7 +103,7 @@ impl<F: PrimeField> TwoToOneCRHGadget<CircomCRH<F>, F> for CircomCRHGadget<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{setup::common::{Curve, setup_circom_params_x5_3}};
+	use crate::setup::common::{setup_circom_params_x5_3, Curve};
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
