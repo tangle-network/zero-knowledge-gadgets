@@ -1,10 +1,10 @@
+use crate::poseidon::sbox::PoseidonSbox;
 use ark_crypto_primitives::Error;
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
 use ethabi::{encode, Token};
 use tiny_keccak::{Hasher, Keccak};
-use crate::poseidon::sbox::PoseidonSbox;
 
 use crate::Vec;
 
@@ -505,7 +505,6 @@ pub fn get_sbox_poseidon_bn254_x17_5<F: PrimeField>() -> PoseidonSbox {
 	bn254_x17_5::SBOX
 }
 
-
 #[cfg(feature = "poseidon_bls381_x3_3")]
 pub fn get_rounds_poseidon_bls381_x3_3<F: PrimeField>() -> Vec<F> {
 	parse_vec(bls381_x3_3::ROUND_CONSTS.to_vec())
@@ -764,7 +763,6 @@ pub fn get_sbox_poseidon_bls381_x17_3<F: PrimeField>() -> PoseidonSbox {
 pub fn get_sbox_poseidon_bls381_x17_5<F: PrimeField>() -> PoseidonSbox {
 	bls381_x17_5::SBOX
 }
-
 
 #[cfg(feature = "mimc_220_ed_on_bn254")]
 pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {

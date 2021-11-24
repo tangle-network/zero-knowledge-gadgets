@@ -404,7 +404,14 @@ pub fn gen_empty_hashes<P: Config>(
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};
-	use crate::{poseidon::{PoseidonParameters, CRH as PoseidonCRH}, utils::{get_full_rounds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_3, get_partial_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3, get_sbox_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_3}};
+	use crate::{
+		poseidon::{PoseidonParameters, CRH as PoseidonCRH},
+		utils::{
+			get_full_rounds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_3,
+			get_partial_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3,
+			get_sbox_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_3,
+		},
+	};
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::{ToBytes, UniformRand};
@@ -445,7 +452,14 @@ mod test {
 		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
 		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
 		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
+		let params3 = PoseidonParameters::<Fq>::new(
+			round_keys_3,
+			mds_matrix_3,
+			full_rounds_3,
+			partial_rounds_3,
+			width_3,
+			sbox_3,
+		);
 
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
@@ -482,7 +496,14 @@ mod test {
 		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
 		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
 		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
+		let params3 = PoseidonParameters::<Fq>::new(
+			round_keys_3,
+			mds_matrix_3,
+			full_rounds_3,
+			partial_rounds_3,
+			width_3,
+			sbox_3,
+		);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
 
@@ -503,7 +524,14 @@ mod test {
 		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
 		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
 		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
+		let params3 = PoseidonParameters::<Fq>::new(
+			round_keys_3,
+			mds_matrix_3,
+			full_rounds_3,
+			partial_rounds_3,
+			width_3,
+			sbox_3,
+		);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
 		let index = 2;

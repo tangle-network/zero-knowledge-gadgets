@@ -103,7 +103,14 @@ impl<F: PrimeField> TwoToOneCRHGadget<CircomCRH<F>, F> for CircomCRHGadget<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{poseidon::{PoseidonParameters}, utils::{get_full_rounds_poseidon_circom_bn254_x5_3, get_partial_rounds_poseidon_circom_bn254_x5_3, get_sbox_poseidon_circom_bn254_x5_3, get_width_poseidon_circom_bn254_x5_3}};
+	use crate::{
+		poseidon::PoseidonParameters,
+		utils::{
+			get_full_rounds_poseidon_circom_bn254_x5_3,
+			get_partial_rounds_poseidon_circom_bn254_x5_3, get_sbox_poseidon_circom_bn254_x5_3,
+			get_width_poseidon_circom_bn254_x5_3,
+		},
+	};
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
@@ -128,7 +135,14 @@ mod test {
 		let partial_rounds_3 = get_partial_rounds_poseidon_circom_bn254_x5_3::<Fq>();
 		let width_3 = get_width_poseidon_circom_bn254_x5_3::<Fq>();
 		let sbox_3 = get_sbox_poseidon_circom_bn254_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
+		let params = PoseidonParameters::<Fq>::new(
+			round_keys_3,
+			mds_matrix_3,
+			full_rounds_3,
+			partial_rounds_3,
+			width_3,
+			sbox_3,
+		);
 
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),
