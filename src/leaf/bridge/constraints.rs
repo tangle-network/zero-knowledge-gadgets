@@ -101,7 +101,6 @@ mod test {
 		leaf::bridge::BridgeLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			sbox::PoseidonSbox,
 			CRH,
 		},
 		setup::common::{setup_params_x5_5, Curve},
