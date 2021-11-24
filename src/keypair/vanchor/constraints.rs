@@ -75,18 +75,11 @@ impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> AllocVar<Keypair<F, H2>, F>
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		ark_std::Zero,
-		poseidon::{
+	use crate::{ark_std::Zero, poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
-			PoseidonParameters, Rounds, CRH,
-		},
-		utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4,
-			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
-		},
-	};
+			PoseidonParameters, CRH,
+		}, utils::{get_full_rounds_poseidon_bn254_x5_2, get_full_rounds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_partial_rounds_poseidon_bn254_x5_2, get_partial_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4, get_sbox_poseidon_bn254_x5_2, get_sbox_poseidon_bn254_x5_4, get_width_poseidon_bn254_x5_2, get_width_poseidon_bn254_x5_4}};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
 	use ark_ff::to_bytes;
@@ -98,43 +91,8 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds2;
-
-	impl Rounds for PoseidonRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds4;
-
-	impl Rounds for PoseidonRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH2 = CRH<Fq, PoseidonRounds2>;
-	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
-
-	type PoseidonCRH2Gadget = CRHGadget<Fq, PoseidonRounds2>;
-	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
-	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
+	type PoseidonCRH = CRH<Fq>;
+	type PoseidonCRHGadget = CRHGadget<Fq>;
 
 	use crate::ark_std::UniformRand;
 	#[test]
@@ -143,13 +101,24 @@ mod test {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		// Native version
-		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let round_keys_2 = get_rounds_poseidon_bn254_x5_2::<Fq>();
+		let mds_matrix_2 = get_mds_poseidon_bn254_x5_2::<Fq>();
+		let full_rounds_2 = get_full_rounds_poseidon_bn254_x5_2::<Fq>();
+		let partial_rounds_2 = get_partial_rounds_poseidon_bn254_x5_2::<Fq>();
+		let width_2 = get_width_poseidon_bn254_x5_2::<Fq>();
+		let sbox_2 = get_sbox_poseidon_bn254_x5_2::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(
+				round_keys_2,
+				mds_matrix_2,
+				full_rounds_2,
+				partial_rounds_2,
+				width_2,
+				sbox_2,
+			);
 		let private_key = Fq::rand(rng);
 
 		let privkey = to_bytes![private_key].unwrap();
-		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
+		let pubkey = PoseidonCRH::evaluate(&params, &privkey).unwrap();
 
 		// Constraints version
 		let bytes = to_bytes![private_key].unwrap();
@@ -161,10 +130,10 @@ mod test {
 		)
 		.unwrap();
 
-		let pubkey_var = PoseidonCRH2Gadget::evaluate(&params_var, &privkey_var).unwrap();
+		let pubkey_var = PoseidonCRHGadget::evaluate(&params_var, &privkey_var).unwrap();
 		let privkey_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(private_key)).unwrap();
 		let keypair_var =
-			KeypairVar::<Fq, PoseidonCRH2, PoseidonCRH2Gadget>::new(&privkey_var).unwrap();
+			KeypairVar::<Fq, PoseidonCRH, PoseidonCRHGadget>::new(&privkey_var).unwrap();
 
 		let new_pubkey_var = keypair_var.public_key(&params_var).unwrap();
 		let res = pubkey_var.is_eq(&new_pubkey_var).unwrap();
@@ -187,16 +156,27 @@ mod test {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		// Native version
-		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let round_keys_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
+		let mds_matrix_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
+		let full_rounds_4 = get_full_rounds_poseidon_bn254_x5_4::<Fq>();
+		let partial_rounds_4 = get_partial_rounds_poseidon_bn254_x5_4::<Fq>();
+		let width_4 = get_width_poseidon_bn254_x5_4::<Fq>();
+		let sbox_4 = get_sbox_poseidon_bn254_x5_4::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(
+				round_keys_4,
+				mds_matrix_4,
+				full_rounds_4,
+				partial_rounds_4,
+				width_4,
+				sbox_4,
+			);
 		let private_key = Fq::rand(rng);
 		let commitment = Fq::rand(rng);
 		let index = Fq::zero();
 
-		let keypair = Keypair::<Fq, PoseidonCRH2>::new(private_key.clone());
+		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
 		let signature = keypair
-			.signature::<PoseidonCRH4, PoseidonCRH5>(&commitment, &index, &params)
+			.signature::<PoseidonCRH, PoseidonCRH>(&commitment, &index, &params)
 			.unwrap();
 
 		// Constraints version
@@ -211,11 +191,11 @@ mod test {
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
 
 		let keypair_var =
-			KeypairVar::<Fq, PoseidonCRH2, PoseidonCRH2Gadget>::new(&privkey_var).unwrap();
+			KeypairVar::<Fq, PoseidonCRH, PoseidonCRHGadget>::new(&privkey_var).unwrap();
 
 		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(signature)).unwrap();
 		let new_signature_var = keypair_var
-			.signature::<FpVar<Fq>, PoseidonCRH4, PoseidonCRH4Gadget, PoseidonCRH5, PoseidonCRH5Gadget>(
+			.signature::<FpVar<Fq>, PoseidonCRH, PoseidonCRHGadget, PoseidonCRH, PoseidonCRHGadget>(
 				&commitment_var,
 				&index_var,
 				&params_var,
