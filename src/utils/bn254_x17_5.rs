@@ -5,6 +5,42 @@ pub const PARTIAL_ROUNDS: u8 = 60;
 pub const WIDTH: u8 = 5;
 pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
 
+use ark_ff::PrimeField;
+use crate::utils::parse_vec;
+use super::parse_matrix;
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_rounds_poseidon_bn254_x17_5<F: PrimeField>() -> Vec<F> {
+	parse_vec(ROUND_CONSTS.to_vec())
+}
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_mds_poseidon_bn254_x17_5<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(
+		MDS_ENTRIES
+			.iter()
+			.map(|x| x.to_vec())
+			.collect::<Vec<_>>(),
+	)
+}
+
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_full_rounds_poseidon_bn254_x17_5<F: PrimeField>() -> u8 {
+	FULL_ROUNDS
+}
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_partial_rounds_poseidon_bn254_x17_5<F: PrimeField>() -> u8 {
+	PARTIAL_ROUNDS
+}
+
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_width_poseidon_bn254_x17_5<F: PrimeField>() -> u8 {
+	WIDTH
+}
+
+#[cfg(feature = "poseidon_bn254_x17_5")]
+pub fn get_sbox_poseidon_bn254_x17_5<F: PrimeField>() -> PoseidonSbox {
+	SBOX
+}
+
 pub const ROUND_CONSTS: [&str; 215] = [
 	"0x2f519d236ff3908aeed8bc12b6e3204820c18780cda2aa9bf32a675722a943e7",
 	"0x0d463eca09295bbf17ecbd6c0f1a2ae22e9e971abf332b50f6dc652948130ac9",
