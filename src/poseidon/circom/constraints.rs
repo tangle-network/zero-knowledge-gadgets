@@ -103,14 +103,7 @@ impl<F: PrimeField> TwoToOneCRHGadget<CircomCRH<F>, F> for CircomCRHGadget<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::PoseidonParameters,
-		utils::{
-			get_full_rounds_poseidon_circom_bn254_x5_3,
-			get_partial_rounds_poseidon_circom_bn254_x5_3, get_sbox_poseidon_circom_bn254_x5_3,
-			get_width_poseidon_circom_bn254_x5_3,
-		},
-	};
+	use crate::{setup::common::{Curve, setup_circom_params_x5_3}};
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
@@ -120,8 +113,6 @@ mod test {
 	};
 	use ark_relations::r1cs::ConstraintSystem;
 
-	use crate::utils::{get_mds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_3};
-
 	type PoseidonCircomCRH3 = CircomCRH<Fq>;
 	type PoseidonCircomCRH3Gadget = CircomCRHGadget<Fq>;
 
@@ -129,20 +120,9 @@ mod test {
 	fn circom_poseidon_native_equality() {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let round_keys_3 = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let mds_matrix_3 = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
-		let full_rounds_3 = get_full_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let partial_rounds_3 = get_partial_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let width_3 = get_width_poseidon_circom_bn254_x5_3::<Fq>();
-		let sbox_3 = get_sbox_poseidon_circom_bn254_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(
-			round_keys_3,
-			mds_matrix_3,
-			full_rounds_3,
-			partial_rounds_3,
-			width_3,
-			sbox_3,
-		);
+		let curve = Curve::Bn254;
+
+		let params = setup_circom_params_x5_3(curve);
 
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),

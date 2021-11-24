@@ -111,51 +111,21 @@ impl<F: PrimeField> TwoToOneCRH for CircomCRH<F> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::PoseidonSbox,
-		utils::{
-			get_full_rounds_poseidon_bn254_x5_2, get_full_rounds_poseidon_bn254_x5_4,
-			get_full_rounds_poseidon_bn254_x5_5, get_full_rounds_poseidon_circom_bn254_x5_3,
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_4,
-			get_mds_poseidon_bn254_x5_5, get_mds_poseidon_circom_bn254_x5_5,
-			get_partial_rounds_poseidon_bn254_x5_2, get_partial_rounds_poseidon_bn254_x5_4,
-			get_partial_rounds_poseidon_bn254_x5_5, get_partial_rounds_poseidon_circom_bn254_x5_3,
-			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3,
-			get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5,
-			get_rounds_poseidon_circom_bn254_x5_5, get_sbox_poseidon_bn254_x5_2,
-			get_sbox_poseidon_bn254_x5_4, get_sbox_poseidon_bn254_x5_5,
-			get_sbox_poseidon_circom_bn254_x5_3, get_width_poseidon_bn254_x5_2,
-			get_width_poseidon_bn254_x5_4, get_width_poseidon_bn254_x5_5,
-			get_width_poseidon_circom_bn254_x5_3,
-		},
-	};
+	use crate::{setup::common::{Curve, setup_circom_params_x5_3, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5}};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
-	use ark_ff::{BigInteger256, Field};
-	use ark_std::{One, Zero};
+	use ark_ff::Field;
+	use ark_std::One;
 
-	use crate::utils::{
-		get_mds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_3, parse_vec,
-	};
+	use crate::utils::parse_vec;
 
 	type PoseidonCircomCRH3 = CircomCRH<Fq>;
 	#[test]
 	fn test_width_3_circom_bn_254() {
-		let round_keys_3 = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let mds_matrix_3 = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
-		let full_rounds_3 = get_full_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let partial_rounds_3 = get_partial_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let width_3 = get_width_poseidon_circom_bn254_x5_3::<Fq>();
-		let sbox_3 = get_sbox_poseidon_circom_bn254_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(
-			round_keys_3,
-			mds_matrix_3,
-			full_rounds_3,
-			partial_rounds_3,
-			width_3,
-			sbox_3,
-		);
+		let curve = Curve::Bn254;
+
+		let params = setup_circom_params_x5_3(curve);
 		// output from circomlib, and here is the code.
 		// ```js
 		// const { poseidon } = require('circomlib');
@@ -224,50 +194,11 @@ mod test {
 	type PoseidonCircomCRH5 = CircomCRH<Fq>;
 	#[test]
 	fn test_compare_hashes_with_circom_bn_254() {
-		let round_keys_2 = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds_matrix_2 = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let full_rounds_2 = get_full_rounds_poseidon_bn254_x5_2::<Fq>();
-		let partial_rounds_2 = get_partial_rounds_poseidon_bn254_x5_2::<Fq>();
-		let width_2 = get_width_poseidon_bn254_x5_2::<Fq>();
-		let sbox_2 = get_sbox_poseidon_bn254_x5_2::<Fq>();
-		let parameters2 = PoseidonParameters::<Fq>::new(
-			round_keys_2,
-			mds_matrix_2,
-			full_rounds_2,
-			partial_rounds_2,
-			width_2,
-			sbox_2,
-		);
+		let curve = Curve::Bn254;
 
-		let round_keys_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds_matrix_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let full_rounds_4 = get_full_rounds_poseidon_bn254_x5_4::<Fq>();
-		let partial_rounds_4 = get_partial_rounds_poseidon_bn254_x5_4::<Fq>();
-		let width_4 = get_width_poseidon_bn254_x5_4::<Fq>();
-		let sbox_4 = get_sbox_poseidon_bn254_x5_4::<Fq>();
-		let parameters4 = PoseidonParameters::<Fq>::new(
-			round_keys_4,
-			mds_matrix_4,
-			full_rounds_4,
-			partial_rounds_4,
-			width_4,
-			sbox_4,
-		);
-
-		let round_keys_5 = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds_matrix_5 = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let full_rounds_5 = get_full_rounds_poseidon_bn254_x5_5::<Fq>();
-		let partial_rounds_5 = get_partial_rounds_poseidon_bn254_x5_5::<Fq>();
-		let width_5 = get_width_poseidon_bn254_x5_5::<Fq>();
-		let sbox_5 = get_sbox_poseidon_bn254_x5_5::<Fq>();
-		let parameters5 = PoseidonParameters::<Fq>::new(
-			round_keys_5,
-			mds_matrix_5,
-			full_rounds_5,
-			partial_rounds_5,
-			width_5,
-			sbox_5,
-		);
+		let parameters2 = setup_params_x5_2(curve);
+		let parameters4 = setup_params_x5_4(curve);
+		let parameters5 = setup_params_x5_5(curve);
 
 		let expected_public_key: Vec<Fq> = parse_vec(vec![
 			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",

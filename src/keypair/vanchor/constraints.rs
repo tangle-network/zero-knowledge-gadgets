@@ -77,9 +77,8 @@ mod test {
 	use super::*;
 	use crate::{ark_std::Zero, poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			sbox::PoseidonSbox,
-			PoseidonParameters, CRH,
-		}, utils::{get_full_rounds_poseidon_bn254_x5_2, get_full_rounds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_partial_rounds_poseidon_bn254_x5_2, get_partial_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4, get_sbox_poseidon_bn254_x5_2, get_sbox_poseidon_bn254_x5_4, get_width_poseidon_bn254_x5_2, get_width_poseidon_bn254_x5_4}};
+			CRH,
+		}, setup::common::{Curve, setup_params_x5_2, setup_params_x5_4}};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
 	use ark_ff::to_bytes;
@@ -99,22 +98,11 @@ mod test {
 	fn should_crate_new_public_key_var() {
 		let rng = &mut test_rng();
 		let cs = ConstraintSystem::<Fq>::new_ref();
+		let curve = Curve::Bn254;
 
 		// Native version
-		let round_keys_2 = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds_matrix_2 = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let full_rounds_2 = get_full_rounds_poseidon_bn254_x5_2::<Fq>();
-		let partial_rounds_2 = get_partial_rounds_poseidon_bn254_x5_2::<Fq>();
-		let width_2 = get_width_poseidon_bn254_x5_2::<Fq>();
-		let sbox_2 = get_sbox_poseidon_bn254_x5_2::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(
-				round_keys_2,
-				mds_matrix_2,
-				full_rounds_2,
-				partial_rounds_2,
-				width_2,
-				sbox_2,
-			);
+		let params = setup_params_x5_2(curve);
+
 		let private_key = Fq::rand(rng);
 
 		let privkey = to_bytes![private_key].unwrap();
@@ -154,22 +142,9 @@ mod test {
 	fn should_crate_new_signature_var() {
 		let rng = &mut test_rng();
 		let cs = ConstraintSystem::<Fq>::new_ref();
-
+		let curve = Curve::Bn254;
 		// Native version
-		let round_keys_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds_matrix_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let full_rounds_4 = get_full_rounds_poseidon_bn254_x5_4::<Fq>();
-		let partial_rounds_4 = get_partial_rounds_poseidon_bn254_x5_4::<Fq>();
-		let width_4 = get_width_poseidon_bn254_x5_4::<Fq>();
-		let sbox_4 = get_sbox_poseidon_bn254_x5_4::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(
-				round_keys_4,
-				mds_matrix_4,
-				full_rounds_4,
-				partial_rounds_4,
-				width_4,
-				sbox_4,
-			);
+		let params = setup_params_x5_4(curve);
 		let private_key = Fq::rand(rng);
 		let commitment = Fq::rand(rng);
 		let index = Fq::zero();
