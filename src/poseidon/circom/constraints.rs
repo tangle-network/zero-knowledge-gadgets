@@ -18,15 +18,15 @@ impl<F: PrimeField> CircomCRHGadget<F> {
 		params: &PoseidonParametersVar<F>,
 		mut state: Vec<FpVar<F>>,
 	) -> Result<Vec<FpVar<F>>, SynthesisError> {
-		let nr = params.full_rounds + params.partial_rounds;
+		let nr = (params.full_rounds + params.partial_rounds) as usize;
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
-				let c = &params.round_keys[(r * params.width + i)];
+				let c = &params.round_keys[(r * (params.width as usize) + i)];
 				a.add_assign(c);
 			});
 
-			let half_rounds = params.full_rounds / 2;
-			if r < half_rounds || r >= half_rounds + params.partial_rounds {
+			let half_rounds = (params.full_rounds as usize)/ 2;
+			if r < half_rounds || r >= half_rounds + (params.partial_rounds as usize) {
 				state
 					.iter_mut()
 					.try_for_each(|a| params.sbox.synthesize_sbox(a).map(|f| *a = f))?;
@@ -61,7 +61,7 @@ impl<F: PrimeField> CRHGadgetTrait<CircomCRH<F>, F> for CircomCRHGadget<F> {
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let f_var_inputs = crate::utils::to_field_var_elements(input)?;
-		if f_var_inputs.len() >= parameters.width {
+		if f_var_inputs.len() >= parameters.width.into() {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_var_inputs.len(),
