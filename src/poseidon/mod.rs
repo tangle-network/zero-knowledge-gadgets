@@ -60,9 +60,9 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		Self {
 			round_keys,
 			mds_matrix,
-			width,
-			full_rounds,
-			partial_rounds,
+			width: width as usize ,
+			full_rounds: full_rounds as usize,
+			partial_rounds: partial_rounds as usize,
 			sbox,
 		}
 	}
@@ -110,22 +110,22 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	}
 
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
-		let mut width_u8 = [0u8; 1];
+		let mut width_u8 = [0u8; 8];
 		bytes.read_exact(&mut width_u8)?;
-		let width: u8 = u8::from_be_bytes(width_u8);
+		let width: usize = usize::from_be_bytes(width_u8);
 
-		let mut full_rounds_u8 = [0u8; 1];
+		let mut full_rounds_u8 = [0u8; 8];
 		bytes.read_exact(&mut full_rounds_u8)?;
-		let full_rounds: u8 = u8::from_be_bytes(full_rounds_u8);
+		let full_rounds: usize = usize::from_be_bytes(full_rounds_u8);
 
-		let mut partial_rounds_u8 = [0u8; 1];
+		let mut partial_rounds_u8 = [0u8; 8];
 		bytes.read_exact(&mut partial_rounds_u8)?;
-		let partial_rounds: u8 = u8::from_be_bytes(partial_rounds_u8);
+		let partial_rounds: usize = usize::from_be_bytes(partial_rounds_u8);
 
-		let mut sbox_e_u8 = [0u8; 1];
+		let mut sbox_e_u8 = [0u8; 8];
 		bytes.read_exact(&mut sbox_e_u8)?;
-		let sbox_e: u8 = u8::from_be_bytes(sbox_e_u8); //TODO: fix this
-		let sbox = PoseidonSbox::Exponentiation(sbox_e.into());
+		let sbox_e: usize = usize::from_be_bytes(sbox_e_u8); //TODO: fix this
+		let sbox = PoseidonSbox::Exponentiation(sbox_e);
 
 		let mut round_key_len = [0u8; 4];
 		bytes.read_exact(&mut round_key_len)?;
@@ -172,7 +172,7 @@ impl<F: PrimeField> CRH<F> {
 		// full Sbox rounds
 		for _ in 0..(params.full_rounds / 2) {
 			// Sbox layer
-			for i in 0..width.into() {
+			for i in 0..width {
 				state[i] += params.round_keys[round_keys_offset];
 				state[i] = params.sbox.apply_sbox(state[i])?;
 				round_keys_offset += 1;
@@ -183,7 +183,7 @@ impl<F: PrimeField> CRH<F> {
 
 		// middle partial Sbox rounds
 		for _ in 0..params.partial_rounds {
-			for i in 0..width.into() {
+			for i in 0..width {
 				state[i] += params.round_keys[round_keys_offset];
 				round_keys_offset += 1;
 			}
@@ -197,7 +197,7 @@ impl<F: PrimeField> CRH<F> {
 		// last full Sbox rounds
 		for _ in 0..(params.full_rounds / 2) {
 			// Sbox layer
-			for i in 0..width.into() {
+			for i in 0..width {
 				state[i] += params.round_keys[round_keys_offset];
 				state[i] = params.sbox.apply_sbox(state[i])?;
 				round_keys_offset += 1;
@@ -241,7 +241,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 
 		let f_inputs: Vec<F> = to_field_elements(input)?;
 
-		if f_inputs.len() > parameters.width.into() {
+		if f_inputs.len() > parameters.width {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_inputs.len(),
@@ -250,7 +250,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 			);
 		}
 
-		let mut buffer = vec![F::zero(); parameters.width.into()];
+		let mut buffer = vec![F::zero(); parameters.width];
 		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
 
 		let result = Self::permute(&parameters, buffer)?;

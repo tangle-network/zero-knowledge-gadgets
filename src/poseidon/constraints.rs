@@ -1,5 +1,5 @@
 use super::{sbox::constraints::SboxConstraints, PoseidonParameters, CRH};
-use crate::{poseidon::PoseidonSbox, utils::to_field_var_elements};
+use crate::utils::to_field_var_elements;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -8,6 +8,7 @@ use ark_r1cs_std::{
 	prelude::*,
 	uint8::UInt8,
 };
+use crate::poseidon::PoseidonSbox;
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
 use core::borrow::Borrow;
@@ -19,11 +20,11 @@ pub struct PoseidonParametersVar<F: PrimeField> {
 	/// The MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<FpVar<F>>>,
 	/// Number of full SBox rounds
-	pub full_rounds: u8,
+	pub full_rounds: usize,
 	/// Number of partial rounds
-	pub partial_rounds: u8,
+	pub partial_rounds: usize,
 	/// The size of the permutation, in field elements.
-	pub width: u8,
+	pub width: usize,
 	/// The S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }
@@ -44,7 +45,7 @@ impl<F: PrimeField> CRHGadget<F> {
 		// full Sbox rounds
 		for _ in 0..(parameters.full_rounds / 2) {
 			// Substitution (S-box) layer
-			for i in 0..width.into() {
+			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
 				state[i] = parameters.sbox.synthesize_sbox(&state[i])?;
 				round_keys_offset += 1;
@@ -56,7 +57,7 @@ impl<F: PrimeField> CRHGadget<F> {
 		// middle partial Sbox rounds
 		for _ in 0..parameters.partial_rounds {
 			// Substitution (S-box) layer
-			for i in 0..width.into() {
+			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
 				round_keys_offset += 1;
 			}
@@ -68,9 +69,9 @@ impl<F: PrimeField> CRHGadget<F> {
 		}
 
 		// last full Sbox rounds
-		for _ in 0..(parameters.full_rounds / 2) {
+		for _ in 0..(parameters.full_rounds/ 2) {
 			// Substitution (S-box) layer
-			for i in 0..width.into() {
+			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
 				state[i] = parameters.sbox.synthesize_sbox(&state[i])?;
 				round_keys_offset += 1;
@@ -106,7 +107,7 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let f_var_inputs: Vec<FpVar<F>> = to_field_var_elements(input)?;
-		if f_var_inputs.len() > parameters.width.into() {
+		if f_var_inputs.len() > parameters.width {
 			panic!(
 				"incorrect input length {:?} for width {:?}",
 				f_var_inputs.len(),
@@ -114,7 +115,7 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 			);
 		}
 
-		let mut buffer = vec![FpVar::zero(); parameters.width.into()];
+		let mut buffer = vec![FpVar::zero(); parameters.width];
 		buffer
 			.iter_mut()
 			.zip(f_var_inputs)
@@ -169,13 +170,14 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 		let width = params.width;
 		let sbox = params.sbox;
 
+
 		Ok(Self {
 			round_keys: round_keys_var,
 			mds_matrix: mds_var,
 			full_rounds,
 			partial_rounds,
 			width,
-			sbox,
+			sbox
 		})
 	}
 }
@@ -188,12 +190,9 @@ mod test {
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
-	use crate::utils::{
-		get_full_rounds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_3,
-		get_partial_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3,
-		get_sbox_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_3,
-	};
+	use crate::{utils::{get_full_rounds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_3, get_partial_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3, get_sbox_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_3}};
 
+	
 	type PoseidonCRH3 = CRH<Fq>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq>;
 
@@ -207,14 +206,7 @@ mod test {
 		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
 		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
 		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(
-			round_keys_3,
-			mds_matrix_3,
-			full_rounds_3,
-			partial_rounds_3,
-			width_3,
-			sbox_3,
-		);
+		let params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),
