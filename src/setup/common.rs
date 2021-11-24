@@ -165,35 +165,23 @@ impl_setup_tree!(
 pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
-		Curve::Bls381 => {
-			crate::utils::bls381_x3_3::get_poseidon_bls381_x3_3()
-		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x3_3::get_poseidon_bn254_x3_3()
-		}
+		Curve::Bls381 => crate::utils::bls381_x3_3::get_poseidon_bls381_x3_3(),
+		Curve::Bn254 => crate::utils::bn254_x3_3::get_poseidon_bn254_x3_3(),
 	}
 }
 pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
-		Curve::Bls381 => {
-			crate::utils::bls381_x3_5::get_poseidon_bls381_x3_5()
-		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x3_5::get_poseidon_bn254_x3_5()
-		}
+		Curve::Bls381 => crate::utils::bls381_x3_5::get_poseidon_bls381_x3_5(),
+		Curve::Bn254 => crate::utils::bn254_x3_5::get_poseidon_bn254_x3_5(),
 	}
 }
 
 pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
-		Curve::Bls381 => {
-			crate::utils::bls381_x5_3::get_poseidon_bls381_x5_3()
-		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x5_3::get_poseidon_bn254_x5_3()
-		}
+		Curve::Bls381 => crate::utils::bls381_x5_3::get_poseidon_bls381_x5_3(),
+		Curve::Bn254 => crate::utils::bn254_x5_3::get_poseidon_bn254_x5_3(),
 	}
 }
 
@@ -203,9 +191,7 @@ pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x5_2::get_poseidon_bn254_x5_2()
-		}
+		Curve::Bn254 => crate::utils::bn254_x5_2::get_poseidon_bn254_x5_2(),
 	}
 }
 
@@ -215,9 +201,7 @@ pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParamete
 		Curve::Bls381 => {
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
-		Curve::Bn254 => {
-			crate::utils::bn254_circom_x5_3::get_poseidon_circom_bn254_x5_3()
-		}
+		Curve::Bn254 => crate::utils::bn254_circom_x5_3::get_poseidon_circom_bn254_x5_3(),
 	}
 }
 
@@ -227,21 +211,15 @@ pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bls381 => {
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x5_4::get_poseidon_bn254_x5_4()
-		}
+		Curve::Bn254 => crate::utils::bn254_x5_4::get_poseidon_bn254_x5_4(),
 	}
 }
 
 pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
-		Curve::Bls381 => {
-			crate::utils::bls381_x5_5::get_poseidon_bls381_x5_5()
-		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x5_5::get_poseidon_bn254_x5_5()
-		}
+		Curve::Bls381 => crate::utils::bls381_x5_5::get_poseidon_bls381_x5_5(),
+		Curve::Bn254 => crate::utils::bn254_x5_5::get_poseidon_bn254_x5_5(),
 	}
 }
 
@@ -251,33 +229,23 @@ pub fn setup_circom_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParamete
 		Curve::Bls381 => {
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
-		Curve::Bn254 => {
-			crate::utils::bn254_circom_x5_5::get_poseidon_circom_bn254_x5_5()
-		}
+		Curve::Bn254 => crate::utils::bn254_circom_x5_5::get_poseidon_circom_bn254_x5_5(),
 	}
 }
 
 pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
-		Curve::Bls381 => {
-			crate::utils::bls381_x17_3::get_poseidon_bls381_x17_3()
-		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x17_3::get_poseidon_bn254_x17_3()
-		}
+		Curve::Bls381 => crate::utils::bls381_x17_3::get_poseidon_bls381_x17_3(),
+		Curve::Bn254 => crate::utils::bn254_x17_3::get_poseidon_bn254_x17_3(),
 	}
 }
 
 pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
-		Curve::Bls381 => {
-			crate::utils::bls381_x17_5::get_poseidon_bls381_x17_5()
-		}
-		Curve::Bn254 => {
-			crate::utils::bn254_x17_5::get_poseidon_bn254_x17_5()
-		}
+		Curve::Bls381 => crate::utils::bls381_x17_5::get_poseidon_bls381_x17_5(),
+		Curve::Bn254 => crate::utils::bn254_x17_5::get_poseidon_bn254_x17_5(),
 	}
 }
 

@@ -30,19 +30,12 @@ pub fn get_sbox_poseidon_bn254_x3_5<F: PrimeField>() -> PoseidonSbox {
 	SBOX
 }
 
-use super::{PoseidonParameters, parse_matrix};
+use super::{parse_matrix, PoseidonParameters};
 pub fn get_poseidon_bn254_x3_5<F: PrimeField>() -> PoseidonParameters<F> {
 	let rounds = get_rounds_poseidon_bn254_x3_5();
 	let mds = get_mds_poseidon_bn254_x3_5();
-	PoseidonParameters::<F>::new(
-	  rounds,
-	  mds,
-	  FULL_ROUNDS,
-	  PARTIAL_ROUNDS,
-	  WIDTH,
-	  SBOX,
-	)
-  }
+	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
+}
 
 pub const ROUND_CONSTS: [&str; 465] = [
 	"0x12f865f28b419806bd53e1d8f6389be0169e5dc5fda2a25ddf2a0e557f5055e1",
