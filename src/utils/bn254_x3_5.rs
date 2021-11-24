@@ -5,7 +5,6 @@ pub const PARTIAL_ROUNDS: u8 = 60;
 pub const WIDTH: u8 = 5;
 pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(3);
 
-use super::parse_matrix;
 use crate::utils::parse_vec;
 use ark_ff::PrimeField;
 
@@ -30,6 +29,20 @@ pub fn get_width_poseidon_bn254_x3_5<F: PrimeField>() -> u8 {
 pub fn get_sbox_poseidon_bn254_x3_5<F: PrimeField>() -> PoseidonSbox {
 	SBOX
 }
+
+use super::{PoseidonParameters, parse_matrix};
+pub fn get_poseidon_bn254_x3_5<F: PrimeField>() -> PoseidonParameters<F> {
+	let rounds = get_rounds_poseidon_bn254_x3_5();
+	let mds = get_mds_poseidon_bn254_x3_5();
+	PoseidonParameters::<F>::new(
+	  rounds,
+	  mds,
+	  FULL_ROUNDS,
+	  PARTIAL_ROUNDS,
+	  WIDTH,
+	  SBOX,
+	)
+  }
 
 pub const ROUND_CONSTS: [&str; 465] = [
 	"0x12f865f28b419806bd53e1d8f6389be0169e5dc5fda2a25ddf2a0e557f5055e1",
