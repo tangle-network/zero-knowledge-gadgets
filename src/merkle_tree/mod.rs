@@ -71,32 +71,7 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		root_hash: &Node<P>,
 		leaf: &L,
 	) -> Result<bool, Error> {
-		if self.path.len() != P::HEIGHT as usize {
-			return Ok(false);
-		}
-		// Check that the given leaf matches the leaf in the membership proof.
-		if self.path.is_empty() {
-			return Ok(false);
-		}
-
-		let claimed_leaf_hash = hash_leaf::<P, L>(self.leaf_params.borrow(), leaf)?;
-
-		// Check if claimed leaf hash is the same as one of
-		// the provided hashes on level 0
-		if claimed_leaf_hash != self.path[0].0 && claimed_leaf_hash != self.path[0].1 {
-			return Ok(false);
-		}
-
-		let mut prev = claimed_leaf_hash;
-		// Check levels between leaf level and root.
-		for &(ref left_hash, ref right_hash) in &self.path {
-			// Check if the previous hash matches the correct current hash.
-			if &prev != left_hash && &prev != right_hash {
-				return Ok(false);
-			}
-			prev = hash_inner_node::<P>(self.inner_params.borrow(), left_hash, right_hash)?;
-		}
-
+		let prev = self.root_hash(leaf)?;
 		Ok(root_hash == &prev)
 	}
 
