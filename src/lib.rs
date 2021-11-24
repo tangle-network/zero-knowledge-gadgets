@@ -8,10 +8,10 @@ pub(crate) use ark_std::vec::Vec;
 
 pub mod arbitrary;
 #[cfg(feature = "r1cs")]
-pub mod circuit;
+//pub mod circuit;
 pub mod identity;
-pub mod keypair;
-pub mod leaf;
+//pub mod keypair;
+//pub mod leaf;
 pub mod merkle_tree;
 pub mod mimc;
 pub mod poseidon;

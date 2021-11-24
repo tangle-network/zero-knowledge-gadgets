@@ -307,15 +307,10 @@ where
 #[cfg(test)]
 mod test {
 	use super::{NodeVar, PathVar};
-	use crate::{
-		ark_std::UniformRand,
-		merkle_tree::{Config, SparseMerkleTree},
-		poseidon::{
+	use crate::{ark_std::UniformRand, merkle_tree::{Config, SparseMerkleTree}, poseidon::{
 			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
-			Rounds, CRH as PoseidonCRH,
-		},
-		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
-	};
+			 CRH as PoseidonCRH,
+		}, utils::{get_full_rounds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_3, get_partial_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3, get_sbox_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_3}};
 	use ark_bls12_381::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
@@ -325,18 +320,8 @@ mod test {
 
 	type FieldVar = FpVar<Fq>;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
-
-	impl Rounds for PoseidonRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type SMTCRH = PoseidonCRH<Fq, PoseidonRounds3>;
-	type SMTCRHGadget = PoseidonCRHGadget<Fq, PoseidonRounds3>;
+	type SMTCRH = PoseidonCRH<Fq>;
+	type SMTCRHGadget = PoseidonCRHGadget<Fq>;
 
 	#[derive(Clone, Debug, Eq, PartialEq)]
 	struct SMTConfig;
@@ -353,9 +338,13 @@ mod test {
 	#[test]
 	fn should_verify_path() {
 		let rng = &mut test_rng();
-		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let round_keys_3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_bls381_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
 
@@ -382,9 +371,13 @@ mod test {
 	#[test]
 	fn should_verify_index() {
 		let rng = &mut test_rng();
-		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let round_keys_3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_bls381_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
 		let index = 2;
@@ -414,9 +407,13 @@ mod test {
 	#[test]
 	fn should_fail_path_creation_with_invalid_size() {
 		let rng = &mut test_rng();
-		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let round_keys_3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_bls381_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
 
@@ -448,9 +445,13 @@ mod test {
 	#[test]
 	fn should_fail_membership_with_invalid_size() {
 		let rng = &mut test_rng();
-		let rounds3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds3 = get_mds_poseidon_bls381_x5_3::<Fq>();
-		let params3 = PoseidonParameters::<Fq>::new(rounds3, mds3);
+		let round_keys_3 = get_rounds_poseidon_bls381_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_bls381_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_bls381_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_bls381_x5_3::<Fq>();
+		let params3 = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 		let inner_params = Rc::new(params3);
 		let leaf_params = inner_params.clone();
 

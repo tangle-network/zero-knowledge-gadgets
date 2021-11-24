@@ -1,6 +1,5 @@
 use crate::poseidon::{
 	circom::CircomCRH, constraints::PoseidonParametersVar, sbox::constraints::SboxConstraints,
-	Rounds,
 };
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
@@ -12,27 +11,27 @@ use ark_relations::r1cs::SynthesisError;
 use ark_std::{marker::PhantomData, vec::Vec};
 use core::ops::{Add, AddAssign, Mul};
 
-pub struct CircomCRHGadget<F: PrimeField, P: Rounds>(PhantomData<F>, PhantomData<P>);
+pub struct CircomCRHGadget<F: PrimeField>(PhantomData<F>);
 
-impl<F: PrimeField, P: Rounds> CircomCRHGadget<F, P> {
+impl<F: PrimeField> CircomCRHGadget<F> {
 	fn permute(
 		params: &PoseidonParametersVar<F>,
 		mut state: Vec<FpVar<F>>,
 	) -> Result<Vec<FpVar<F>>, SynthesisError> {
-		let nr = P::FULL_ROUNDS + P::PARTIAL_ROUNDS;
+		let nr = params.full_rounds + params.partial_rounds;
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
-				let c = &params.round_keys[(r * P::WIDTH + i)];
+				let c = &params.round_keys[(r * params.width + i)];
 				a.add_assign(c);
 			});
 
-			let half_rounds = P::FULL_ROUNDS / 2;
-			if r < half_rounds || r >= half_rounds + P::PARTIAL_ROUNDS {
+			let half_rounds = params.full_rounds / 2;
+			if r < half_rounds || r >= half_rounds + params.partial_rounds {
 				state
 					.iter_mut()
-					.try_for_each(|a| P::SBOX.synthesize_sbox(a).map(|f| *a = f))?;
+					.try_for_each(|a| params.sbox.synthesize_sbox(a).map(|f| *a = f))?;
 			} else {
-				state[0] = P::SBOX.synthesize_sbox(&state[0])?;
+				state[0] = params.sbox.synthesize_sbox(&state[0])?;
 			}
 
 			state = state
@@ -53,7 +52,7 @@ impl<F: PrimeField, P: Rounds> CircomCRHGadget<F, P> {
 	}
 }
 
-impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CircomCRH<F, P>, F> for CircomCRHGadget<F, P> {
+impl<F: PrimeField> CRHGadgetTrait<CircomCRH<F>, F> for CircomCRHGadget<F> {
 	type OutputVar = FpVar<F>;
 	type ParametersVar = PoseidonParametersVar<F>;
 
@@ -62,11 +61,11 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CircomCRH<F, P>, F> for CircomCRHG
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let f_var_inputs = crate::utils::to_field_var_elements(input)?;
-		if f_var_inputs.len() >= P::WIDTH {
+		if f_var_inputs.len() >= parameters.width {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_var_inputs.len(),
-				P::WIDTH,
+				parameters.width,
 				input.len()
 			);
 		}
@@ -81,7 +80,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CircomCRH<F, P>, F> for CircomCRHG
 	}
 }
 
-impl<F: PrimeField, P: Rounds> TwoToOneCRHGadget<CircomCRH<F, P>, F> for CircomCRHGadget<F, P> {
+impl<F: PrimeField> TwoToOneCRHGadget<CircomCRH<F>, F> for CircomCRHGadget<F> {
 	type OutputVar = FpVar<F>;
 	type ParametersVar = PoseidonParametersVar<F>;
 
@@ -104,7 +103,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRHGadget<CircomCRH<F, P>, F> for CircomC
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::poseidon::{PoseidonParameters, PoseidonSbox};
+	use crate::{poseidon::{PoseidonParameters}, utils::{get_full_rounds_poseidon_circom_bn254_x5_3, get_partial_rounds_poseidon_circom_bn254_x5_3, get_sbox_poseidon_circom_bn254_x5_3, get_width_poseidon_circom_bn254_x5_3}};
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
@@ -116,26 +115,20 @@ mod test {
 
 	use crate::utils::{get_mds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_3};
 
-	#[derive(Default, Clone)]
-	struct PoseidonCircomRounds3;
-
-	impl Rounds for PoseidonCircomRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type PoseidonCircomCRH3 = CircomCRH<Fq, PoseidonCircomRounds3>;
-	type PoseidonCircomCRH3Gadget = CircomCRHGadget<Fq, PoseidonCircomRounds3>;
+	type PoseidonCircomCRH3 = CircomCRH<Fq>;
+	type PoseidonCircomCRH3Gadget = CircomCRHGadget<Fq>;
 
 	#[test]
 	fn circom_poseidon_native_equality() {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let rounds = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
-		let mds = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let round_keys_3 = get_rounds_poseidon_circom_bn254_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_circom_bn254_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_circom_bn254_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_circom_bn254_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_circom_bn254_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_circom_bn254_x5_3::<Fq>();
+		let params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),

@@ -56,12 +56,12 @@ pub struct PoseidonParameters<F> {
 	pub round_keys: Vec<F>,
 	/// The MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<F>>,
-	/// The size of the permutation, in field elements.
-	pub width: usize,
 	/// Number of full SBox rounds
 	pub full_rounds: usize,
 	/// Number of partial rounds
 	pub partial_rounds: usize,
+	/// The size of the permutation, in field elements.
+	pub width: usize,
 	/// The S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }
@@ -70,9 +70,9 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	pub fn new(
 		round_keys: Vec<F>,
 		mds_matrix: Vec<Vec<F>>,
-		width: usize,
 		full_rounds: usize,
 		partial_rounds: usize,
+		width: usize,
 		sbox: PoseidonSbox,
 	) -> Self {
 		Self {
@@ -246,7 +246,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
 
-	const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * PoseidonParameters::width * 8;
+	const INPUT_SIZE_BITS: usize = 0;// F::BigInt::NUM_LIMBS * 8 * PoseidonParameters::width * 8;
 
 	// Not sure what's the purpose of this function of we are going to pass
 	// parameters
@@ -315,11 +315,7 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
-	use crate::utils::{
-		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_results_poseidon_bn254_x5_3,
-		get_results_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
-		get_rounds_poseidon_bn254_x5_5,
-	};
+	use crate::utils::{get_full_rounds_poseidon_bn254_x5_3, get_full_rounds_poseidon_bn254_x5_5, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_partial_rounds_poseidon_bn254_x5_3, get_partial_rounds_poseidon_bn254_x5_5, get_results_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_5, get_sbox_poseidon_bn254_x5_3, get_sbox_poseidon_bn254_x5_5, get_width_poseidon_bn254_x5_3, get_width_poseidon_bn254_x5_5};
 
 	#[derive(Default, Clone)]
 	struct PoseidonRounds3;
@@ -333,9 +329,13 @@ mod test {
 
 	#[test]
 	fn test_parameter_to_and_from_bytes() {
-		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let round_keys_3 = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_bn254_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_bn254_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_bn254_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_bn254_x5_3::<Fq>();
+		let	params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
 
 		let bytes = params.to_bytes();
 		let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
@@ -344,12 +344,16 @@ mod test {
 
 	#[test]
 	fn test_width_3_bn_254() {
-		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
+		let round_keys_3 = get_rounds_poseidon_bn254_x5_3::<Fq>();
+		let mds_matrix_3 = get_mds_poseidon_bn254_x5_3::<Fq>();
+		let full_rounds_3 = get_full_rounds_poseidon_bn254_x5_3::<Fq>();
+		let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x5_3::<Fq>();
+		let width_3 = get_width_poseidon_bn254_x5_3::<Fq>();
+		let sbox_3 = get_sbox_poseidon_bn254_x5_3::<Fq>();
+		let	params = PoseidonParameters::<Fq>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3);
+
 		let res = get_results_poseidon_bn254_x5_3::<Fq>();
-
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
-
+		
 		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 
 		let poseidon_res = <PoseidonCRH3 as CRHTrait>::evaluate(&params, &inp).unwrap();
@@ -358,11 +362,17 @@ mod test {
 
 	#[test]
 	fn test_width_5_bn_254() {
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let round_keys_5 = get_rounds_poseidon_bn254_x5_5::<Fq>();
+		let mds_matrix_5 = get_mds_poseidon_bn254_x5_5::<Fq>();
+		let full_rounds_5 = get_full_rounds_poseidon_bn254_x5_5::<Fq>();
+		let partial_rounds_5 = get_partial_rounds_poseidon_bn254_x5_5::<Fq>();
+		let width_5 = get_width_poseidon_bn254_x5_5::<Fq>();
+		let sbox_5 = get_sbox_poseidon_bn254_x5_5::<Fq>();
+		let	params = PoseidonParameters::<Fq>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5);
+
 		let res = get_results_poseidon_bn254_x5_5::<Fq>();
 
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		
 
 		let inp = to_bytes![
 			Fq::zero(),

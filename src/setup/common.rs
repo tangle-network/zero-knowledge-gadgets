@@ -1,30 +1,9 @@
-use crate::{
-	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
-	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
-	mimc::{MiMCParameters, Rounds as MiMCRounds},
-	poseidon::{
+use crate::{identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH}, merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree}, mimc::{MiMCParameters, Rounds as MiMCRounds}, poseidon::{
 		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
 		sbox::PoseidonSbox,
-		PoseidonParameters, Rounds, CRH,
-	},
-	utils::{
-		get_mds_poseidon_bls381_x17_3, get_mds_poseidon_bls381_x17_5, get_mds_poseidon_bls381_x3_3,
-		get_mds_poseidon_bls381_x3_5, get_mds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_5,
-		get_mds_poseidon_bn254_x17_3, get_mds_poseidon_bn254_x17_5, get_mds_poseidon_bn254_x3_3,
-		get_mds_poseidon_bn254_x3_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3,
-		get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
-		get_mds_poseidon_circom_bn254_x5_3, get_mds_poseidon_circom_bn254_x5_5,
-		get_rounds_poseidon_bls381_x17_3, get_rounds_poseidon_bls381_x17_5,
-		get_rounds_poseidon_bls381_x3_3, get_rounds_poseidon_bls381_x3_5,
-		get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5,
-		get_rounds_poseidon_bn254_x17_3, get_rounds_poseidon_bn254_x17_5,
-		get_rounds_poseidon_bn254_x3_3, get_rounds_poseidon_bn254_x3_5,
-		get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3,
-		get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5,
-		get_rounds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5,
-	},
-};
+		PoseidonParameters, CRH,
+	}, utils::{get_full_rounds_poseidon_bls381_x17_3, get_full_rounds_poseidon_bls381_x17_5, get_full_rounds_poseidon_bls381_x3_3, get_full_rounds_poseidon_bls381_x3_5, get_full_rounds_poseidon_bls381_x5_3, get_full_rounds_poseidon_bls381_x5_5, get_full_rounds_poseidon_bn254_x17_3, get_full_rounds_poseidon_bn254_x17_5, get_full_rounds_poseidon_bn254_x3_3, get_full_rounds_poseidon_bn254_x3_5, get_full_rounds_poseidon_bn254_x5_2, get_full_rounds_poseidon_bn254_x5_3, get_full_rounds_poseidon_bn254_x5_4, get_full_rounds_poseidon_bn254_x5_5, get_full_rounds_poseidon_circom_bn254_x5_3, get_full_rounds_poseidon_circom_bn254_x5_5, get_mds_poseidon_bls381_x17_3, get_mds_poseidon_bls381_x17_5, get_mds_poseidon_bls381_x3_3, get_mds_poseidon_bls381_x3_5, get_mds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x17_3, get_mds_poseidon_bn254_x17_5, get_mds_poseidon_bn254_x3_3, get_mds_poseidon_bn254_x3_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5, get_mds_poseidon_circom_bn254_x5_3, get_mds_poseidon_circom_bn254_x5_5, get_partial_rounds_poseidon_bls381_x17_3, get_partial_rounds_poseidon_bls381_x17_5, get_partial_rounds_poseidon_bls381_x3_3, get_partial_rounds_poseidon_bls381_x3_5, get_partial_rounds_poseidon_bls381_x5_3, get_partial_rounds_poseidon_bls381_x5_5, get_partial_rounds_poseidon_bn254_x17_3, get_partial_rounds_poseidon_bn254_x17_5, get_partial_rounds_poseidon_bn254_x3_3, get_partial_rounds_poseidon_bn254_x3_5, get_partial_rounds_poseidon_bn254_x5_2, get_partial_rounds_poseidon_bn254_x5_3, get_partial_rounds_poseidon_bn254_x5_4, get_partial_rounds_poseidon_bn254_x5_5, get_partial_rounds_poseidon_circom_bn254_x5_3, get_partial_rounds_poseidon_circom_bn254_x5_5, get_rounds_poseidon_bls381_x17_3, get_rounds_poseidon_bls381_x17_5, get_rounds_poseidon_bls381_x3_3, get_rounds_poseidon_bls381_x3_5, get_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_5, get_rounds_poseidon_bn254_x17_3, get_rounds_poseidon_bn254_x17_5, get_rounds_poseidon_bn254_x3_3, get_rounds_poseidon_bn254_x3_5, get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_3, get_rounds_poseidon_bn254_x5_4, get_rounds_poseidon_bn254_x5_5, get_rounds_poseidon_circom_bn254_x5_3, get_rounds_poseidon_circom_bn254_x5_5, get_sbox_poseidon_bls381_x17_3, get_sbox_poseidon_bls381_x17_5, get_sbox_poseidon_bls381_x3_3, get_sbox_poseidon_bls381_x3_5, get_sbox_poseidon_bls381_x5_3, get_sbox_poseidon_bls381_x5_5, get_sbox_poseidon_bn254_x17_3, get_sbox_poseidon_bn254_x17_5, get_sbox_poseidon_bn254_x3_3, get_sbox_poseidon_bn254_x3_5, get_sbox_poseidon_bn254_x5_2, get_sbox_poseidon_bn254_x5_3, get_sbox_poseidon_bn254_x5_4, get_sbox_poseidon_bn254_x5_5, get_sbox_poseidon_circom_bn254_x5_3, get_sbox_poseidon_circom_bn254_x5_5, get_width_poseidon_bls381_x17_3, get_width_poseidon_bls381_x17_5, get_width_poseidon_bls381_x3_3, get_width_poseidon_bls381_x3_5, get_width_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_5, get_width_poseidon_bn254_x17_3, get_width_poseidon_bn254_x17_5, get_width_poseidon_bn254_x3_3, get_width_poseidon_bn254_x3_5, get_width_poseidon_bn254_x5_2, get_width_poseidon_bn254_x5_3, get_width_poseidon_bn254_x5_4, get_width_poseidon_bn254_x5_5, get_width_poseidon_circom_bn254_x5_3, get_width_poseidon_circom_bn254_x5_5}};
 use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
@@ -32,115 +11,35 @@ use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_std::{marker::PhantomData, rc::Rc};
 use paste::paste;
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x3_3;
+pub type PoseidonCRH_x3_3<F> = CRH<F>;
+pub type PoseidonCRH_x3_3Gadget<F> = CRHGadget<F>;
 
-impl Rounds for PoseidonRounds_x3_3 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 84;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(3);
-	const WIDTH: usize = 3;
-}
+pub type PoseidonCRH_x3_5<F> = CRH<F>;
+pub type PoseidonCRH_x3_5Gadget<F> = CRHGadget<F>;
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x3_5;
+pub type PoseidonCRH_x5_3<F> = CRH<F>;
+pub type PoseidonCRH_x5_3Gadget<F> = CRHGadget<F>;
 
-impl Rounds for PoseidonRounds_x3_5 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 85;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(3);
-	const WIDTH: usize = 5;
-}
+pub type PoseidonCRH_x5_5<F> = CRH<F>;
+pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F>;
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_5;
+pub type PoseidonCRH_x5_4<F> = CRH<F>;
+pub type PoseidonCRH_x5_4Gadget<F> = CRHGadget<F>;
 
-impl Rounds for PoseidonRounds_x5_5 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 60;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 5;
-}
+pub type PoseidonCircomCRH_x5_3<F> = CircomCRH<F>;
+pub type PoseidonCircomCRH_x5_3Gadget<F> = CircomCRHGadget<F>;
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_4;
+pub type PoseidonCRH_x5_2<F> = CRH<F>;
+pub type PoseidonCRH_x5_2Gadget<F> = CRHGadget<F>;
 
-impl Rounds for PoseidonRounds_x5_4 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 56;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 4;
-}
+pub type PoseidonCircomCRH_x5_5<F> = CircomCRH<F>;
+pub type PoseidonCircomCRH_x5_5Gadget<F> = CircomCRHGadget<F>;
 
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_3;
+pub type PoseidonCRH_x17_3<F> = CRH<F>;
+pub type PoseidonCRH_x17_3Gadget<F> = CRHGadget<F>;
 
-impl Rounds for PoseidonRounds_x5_3 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 57;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 3;
-}
-
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_2;
-
-impl Rounds for PoseidonRounds_x5_2 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 56;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 2;
-}
-
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x17_5;
-
-impl Rounds for PoseidonRounds_x17_5 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 35;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
-	const WIDTH: usize = 5;
-}
-
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x17_3;
-
-impl Rounds for PoseidonRounds_x17_3 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 33;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
-	const WIDTH: usize = 3;
-}
-
-pub type PoseidonCRH_x3_3<F> = CRH<F, PoseidonRounds_x3_3>;
-pub type PoseidonCRH_x3_3Gadget<F> = CRHGadget<F, PoseidonRounds_x3_3>;
-
-pub type PoseidonCRH_x3_5<F> = CRH<F, PoseidonRounds_x3_5>;
-pub type PoseidonCRH_x3_5Gadget<F> = CRHGadget<F, PoseidonRounds_x3_5>;
-
-pub type PoseidonCRH_x5_3<F> = CRH<F, PoseidonRounds_x5_3>;
-pub type PoseidonCRH_x5_3Gadget<F> = CRHGadget<F, PoseidonRounds_x5_3>;
-
-pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
-pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
-
-pub type PoseidonCRH_x5_4<F> = CRH<F, PoseidonRounds_x5_4>;
-pub type PoseidonCRH_x5_4Gadget<F> = CRHGadget<F, PoseidonRounds_x5_4>;
-
-pub type PoseidonCircomCRH_x5_3<F> = CircomCRH<F, PoseidonRounds_x5_3>;
-pub type PoseidonCircomCRH_x5_3Gadget<F> = CircomCRHGadget<F, PoseidonRounds_x5_3>;
-
-pub type PoseidonCRH_x5_2<F> = CRH<F, PoseidonRounds_x5_2>;
-pub type PoseidonCRH_x5_2Gadget<F> = CRHGadget<F, PoseidonRounds_x5_2>;
-
-pub type PoseidonCircomCRH_x5_5<F> = CircomCRH<F, PoseidonRounds_x5_5>;
-pub type PoseidonCircomCRH_x5_5Gadget<F> = CircomCRHGadget<F, PoseidonRounds_x5_5>;
-
-pub type PoseidonCRH_x17_3<F> = CRH<F, PoseidonRounds_x17_3>;
-pub type PoseidonCRH_x17_3Gadget<F> = CRHGadget<F, PoseidonRounds_x17_3>;
-
-pub type PoseidonCRH_x17_5<F> = CRH<F, PoseidonRounds_x17_5>;
-pub type PoseidonCRH_x17_5Gadget<F> = CRHGadget<F, PoseidonRounds_x17_5>;
+pub type PoseidonCRH_x17_5<F> = CRH<F>;
+pub type PoseidonCRH_x17_5Gadget<F> = CRHGadget<F>;
 
 #[derive(Default, Clone)]
 pub struct MiMCRounds_220_3;
@@ -262,14 +161,22 @@ pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
 		Curve::Bls381 => {
-			let rounds3 = get_rounds_poseidon_bls381_x3_3::<F>();
-			let mds3 = get_mds_poseidon_bls381_x3_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_bls381_x3_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_bls381_x3_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_bls381_x3_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x3_3::<F>();
+			let width_3 = get_width_poseidon_bls381_x3_3::<F>();
+			let sbox_3 = get_sbox_poseidon_bls381_x3_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 		Curve::Bn254 => {
-			let rounds3 = get_rounds_poseidon_bn254_x3_3::<F>();
-			let mds3 = get_mds_poseidon_bn254_x3_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_bn254_x3_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_bn254_x3_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_bn254_x3_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x3_3::<F>();
+			let width_3 = get_width_poseidon_bn254_x3_3::<F>();
+			let sbox_3 = get_sbox_poseidon_bn254_x3_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 	}
 }
@@ -277,14 +184,22 @@ pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
 		Curve::Bls381 => {
-			let rounds5 = get_rounds_poseidon_bls381_x3_5::<F>();
-			let mds5 = get_mds_poseidon_bls381_x3_5::<F>();
-			PoseidonParameters::<F>::new(rounds5, mds5)
+			let round_keys_5 = get_rounds_poseidon_bls381_x3_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_bls381_x3_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_bls381_x3_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_bls381_x3_5::<F>();
+			let width_5 = get_width_poseidon_bls381_x3_5::<F>();
+			let sbox_5 = get_sbox_poseidon_bls381_x3_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 		Curve::Bn254 => {
-			let rounds3 = get_rounds_poseidon_bn254_x3_5::<F>();
-			let mds3 = get_mds_poseidon_bn254_x3_5::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_5 = get_rounds_poseidon_bn254_x3_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_bn254_x3_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_bn254_x3_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_bn254_x3_5::<F>();
+			let width_5 = get_width_poseidon_bn254_x3_5::<F>();
+			let sbox_5 = get_sbox_poseidon_bn254_x3_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 	}
 }
@@ -293,14 +208,22 @@ pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
 		Curve::Bls381 => {
-			let rounds3 = get_rounds_poseidon_bls381_x5_3::<F>();
-			let mds3 = get_mds_poseidon_bls381_x5_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_bls381_x5_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_bls381_x5_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_bls381_x5_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x5_3::<F>();
+			let width_3 = get_width_poseidon_bls381_x5_3::<F>();
+			let sbox_3 = get_sbox_poseidon_bls381_x5_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 		Curve::Bn254 => {
-			let rounds3 = get_rounds_poseidon_bn254_x5_3::<F>();
-			let mds3 = get_mds_poseidon_bn254_x5_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_bn254_x5_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_bn254_x5_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_bn254_x5_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x5_3::<F>();
+			let width_3 = get_width_poseidon_bn254_x5_3::<F>();
+			let sbox_3 = get_sbox_poseidon_bn254_x5_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 	}
 }
@@ -312,9 +235,13 @@ pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
 		Curve::Bn254 => {
-			let rounds2 = get_rounds_poseidon_bn254_x5_2::<F>();
-			let mds2 = get_mds_poseidon_bn254_x5_2::<F>();
-			PoseidonParameters::<F>::new(rounds2, mds2)
+			let round_keys_2 = get_rounds_poseidon_bn254_x5_2::<F>();
+			let mds_matrix_2 = get_mds_poseidon_bn254_x5_2::<F>();
+			let full_rounds_2 = get_full_rounds_poseidon_bn254_x5_2::<F>();
+			let partial_rounds_2 = get_partial_rounds_poseidon_bn254_x5_2::<F>();
+			let width_2 = get_width_poseidon_bn254_x5_2::<F>();
+			let sbox_2 = get_sbox_poseidon_bn254_x5_2::<F>();
+			PoseidonParameters::<F>::new(round_keys_2, mds_matrix_2, full_rounds_2, partial_rounds_2, width_2, sbox_2)
 		}
 	}
 }
@@ -326,9 +253,13 @@ pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParamete
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
 		Curve::Bn254 => {
-			let rounds3 = get_rounds_poseidon_circom_bn254_x5_3::<F>();
-			let mds3 = get_mds_poseidon_circom_bn254_x5_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_circom_bn254_x5_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_circom_bn254_x5_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_circom_bn254_x5_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_circom_bn254_x5_3::<F>();
+			let width_3 = get_width_poseidon_circom_bn254_x5_3::<F>();
+			let sbox_3 = get_sbox_poseidon_circom_bn254_x5_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 	}
 }
@@ -340,9 +271,13 @@ pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
 		Curve::Bn254 => {
-			let rounds4 = get_rounds_poseidon_bn254_x5_4::<F>();
-			let mds4 = get_mds_poseidon_bn254_x5_4::<F>();
-			PoseidonParameters::<F>::new(rounds4, mds4)
+			let round_keys_4 = get_rounds_poseidon_bn254_x5_4::<F>();
+			let mds_matrix_4 = get_mds_poseidon_bn254_x5_4::<F>();
+			let full_rounds_4 = get_full_rounds_poseidon_bn254_x5_4::<F>();
+			let partial_rounds_4 = get_partial_rounds_poseidon_bn254_x5_4::<F>();
+			let width_4 = get_width_poseidon_bn254_x5_4::<F>();
+			let sbox_4 = get_sbox_poseidon_bn254_x5_4::<F>();
+			PoseidonParameters::<F>::new(round_keys_4, mds_matrix_4, full_rounds_4, partial_rounds_4, width_4, sbox_4)
 		}
 	}
 }
@@ -351,14 +286,22 @@ pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
 		Curve::Bls381 => {
-			let rounds5 = get_rounds_poseidon_bls381_x5_5::<F>();
-			let mds5 = get_mds_poseidon_bls381_x5_5::<F>();
-			PoseidonParameters::<F>::new(rounds5, mds5)
+			let round_keys_5 = get_rounds_poseidon_bls381_x5_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_bls381_x5_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_bls381_x5_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_bls381_x5_5::<F>();
+			let width_5 = get_width_poseidon_bls381_x5_5::<F>();
+			let sbox_5 = get_sbox_poseidon_bls381_x5_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 		Curve::Bn254 => {
-			let rounds5 = get_rounds_poseidon_bn254_x5_5::<F>();
-			let mds5 = get_mds_poseidon_bn254_x5_5::<F>();
-			PoseidonParameters::<F>::new(rounds5, mds5)
+			let round_keys_5 = get_rounds_poseidon_bn254_x5_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_bn254_x5_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_bn254_x5_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_bn254_x5_5::<F>();
+			let width_5 = get_width_poseidon_bn254_x5_5::<F>();
+			let sbox_5 = get_sbox_poseidon_bn254_x5_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 	}
 }
@@ -370,9 +313,13 @@ pub fn setup_circom_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParamete
 			unimplemented!("we don't hava parameters for bls381 curve yet");
 		}
 		Curve::Bn254 => {
-			let rounds5 = get_rounds_poseidon_circom_bn254_x5_5::<F>();
-			let mds5 = get_mds_poseidon_circom_bn254_x5_5::<F>();
-			PoseidonParameters::<F>::new(rounds5, mds5)
+			let round_keys_5 = get_rounds_poseidon_circom_bn254_x5_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_circom_bn254_x5_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_circom_bn254_x5_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_circom_bn254_x5_5::<F>();
+			let width_5 = get_width_poseidon_circom_bn254_x5_5::<F>();
+			let sbox_5 = get_sbox_poseidon_circom_bn254_x5_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 	}
 }
@@ -381,14 +328,22 @@ pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 	// Making params for poseidon in merkle tree
 	match curve {
 		Curve::Bls381 => {
-			let rounds3 = get_rounds_poseidon_bls381_x17_3::<F>();
-			let mds3 = get_mds_poseidon_bls381_x17_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_bls381_x17_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_bls381_x17_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_bls381_x17_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_bls381_x17_3::<F>();
+			let width_3 = get_width_poseidon_bls381_x17_3::<F>();
+			let sbox_3 = get_sbox_poseidon_bls381_x17_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 		Curve::Bn254 => {
-			let rounds3 = get_rounds_poseidon_bn254_x17_3::<F>();
-			let mds3 = get_mds_poseidon_bn254_x17_3::<F>();
-			PoseidonParameters::<F>::new(rounds3, mds3)
+			let round_keys_3 = get_rounds_poseidon_bn254_x17_3::<F>();
+			let mds_matrix_3 = get_mds_poseidon_bn254_x17_3::<F>();
+			let full_rounds_3 = get_full_rounds_poseidon_bn254_x17_3::<F>();
+			let partial_rounds_3 = get_partial_rounds_poseidon_bn254_x17_3::<F>();
+			let width_3 = get_width_poseidon_bn254_x17_3::<F>();
+			let sbox_3 = get_sbox_poseidon_bn254_x17_3::<F>();
+			PoseidonParameters::<F>::new(round_keys_3, mds_matrix_3, full_rounds_3, partial_rounds_3, width_3, sbox_3)
 		}
 	}
 }
@@ -397,14 +352,22 @@ pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 	// Making params for poseidon in merkle tree
 	match curve {
 		Curve::Bls381 => {
-			let rounds5 = get_rounds_poseidon_bls381_x17_5::<F>();
-			let mds5 = get_mds_poseidon_bls381_x17_5::<F>();
-			PoseidonParameters::<F>::new(rounds5, mds5)
+			let round_keys_5 = get_rounds_poseidon_bls381_x17_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_bls381_x17_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_bls381_x17_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_bls381_x17_5::<F>();
+			let width_5 = get_width_poseidon_bls381_x17_5::<F>();
+			let sbox_5 = get_sbox_poseidon_bls381_x17_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 		Curve::Bn254 => {
-			let rounds5 = get_rounds_poseidon_bn254_x17_5::<F>();
-			let mds5 = get_mds_poseidon_bn254_x17_5::<F>();
-			PoseidonParameters::<F>::new(rounds5, mds5)
+			let round_keys_5 = get_rounds_poseidon_bn254_x17_5::<F>();
+			let mds_matrix_5 = get_mds_poseidon_bn254_x17_5::<F>();
+			let full_rounds_5 = get_full_rounds_poseidon_bn254_x17_5::<F>();
+			let partial_rounds_5 = get_partial_rounds_poseidon_bn254_x17_5::<F>();
+			let width_5 = get_width_poseidon_bn254_x17_5::<F>();
+			let sbox_5 = get_sbox_poseidon_bn254_x17_5::<F>();
+			PoseidonParameters::<F>::new(round_keys_5, mds_matrix_5, full_rounds_5, partial_rounds_5, width_5, sbox_5)
 		}
 	}
 }
