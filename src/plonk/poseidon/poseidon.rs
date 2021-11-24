@@ -1,13 +1,13 @@
 use crate::Vec;
-use ark_ec::PairingEngine;
+use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_std::marker::PhantomData;
-
-use ark_ec::models::TEModelParameters;
 use ark_plonk::circuit::{self, Circuit};
+use ark_std::marker::PhantomData;
 
 use ark_plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 use num_traits::{One, Zero};
+
+use crate::plonk::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
 #[derive(Debug, Default)]
 pub struct PoseidonParameters<F: PrimeField> {
@@ -83,21 +83,23 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, R: Rounds> Circu
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c_temp = params.round_keys[(r * R::WIDTH + i)];
 				// a = a + c_temp
-				let add_result = composer.add(
+				let mut add_result = composer.add(
 					(E::Fr::one(), *a),
 					(E::Fr::one(), c_temp),
 					E::Fr::zero(),
-					Some(-(*a + c_temp)),
+					None,
 				);
+
+				a = &mut add_result;
 			});
 
 			let half_rounds = R::FULL_ROUNDS / 2;
 			if r < half_rounds || r >= half_rounds + R::PARTIAL_ROUNDS {
 				state
 					.iter_mut()
-					.try_for_each(|a| R::SBOX.synthesize_sbox(a).map(|f| *a = f))?;
+					.try_for_each(|a| R::SBOX.synthesize_sbox(a, composer).map(|f| *a = f))?;
 			} else {
-				state[0] = R::SBOX.synthesize_sbox(&state[0])?;
+				state[0] = R::SBOX.synthesize_sbox(&state[0], composer)?;
 			}
 
 			state = state
@@ -107,9 +109,19 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, R: Rounds> Circu
 					state
 						.iter()
 						.enumerate()
-						.fold(FpVar::<F>::zero(), |acc, (j, a)| {
+						.fold(composer.zero_var(), |acc, (j, a)| {
 							let m = &params.mds_matrix[i][j];
-							acc.add(m.mul(a))
+
+							let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::one(), None);
+
+							let add_result = composer.add(
+								(E::Fr::one(), acc),
+								(E::Fr::one(), mul_result),
+								E::Fr::zero(),
+								None,
+							);
+
+							add_result
 						})
 				})
 				.collect();

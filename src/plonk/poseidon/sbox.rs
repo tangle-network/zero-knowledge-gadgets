@@ -1,6 +1,7 @@
 use ark_ec::{PairingEngine, TEModelParameters};
 use ark_ff::Field;
 use ark_plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use ark_std::One;
 
 #[derive(Debug)]
 pub enum PoseidonError {
@@ -25,7 +26,6 @@ impl core::fmt::Display for PoseidonError {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum PoseidonSbox {
 	Exponentiation(usize),
-	Inverse,
 }
 
 impl PoseidonSbox {
@@ -50,7 +50,7 @@ impl PoseidonSbox {
 				};
 				Ok(res)
 			}
-			PoseidonSbox::Inverse => elem.inverse().ok_or(PoseidonError::ApplySboxFailed),
+			_ => return Err(PoseidonError::InvalidSboxSize(0)),
 		}
 	}
 }
@@ -76,7 +76,7 @@ impl SboxConstraints for PoseidonSbox {
 				17 => synthesize_exp17_sbox::<E, P>(input_var, composer),
 				_ => synthesize_exp3_sbox::<E, P>(input_var, composer),
 			},
-			PoseidonSbox::Inverse => synthesize_inverse_sbox::<E, P>(input_var, composer),
+			_ => synthesize_exp3_sbox::<E, P>(input_var, composer),
 		}
 	}
 }
@@ -86,8 +86,8 @@ fn synthesize_exp3_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr
 	input_var: &Variable,
 	composer: &mut StandardComposer<E, P>,
 ) -> Result<Variable, Error> {
-	let sqr = input_var * input_var;
-	let cube = input_var * sqr;
+	let sqr = composer.mul(E::Fr::one(), *input_var, *input_var, E::Fr::one(), None);
+	let cube = composer.mul(E::Fr::one(), sqr, *input_var, E::Fr::one(), None);
 	Ok(cube)
 }
 
@@ -96,9 +96,9 @@ fn synthesize_exp5_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr
 	input_var: &Variable,
 	composer: &mut StandardComposer<E, P>,
 ) -> Result<Variable, Error> {
-	let sqr = input_var * input_var;
-	let fourth = &sqr * &sqr;
-	let fifth = input_var * fourth;
+	let sqr = composer.mul(E::Fr::one(), *input_var, *input_var, E::Fr::one(), None);
+	let fourth = composer.mul(E::Fr::one(), sqr, sqr, E::Fr::one(), None);
+	let fifth = composer.mul(E::Fr::one(), fourth, *input_var, E::Fr::one(), None);
 	Ok(fifth)
 }
 
@@ -107,18 +107,9 @@ fn synthesize_exp17_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::F
 	input_var: &Variable,
 	composer: &mut StandardComposer<E, P>,
 ) -> Result<Variable, Error> {
-	let sqr = input_var * input_var;
-	let fourth = &sqr * &sqr;
-	let sixteenth = &fourth * &fourth;
-	let seventeenth = &sixteenth * input_var;
+	let sqr = composer.mul(E::Fr::one(), *input_var, *input_var, E::Fr::one(), None);
+	let fourth = composer.mul(E::Fr::one(), sqr, sqr, E::Fr::one(), None);
+	let sixteenth = composer.mul(E::Fr::one(), fourth, fourth, E::Fr::one(), None);
+	let seventeenth = composer.mul(E::Fr::one(), sqr, *input_var, E::Fr::one(), None);
 	Ok(seventeenth)
-}
-
-// Allocate variables in circuit and enforce constraints when Sbox as
-// inverse
-fn synthesize_inverse_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
-	input_var: &Variable,
-	composer: &mut StandardComposer<E, P>,
-) -> Result<Variable, Error> {
-	input_var.inverse()
 }
