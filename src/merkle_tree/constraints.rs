@@ -308,13 +308,8 @@ where
 mod test {
 	use super::{NodeVar, PathVar};
 	use crate::{ark_std::UniformRand, merkle_tree::{Config, SparseMerkleTree}, poseidon::{
-			constraints::CRHGadget as PoseidonCRHGadget, sbox::PoseidonSbox, PoseidonParameters,
-			CRH as PoseidonCRH,
-		}, setup::common::{Curve, setup_params_x5_3}, utils::{
-			get_full_rounds_poseidon_bls381_x5_3, get_mds_poseidon_bls381_x5_3,
-			get_partial_rounds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3,
-			get_sbox_poseidon_bls381_x5_3, get_width_poseidon_bls381_x5_3,
-		}};
+			constraints::CRHGadget as PoseidonCRHGadget, CRH as PoseidonCRH,
+		}, setup::common::{Curve, setup_params_x5_3}};
 	use ark_bls12_381::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;

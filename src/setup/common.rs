@@ -5,7 +5,6 @@ use crate::{
 	poseidon::{
 		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
-		sbox::PoseidonSbox,
 		PoseidonParameters, CRH,
 	},
 	utils::{

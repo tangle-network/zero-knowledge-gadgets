@@ -85,7 +85,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		}
 	}
 
-	pub fn generate<R: Rng>(rng: &mut R) -> Self {
+	pub fn generate<R: Rng>(_rng: &mut R) -> Self {
 		todo!();
 		/* Self {
 

@@ -1,7 +1,7 @@
 use crate::poseidon::{PoseidonError, PoseidonParameters};
 
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
-use ark_ff::{fields::PrimeField, BigInteger};
+use ark_ff::{fields::PrimeField};
 use ark_std::{marker::PhantomData, rand::Rng, vec::Vec};
 
 #[cfg(feature = "r1cs")]
@@ -115,7 +115,7 @@ mod test {
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
-	use ark_ff::Field;
+	use ark_ff::{BigInteger, Field};
 	use ark_std::One;
 
 	use crate::utils::parse_vec;
