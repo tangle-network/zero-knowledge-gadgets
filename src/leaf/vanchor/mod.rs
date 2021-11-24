@@ -14,7 +14,7 @@ pub struct Private<F: PrimeField> {
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
-	chain_id: F,
+	pub chain_id: F,
 }
 
 impl<F: PrimeField> Public<F> {

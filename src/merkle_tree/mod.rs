@@ -13,7 +13,7 @@ use core::convert::TryInto;
 pub mod constraints;
 
 /// configuration of a Merkle tree
-pub trait Config: Clone {
+pub trait Config: Clone + PartialEq {
 	/// Tree height
 	const HEIGHT: u8;
 	/// The CRH
@@ -222,7 +222,7 @@ impl<P: Config> SparseMerkleTree<P> {
 		Ok(smt)
 	}
 
-	pub fn new_sequential<L: Default + ToBytes + Copy>(
+	pub fn new_sequential<L: Default + ToBytes + Clone>(
 		inner_params: Rc<InnerParameters<P>>,
 		leaf_params: Rc<LeafParameters<P>>,
 		leaves: &[L],
@@ -230,7 +230,7 @@ impl<P: Config> SparseMerkleTree<P> {
 		let pairs: BTreeMap<u32, L> = leaves
 			.iter()
 			.enumerate()
-			.map(|(i, l)| (i as u32, *l))
+			.map(|(i, l)| (i as u32, l.clone()))
 			.collect();
 		let smt = Self::new(inner_params, leaf_params, &pairs)?;
 

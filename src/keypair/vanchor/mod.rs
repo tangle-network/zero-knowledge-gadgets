@@ -7,7 +7,7 @@ pub mod constraints;
 
 #[derive(Default)]
 pub struct Keypair<B: Clone + ToBytes, H2: CRH> {
-	private_key: B,
+	pub private_key: B,
 	_h2: PhantomData<H2>,
 }
 

@@ -473,7 +473,7 @@ mod test {
 			constraints::CRHGadget as PCRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds,
 			CRH as PCRH,
 		},
-		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+		setup::{bridge::*, common::*, vanchor::*},
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};

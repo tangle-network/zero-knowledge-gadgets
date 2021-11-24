@@ -175,7 +175,7 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
 	const HEIGHT: u8 = 30;
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TreeConfig_Circomx5<F: PrimeField>(PhantomData<F>);
 impl<F: PrimeField> MerkleConfig for TreeConfig_Circomx5<F> {
 	type H = PoseidonCircomCRH_x5_3<F>;
@@ -184,7 +184,7 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_Circomx5<F> {
 	const HEIGHT: u8 = 30;
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TreeConfig_x17<F: PrimeField>(PhantomData<F>);
 impl<F: PrimeField> MerkleConfig for TreeConfig_x17<F> {
 	type H = PoseidonCRH_x17_3<F>;
@@ -193,7 +193,7 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_x17<F> {
 	const HEIGHT: u8 = 30;
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TreeConfig_MiMC220<F: PrimeField>(PhantomData<F>);
 impl<F: PrimeField> MerkleConfig for TreeConfig_MiMC220<F> {
 	type H = MiMCCRH_220<F>;

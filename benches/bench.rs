@@ -57,7 +57,7 @@ macro_rules! setup_circuit {
 		type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
 		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget>;
 
-		#[derive(Clone)]
+		#[derive(Clone, PartialEq)]
 		struct BridgeTreeConfig;
 		impl MerkleConfig for BridgeTreeConfig {
 			type H = PoseidonCRH3;
