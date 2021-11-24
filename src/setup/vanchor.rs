@@ -2,7 +2,7 @@ use crate::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	leaf::vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
 	merkle_tree::{Config, Node, Path},
-	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, Rounds, CRH},
+	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, CRH},
 	setup::common::*,
 };
 use ark_crypto_primitives::CRH as CRHTrait;
@@ -14,8 +14,8 @@ use ark_std::{
 	vec::Vec,
 };
 
-pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
-pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
+pub type PoseidonCRH_x5_5<F> = CRH<F>;
+pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F>;
 
 pub fn generate_vanchor_leaf_rng<
 	F: PrimeField,

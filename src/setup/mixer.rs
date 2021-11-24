@@ -4,7 +4,7 @@ use crate::{
 	circuit::mixer::MixerCircuit,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
 	mimc::MiMCParameters,
-	poseidon::PoseidonParameters,
+	utils::PoseidonParameters,
 };
 use ark_crypto_primitives::{CRH as CRHTrait, SNARK};
 use ark_ec::PairingEngine;

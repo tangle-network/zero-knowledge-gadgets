@@ -78,7 +78,7 @@ mod test {
 	use crate::{
 		poseidon::{circom::CircomCRH, CRH},
 		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
-		utils::{parse_vec, PoseidonParameters},
+		utils::parse_vec,
 	};
 	use ark_ed_on_bn254::Fq;
 

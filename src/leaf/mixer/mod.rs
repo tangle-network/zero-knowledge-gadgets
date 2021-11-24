@@ -53,7 +53,10 @@ mod test {
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_std::test_rng;
 
-	use crate::{poseidon::CRH, setup::common::{Curve, setup_params_x5_5}};
+	use crate::{
+		poseidon::CRH,
+		setup::common::{setup_params_x5_5, Curve},
+	};
 
 	use super::*;
 
@@ -71,7 +74,7 @@ mod test {
 		let leaf_inputs = to_bytes![private.secret, private.nullifier].unwrap();
 
 		let nullifier_inputs = to_bytes![private.nullifier, private.nullifier].unwrap();
-		
+
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 

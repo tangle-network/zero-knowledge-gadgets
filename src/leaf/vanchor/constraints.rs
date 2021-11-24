@@ -122,10 +122,14 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{leaf::vanchor::VAnchorLeaf, poseidon::{
+	use crate::{
+		leaf::vanchor::VAnchorLeaf,
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
-		}, setup::common::{Curve, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5}};
+		},
+		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
+	};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
@@ -156,7 +160,7 @@ mod test {
 
 		let params5_2 = setup_params_x5_2(curve);
 		let params5_5 = setup_params_x5_5(curve);
-		
+
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);

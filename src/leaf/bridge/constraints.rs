@@ -97,11 +97,15 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{leaf::bridge::BridgeLeaf, poseidon::{
+	use crate::{
+		leaf::bridge::BridgeLeaf,
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			CRH,
-		}, setup::common::{Curve, setup_params_x5_5}};
+		},
+		setup::common::{setup_params_x5_5, Curve},
+	};
 	use ark_bls12_381::Fq;
 	use ark_ff::One;
 	use ark_r1cs_std::R1CSVar;

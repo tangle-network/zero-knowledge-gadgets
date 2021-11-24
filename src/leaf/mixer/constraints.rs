@@ -72,15 +72,18 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{leaf::mixer::MixerLeaf, poseidon::{
+	use crate::{
+		leaf::mixer::MixerLeaf,
+		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
-		}, setup::common::{Curve, setup_params_x5_5}};
+		},
+		setup::common::{setup_params_x5_5, Curve},
+	};
 	use ark_bls12_381::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	
 	type PoseidonCRH5 = CRH<Fq>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq>;
 

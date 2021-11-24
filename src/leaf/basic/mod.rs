@@ -41,7 +41,10 @@ impl<F: PrimeField, H: CRH> BasicLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{poseidon::CRH, setup::common::{Curve, setup_params_x5_3}};
+	use crate::{
+		poseidon::CRH,
+		setup::common::{setup_params_x5_3, Curve},
+	};
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;
