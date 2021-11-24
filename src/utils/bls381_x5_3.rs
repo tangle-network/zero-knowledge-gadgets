@@ -28,21 +28,6 @@ pub fn get_mds_poseidon_bls381_x5_3<F: PrimeField>() -> Vec<Vec<F>> {
 	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
 }
 
-pub fn get_full_rounds_poseidon_bls381_x5_3<F: PrimeField>() -> u8 {
-	FULL_ROUNDS
-}
-pub fn get_partial_rounds_poseidon_bls381_x5_3<F: PrimeField>() -> u8 {
-	PARTIAL_ROUNDS
-}
-
-pub fn get_width_poseidon_bls381_x5_3<F: PrimeField>() -> u8 {
-	WIDTH
-}
-
-pub fn get_sbox_poseidon_bls381_x5_3<F: PrimeField>() -> PoseidonSbox {
-	SBOX
-}
-
 use super::{parse_matrix, PoseidonParameters};
 pub fn get_poseidon_bls381_x5_3<F: PrimeField>() -> PoseidonParameters<F> {
 	let rounds = get_rounds_poseidon_bls381_x5_3();
