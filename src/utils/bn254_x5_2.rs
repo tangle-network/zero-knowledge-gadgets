@@ -1,8 +1,8 @@
 use crate::poseidon::sbox::PoseidonSbox;
 
-pub const FULL_ROUNDS: usize = 8;
-pub const PARTIAL_ROUNDS: usize = 56;
-pub const WIDTH: usize = 2;
+pub const FULL_ROUNDS: u8 = 8;
+pub const PARTIAL_ROUNDS: u8 = 56;
+pub const WIDTH: u8 = 2;
 pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 
 pub const ROUND_CONSTS: [&str; 128] = [
@@ -151,8 +151,8 @@ pub const MDS_ENTRIES: [[&str; 2]; 2] = [
 struct PoseidonRounds2;
 
 impl Rounds for PoseidonRounds2 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 56;
+	const FULL_ROUNDS: u8 = 8;
+	const PARTIAL_ROUNDS: u8 = 56;
 	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 2;
+	const WIDTH: u8 = 2;
 } */

@@ -1,7 +1,4 @@
-use crate::{
-	poseidon::sbox::PoseidonSbox,
-	utils::{from_field_elements, to_field_elements},
-};
+use crate::{poseidon::sbox::PoseidonSbox, utils::{PoseidonParameters, from_field_elements, to_field_elements}};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_serialize::Read;
@@ -49,30 +46,15 @@ pub const ZERO_CONST: u64 = 0;
 	const SBOX: PoseidonSbox;
 } */
 
-/// The Poseidon permutation.
-#[derive(Default, Clone)]
-pub struct PoseidonParameters<F> {
-	/// The round key constants
-	pub round_keys: Vec<F>,
-	/// The MDS matrix to apply in the mix layer.
-	pub mds_matrix: Vec<Vec<F>>,
-	/// Number of full SBox rounds
-	pub full_rounds: usize,
-	/// Number of partial rounds
-	pub partial_rounds: usize,
-	/// The size of the permutation, in field elements.
-	pub width: usize,
-	/// The S-box to apply in the sub words layer.
-	pub sbox: PoseidonSbox,
-}
+
 
 impl<F: PrimeField> PoseidonParameters<F> {
 	pub fn new(
 		round_keys: Vec<F>,
 		mds_matrix: Vec<Vec<F>>,
-		full_rounds: usize,
-		partial_rounds: usize,
-		width: usize,
+		full_rounds: u8,
+		partial_rounds: u8,
+		width: u8,
 		sbox: PoseidonSbox,
 	) -> Self {
 		Self {
@@ -130,19 +112,19 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
 		let mut width_u8 = [0u8; 8];
 		bytes.read_exact(&mut width_u8)?;
-		let width: usize = usize::from_be_bytes(width_u8);
+		let width: u8 = u8::from_be_bytes(width_u8);
 
 		let mut full_rounds_u8 = [0u8; 8];
 		bytes.read_exact(&mut full_rounds_u8)?;
-		let full_rounds: usize = usize::from_be_bytes(full_rounds_u8);
+		let full_rounds: u8 = u8::from_be_bytes(full_rounds_u8);
 
 		let mut partial_rounds_u8 = [0u8; 8];
 		bytes.read_exact(&mut partial_rounds_u8)?;
-		let partial_rounds: usize = usize::from_be_bytes(partial_rounds_u8);
+		let partial_rounds: u8 = u8::from_be_bytes(partial_rounds_u8);
 
 		let mut sbox_e_u8 = [0u8; 8];
 		bytes.read_exact(&mut sbox_e_u8)?;
-		let sbox_e: usize = usize::from_be_bytes(sbox_e_u8); //TODO: fix this
+		let sbox_e: u8 = u8::from_be_bytes(sbox_e_u8); //TODO: fix this
 		let sbox = PoseidonSbox::Exponentiation(sbox_e);
 
 		let mut round_key_len = [0u8; 4];

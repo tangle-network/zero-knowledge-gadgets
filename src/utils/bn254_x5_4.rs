@@ -1,8 +1,8 @@
 use crate::poseidon::sbox::PoseidonSbox;
 
-pub const FULL_ROUNDS: usize = 8;
-pub const PARTIAL_ROUNDS: usize = 56;
-pub const WIDTH: usize = 4;
+pub const FULL_ROUNDS: u8 = 8;
+pub const PARTIAL_ROUNDS: u8 = 56;
+pub const WIDTH: u8 = 4;
 pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 
 pub const ROUND_CONSTS: [&str; 256] = [

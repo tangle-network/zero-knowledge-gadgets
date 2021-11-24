@@ -5,9 +5,9 @@ use crate::{
 	poseidon::{
 		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
-		PoseidonParameters, CRH,
+		CRH,
 	},
-	utils::{
+	utils::{PoseidonParameters,
 		get_full_rounds_poseidon_bls381_x17_3, get_full_rounds_poseidon_bls381_x17_5,
 		get_full_rounds_poseidon_bls381_x3_3, get_full_rounds_poseidon_bls381_x3_5,
 		get_full_rounds_poseidon_bls381_x5_3, get_full_rounds_poseidon_bls381_x5_5,
