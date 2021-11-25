@@ -59,14 +59,14 @@ impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 		H5::evaluate(h_w5, &bytes)
 	}
 
-	// Computes the nullifier = hash(commitment, pathIndices, privKey)
+	// Computes the nullifier = hash(commitment, pathIndices, signature)
 	pub fn create_nullifier<B: ToBytes>(
-		private_key: &B,
+		signature: &B,
 		commitment: &H5::Output,
 		h_w4: &H4::Parameters,
 		index: &F,
 	) -> Result<H4::Output, Error> {
-		let bytes = to_bytes![commitment, index, private_key]?;
+		let bytes = to_bytes![commitment, index, signature]?;
 		H4::evaluate(h_w4, &bytes)
 	}
 }
@@ -144,7 +144,6 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
@@ -173,15 +172,14 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		//TODO: change the params
 		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
-		let inputs_null = to_bytes![commitment, index, private_key].unwrap();
+		let signature = Fq::rand(rng);
+		let inputs_null = to_bytes![commitment, index, signature].unwrap();
 		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_null).unwrap();
-		let nullifier =
-			Leaf::create_nullifier(&private_key, &commitment, &params4, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&signature, &commitment, &params4, &index).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 

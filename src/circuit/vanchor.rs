@@ -176,9 +176,14 @@ where
 			)?;
 			// End of computing the hash
 
+			let signature = inkeypair_var[tx].signature::<FpVar<F>, H4, HG4, H5, HG5>(
+				&in_utxo_hasher_var,
+				&in_path_indices_var[tx],
+				&hasher_params_w4_var,
+			)?;
 			// Nullifier
 			let nullifier_hash = VAnchorLeafGadget::<F, H4, HG4, H5, HG5>::create_nullifier(
-				&inkeypair_var[tx].private_key,
+				&signature,
 				&in_utxo_hasher_var,
 				&hasher_params_w4_var,
 				&in_path_indices_var[tx],
@@ -188,7 +193,6 @@ where
 
 			// Add the roots and diffs signals to the vanchor circuit
 			let roothash = &in_path_elements_var[tx].root_hash(&in_utxo_hasher_var)?;
-
 			let in_amount_tx = &leaf_private_var[tx].amount;
 			let check = SetMembershipGadget::check_is_enabled(
 				&roothash,
@@ -473,7 +477,7 @@ mod test {
 			constraints::CRHGadget as PCRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds,
 			CRH as PCRH,
 		},
-		setup::{bridge::*, common::*, vanchor::*},
+		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
@@ -585,7 +589,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -625,10 +629,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -734,7 +744,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -761,8 +771,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = BnFr::rand(rng);
 
 		let root_set = [root; TEST_M];
@@ -773,10 +784,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -882,7 +899,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -909,8 +926,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = BnFr::rand(rng);
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -922,10 +940,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -1031,7 +1055,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1058,8 +1082,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1072,8 +1097,11 @@ mod test {
 		let indices = vec![index_0, index_1];
 
 		let nullifier_hash_1 = BnFr::rand(rng);
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -1179,7 +1207,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1206,8 +1234,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1219,8 +1248,11 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_1];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -1326,7 +1358,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1353,8 +1385,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1366,10 +1399,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 		assert_ne!(nullifier_hash_1, nullifier_hash_2);
 
@@ -1485,7 +1524,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1512,8 +1551,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1525,10 +1565,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 		assert_ne!(nullifier_hash_1, nullifier_hash_2);
 
@@ -1635,7 +1681,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1662,8 +1708,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1675,10 +1722,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 		assert_ne!(nullifier_hash_1, nullifier_hash_2);
 
@@ -1797,7 +1850,7 @@ mod test {
 		let keypair_1 = KeyPair::new(private_key_1.clone());
 		let privkey = to_bytes![private_key_1].unwrap();
 		let public_key_1 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1];
+		let keypair_inputs = vec![keypair_1.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1816,8 +1869,9 @@ mod test {
 		let paths = vec![path_1.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1826,8 +1880,11 @@ mod test {
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let indices = vec![index_0];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -1926,7 +1983,7 @@ mod test {
 		let keypair_1 = KeyPair::new(private_key_1.clone());
 		let privkey = to_bytes![private_key_1].unwrap();
 		let public_key_1 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1];
+		let keypair_inputs = vec![keypair_1.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -1945,8 +2002,9 @@ mod test {
 		let paths = vec![path_1.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -1955,8 +2013,11 @@ mod test {
 		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
 		let indices = vec![index_0];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1];
 
 		let set_private_inputs_1 = setup_set(&root, &root_set);
@@ -2078,7 +2139,7 @@ mod test {
 		let keypair_2 = KeyPair::new(private_key_2.clone());
 		let privkey = to_bytes![private_key_2].unwrap();
 		let public_key_2 = PoseidonCRH2::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1, keypair_2];
+		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
@@ -2105,8 +2166,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
@@ -2118,10 +2180,16 @@ mod test {
 		assert_eq!(index_1, BnFr::one());
 		let indices = vec![index_0, index_1];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
 		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
 		assert_ne!(nullifier_hash_1, nullifier_hash_2);
 
@@ -2285,7 +2353,14 @@ mod test {
 		let keypair_7 = KeyPair::new(private_key_7.clone());
 		let keypair_8 = KeyPair::new(private_key_8.clone());
 		let keypair_inputs = vec![
-			keypair_1, keypair_2, keypair_3, keypair_4, keypair_5, keypair_6, keypair_7, keypair_8,
+			keypair_1.clone(),
+			keypair_2.clone(),
+			keypair_3.clone(),
+			keypair_4.clone(),
+			keypair_5.clone(),
+			keypair_6.clone(),
+			keypair_7.clone(),
+			keypair_8.clone(),
 		];
 
 		let leaf_1 = Leaf::create_leaf(
@@ -2374,8 +2449,9 @@ mod test {
 		];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root_1 = tree_1.root().inner();
 		let root_2 = tree_2.root().inner();
 
@@ -2395,23 +2471,46 @@ mod test {
 			index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7,
 		];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+		let signature = keypair_3
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_3, &index_2, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_3 =
-			Leaf::create_nullifier(&private_key_3, &leaf_3, &hasher_params_w4, &index_2).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_3, &hasher_params_w4, &index_2).unwrap();
+		let signature = keypair_4
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_4, &index_3, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_4 =
-			Leaf::create_nullifier(&private_key_4, &leaf_4, &hasher_params_w4, &index_3).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_4, &hasher_params_w4, &index_3).unwrap();
+		let signature = keypair_5
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_5, &index_4, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_5 =
-			Leaf::create_nullifier(&private_key_5, &leaf_5, &hasher_params_w4, &index_4).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_5, &hasher_params_w4, &index_4).unwrap();
+		let signature = keypair_6
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_6, &index_5, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_6 =
-			Leaf::create_nullifier(&private_key_6, &leaf_6, &hasher_params_w4, &index_5).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_6, &hasher_params_w4, &index_5).unwrap();
+		let signature = keypair_7
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_7, &index_6, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_7 =
-			Leaf::create_nullifier(&private_key_7, &leaf_7, &hasher_params_w4, &index_6).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_7, &hasher_params_w4, &index_6).unwrap();
+		let signature = keypair_8
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_8, &index_7, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_8 =
-			Leaf::create_nullifier(&private_key_8, &leaf_8, &hasher_params_w4, &index_7).unwrap();
-
+			Leaf::create_nullifier(&signature, &leaf_8, &hasher_params_w4, &index_7).unwrap();
 		let nullifier_hash = vec![
 			nullifier_hash_1,
 			nullifier_hash_2,
@@ -2684,7 +2783,14 @@ mod test {
 		let keypair_7 = KeyPair::new(private_key_7.clone());
 		let keypair_8 = KeyPair::new(private_key_8.clone());
 		let keypair_inputs = vec![
-			keypair_1, keypair_2, keypair_3, keypair_4, keypair_5, keypair_6, keypair_7, keypair_8,
+			keypair_1.clone(),
+			keypair_2.clone(),
+			keypair_3.clone(),
+			keypair_4.clone(),
+			keypair_5.clone(),
+			keypair_6.clone(),
+			keypair_7.clone(),
+			keypair_8.clone(),
 		];
 
 		let leaf_1 = Leaf::create_leaf(
@@ -2744,8 +2850,6 @@ mod test {
 			&hasher_params_w5,
 		)
 		.unwrap();
-		//let commitment_2 = leaf_2.clone(); //TODO: change after using the new
-		// arbitrary
 
 		let inner_params = Rc::new(params3.clone());
 		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4];
@@ -2775,8 +2879,9 @@ mod test {
 		];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root_1 = tree_1.root().inner();
 		let root_2 = tree_2.root().inner();
 
@@ -2796,22 +2901,46 @@ mod test {
 			index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7,
 		];
 
+		let signature = keypair_1
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_1, &index_0, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_1 =
-			Leaf::create_nullifier(&private_key_1, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
+		let signature = keypair_2
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_2, &index_1, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_2 =
-			Leaf::create_nullifier(&private_key_2, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
+		let signature = keypair_3
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_3, &index_2, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_3 =
-			Leaf::create_nullifier(&private_key_3, &leaf_3, &hasher_params_w4, &index_2).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_3, &hasher_params_w4, &index_2).unwrap();
+		let signature = keypair_4
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_4, &index_3, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_4 =
-			Leaf::create_nullifier(&private_key_4, &leaf_4, &hasher_params_w4, &index_3).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_4, &hasher_params_w4, &index_3).unwrap();
+		let signature = keypair_5
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_5, &index_4, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_5 =
-			Leaf::create_nullifier(&private_key_5, &leaf_5, &hasher_params_w4, &index_4).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_5, &hasher_params_w4, &index_4).unwrap();
+		let signature = keypair_6
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_6, &index_5, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_6 =
-			Leaf::create_nullifier(&private_key_6, &leaf_6, &hasher_params_w4, &index_5).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_6, &hasher_params_w4, &index_5).unwrap();
+		let signature = keypair_7
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_7, &index_6, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_7 =
-			Leaf::create_nullifier(&private_key_7, &leaf_7, &hasher_params_w4, &index_6).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_7, &hasher_params_w4, &index_6).unwrap();
+		let signature = keypair_8
+			.signature::<PoseidonCRH4, PoseidonCRH5>(&leaf_8, &index_7, &hasher_params_w4)
+			.unwrap();
 		let nullifier_hash_8 =
-			Leaf::create_nullifier(&private_key_8, &leaf_8, &hasher_params_w4, &index_7).unwrap();
+			Leaf::create_nullifier(&signature, &leaf_8, &hasher_params_w4, &index_7).unwrap();
 
 		let nullifier_hash = vec![
 			nullifier_hash_1,

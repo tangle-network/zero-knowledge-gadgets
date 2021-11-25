@@ -1,4 +1,4 @@
-use super::{Private, Public, VAnchorLeaf};
+use super::{Private, Public};
 use crate::Vec;
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
@@ -72,15 +72,15 @@ impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, 
 	}
 
 	pub fn create_nullifier<BG: ToBytesGadget<F>>(
-		private_key: &BG,
+		signature: &BG,
 		commitment: &HG5::OutputVar,
 		h_w4: &HG4::ParametersVar,
-		i: &FpVar<F>,
+		index: &FpVar<F>,
 	) -> Result<HG4::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(commitment.to_bytes()?);
-		bytes.extend(i.to_bytes()?);
-		bytes.extend(private_key.to_bytes()?);
+		bytes.extend(index.to_bytes()?);
+		bytes.extend(signature.to_bytes()?);
 		HG4::evaluate(h_w4, &bytes)
 	}
 }
@@ -123,14 +123,14 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 mod test {
 	use super::*;
 	use crate::{
+		leaf::vanchor::VAnchorLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			sbox::PoseidonSbox,
 			PoseidonParameters, Rounds, CRH,
 		},
 		utils::{
-			get_mds_poseidon_bls381_x5_5, get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4,
-			get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bls381_x5_5,
+			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
 			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
 			get_rounds_poseidon_bn254_x5_5,
 		},
@@ -204,7 +204,6 @@ mod test {
 		let private_key = Fq::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params5_2, &privkey).unwrap();
-		//TODO Change the parameters
 		let leaf = Leaf::create_leaf(&secrets, &public_key, &public, &params5_5).unwrap();
 
 		// Constraints version
@@ -229,7 +228,6 @@ mod test {
 		bytes.extend(private_key_var.to_bytes().unwrap());
 		let public_key_var = PoseidonCRH2Gadget::evaluate(&params_var5_2, &bytes).unwrap();
 
-		//TODO Change the parameters
 		let leaf_var =
 			LeafGadget::create_leaf(&secrets_var, &public_key_var, &public_var, &params_var5_5)
 				.unwrap();
@@ -251,11 +249,13 @@ mod test {
 			AllocationMode::Constant,
 		)
 		.unwrap();
-		let nullifier = Leaf::create_nullifier(&private_key, &leaf, &params5_4, &index).unwrap();
+		let signature = Fq::rand(rng);
+		let nullifier = Leaf::create_nullifier(&signature, &leaf, &params5_4, &index).unwrap();
 
 		// Constraints version
+		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&signature)).unwrap();
 		let nullifier_var =
-			LeafGadget::create_nullifier(&private_key_var, &leaf_var, &params_var5_4, &index_var)
+			LeafGadget::create_nullifier(&signature_var, &leaf_var, &params_var5_4, &index_var)
 				.unwrap();
 
 		// Check equality
