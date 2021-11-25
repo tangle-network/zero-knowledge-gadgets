@@ -616,8 +616,9 @@ mod test {
 		let paths = vec![path_1.clone(), path_2.clone()];
 
 		let public_amount = BnFr::one();
+
 		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // TODO: change it with new Arbitrary values
+		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
 		let root = tree.root().inner();
 
 		let mut root_set = [BnFr::rand(rng); TEST_M];
