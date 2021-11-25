@@ -16,7 +16,6 @@ pub struct PoseidonParameters<F: PrimeField> {
 	/// The size of the permutation, in field elements.
 	pub width: usize,
 	/// The S-box to apply in the sub words layer.
-	pub exponentiation: usize,
 	/// The S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }

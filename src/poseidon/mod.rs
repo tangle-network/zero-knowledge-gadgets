@@ -45,7 +45,6 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		full_rounds: u8,
 		partial_rounds: u8,
 		width: u8,
-		exponentiation: u8,
 		sbox: PoseidonSbox,
 	) -> Self {
 		Self {
@@ -54,7 +53,6 @@ impl<F: PrimeField> PoseidonParameters<F> {
 			width: width as usize,
 			full_rounds: full_rounds as usize,
 			partial_rounds: partial_rounds as usize,
-			exponentiation: exponentiation as usize,
 			sbox,
 		}
 	}
@@ -81,11 +79,14 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		let mut buf: Vec<u8> = vec![];
 		// serialize length of round keys and round keys, packing them together
 		let round_key_len = self.round_keys.len() * max_elt_size;
-
+		let exponentiation = match &self.sbox {
+			PoseidonSbox::Exponentiation(ex) => *ex,
+			PoseidonSbox::Inverse => 0 as usize, // or similar
+		};
 		buf.extend(&self.width.to_be_bytes());
 		buf.extend(&self.full_rounds.to_be_bytes());
 		buf.extend(&self.partial_rounds.to_be_bytes());
-		buf.extend(&self.exponentiation.to_be_bytes());
+		buf.extend(exponentiation.to_be_bytes());
 
 		buf.extend_from_slice(&(round_key_len as u32).to_be_bytes());
 		buf.extend_from_slice(&from_field_elements(&self.round_keys).unwrap());
@@ -155,7 +156,6 @@ impl<F: PrimeField> PoseidonParameters<F> {
 			width,
 			full_rounds,
 			partial_rounds,
-			exponentiation,
 			sbox,
 		})
 	}

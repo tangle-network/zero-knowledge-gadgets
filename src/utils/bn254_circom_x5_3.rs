@@ -3,7 +3,6 @@ use crate::poseidon::sbox::PoseidonSbox;
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 57;
 pub const WIDTH: u8 = 3;
-pub const EXPONENTIATION: u8 = 5;
 pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
 
 use crate::utils::parse_vec;
@@ -20,15 +19,7 @@ use super::{parse_matrix, PoseidonParameters};
 pub fn get_poseidon_circom_bn254_x5_3<F: PrimeField>() -> PoseidonParameters<F> {
 	let rounds = get_rounds_poseidon_circom_bn254_x5_3();
 	let mds = get_mds_poseidon_circom_bn254_x5_3();
-	PoseidonParameters::<F>::new(
-		rounds,
-		mds,
-		FULL_ROUNDS,
-		PARTIAL_ROUNDS,
-		WIDTH,
-		EXPONENTIATION,
-		SBOX,
-	)
+	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
 }
 
 pub const ROUND_CONSTS: [&str; 195] = [
