@@ -80,9 +80,8 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		let max_elt_size = F::BigInt::NUM_LIMBS * 8;
 		let mut buf: Vec<u8> = vec![];
 		// serialize length of round keys and round keys, packing them together
-		let usize_size= (usize::BITS / 8) as usize;
 		let round_key_len = self.round_keys.len() * max_elt_size;
-		
+
 		buf.extend(&self.width.to_be_bytes());
 		buf.extend(&self.full_rounds.to_be_bytes());
 		buf.extend(&self.partial_rounds.to_be_bytes());
@@ -121,13 +120,13 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		bytes.read_exact(&mut partial_rounds_u8)?;
 		let partial_rounds: usize = usize::from_be_bytes(partial_rounds_u8);
 
-		let mut exponentiation_u8 = [0u8;((usize::BITS / 8) as usize)];
+		let mut exponentiation_u8 = [0u8; ((usize::BITS / 8) as usize)];
 		bytes.read_exact(&mut exponentiation_u8)?;
 		let exponentiation: usize = usize::from_be_bytes(exponentiation_u8); //TODO: fix this
 		let mut sbox = PoseidonSbox::Inverse;
 		if exponentiation != 0 {
 			sbox = PoseidonSbox::Exponentiation(exponentiation);
-			}
+		}
 
 		let mut round_key_len = [0u8; 4];
 		bytes.read_exact(&mut round_key_len)?;
@@ -302,25 +301,30 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
-	use crate::{setup::common::{setup_params_x5_3, setup_params_x5_5, Curve}, utils::{bn254_x5_3::get_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_5}};
+	use crate::{
+		setup::common::{setup_params_x5_3, setup_params_x5_5, Curve},
+		utils::{
+			bn254_x5_3::get_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_3,
+			get_results_poseidon_bn254_x5_5,
+		},
+	};
 
 	type PoseidonCRH = CRH<Fq>;
 
-	 #[test]
-	   fn test_parameter_to_and_from_bytes() {
-		   let params = get_poseidon_bn254_x5_3::<Fq>();
+	#[test]
+	fn test_parameter_to_and_from_bytes() {
+		let params = get_poseidon_bn254_x5_3::<Fq>();
 
-		   let bytes = params.to_bytes();
-		   let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
-		   assert_eq!(bytes, new_params.to_bytes());
-		   
-		   let input = to_bytes![Fq::zero(),Fq::zero()].unwrap();
-		   let hash1 = <PoseidonCRH as CRHTrait>::evaluate(&params, &input).unwrap();
-		   let hash2 = <PoseidonCRH as CRHTrait>::evaluate(&new_params, &input).unwrap();
-		   assert_eq!(hash1, hash2);
+		let bytes = params.to_bytes();
+		let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
+		assert_eq!(bytes, new_params.to_bytes());
 
-	   }
-	
+		let input = to_bytes![Fq::zero(), Fq::zero()].unwrap();
+		let hash1 = <PoseidonCRH as CRHTrait>::evaluate(&params, &input).unwrap();
+		let hash2 = <PoseidonCRH as CRHTrait>::evaluate(&new_params, &input).unwrap();
+		assert_eq!(hash1, hash2);
+	}
+
 	#[test]
 	fn test_width_3_bn_254() {
 		let curve = Curve::Bn254;

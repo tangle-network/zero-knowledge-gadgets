@@ -34,7 +34,15 @@ use super::{parse_matrix, PoseidonParameters};
 pub fn get_poseidon_bls381_x3_3<F: PrimeField>() -> PoseidonParameters<F> {
 	let rounds = get_rounds_poseidon_bls381_x3_3();
 	let mds = get_mds_poseidon_bls381_x3_3();
-	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH,EXPONENTIATION, SBOX)
+	PoseidonParameters::<F>::new(
+		rounds,
+		mds,
+		FULL_ROUNDS,
+		PARTIAL_ROUNDS,
+		WIDTH,
+		EXPONENTIATION,
+		SBOX,
+	)
 }
 
 pub const ROUND_CONSTS: [&str; 276] = [
