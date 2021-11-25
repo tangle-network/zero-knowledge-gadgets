@@ -11,6 +11,12 @@ pub enum PoseidonSbox {
 	Inverse,
 }
 
+impl Default for PoseidonSbox {
+	fn default() -> Self {
+		PoseidonSbox::Exponentiation(5)
+	}
+}
+
 impl PoseidonSbox {
 	pub fn apply_sbox<F: PrimeField>(&self, elem: F) -> Result<F, PoseidonError> {
 		match self {

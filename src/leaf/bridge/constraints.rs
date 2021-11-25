@@ -101,10 +101,9 @@ mod test {
 		leaf::bridge::BridgeLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			sbox::PoseidonSbox,
-			PoseidonParameters, Rounds, CRH,
+			CRH,
 		},
-		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
+		setup::common::{setup_params_x5_5, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_ff::One;
@@ -112,31 +111,20 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
-	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
+	type PoseidonCRH5 = CRH<Fq>;
+	type PoseidonCRH5Gadget = CRHGadget<Fq>;
 
 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
 	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget>;
 	#[test]
 	fn should_create_bridge_leaf_constraints() {
 		let rng = &mut test_rng();
+		let curve = Curve::Bls381;
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
 		// Native version
-		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_5(curve);
 		let chain_id = Fq::one();
 
 		let public = Public::new(chain_id);

@@ -473,11 +473,9 @@ mod test {
 		keypair::vanchor::Keypair,
 		leaf::vanchor::VAnchorLeaf,
 		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-		poseidon::{
-			constraints::CRHGadget as PCRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds,
-			CRH as PCRH,
-		},
+		poseidon::{constraints::CRHGadget as PCRHGadget, CRH as PCRH},
 		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+		utils::PoseidonParameters,
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
@@ -492,43 +490,13 @@ mod test {
 	pub const TEST_N_OUTS_2: usize = 2;
 	pub const TEST_M: usize = 2;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds2;
+	type PoseidonCRH2 = PCRH<BnFr>;
+	type PoseidonCRH4 = PCRH<BnFr>;
+	type PoseidonCRH5 = PCRH<BnFr>;
 
-	impl Rounds for PoseidonRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds4;
-
-	impl Rounds for PoseidonRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH2 = PCRH<BnFr, PoseidonRounds2>;
-	type PoseidonCRH4 = PCRH<BnFr, PoseidonRounds4>;
-	type PoseidonCRH5 = PCRH<BnFr, PoseidonRounds5>;
-
-	type PoseidonCRH2Gadget = PCRHGadget<BnFr, PoseidonRounds2>;
-	type PoseidonCRH4Gadget = PCRHGadget<BnFr, PoseidonRounds4>;
-	type PoseidonCRH5Gadget = PCRHGadget<BnFr, PoseidonRounds5>;
+	type PoseidonCRH2Gadget = PCRHGadget<BnFr>;
+	type PoseidonCRH4Gadget = PCRHGadget<BnFr>;
+	type PoseidonCRH5Gadget = PCRHGadget<BnFr>;
 
 	type KeyPair = Keypair<BnFr, PoseidonCRH2>;
 	type Leaf = VAnchorLeaf<BnFr, PoseidonCRH4, PoseidonCRH5>;

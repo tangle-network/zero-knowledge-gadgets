@@ -5,10 +5,10 @@ use crate::{
 	leaf::bridge::{
 		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
-	poseidon::PoseidonParameters,
 	set::membership::{
 		constraints::SetMembershipGadget, Private as SetMembershipPrivate, SetMembership,
 	},
+	utils::PoseidonParameters,
 };
 use ark_crypto_primitives::{CRH as CRHTrait, SNARK};
 use ark_ec::PairingEngine;

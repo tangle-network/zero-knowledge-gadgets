@@ -78,42 +78,29 @@ mod test {
 		leaf::basic::BasicLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			sbox::PoseidonSbox,
-			PoseidonParameters, Rounds, CRH,
+			CRH,
 		},
-		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
+		setup::common::{setup_params_x5_3, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
-
-	impl Rounds for PoseidonRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
-	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
+	type PoseidonCRH3 = CRH<Fq>;
+	type PoseidonCRH3Gadget = CRHGadget<Fq>;
 
 	type Leaf = BasicLeaf<Fq, PoseidonCRH3>;
 	type LeafGadget = BasicLeafGadget<Fq, PoseidonCRH3, PoseidonCRH3Gadget>;
 	#[test]
 	fn should_crate_basic_leaf_constraints() {
 		let rng = &mut test_rng();
+		let curve = Curve::Bls381;
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
-
 		// Native version
 		let secrets = Private::generate(rng);
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_3(curve);
 		let leaf = Leaf::create_leaf(&secrets, &params).unwrap();
 
 		// Constraints version

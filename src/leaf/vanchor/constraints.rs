@@ -126,14 +126,9 @@ mod test {
 		leaf::vanchor::VAnchorLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			sbox::PoseidonSbox,
-			PoseidonParameters, Rounds, CRH,
+			CRH,
 		},
-		utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
-			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
-			get_rounds_poseidon_bn254_x5_5,
-		},
+		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
 	};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
@@ -143,43 +138,13 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds2;
+	type PoseidonCRH2 = CRH<Fq>;
+	type PoseidonCRH4 = CRH<Fq>;
+	type PoseidonCRH5 = CRH<Fq>;
 
-	impl Rounds for PoseidonRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds4;
-
-	impl Rounds for PoseidonRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH2 = CRH<Fq, PoseidonRounds2>;
-	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
-
-	type PoseidonCRH2Gadget = CRHGadget<Fq, PoseidonRounds2>;
-	type PoseidonCRH4Gadget = CRHGadget<Fq, PoseidonRounds4>;
-	type PoseidonCRH5Gadget = CRHGadget<Fq, PoseidonRounds5>;
+	type PoseidonCRH2Gadget = CRHGadget<Fq>;
+	type PoseidonCRH4Gadget = CRHGadget<Fq>;
+	type PoseidonCRH5Gadget = CRHGadget<Fq>;
 
 	type Leaf = VAnchorLeaf<Fq, PoseidonCRH4, PoseidonCRH5>;
 	type LeafGadget =
@@ -189,14 +154,13 @@ mod test {
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
 		let cs = ConstraintSystem::<Fq>::new_ref();
+		let curve = Curve::Bn254;
 
 		// Native version
-		let rounds5_5 = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds5_5 = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let params5_5 = PoseidonParameters::<Fq>::new(rounds5_5, mds5_5);
-		let rounds5_2 = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds5_2 = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let params5_2 = PoseidonParameters::<Fq>::new(rounds5_2, mds5_2);
+
+		let params5_2 = setup_params_x5_2(curve);
+		let params5_5 = setup_params_x5_5(curve);
+
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);
@@ -240,9 +204,7 @@ mod test {
 
 		// Test Nullifier
 		// Native version
-		let rounds5_4 = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds5_4 = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let params5_4 = PoseidonParameters::<Fq>::new(rounds5_4, mds5_4);
+		let params5_4 = setup_params_x5_4(curve);
 		let params_var5_4 = PoseidonParametersVar::new_variable(
 			cs.clone(),
 			|| Ok(&params5_4),

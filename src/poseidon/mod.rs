@@ -1,6 +1,6 @@
 use crate::{
 	poseidon::sbox::PoseidonSbox,
-	utils::{from_field_elements, to_field_elements},
+	utils::{from_field_elements, to_field_elements, PoseidonParameters},
 };
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
@@ -38,39 +38,32 @@ impl ArkError for PoseidonError {}
 pub const PADDING_CONST: u64 = 101;
 pub const ZERO_CONST: u64 = 0;
 
-pub trait Rounds: Default + Clone {
-	/// The size of the permutation, in field elements.
-	const WIDTH: usize;
-	/// Number of full SBox rounds
-	const FULL_ROUNDS: usize;
-	/// Number of partial rounds
-	const PARTIAL_ROUNDS: usize;
-	/// The S-box to apply in the sub words layer.
-	const SBOX: PoseidonSbox;
-}
-
-/// The Poseidon permutation.
-#[derive(Default, Clone)]
-pub struct PoseidonParameters<F> {
-	/// The round key constants
-	pub round_keys: Vec<F>,
-	/// The MDS matrix to apply in the mix layer.
-	pub mds_matrix: Vec<Vec<F>>,
-}
-
 impl<F: PrimeField> PoseidonParameters<F> {
-	pub fn new(round_keys: Vec<F>, mds_matrix: Vec<Vec<F>>) -> Self {
+	pub fn new(
+		round_keys: Vec<F>,
+		mds_matrix: Vec<Vec<F>>,
+		full_rounds: u8,
+		partial_rounds: u8,
+		width: u8,
+		sbox: PoseidonSbox,
+	) -> Self {
 		Self {
 			round_keys,
 			mds_matrix,
+			width: width as usize,
+			full_rounds: full_rounds as usize,
+			partial_rounds: partial_rounds as usize,
+			sbox,
 		}
 	}
 
-	pub fn generate<R: Rng>(rng: &mut R) -> Self {
-		Self {
+	pub fn generate<R: Rng>(_rng: &mut R) -> Self {
+		todo!();
+		/* Self {
+
 			round_keys: Self::create_round_keys(rng),
 			mds_matrix: Self::create_mds(rng),
-		}
+		} */
 	}
 
 	pub fn create_mds<R: Rng>(_rng: &mut R) -> Vec<Vec<F>> {
@@ -86,12 +79,22 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		let mut buf: Vec<u8> = vec![];
 		// serialize length of round keys and round keys, packing them together
 		let round_key_len = self.round_keys.len() * max_elt_size;
+		let exponentiation = match &self.sbox {
+			PoseidonSbox::Exponentiation(ex) => *ex,
+			PoseidonSbox::Inverse => 0 as usize, // or similar
+		};
+		buf.extend(&self.width.to_be_bytes());
+		buf.extend(&self.full_rounds.to_be_bytes());
+		buf.extend(&self.partial_rounds.to_be_bytes());
+		buf.extend(exponentiation.to_be_bytes());
+
 		buf.extend_from_slice(&(round_key_len as u32).to_be_bytes());
 		buf.extend_from_slice(&from_field_elements(&self.round_keys).unwrap());
 		// serialize all inner matrices and add to buffer, we assume the rest
 		// of the buffer is reserved for mds_matrix serialization. Since each
 		// inner mds_matrix is equally sized we only add the length once.
 		let mut stored = false;
+		//TODO: implement this for new properties
 		for i in 0..self.mds_matrix.len() {
 			if !stored {
 				// the number of bytes to read for each inner mds matrix vec
@@ -106,6 +109,26 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	}
 
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
+		let mut width_u8 = [0u8; ((usize::BITS / 8) as usize)];
+		bytes.read_exact(&mut width_u8)?;
+		let width: usize = usize::from_be_bytes(width_u8);
+
+		let mut full_rounds_len = [0u8; ((usize::BITS / 8) as usize)];
+		bytes.read_exact(&mut full_rounds_len)?;
+		let full_rounds: usize = usize::from_be_bytes(full_rounds_len);
+
+		let mut partial_rounds_u8 = [0u8; ((usize::BITS / 8) as usize)];
+		bytes.read_exact(&mut partial_rounds_u8)?;
+		let partial_rounds: usize = usize::from_be_bytes(partial_rounds_u8);
+
+		let mut exponentiation_u8 = [0u8; ((usize::BITS / 8) as usize)];
+		bytes.read_exact(&mut exponentiation_u8)?;
+		let exponentiation: usize = usize::from_be_bytes(exponentiation_u8); //TODO: fix this
+		let mut sbox = PoseidonSbox::Inverse;
+		if exponentiation != 0 {
+			sbox = PoseidonSbox::Exponentiation(exponentiation);
+		}
+
 		let mut round_key_len = [0u8; 4];
 		bytes.read_exact(&mut round_key_len)?;
 
@@ -130,27 +153,30 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		Ok(Self {
 			round_keys,
 			mds_matrix,
+			width,
+			full_rounds,
+			partial_rounds,
+			sbox,
 		})
 	}
 }
 
-pub struct CRH<F: PrimeField, P: Rounds> {
+pub struct CRH<F: PrimeField> {
 	field: PhantomData<F>,
-	rounds: PhantomData<P>,
 }
 
-impl<F: PrimeField, P: Rounds> CRH<F, P> {
+impl<F: PrimeField> CRH<F> {
 	fn permute(params: &PoseidonParameters<F>, mut state: Vec<F>) -> Result<Vec<F>, PoseidonError> {
-		let width = P::WIDTH;
+		let width = params.width;
 
 		let mut round_keys_offset = 0;
 
 		// full Sbox rounds
-		for _ in 0..(P::FULL_ROUNDS / 2) {
+		for _ in 0..(params.full_rounds / 2) {
 			// Sbox layer
 			for i in 0..width {
 				state[i] += params.round_keys[round_keys_offset];
-				state[i] = P::SBOX.apply_sbox(state[i])?;
+				state[i] = params.sbox.apply_sbox(state[i])?;
 				round_keys_offset += 1;
 			}
 			// linear layer
@@ -158,24 +184,24 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 		}
 
 		// middle partial Sbox rounds
-		for _ in 0..P::PARTIAL_ROUNDS {
+		for _ in 0..params.partial_rounds {
 			for i in 0..width {
 				state[i] += params.round_keys[round_keys_offset];
 				round_keys_offset += 1;
 			}
 			// partial Sbox layer, apply Sbox to only 1 element of the state.
 			// Here the last one is chosen but the choice is arbitrary.
-			state[0] = P::SBOX.apply_sbox(state[0])?;
+			state[0] = params.sbox.apply_sbox(state[0])?;
 			// linear layer
 			state = Self::apply_linear_layer(&state, &params.mds_matrix);
 		}
 
 		// last full Sbox rounds
-		for _ in 0..(P::FULL_ROUNDS / 2) {
+		for _ in 0..(params.full_rounds / 2) {
 			// Sbox layer
 			for i in 0..width {
 				state[i] += params.round_keys[round_keys_offset];
-				state[i] = P::SBOX.apply_sbox(state[i])?;
+				state[i] = params.sbox.apply_sbox(state[i])?;
 				round_keys_offset += 1;
 			}
 			// linear layer
@@ -200,11 +226,13 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 	}
 }
 
-impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
+impl<F: PrimeField> CRHTrait for CRH<F> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
 
-	const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8;
+	const INPUT_SIZE_BITS: usize = 0;
+
+	// F::BigInt::NUM_LIMBS * 8 * PoseidonParameters::width * 8;
 
 	// Not sure what's the purpose of this function of we are going to pass
 	// parameters
@@ -217,16 +245,16 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 
 		let f_inputs: Vec<F> = to_field_elements(input)?;
 
-		if f_inputs.len() > P::WIDTH {
+		if f_inputs.len() > parameters.width {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_inputs.len(),
-				P::WIDTH,
+				parameters.width,
 				input.len()
 			);
 		}
 
-		let mut buffer = vec![F::zero(); P::WIDTH];
+		let mut buffer = vec![F::zero(); parameters.width];
 		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
 
 		let result = Self::permute(&parameters, buffer)?;
@@ -237,7 +265,7 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 	}
 }
 
-impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
+impl<F: PrimeField> TwoToOneCRH for CRH<F> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
 
@@ -273,75 +301,51 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
-	use crate::utils::{
-		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_results_poseidon_bn254_x5_3,
-		get_results_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
-		get_rounds_poseidon_bn254_x5_5,
+	use crate::{
+		setup::common::{setup_params_x5_3, setup_params_x5_5, Curve},
+		utils::{
+			bn254_x5_3::get_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_3,
+			get_results_poseidon_bn254_x5_5,
+		},
 	};
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-	#[derive(Default, Clone)]
-	struct PoseidonCircomRounds3;
-
-	impl Rounds for PoseidonRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	impl Rounds for PoseidonCircomRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCRH = CRH<Fq>;
 
 	#[test]
 	fn test_parameter_to_and_from_bytes() {
-		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = get_poseidon_bn254_x5_3::<Fq>();
 
 		let bytes = params.to_bytes();
 		let new_params: PoseidonParameters<Fq> = PoseidonParameters::from_bytes(&bytes).unwrap();
 		assert_eq!(bytes, new_params.to_bytes());
+
+		let input = to_bytes![Fq::zero(), Fq::zero()].unwrap();
+		let hash1 = <PoseidonCRH as CRHTrait>::evaluate(&params, &input).unwrap();
+		let hash2 = <PoseidonCRH as CRHTrait>::evaluate(&new_params, &input).unwrap();
+		assert_eq!(hash1, hash2);
 	}
 
 	#[test]
 	fn test_width_3_bn_254() {
-		let rounds = get_rounds_poseidon_bn254_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_3::<Fq>();
-		let res = get_results_poseidon_bn254_x5_3::<Fq>();
+		let curve = Curve::Bn254;
 
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_3(curve);
+
+		let res = get_results_poseidon_bn254_x5_3::<Fq>();
 
 		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 
-		let poseidon_res = <PoseidonCRH3 as CRHTrait>::evaluate(&params, &inp).unwrap();
+		let poseidon_res = <PoseidonCRH as CRHTrait>::evaluate(&params, &inp).unwrap();
 		assert_eq!(res[0], poseidon_res);
 	}
 
 	#[test]
 	fn test_width_5_bn_254() {
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let res = get_results_poseidon_bn254_x5_5::<Fq>();
+		let curve = Curve::Bn254;
 
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_5(curve);
+
+		let res = get_results_poseidon_bn254_x5_5::<Fq>();
 
 		let inp = to_bytes![
 			Fq::zero(),
@@ -352,7 +356,7 @@ mod test {
 		]
 		.unwrap();
 
-		let poseidon_res = <PoseidonCRH5 as CRHTrait>::evaluate(&params, &inp).unwrap();
+		let poseidon_res = <PoseidonCRH as CRHTrait>::evaluate(&params, &inp).unwrap();
 		assert_eq!(res[0], poseidon_res);
 	}
 }
