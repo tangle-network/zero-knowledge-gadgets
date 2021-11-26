@@ -5,23 +5,14 @@ use crate::{
 	circuit::vanchor::VAnchorCircuit,
 	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
-	merkle_tree::{Config, Node, Path, SparseMerkleTree},
-	poseidon::{
-		constraints::CRHGadget as PoseidonGadget, sbox::PoseidonSbox, Rounds, CRH as PoseidonCRH,
-	},
+	merkle_tree::{Config, Path, SparseMerkleTree},
 	set::membership::{Private as SetMembershipPrivate, SetMembership},
-	setup::common::*,
 };
 use ark_crypto_primitives::{CRHGadget, CRH as CRHTrait};
 use ark_ff::{to_bytes, PrimeField, ToBytes};
-use ark_std::{self, rc::Rc, test_rng, time::Instant};
-use blake2::crypto_mac::Key;
-use paste::paste;
+use ark_std::{self, rc::Rc};
 
-use ark_std::{
-	rand::{CryptoRng, Rng, RngCore},
-	vec::Vec,
-};
+use ark_std::{rand::Rng, vec::Vec};
 
 pub struct VAnchorProverSetup<
 	F: PrimeField,

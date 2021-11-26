@@ -76,12 +76,9 @@ impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 mod test {
 	use super::*;
 	use crate::{
-		poseidon::{circom::CircomCRH, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4, get_mds_poseidon_bn254_x5_5,
-			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
-			get_rounds_poseidon_bn254_x5_5, parse_vec,
-		},
+		poseidon::{circom::CircomCRH, CRH},
+		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
+		utils::parse_vec,
 	};
 	use ark_ed_on_bn254::Fq;
 
@@ -89,54 +86,24 @@ mod test {
 	use ark_ff::{to_bytes, BigInteger};
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds2;
-
-	impl Rounds for PoseidonRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds4;
-
-	impl Rounds for PoseidonRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH2 = CRH<Fq, PoseidonRounds2>;
-	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCRH2 = CRH<Fq>;
+	type PoseidonCRH4 = CRH<Fq>;
+	type PoseidonCRH5 = CRH<Fq>;
 
 	type Leaf = VAnchorLeaf<Fq, PoseidonCRH4, PoseidonCRH5>;
 	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_create_leaf() {
 		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
 		let secrets = Private::generate(rng);
 		let publics = Public::default();
 		let private_key = Fq::rand(rng);
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
-		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
+
+		let params2 = setup_params_x5_2(curve);
+		let params5 = setup_params_x5_5(curve);
+
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
 		// Commitment = hash(chainID, amount, blinding, pubKey)
@@ -151,20 +118,18 @@ mod test {
 	#[test]
 	fn should_create_nullifier() {
 		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
 		let secrets = Private::generate(rng);
 		let chain_id = Fq::zero();
 		let publics = Public::new(chain_id);
 		let index = Fq::zero();
 		let private_key = Fq::rand(rng);
-		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let params2 = PoseidonParameters::<Fq>::new(rounds, mds);
-		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let params4 = PoseidonParameters::<Fq>::new(rounds, mds);
-		let rounds = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let params5 = PoseidonParameters::<Fq>::new(rounds, mds);
+
+		let params2 = setup_params_x5_2(curve);
+		let params4 = setup_params_x5_4(curve);
+		let params5 = setup_params_x5_5(curve);
+
 		let privkey = to_bytes![private_key].unwrap();
 		let pubkey = PoseidonCRH2::evaluate(&params2, &privkey).unwrap();
 		// Since Commitment = hash(chainID, amount, blinding, pubKey)
@@ -183,52 +148,19 @@ mod test {
 		assert_eq!(ev_res, nullifier);
 	}
 
-	#[derive(Default, Clone)]
-	struct PoseidonCircomRounds2;
-	impl Rounds for PoseidonCircomRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonCircomRounds4;
-	impl Rounds for PoseidonCircomRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonCircomRounds5;
-	impl Rounds for PoseidonCircomRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCircomCRH4 = CircomCRH<Fq, PoseidonCircomRounds4>;
-	type PoseidonCircomCRH2 = CircomCRH<Fq, PoseidonCircomRounds2>;
-	type PoseidonCircomCRH5 = CircomCRH<Fq, PoseidonCircomRounds5>;
+	type PoseidonCircomCRH4 = CircomCRH<Fq>;
+	type PoseidonCircomCRH2 = CircomCRH<Fq>;
+	type PoseidonCircomCRH5 = CircomCRH<Fq>;
 
 	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH4, PoseidonCircomCRH5>;
 
 	#[test]
 	fn should_be_the_same_as_circom() {
-		let round_keys = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds_matrix = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let parameters2 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+		let curve = Curve::Bn254;
 
-		let round_keys = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds_matrix = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let parameters4 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
-
-		let round_keys = get_rounds_poseidon_bn254_x5_5::<Fq>();
-		let mds_matrix = get_mds_poseidon_bn254_x5_5::<Fq>();
-		let parameters5 = PoseidonParameters::<Fq>::new(round_keys, mds_matrix);
+		let parameters2 = setup_params_x5_2(curve);
+		let parameters4 = setup_params_x5_4(curve);
+		let parameters5 = setup_params_x5_5(curve);
 
 		let private_key: Vec<Fq> = parse_vec(vec![
 			"0xb2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046",

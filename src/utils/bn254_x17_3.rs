@@ -1,3 +1,27 @@
+use crate::poseidon::sbox::PoseidonSbox;
+
+pub const FULL_ROUNDS: u8 = 8;
+pub const PARTIAL_ROUNDS: u8 = 57;
+pub const WIDTH: u8 = 3;
+pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
+
+use crate::utils::parse_vec;
+use ark_ff::PrimeField;
+
+pub fn get_rounds_poseidon_bn254_x17_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(ROUND_CONSTS.to_vec())
+}
+pub fn get_mds_poseidon_bn254_x17_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
+}
+
+use super::{parse_matrix, PoseidonParameters};
+pub fn get_poseidon_bn254_x17_3<F: PrimeField>() -> PoseidonParameters<F> {
+	let rounds = get_rounds_poseidon_bn254_x17_3();
+	let mds = get_mds_poseidon_bn254_x17_3();
+	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
+}
+
 pub const ROUND_CONSTS: [&str; 123] = [
 	"0x1b3076f41cbcf5e9fa4b78634027ea500524cba9bbbad22fa1c4b7cc19aa66c3",
 	"0x2bf1bc122783fa0c18aded20b5f1bd9aaefd0d87b6a8ea8fad2bddf367cc083d",

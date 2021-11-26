@@ -11,6 +11,30 @@
 // Sage script command:
 // sage generate_parameters_grain.sage 1 0 255 3 8 33
 // 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+use crate::poseidon::sbox::PoseidonSbox;
+
+pub const FULL_ROUNDS: u8 = 8;
+pub const PARTIAL_ROUNDS: u8 = 57;
+pub const WIDTH: u8 = 3;
+pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(17);
+
+use crate::utils::parse_vec;
+use ark_ff::PrimeField;
+
+pub fn get_rounds_poseidon_bls381_x17_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(ROUND_CONSTS.to_vec())
+}
+pub fn get_mds_poseidon_bls381_x17_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
+}
+
+use super::{parse_matrix, PoseidonParameters};
+pub fn get_poseidon_bls381_x17_3<F: PrimeField>() -> PoseidonParameters<F> {
+	let rounds = get_rounds_poseidon_bls381_x17_3();
+	let mds = get_mds_poseidon_bls381_x17_3();
+	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
+}
+
 pub const ROUND_CONSTS: [&str; 123] = [
 	"0x5d772b29f1d7b793e319457b3b07d48d21aeec2097aa56cd3e30f9af0bbc8d89",
 	"0x201a8ace9938a4dccc38d35d5ca1576c7668b4694727d0a9e0b5f46ea5ee375d",

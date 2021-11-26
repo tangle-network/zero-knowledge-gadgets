@@ -47,11 +47,8 @@ impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 #[cfg(test)]
 mod test {
 	use crate::{
-		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{
-			get_mds_poseidon_bn254_x5_2, get_mds_poseidon_bn254_x5_4,
-			get_rounds_poseidon_bn254_x5_2, get_rounds_poseidon_bn254_x5_4,
-		},
+		poseidon::CRH,
+		setup::common::{setup_params_x5_2, setup_params_x5_4, Curve},
 	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
@@ -62,54 +59,22 @@ mod test {
 
 	use super::Keypair;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds2;
-
-	impl Rounds for PoseidonRounds2 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 2;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds4;
-
-	impl Rounds for PoseidonRounds4 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 56;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 4;
-	}
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH2 = CRH<Fq, PoseidonRounds2>;
-	type PoseidonCRH4 = CRH<Fq, PoseidonRounds4>;
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCRH = CRH<Fq>;
 
 	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_crate_new_public_key() {
 		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
 
-		let rounds = get_rounds_poseidon_bn254_x5_2::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_2::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_2(curve);
+
 		let private_key = Fq::rand(rng);
 
 		let privkey = to_bytes![private_key].unwrap();
-		let pubkey = PoseidonCRH2::evaluate(&params, &privkey).unwrap();
+		let pubkey = PoseidonCRH::evaluate(&params, &privkey).unwrap();
 
-		let keypair = Keypair::<Fq, PoseidonCRH2>::new(private_key.clone());
+		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
 		let new_pubkey = keypair.public_key(&params).unwrap();
 
 		assert_eq!(new_pubkey, pubkey)
@@ -119,20 +84,19 @@ mod test {
 		let rng = &mut test_rng();
 		let index = Fq::zero();
 		let private_key = Fq::rand(rng);
+		let curve = Curve::Bn254;
 
-		let rounds = get_rounds_poseidon_bn254_x5_4::<Fq>();
-		let mds = get_mds_poseidon_bn254_x5_4::<Fq>();
-		let params4 = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params4 = setup_params_x5_4(curve);
 
 		let commitment = Fq::rand(rng);
 
-		let keypair = Keypair::<Fq, PoseidonCRH2>::new(private_key.clone());
+		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
 
 		// Since signature = hash(privKey, commitment, pathIndices)
 		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
-		let ev_res = PoseidonCRH4::evaluate(&params4, &inputs_signature).unwrap();
+		let ev_res = PoseidonCRH::evaluate(&params4, &inputs_signature).unwrap();
 		let signature = keypair
-			.signature::<PoseidonCRH4, PoseidonCRH5>(&commitment, &index, &params4)
+			.signature::<PoseidonCRH, PoseidonCRH>(&commitment, &index, &params4)
 			.unwrap();
 		assert_eq!(ev_res, signature);
 	}

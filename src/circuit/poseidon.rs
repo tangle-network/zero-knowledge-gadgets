@@ -64,8 +64,8 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> ConstraintSynthesizer<F>
 mod test {
 	use super::*;
 	use crate::{
-		poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
+		poseidon::{constraints::CRHGadget, CRH},
+		setup::common::{setup_params_x5_3, Curve},
 	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 	use ark_crypto_primitives::{crh::CRH as CRHTrait, SNARK};
@@ -76,30 +76,20 @@ mod test {
 	use ark_std::UniformRand;
 	use blake2::Blake2s;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
-
-	impl Rounds for PoseidonRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type PoseidonCRH3 = CRH<BlsFr, PoseidonRounds3>;
-	type PoseidonCRH3Gadget = CRHGadget<BlsFr, PoseidonRounds3>;
+	type PoseidonCRH3 = CRH<BlsFr>;
+	type PoseidonCRH3Gadget = CRHGadget<BlsFr>;
 	type PoseidonC = PoseidonCircuit<BlsFr, PoseidonCRH3, PoseidonCRH3Gadget>;
 
 	#[test]
 	fn should_verify_poseidon_circuit() {
 		let rng = &mut ark_std::test_rng();
+		let curve = Curve::Bls381;
 
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
 		let bytes = to_bytes![a, b].unwrap();
-		let rounds3 = get_rounds_poseidon_bls381_x5_3::<BlsFr>();
-		let mds3 = get_mds_poseidon_bls381_x5_3::<BlsFr>();
-		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
+		let parameters = setup_params_x5_3(curve);
+
 		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
 		let nc = 3000;
 		let nv = 2;
@@ -119,13 +109,13 @@ mod test {
 	#[test]
 	fn should_verify_poseidon_circuit_groth16() {
 		let rng = &mut ark_std::test_rng();
+		let curve = Curve::Bls381;
 
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
 		let bytes = to_bytes![a, b].unwrap();
-		let rounds3 = get_rounds_poseidon_bls381_x5_3::<BlsFr>();
-		let mds3 = get_mds_poseidon_bls381_x5_3::<BlsFr>();
-		let parameters = PoseidonParameters::<BlsFr>::new(rounds3, mds3);
+		let parameters = setup_params_x5_3(curve);
+
 		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
 		let circuit = PoseidonC::new(a, b, c, parameters);
 

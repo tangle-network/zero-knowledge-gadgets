@@ -58,30 +58,22 @@ impl<F: PrimeField, H: CRH> BridgeLeaf<F, H> {
 mod test {
 	use super::*;
 	use crate::{
-		poseidon::{sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
-		utils::{get_mds_poseidon_bls381_x5_5, get_rounds_poseidon_bls381_x5_5},
+		poseidon::CRH,
+		setup::common::{setup_params_x5_5, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::One;
 	use ark_std::test_rng;
 
-	#[derive(Default, Clone)]
-	struct PoseidonRounds5;
-
-	impl Rounds for PoseidonRounds5 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 60;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 5;
-	}
-
-	type PoseidonCRH5 = CRH<Fq, PoseidonRounds5>;
+	type PoseidonCRH5 = CRH<Fq>;
 
 	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
 	#[test]
 	fn should_crate_bridge_leaf() {
 		let rng = &mut test_rng();
+		let curve = Curve::Bls381;
+
 		let private = Private::generate(rng);
 
 		let chain_id = Fq::one();
@@ -91,9 +83,8 @@ mod test {
 
 		let nullifier_inputs = to_bytes![private.nullifier, private.nullifier].unwrap();
 
-		let rounds = get_rounds_poseidon_bls381_x5_5::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_5::<Fq>();
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_5(curve);
+
 		let leaf_res = PoseidonCRH5::evaluate(&params, &leaf_inputs).unwrap();
 		let nullifier_res = PoseidonCRH5::evaluate(&params, &nullifier_inputs).unwrap();
 

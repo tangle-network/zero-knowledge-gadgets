@@ -1,5 +1,5 @@
-use super::{sbox::constraints::SboxConstraints, PoseidonParameters, Rounds, CRH};
-use crate::utils::to_field_var_elements;
+use super::{sbox::constraints::SboxConstraints, PoseidonParameters, CRH};
+use crate::{poseidon::PoseidonSbox, utils::to_field_var_elements};
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -18,28 +18,35 @@ pub struct PoseidonParametersVar<F: PrimeField> {
 	pub round_keys: Vec<FpVar<F>>,
 	/// The MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<FpVar<F>>>,
+	/// Number of full SBox rounds
+	pub full_rounds: usize,
+	/// Number of partial rounds
+	pub partial_rounds: usize,
+	/// The size of the permutation, in field elements.
+	pub width: usize,
+	/// The S-box to apply in the sub words layer.
+	pub sbox: PoseidonSbox,
 }
 
-pub struct CRHGadget<F: PrimeField, P: Rounds> {
+pub struct CRHGadget<F: PrimeField> {
 	field: PhantomData<F>,
-	params: PhantomData<P>,
 }
 
-impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
+impl<F: PrimeField> CRHGadget<F> {
 	fn permute(
 		parameters: &PoseidonParametersVar<F>,
 		mut state: Vec<FpVar<F>>,
 	) -> Result<Vec<FpVar<F>>, SynthesisError> {
-		let width = P::WIDTH;
+		let width = parameters.width;
 
 		let mut round_keys_offset = 0;
 
 		// full Sbox rounds
-		for _ in 0..(P::FULL_ROUNDS / 2) {
+		for _ in 0..(parameters.full_rounds / 2) {
 			// Substitution (S-box) layer
 			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
-				state[i] = P::SBOX.synthesize_sbox(&state[i])?;
+				state[i] = parameters.sbox.synthesize_sbox(&state[i])?;
 				round_keys_offset += 1;
 			}
 			// Apply linear layer
@@ -47,7 +54,7 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
 		}
 
 		// middle partial Sbox rounds
-		for _ in 0..P::PARTIAL_ROUNDS {
+		for _ in 0..parameters.partial_rounds {
 			// Substitution (S-box) layer
 			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
@@ -55,17 +62,17 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
 			}
 			// apply Sbox to only 1 element of the state.
 			// Here the last one is chosen but the choice is arbitrary.
-			state[0] = P::SBOX.synthesize_sbox(&state[0])?;
+			state[0] = parameters.sbox.synthesize_sbox(&state[0])?;
 			// Linear layer
 			state = Self::apply_linear_layer(&state, &parameters.mds_matrix);
 		}
 
 		// last full Sbox rounds
-		for _ in 0..(P::FULL_ROUNDS / 2) {
+		for _ in 0..(parameters.full_rounds / 2) {
 			// Substitution (S-box) layer
 			for i in 0..width {
 				state[i] += &parameters.round_keys[round_keys_offset];
-				state[i] = P::SBOX.synthesize_sbox(&state[i])?;
+				state[i] = parameters.sbox.synthesize_sbox(&state[i])?;
 				round_keys_offset += 1;
 			}
 			// Linear layer
@@ -90,7 +97,7 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
 }
 
 // https://github.com/arkworks-rs/r1cs-std/blob/master/src/bits/uint8.rs#L343
-impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> {
+impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 	type OutputVar = FpVar<F>;
 	type ParametersVar = PoseidonParametersVar<F>;
 
@@ -99,15 +106,15 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> 
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let f_var_inputs: Vec<FpVar<F>> = to_field_var_elements(input)?;
-		if f_var_inputs.len() > P::WIDTH {
+		if f_var_inputs.len() > parameters.width {
 			panic!(
 				"incorrect input length {:?} for width {:?}",
 				f_var_inputs.len(),
-				P::WIDTH,
+				parameters.width,
 			);
 		}
 
-		let mut buffer = vec![FpVar::zero(); P::WIDTH];
+		let mut buffer = vec![FpVar::zero(); parameters.width];
 		buffer
 			.iter_mut()
 			.zip(f_var_inputs)
@@ -118,7 +125,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> 
 	}
 }
 
-impl<F: PrimeField, P: Rounds> TwoToOneCRHGadget<CRH<F, P>, F> for CRHGadget<F, P> {
+impl<F: PrimeField> TwoToOneCRHGadget<CRH<F>, F> for CRHGadget<F> {
 	type OutputVar = FpVar<F>;
 	type ParametersVar = PoseidonParametersVar<F>;
 
@@ -145,7 +152,6 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 		_mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let params = f()?.borrow().clone();
-
 		let mut round_keys_var = Vec::new();
 		for rk in params.round_keys {
 			round_keys_var.push(FpVar::Constant(rk));
@@ -158,47 +164,43 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 			}
 			mds_var.push(row_var);
 		}
+		let full_rounds = params.full_rounds;
+		let partial_rounds = params.partial_rounds;
+		let width = params.width;
+		let sbox = params.sbox;
+
 		Ok(Self {
 			round_keys: round_keys_var,
 			mds_matrix: mds_var,
+			full_rounds,
+			partial_rounds,
+			width,
+			sbox,
 		})
 	}
 }
 
 #[cfg(test)]
 mod test {
+	use crate::setup::common::{setup_params_x5_3, Curve};
+
 	use super::*;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
-	use crate::{
-		poseidon::sbox::PoseidonSbox,
-		utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3},
-	};
-
-	#[derive(Default, Clone)]
-	struct PoseidonRounds3;
-
-	impl Rounds for PoseidonRounds3 {
-		const FULL_ROUNDS: usize = 8;
-		const PARTIAL_ROUNDS: usize = 57;
-		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-		const WIDTH: usize = 3;
-	}
-
-	type PoseidonCRH3 = CRH<Fq, PoseidonRounds3>;
-	type PoseidonCRH3Gadget = CRHGadget<Fq, PoseidonRounds3>;
+	type PoseidonCRH3 = CRH<Fq>;
+	type PoseidonCRH3Gadget = CRHGadget<Fq>;
 
 	#[test]
 	fn test_poseidon_native_equality() {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let rounds = get_rounds_poseidon_bls381_x5_3::<Fq>();
-		let mds = get_mds_poseidon_bls381_x5_3::<Fq>();
+		let curve = Curve::Bls381;
 
-		let params = PoseidonParameters::<Fq>::new(rounds, mds);
+		let params = setup_params_x5_3(curve);
+
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),
 			|| Ok(&params),
