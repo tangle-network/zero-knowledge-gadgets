@@ -1,7 +1,7 @@
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 use ark_crypto_primitives::SNARK;
 use ark_ed_on_bls12_381::{EdwardsAffine, Fr as EdBlsFr};
-use ark_ff::{One, UniformRand};
+use ark_ff::{One, PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
@@ -14,7 +14,7 @@ use arkworks_gadgets::{
 		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, Rounds, CRH},
+	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, CRH},
 	set::membership::{constraints::SetMembershipGadget, SetMembership},
 	utils::{
 		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
@@ -57,7 +57,7 @@ macro_rules! setup_circuit {
 		type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
 		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget>;
 
-		#[derive(Clone)]
+		#[derive(Clone, PartialEq)]
 		struct BridgeTreeConfig;
 		impl MerkleConfig for BridgeTreeConfig {
 			type H = PoseidonCRH3;

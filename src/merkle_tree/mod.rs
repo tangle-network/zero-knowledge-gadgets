@@ -13,7 +13,7 @@ use core::convert::TryInto;
 pub mod constraints;
 
 /// configuration of a Merkle tree
-pub trait Config: Clone {
+pub trait Config: Clone + PartialEq {
 	/// Tree height
 	const HEIGHT: u8;
 	/// The CRH
@@ -32,6 +32,7 @@ pub enum Node<P: Config> {
 	Inner(InnerNode<P>),
 }
 
+// TODO: Improve error handling
 impl<P: Config> Node<P> {
 	pub fn inner(self) -> InnerNode<P> {
 		match self {
@@ -80,8 +81,8 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		root_hash: &Node<P>,
 		leaf: &L,
 	) -> Result<F, Error> {
-		if !self.check_membership(root_hash, leaf).unwrap() {
-			panic!("leaf is not in the path");
+		if !self.check_membership(root_hash, leaf)? {
+			panic!("Leaf is not in the path");
 		}
 
 		let mut prev = hash_leaf::<P, L>(self.leaf_params.borrow(), leaf)?;
@@ -107,10 +108,6 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		if self.path.len() != P::HEIGHT as usize {
 			panic!("path.len !=  P::HEIGHT");
 		}
-		// Check that the given leaf matches the leaf in the membership proof.
-		if self.path.is_empty() {
-			panic!("path is empty");
-		}
 
 		let claimed_leaf_hash = hash_leaf::<P, L>(self.leaf_params.borrow(), leaf)?;
 
@@ -125,7 +122,7 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		for &(ref left_hash, ref right_hash) in &self.path {
 			// Check if the previous hash matches the correct current hash.
 			if &prev != left_hash && &prev != right_hash {
-				panic!("path nodes are not consistent");
+				panic!("Path nodes are not consistent");
 			}
 			prev = hash_inner_node::<P>(self.inner_params.borrow(), left_hash, right_hash)?;
 		}
@@ -143,6 +140,7 @@ pub struct SparseMerkleTree<P: Config> {
 	inner_params: Rc<<P::H as CRH>::Parameters>,
 }
 
+// TODO: Improve error handling
 impl<P: Config> SparseMerkleTree<P> {
 	/// obtain an empty tree
 	pub fn blank(inner_params: Rc<InnerParameters<P>>, leaf_params: Rc<LeafParameters<P>>) -> Self {
@@ -224,7 +222,7 @@ impl<P: Config> SparseMerkleTree<P> {
 		Ok(smt)
 	}
 
-	pub fn new_sequential<L: Default + ToBytes + Copy>(
+	pub fn new_sequential<L: Default + ToBytes + Clone>(
 		inner_params: Rc<InnerParameters<P>>,
 		leaf_params: Rc<LeafParameters<P>>,
 		leaves: &[L],
@@ -232,7 +230,7 @@ impl<P: Config> SparseMerkleTree<P> {
 		let pairs: BTreeMap<u32, L> = leaves
 			.iter()
 			.enumerate()
-			.map(|(i, l)| (i as u32, *l))
+			.map(|(i, l)| (i as u32, l.clone()))
 			.collect();
 		let smt = Self::new(inner_params, leaf_params, &pairs)?;
 

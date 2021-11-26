@@ -22,6 +22,7 @@ use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::{cmp::Ordering::Less, marker::PhantomData};
+
 pub struct VAnchorCircuit<
 	F: PrimeField,
 	// Hasher for the leaf creation,  Nullifier, Public key generation
@@ -149,7 +150,6 @@ where
 	}
 
 	pub fn verify_input_var(
-		&self,
 		hasher_params_w2_var: &HG2::ParametersVar,
 		hasher_params_w4_var: &HG4::ParametersVar,
 		hasher_params_w5_var: &HG5::ParametersVar,
@@ -165,13 +165,16 @@ where
 		let mut sums_ins_var = FpVar::<F>::zero();
 
 		for tx in 0..N_INS {
+			// Computing the public key
+			let pub_key = inkeypair_var[tx].public_key(hasher_params_w2_var)?;
 			// Computing the hash
 			let in_utxo_hasher_var = VAnchorLeafGadget::<F, H4, HG4, H5, HG5>::create_leaf(
 				&leaf_private_var[tx],
-				&inkeypair_var[tx].public_key(hasher_params_w2_var)?,
 				&leaf_public_input_var,
+				&pub_key,
 				&hasher_params_w5_var,
 			)?;
+			// End of computing the hash
 
 			let signature = inkeypair_var[tx].signature::<FpVar<F>, H4, HG4, H5, HG5>(
 				&in_utxo_hasher_var,
@@ -199,14 +202,13 @@ where
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
 
-			sums_ins_var = sums_ins_var + in_amount_tx;
+			sums_ins_var += in_amount_tx;
 		}
 		Ok(sums_ins_var)
 	}
 
 	// Verify correctness of transaction outputs
 	pub fn verify_output_var(
-		&self,
 		hasher_params_w5_var: &HG5::ParametersVar,
 		output_commitment_var: &Vec<HG5::OutputVar>,
 		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
@@ -220,11 +222,11 @@ where
 			// Computing the hash
 			let out_utxo_hasher_var = VAnchorLeafGadget::<F, H4, HG4, H5, HG5>::create_leaf(
 				&leaf_private_var[tx],
-				&out_pubkey_var[tx],
 				&leaf_public_var[tx],
+				&out_pubkey_var[tx],
 				&hasher_params_w5_var,
 			)?;
-
+			// End of computing the hash
 			let out_amount_var = &leaf_private_var[tx].amount;
 			out_utxo_hasher_var.enforce_equal(&output_commitment_var[tx])?;
 
@@ -238,7 +240,6 @@ where
 
 	//Check that there are no same nullifiers among all inputs
 	pub fn verify_no_same_nul(
-		&self,
 		in_nullifier_var: &Vec<HG4::OutputVar>,
 	) -> Result<(), SynthesisError> {
 		for i in 0..N_INS - 1 {
@@ -252,12 +253,11 @@ where
 
 	// Verify amount invariant
 	pub fn verify_input_invariant(
-		&self,
 		public_amount_var: &FpVar<F>,
 		sum_ins_var: &FpVar<F>,
 		sum_outs_var: &FpVar<F>,
 	) -> Result<(), SynthesisError> {
-		let res = sum_ins_var + public_amount_var.clone();
+		let res = sum_ins_var + public_amount_var;
 		res.enforce_equal(&sum_outs_var)?;
 		Ok(())
 	}
@@ -362,24 +362,26 @@ where
 	HGT: CRHGadget<C::H, F>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
-		let public_amount = self.public_amount.clone();
-		let ext_data_hash = self.ext_data_hash.clone();
-		let leaf_private = self.leaf_private_inputs.clone(); // amount, blinding
-		let keypair_inputs = self.keypair_inputs.clone();
-		let leaf_public_input = self.leaf_public_input.clone(); // chain id
-		let set_private = self.set_private_inputs.clone();
-		let root_set = self.root_set.clone();
-		let hasher_params_w2 = self.hasher_params_w2.clone();
-		let hasher_params_w4 = self.hasher_params_w4.clone();
-		let hasher_params_w5 = self.hasher_params_w5.clone();
-		let paths = self.paths.clone();
-		let indices = self.indices.clone();
-		let nullifier_hash = self.nullifier_hash.clone();
+		let public_amount = self.public_amount;
+		let ext_data_hash = self.ext_data_hash;
+		let leaf_private = self.leaf_private_inputs; // amount, blinding
+		let keypair_inputs = self.keypair_inputs;
+		let leaf_public_input = self.leaf_public_input; // chain id
+		let set_private = self.set_private_inputs;
+		let root_set = self.root_set;
+		let hasher_params_w2 = self.hasher_params_w2;
+		let hasher_params_w4 = self.hasher_params_w4;
+		let hasher_params_w5 = self.hasher_params_w5;
+		let paths = self.paths;
+		let indices = self.indices;
+		let nullifier_hash = self.nullifier_hash;
 
-		let output_commitment = self.output_commitment.clone();
-		let out_leaf_private = self.out_leaf_private.clone();
-		let out_leaf_public = self.out_leaf_public.clone();
-		let out_pubkey = self.out_pubkey.clone();
+		let output_commitment = self.output_commitment;
+		let out_leaf_private = self.out_leaf_private;
+		let out_leaf_public = self.out_leaf_public;
+		let out_pubkey = self.out_pubkey;
+
+		// TODO: move outside the circuit
 		// 2^248
 		let limit: F = F::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662656",
@@ -391,13 +393,12 @@ where
 		// Generating vars
 		// Public inputs
 		let leaf_public_input_var =
-			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input.clone()))?;
+			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let in_nullifier_var =
-			Vec::<HG4::OutputVar>::new_input(cs.clone(), || Ok(nullifier_hash.clone()))?;
+		let in_nullifier_var = Vec::<HG4::OutputVar>::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let output_commitment_var =
-			Vec::<HG5::OutputVar>::new_input(cs.clone(), || Ok(output_commitment.clone()))?;
+			Vec::<HG5::OutputVar>::new_input(cs.clone(), || Ok(output_commitment))?;
 
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 
@@ -409,25 +410,24 @@ where
 
 		// Private inputs
 		let leaf_private_var =
-			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(leaf_private.clone()))?;
+			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let inkeypair_var =
-			Vec::<KeypairVar<F, H2, HG2>>::new_witness(cs.clone(), || Ok(keypair_inputs.clone()))?;
+			Vec::<KeypairVar<F, H2, HG2>>::new_witness(cs.clone(), || Ok(keypair_inputs))?;
 		let set_input_private_var =
-			Vec::<SetPrivateInputsVar<F, M>>::new_witness(cs.clone(), || Ok(set_private.clone()))?;
+			Vec::<SetPrivateInputsVar<F, M>>::new_witness(cs.clone(), || Ok(set_private))?;
 		let in_path_elements_var =
-			Vec::<PathVar<F, C, HGT, LHGT, K>>::new_witness(cs.clone(), || Ok(paths.clone()))?;
-		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices.clone()))?;
+			Vec::<PathVar<F, C, HGT, LHGT, K>>::new_witness(cs.clone(), || Ok(paths))?;
+		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices))?;
 
 		// Outputs
-		let out_leaf_private_var = Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || {
-			Ok(out_leaf_private.clone())
-		})?;
+		let out_leaf_private_var =
+			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_private))?;
 		let out_leaf_public_var =
-			Vec::<LeafPublicInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_public.clone()))?;
-		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_pubkey.clone()))?;
+			Vec::<LeafPublicInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_public))?;
+		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_pubkey))?;
 
 		// verify correctness of transaction inputs
-		let sum_ins_var = self.verify_input_var(
+		let sum_ins_var = Self::verify_input_var(
 			&hasher_params_w2_var,
 			&hasher_params_w4_var,
 			&hasher_params_w5_var,
@@ -442,7 +442,7 @@ where
 		)?;
 
 		// verify correctness of transaction outputs
-		let sum_outs_var = self.verify_output_var(
+		let sum_outs_var = Self::verify_output_var(
 			&hasher_params_w5_var,
 			&output_commitment_var,
 			&out_leaf_private_var,
@@ -452,10 +452,10 @@ where
 		)?;
 
 		// check that there are no same nullifiers among all inputs
-		self.verify_no_same_nul(&in_nullifier_var)?;
+		Self::verify_no_same_nul(&in_nullifier_var)?;
 
 		// verify amount invariant
-		self.verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)?;
+		Self::verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)?;
 
 		// optional safety constraint to make sure extDataHash cannot be changed
 		arbitrary_input_var.constrain()?;
@@ -473,9 +473,8 @@ mod test {
 		keypair::vanchor::Keypair,
 		leaf::vanchor::VAnchorLeaf,
 		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-		poseidon::{constraints::CRHGadget as PCRHGadget, CRH as PCRH},
+		poseidon::{constraints::CRHGadget as PCRHGadget, PoseidonParameters, CRH as PCRH},
 		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
-		utils::PoseidonParameters,
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
@@ -561,16 +560,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -614,7 +613,7 @@ mod test {
 		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
 
 		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
+		let out_amount_1 = public_amount + &leaf_private_1.amount;
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
 
@@ -633,16 +632,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -717,16 +716,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -788,16 +787,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -872,16 +871,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -944,16 +943,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1028,16 +1027,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1096,16 +1095,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1180,16 +1179,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1247,16 +1246,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1331,16 +1330,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1388,7 +1387,6 @@ mod test {
 		let out_amount_1 = public_amount + leaf_private_1.amount
 		// Here is the cause of invalidation
 			+ public_amount;
-		//
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
 
@@ -1407,16 +1405,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1498,16 +1496,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1552,7 +1550,7 @@ mod test {
 		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
 
 		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
+		let out_amount_1 = public_amount + &leaf_private_1.amount;
 		let out_pubkey_1 = BnFr::rand(rng);
 		let out_blinding_1 = BnFr::rand(rng);
 
@@ -1571,16 +1569,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1655,16 +1653,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1728,16 +1726,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1824,8 +1822,8 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1873,8 +1871,8 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1957,8 +1955,8 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2013,16 +2011,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2113,16 +2111,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2179,8 +2177,8 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2335,58 +2333,58 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_3 = Leaf::create_leaf(
 			&leaf_private_3,
-			&public_key_3,
 			&leaf_public_input,
+			&public_key_3,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_4 = Leaf::create_leaf(
 			&leaf_private_4,
-			&public_key_4,
 			&leaf_public_input,
+			&public_key_4,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_5 = Leaf::create_leaf(
 			&leaf_private_5,
-			&public_key_5,
 			&leaf_public_input,
+			&public_key_5,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_6 = Leaf::create_leaf(
 			&leaf_private_6,
-			&public_key_6,
 			&leaf_public_input,
+			&public_key_6,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_7 = Leaf::create_leaf(
 			&leaf_private_7,
-			&public_key_7,
 			&leaf_public_input,
+			&public_key_7,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_8 = Leaf::create_leaf(
 			&leaf_private_8,
-			&public_key_8,
 			&leaf_public_input,
+			&public_key_8,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2765,58 +2763,58 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_3 = Leaf::create_leaf(
 			&leaf_private_3,
-			&public_key_3,
 			&leaf_public_input,
+			&public_key_3,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_4 = Leaf::create_leaf(
 			&leaf_private_4,
-			&public_key_4,
 			&leaf_public_input,
+			&public_key_4,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_5 = Leaf::create_leaf(
 			&leaf_private_5,
-			&public_key_5,
 			&leaf_public_input,
+			&public_key_5,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_6 = Leaf::create_leaf(
 			&leaf_private_6,
-			&public_key_6,
 			&leaf_public_input,
+			&public_key_6,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_7 = Leaf::create_leaf(
 			&leaf_private_7,
-			&public_key_7,
 			&leaf_public_input,
+			&public_key_7,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_8 = Leaf::create_leaf(
 			&leaf_private_8,
-			&public_key_8,
 			&leaf_public_input,
+			&public_key_8,
 			&hasher_params_w5,
 		)
 		.unwrap();

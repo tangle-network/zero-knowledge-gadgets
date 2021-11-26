@@ -7,8 +7,6 @@ use ethabi::{encode, Token};
 use tiny_keccak::{Hasher, Keccak};
 
 use crate::Vec;
-pub mod types;
-pub use types::*;
 
 #[cfg(feature = "poseidon_bn254_x17_3")]
 pub mod bn254_x17_3;

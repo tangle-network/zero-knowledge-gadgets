@@ -14,7 +14,7 @@ pub struct Private<F: PrimeField> {
 
 #[derive(Default, Clone)]
 pub struct Public<F: PrimeField> {
-	chain_id: F,
+	pub chain_id: F,
 }
 
 impl<F: PrimeField> Public<F> {
@@ -46,8 +46,8 @@ impl<F: PrimeField, H4: CRH, H5: CRH> VAnchorLeaf<F, H4, H5> {
 	// Commits to the values = hash(chain_id, amount, pubKey, blinding)
 	pub fn create_leaf<B: ToBytes>(
 		private: &Private<F>,
-		public_key: &B,
 		public: &Public<F>,
+		public_key: &B,
 		h_w5: &H5::Parameters,
 	) -> Result<H5::Output, Error> {
 		let bytes = to_bytes![
@@ -111,7 +111,7 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let ev_res = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &publics, &pubkey, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
 	use crate::ark_std::Zero;
@@ -137,7 +137,7 @@ mod test {
 			to_bytes![publics.chain_id, secrets.amount, pubkey, secrets.blinding].unwrap();
 		let commitment = PoseidonCRH5::evaluate(&params5, &inputs_leaf).unwrap();
 
-		let leaf = Leaf::create_leaf(&secrets, &pubkey, &publics, &params5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &publics, &pubkey, &params5).unwrap();
 		assert_eq!(leaf, commitment);
 
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
@@ -212,7 +212,7 @@ mod test {
 		let private = Private::new(amount[0], blinding[0]);
 		let public = Public::new(chain_id[0]);
 		let leaf_from_vanchorleaf =
-			LeafCircom::create_leaf(&private, &computed_public_key, &public, &parameters5).unwrap();
+			LeafCircom::create_leaf(&private, &public, &computed_public_key, &parameters5).unwrap();
 
 		assert_eq!(
 			expected_leaf[0], computed_leaf_without_vanchorleaf,

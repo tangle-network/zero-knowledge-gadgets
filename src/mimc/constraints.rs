@@ -197,7 +197,7 @@ mod test {
 	use super::*;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::{field_new, to_bytes, Zero};
+	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
 
 	#[derive(Default, Clone)]

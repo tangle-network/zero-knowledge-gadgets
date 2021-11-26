@@ -61,11 +61,10 @@ mod test {
 
 		let ext_data = Fq::rand(rng);
 
-		let extdatahash = VAnchorArbitraryData::new(ext_data);
-		let extdatahash_var =
-			VAnchorArbitraryDataVar::new_input(cs.clone(), || Ok(&extdatahash)).unwrap();
+		let data = VAnchorArbitraryData::new(ext_data);
+		let data_var = VAnchorArbitraryDataVar::new_input(cs.clone(), || Ok(&data)).unwrap();
 
-		extdatahash_var.constrain().unwrap();
+		data_var.constrain().unwrap();
 
 		assert!(cs.is_satisfied().unwrap());
 	}

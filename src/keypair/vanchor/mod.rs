@@ -1,6 +1,7 @@
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{to_bytes, ToBytes};
 use ark_std::marker::PhantomData;
+
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
@@ -12,7 +13,7 @@ pub struct Keypair<B: Clone + ToBytes, H2: CRH> {
 
 impl<B: Clone + ToBytes, H2: CRH> Keypair<B, H2> {
 	pub fn new(private_key: B) -> Self {
-		Keypair {
+		Self {
 			private_key,
 			_h2: PhantomData,
 		}
@@ -20,8 +21,7 @@ impl<B: Clone + ToBytes, H2: CRH> Keypair<B, H2> {
 
 	pub fn public_key(&self, h: &H2::Parameters) -> Result<H2::Output, Error> {
 		let bytes = to_bytes![&self.private_key]?;
-		let pubkey = H2::evaluate(&h, &bytes)?;
-		Ok(pubkey)
+		H2::evaluate(&h, &bytes)
 	}
 
 	// Computes the signature = hash(privKey, commitment, pathIndices)
@@ -42,6 +42,7 @@ impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 		Self::new(private_key)
 	}
 }
+
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
