@@ -5,9 +5,8 @@ use crate::{
 	poseidon::{
 		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
-		CRH,
+		PoseidonParameters, CRH,
 	},
-	utils::PoseidonParameters,
 };
 use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;

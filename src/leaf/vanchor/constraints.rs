@@ -57,8 +57,8 @@ impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, 
 {
 	pub fn create_leaf<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
-		public_key: &BG,
 		public: &PublicVar<F>,
+		public_key: &BG,
 		h_w5: &HG5::ParametersVar,
 	) -> Result<HG5::OutputVar, SynthesisError> {
 		let pubkey = public_key;
@@ -168,7 +168,7 @@ mod test {
 		let private_key = Fq::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
 		let public_key = PoseidonCRH2::evaluate(&params5_2, &privkey).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &public_key, &public, &params5_5).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &public_key, &params5_5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -193,7 +193,7 @@ mod test {
 		let public_key_var = PoseidonCRH2Gadget::evaluate(&params_var5_2, &bytes).unwrap();
 
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_key_var, &public_var, &params_var5_5)
+			LeafGadget::create_leaf(&secrets_var, &public_var, &public_key_var, &params_var5_5)
 				.unwrap();
 
 		// Check equality

@@ -165,8 +165,8 @@ impl<
 		let public_key = keypair.public_key(&self.h2_params).unwrap();
 		let leaf = VAnchorLeaf::<F, H4, H5>::create_leaf(
 			&leaf_private,
-			&public_key,
 			&leaf_public,
+			&public_key,
 			&self.h5_params,
 		)
 		.unwrap();

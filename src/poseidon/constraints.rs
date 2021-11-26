@@ -19,11 +19,11 @@ pub struct PoseidonParametersVar<F: PrimeField> {
 	/// The MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<FpVar<F>>>,
 	/// Number of full SBox rounds
-	pub full_rounds: usize,
+	pub full_rounds: u8,
 	/// Number of partial rounds
-	pub partial_rounds: usize,
+	pub partial_rounds: u8,
 	/// The size of the permutation, in field elements.
-	pub width: usize,
+	pub width: u8,
 	/// The S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }
@@ -37,7 +37,7 @@ impl<F: PrimeField> CRHGadget<F> {
 		parameters: &PoseidonParametersVar<F>,
 		mut state: Vec<FpVar<F>>,
 	) -> Result<Vec<FpVar<F>>, SynthesisError> {
-		let width = parameters.width;
+		let width = parameters.width as usize;
 
 		let mut round_keys_offset = 0;
 
@@ -106,7 +106,9 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let f_var_inputs: Vec<FpVar<F>> = to_field_var_elements(input)?;
-		if f_var_inputs.len() > parameters.width {
+		let width = parameters.width as usize;
+
+		if f_var_inputs.len() > width {
 			panic!(
 				"incorrect input length {:?} for width {:?}",
 				f_var_inputs.len(),
@@ -114,7 +116,7 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 			);
 		}
 
-		let mut buffer = vec![FpVar::zero(); parameters.width];
+		let mut buffer = vec![FpVar::zero(); width];
 		buffer
 			.iter_mut()
 			.zip(f_var_inputs)

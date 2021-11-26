@@ -12,14 +12,12 @@ impl SboxConstraints for PoseidonSbox {
 		&self,
 		input_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
-		match self {
-			PoseidonSbox::Exponentiation(val) => match val {
-				3 => synthesize_exp3_sbox::<F>(input_var),
-				5 => synthesize_exp5_sbox::<F>(input_var),
-				17 => synthesize_exp17_sbox::<F>(input_var),
-				_ => synthesize_exp3_sbox::<F>(input_var),
-			},
-			PoseidonSbox::Inverse => synthesize_inverse_sbox::<F>(input_var),
+		match self.0 {
+			3 => synthesize_exp3_sbox::<F>(input_var),
+			5 => synthesize_exp5_sbox::<F>(input_var),
+			17 => synthesize_exp17_sbox::<F>(input_var),
+			-1 => synthesize_inverse_sbox::<F>(input_var),
+			_ => synthesize_exp3_sbox::<F>(input_var),
 		}
 	}
 }

@@ -170,8 +170,8 @@ where
 			// Computing the hash
 			let in_utxo_hasher_var = VAnchorLeafGadget::<F, H4, HG4, H5, HG5>::create_leaf(
 				&leaf_private_var[tx],
-				&pub_key,
 				&leaf_public_input_var,
+				&pub_key,
 				&hasher_params_w5_var,
 			)?;
 			// End of computing the hash
@@ -222,8 +222,8 @@ where
 			// Computing the hash
 			let out_utxo_hasher_var = VAnchorLeafGadget::<F, H4, HG4, H5, HG5>::create_leaf(
 				&leaf_private_var[tx],
-				&out_pubkey_var[tx],
 				&leaf_public_var[tx],
+				&out_pubkey_var[tx],
 				&hasher_params_w5_var,
 			)?;
 			// End of computing the hash
@@ -473,9 +473,8 @@ mod test {
 		keypair::vanchor::Keypair,
 		leaf::vanchor::VAnchorLeaf,
 		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-		poseidon::{constraints::CRHGadget as PCRHGadget, CRH as PCRH},
+		poseidon::{constraints::CRHGadget as PCRHGadget, PoseidonParameters, CRH as PCRH},
 		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
-		utils::PoseidonParameters,
 	};
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
@@ -561,16 +560,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -633,16 +632,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -717,16 +716,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -788,16 +787,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -872,16 +871,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -944,16 +943,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1028,16 +1027,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1096,16 +1095,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1180,16 +1179,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1247,16 +1246,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1331,16 +1330,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1406,16 +1405,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1497,16 +1496,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1570,16 +1569,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1654,16 +1653,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1727,16 +1726,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1823,8 +1822,8 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1872,8 +1871,8 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -1956,8 +1955,8 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2012,16 +2011,16 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 
 		let output_commitment_2 = Leaf::create_leaf(
 			&out_leaf_private_2,
-			&out_pubkey_2,
 			&out_leaf_public_2,
+			&out_pubkey_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2112,16 +2111,16 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2178,8 +2177,8 @@ mod test {
 
 		let output_commitment_1 = Leaf::create_leaf(
 			&out_leaf_private_1,
-			&out_pubkey_1,
 			&out_leaf_public_1,
+			&out_pubkey_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2334,58 +2333,58 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_3 = Leaf::create_leaf(
 			&leaf_private_3,
-			&public_key_3,
 			&leaf_public_input,
+			&public_key_3,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_4 = Leaf::create_leaf(
 			&leaf_private_4,
-			&public_key_4,
 			&leaf_public_input,
+			&public_key_4,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_5 = Leaf::create_leaf(
 			&leaf_private_5,
-			&public_key_5,
 			&leaf_public_input,
+			&public_key_5,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_6 = Leaf::create_leaf(
 			&leaf_private_6,
-			&public_key_6,
 			&leaf_public_input,
+			&public_key_6,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_7 = Leaf::create_leaf(
 			&leaf_private_7,
-			&public_key_7,
 			&leaf_public_input,
+			&public_key_7,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_8 = Leaf::create_leaf(
 			&leaf_private_8,
-			&public_key_8,
 			&leaf_public_input,
+			&public_key_8,
 			&hasher_params_w5,
 		)
 		.unwrap();
@@ -2764,58 +2763,58 @@ mod test {
 
 		let leaf_1 = Leaf::create_leaf(
 			&leaf_private_1,
-			&public_key_1,
 			&leaf_public_input,
+			&public_key_1,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let commitment_1 = leaf_1.clone();
 		let leaf_2 = Leaf::create_leaf(
 			&leaf_private_2,
-			&public_key_2,
 			&leaf_public_input,
+			&public_key_2,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_3 = Leaf::create_leaf(
 			&leaf_private_3,
-			&public_key_3,
 			&leaf_public_input,
+			&public_key_3,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_4 = Leaf::create_leaf(
 			&leaf_private_4,
-			&public_key_4,
 			&leaf_public_input,
+			&public_key_4,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_5 = Leaf::create_leaf(
 			&leaf_private_5,
-			&public_key_5,
 			&leaf_public_input,
+			&public_key_5,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_6 = Leaf::create_leaf(
 			&leaf_private_6,
-			&public_key_6,
 			&leaf_public_input,
+			&public_key_6,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_7 = Leaf::create_leaf(
 			&leaf_private_7,
-			&public_key_7,
 			&leaf_public_input,
+			&public_key_7,
 			&hasher_params_w5,
 		)
 		.unwrap();
 		let leaf_8 = Leaf::create_leaf(
 			&leaf_private_8,
-			&public_key_8,
 			&leaf_public_input,
+			&public_key_8,
 			&hasher_params_w5,
 		)
 		.unwrap();

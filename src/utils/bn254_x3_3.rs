@@ -1,26 +1,14 @@
-use crate::poseidon::sbox::PoseidonSbox;
+use super::parse_matrix;
+use crate::{
+	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
+	utils::parse_vec,
+};
+use ark_ff::PrimeField;
 
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 57;
 pub const WIDTH: u8 = 3;
-pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(3);
-
-use crate::utils::parse_vec;
-use ark_ff::PrimeField;
-
-pub fn get_rounds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<F> {
-	parse_vec(ROUND_CONSTS.to_vec())
-}
-pub fn get_mds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
-	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
-}
-
-use super::{parse_matrix, PoseidonParameters};
-pub fn get_poseidon_bn254_x3_3<F: PrimeField>() -> PoseidonParameters<F> {
-	let rounds = get_rounds_poseidon_bn254_x3_3();
-	let mds = get_mds_poseidon_bn254_x3_3();
-	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
-}
+pub const SBOX: PoseidonSbox = PoseidonSbox(3);
 
 pub const ROUND_CONSTS: [&str; 276] = [
 	"0x0f038b42614de105014484d873c2c56b9dd9efc9c529add2cdcdc50a4c6d9a59",
@@ -317,3 +305,16 @@ pub const MDS_ENTRIES: [[&str; 3]; 3] = [
 		"0x303dcf66c3929b51a78bbc8d20c3d4c4f2e7ac08e2f44e4cb95fd345906e0d91",
 	],
 ];
+
+pub fn get_rounds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<F> {
+	parse_vec(ROUND_CONSTS.to_vec())
+}
+pub fn get_mds_poseidon_bn254_x3_3<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
+}
+
+pub fn get_poseidon_bn254_x3_3<F: PrimeField>() -> PoseidonParameters<F> {
+	let rounds = get_rounds_poseidon_bn254_x3_3();
+	let mds = get_mds_poseidon_bn254_x3_3();
+	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
+}

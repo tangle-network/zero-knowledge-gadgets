@@ -1,6 +1,6 @@
 use crate::{
 	poseidon::sbox::PoseidonSbox,
-	utils::{from_field_elements, to_field_elements, PoseidonParameters},
+	utils::{from_field_elements, to_field_elements},
 };
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
@@ -15,7 +15,7 @@ pub mod constraints;
 
 #[derive(Debug)]
 pub enum PoseidonError {
-	InvalidSboxSize(usize),
+	InvalidSboxSize(i8),
 	ApplySboxFailed,
 	InvalidInputs,
 }
@@ -34,9 +34,22 @@ impl core::fmt::Display for PoseidonError {
 
 impl ArkError for PoseidonError {}
 
-// Choice is arbitrary
-pub const PADDING_CONST: u64 = 101;
-pub const ZERO_CONST: u64 = 0;
+/// The Poseidon permutation.
+#[derive(Default, Clone)]
+pub struct PoseidonParameters<F: PrimeField> {
+	/// The round key constants
+	pub round_keys: Vec<F>,
+	/// The MDS matrix to apply in the mix layer.
+	pub mds_matrix: Vec<Vec<F>>,
+	/// Number of full SBox rounds
+	pub full_rounds: u8,
+	/// Number of partial rounds
+	pub partial_rounds: u8,
+	/// The size of the permutation, in field elements.
+	pub width: u8,
+	/// The S-box to apply in the sub words layer.
+	pub sbox: PoseidonSbox,
+}
 
 impl<F: PrimeField> PoseidonParameters<F> {
 	pub fn new(
@@ -50,28 +63,23 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		Self {
 			round_keys,
 			mds_matrix,
-			width: width as usize,
-			full_rounds: full_rounds as usize,
-			partial_rounds: partial_rounds as usize,
+			width,
+			full_rounds,
+			partial_rounds,
 			sbox,
 		}
 	}
 
 	pub fn generate<R: Rng>(_rng: &mut R) -> Self {
-		todo!();
-		/* Self {
-
-			round_keys: Self::create_round_keys(rng),
-			mds_matrix: Self::create_mds(rng),
-		} */
+		unimplemented!();
 	}
 
 	pub fn create_mds<R: Rng>(_rng: &mut R) -> Vec<Vec<F>> {
-		todo!();
+		unimplemented!();
 	}
 
 	pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
-		todo!();
+		unimplemented!();
 	}
 
 	pub fn to_bytes(&self) -> Vec<u8> {
@@ -79,14 +87,10 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		let mut buf: Vec<u8> = vec![];
 		// serialize length of round keys and round keys, packing them together
 		let round_key_len = self.round_keys.len() * max_elt_size;
-		let exponentiation = match &self.sbox {
-			PoseidonSbox::Exponentiation(ex) => *ex,
-			PoseidonSbox::Inverse => 0 as usize, // or similar
-		};
 		buf.extend(&self.width.to_be_bytes());
 		buf.extend(&self.full_rounds.to_be_bytes());
 		buf.extend(&self.partial_rounds.to_be_bytes());
-		buf.extend(exponentiation.to_be_bytes());
+		buf.extend(&self.sbox.0.to_be_bytes());
 
 		buf.extend_from_slice(&(round_key_len as u32).to_be_bytes());
 		buf.extend_from_slice(&from_field_elements(&self.round_keys).unwrap());
@@ -109,25 +113,21 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	}
 
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
-		let mut width_u8 = [0u8; ((usize::BITS / 8) as usize)];
+		let mut width_u8 = [0u8; 1];
 		bytes.read_exact(&mut width_u8)?;
-		let width: usize = usize::from_be_bytes(width_u8);
+		let width = u8::from_be_bytes(width_u8);
 
-		let mut full_rounds_len = [0u8; ((usize::BITS / 8) as usize)];
+		let mut full_rounds_len = [0u8; 1];
 		bytes.read_exact(&mut full_rounds_len)?;
-		let full_rounds: usize = usize::from_be_bytes(full_rounds_len);
+		let full_rounds = u8::from_be_bytes(full_rounds_len);
 
-		let mut partial_rounds_u8 = [0u8; ((usize::BITS / 8) as usize)];
+		let mut partial_rounds_u8 = [0u8; 1];
 		bytes.read_exact(&mut partial_rounds_u8)?;
-		let partial_rounds: usize = usize::from_be_bytes(partial_rounds_u8);
+		let partial_rounds = u8::from_be_bytes(partial_rounds_u8);
 
-		let mut exponentiation_u8 = [0u8; ((usize::BITS / 8) as usize)];
+		let mut exponentiation_u8 = [0u8; 1];
 		bytes.read_exact(&mut exponentiation_u8)?;
-		let exponentiation: usize = usize::from_be_bytes(exponentiation_u8); //TODO: fix this
-		let mut sbox = PoseidonSbox::Inverse;
-		if exponentiation != 0 {
-			sbox = PoseidonSbox::Exponentiation(exponentiation);
-		}
+		let exp = i8::from_be_bytes(exponentiation_u8);
 
 		let mut round_key_len = [0u8; 4];
 		bytes.read_exact(&mut round_key_len)?;
@@ -156,7 +156,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 			width,
 			full_rounds,
 			partial_rounds,
-			sbox,
+			sbox: PoseidonSbox(exp),
 		})
 	}
 }
@@ -167,7 +167,7 @@ pub struct CRH<F: PrimeField> {
 
 impl<F: PrimeField> CRH<F> {
 	fn permute(params: &PoseidonParameters<F>, mut state: Vec<F>) -> Result<Vec<F>, PoseidonError> {
-		let width = params.width;
+		let width = params.width as usize;
 
 		let mut round_keys_offset = 0;
 
@@ -245,7 +245,9 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 
 		let f_inputs: Vec<F> = to_field_elements(input)?;
 
-		if f_inputs.len() > parameters.width {
+		let width = parameters.width as usize;
+
+		if f_inputs.len() > width {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_inputs.len(),
@@ -254,7 +256,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 			);
 		}
 
-		let mut buffer = vec![F::zero(); parameters.width];
+		let mut buffer = vec![F::zero(); width];
 		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
 
 		let result = Self::permute(&parameters, buffer)?;

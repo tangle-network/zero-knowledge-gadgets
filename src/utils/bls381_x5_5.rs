@@ -1,3 +1,10 @@
+use super::parse_matrix;
+use crate::{
+	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
+	utils::parse_vec,
+};
+use ark_ff::PrimeField;
+
 // https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon
 
 // Parameter for:
@@ -11,29 +18,10 @@
 // Sage script command:
 // sage generate_parameters_grain.sage 1 0 255 5 8 60
 // 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
-use crate::poseidon::sbox::PoseidonSbox;
-
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 60;
 pub const WIDTH: u8 = 5;
-pub const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-
-use crate::utils::parse_vec;
-use ark_ff::PrimeField;
-
-pub fn get_rounds_poseidon_bls381_x5_5<F: PrimeField>() -> Vec<F> {
-	parse_vec(ROUND_CONSTS.to_vec())
-}
-pub fn get_mds_poseidon_bls381_x5_5<F: PrimeField>() -> Vec<Vec<F>> {
-	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
-}
-
-use super::{parse_matrix, PoseidonParameters};
-pub fn get_poseidon_bls381_x5_5<F: PrimeField>() -> PoseidonParameters<F> {
-	let rounds = get_rounds_poseidon_bls381_x5_5();
-	let mds = get_mds_poseidon_bls381_x5_5();
-	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
-}
+pub const SBOX: PoseidonSbox = PoseidonSbox(5);
 
 pub const ROUND_CONSTS: [&str; 340] = [
 	"0x5ee52b2f39e240a4006e97a15a7609dce42fa9aa510d11586a56db98fa925158",
@@ -414,3 +402,16 @@ pub const MDS_ENTRIES: [[&str; 5]; 5] = [
 		"0x2f7126ddc54648ab6d02493dbe9907f29f4ef3967ad8cd609f0d9467e1694607",
 	],
 ];
+
+pub fn get_rounds_poseidon_bls381_x5_5<F: PrimeField>() -> Vec<F> {
+	parse_vec(ROUND_CONSTS.to_vec())
+}
+pub fn get_mds_poseidon_bls381_x5_5<F: PrimeField>() -> Vec<Vec<F>> {
+	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
+}
+
+pub fn get_poseidon_bls381_x5_5<F: PrimeField>() -> PoseidonParameters<F> {
+	let rounds = get_rounds_poseidon_bls381_x5_5();
+	let mds = get_mds_poseidon_bls381_x5_5();
+	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
+}
