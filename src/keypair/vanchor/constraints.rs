@@ -9,49 +9,43 @@ use core::borrow::Borrow;
 use super::Keypair;
 
 #[derive(Clone)]
-pub struct KeypairVar<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> {
+pub struct KeypairVar<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 	pub private_key: FpVar<F>,
 
-	_h2: PhantomData<H2>,
-	_hg2: PhantomData<HG2>,
+	_h: PhantomData<H>,
+	_hg: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> KeypairVar<F, H2, HG2> {
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> KeypairVar<F, H, HG> {
 	pub fn new(private_key_in: &FpVar<F>) -> Result<Self, SynthesisError> {
 		let private_key = private_key_in.clone();
 		Ok(Self {
 			private_key,
-			_h2: PhantomData,
-			_hg2: PhantomData,
+			_h: PhantomData,
+			_hg: PhantomData,
 		})
 	}
 
 	pub fn public_key(
 		&self,
-		hg2: &HG2::ParametersVar,
-	) -> Result<<HG2 as CRHGadget<H2, F>>::OutputVar, SynthesisError> {
+		parameters2: &HG::ParametersVar,
+	) -> Result<<HG as CRHGadget<H, F>>::OutputVar, SynthesisError> {
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(self.private_key.to_bytes()?);
-		HG2::evaluate(&hg2, &bytes)
+		HG::evaluate(&parameters2, &bytes)
 	}
 
-	pub fn signature<
-		BG: ToBytesGadget<F>,
-		H4: CRH,
-		HG4: CRHGadget<H4, F>,
-		H5: CRH,
-		HG5: CRHGadget<H5, F>,
-	>(
+	pub fn signature(
 		&self,
-		commitment: &HG5::OutputVar,
+		commitment: &HG::OutputVar,
 		index: &FpVar<F>,
-		h_w4: &HG4::ParametersVar,
-	) -> Result<HG4::OutputVar, SynthesisError> {
+		h_w4: &HG::ParametersVar,
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(self.private_key.clone().to_bytes()?);
 		bytes.extend(commitment.to_bytes()?);
 		bytes.extend(index.to_bytes()?);
-		HG4::evaluate(h_w4, &bytes)
+		HG::evaluate(h_w4, &bytes)
 	}
 }
 
@@ -153,7 +147,7 @@ mod test {
 
 		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
 		let signature = keypair
-			.signature::<PoseidonCRH, PoseidonCRH>(&commitment, &index, &params)
+			.signature(&commitment, &index, &params)
 			.unwrap();
 
 		// Constraints version
@@ -172,7 +166,7 @@ mod test {
 
 		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(signature)).unwrap();
 		let new_signature_var = keypair_var
-			.signature::<FpVar<Fq>, PoseidonCRH, PoseidonCRHGadget, PoseidonCRH, PoseidonCRHGadget>(
+			.signature(
 				&commitment_var,
 				&index_var,
 				&params_var,

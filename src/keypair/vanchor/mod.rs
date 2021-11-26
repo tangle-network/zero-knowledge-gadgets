@@ -6,33 +6,33 @@ use ark_std::marker::PhantomData;
 pub mod constraints;
 
 #[derive(Default)]
-pub struct Keypair<B: Clone + ToBytes, H2: CRH> {
+pub struct Keypair<B: Clone + ToBytes, H: CRH> {
 	pub private_key: B,
-	_h2: PhantomData<H2>,
+	_h: PhantomData<H>,
 }
 
-impl<B: Clone + ToBytes, H2: CRH> Keypair<B, H2> {
+impl<B: Clone + ToBytes, H: CRH> Keypair<B, H> {
 	pub fn new(private_key: B) -> Self {
 		Self {
 			private_key,
-			_h2: PhantomData,
+			_h: PhantomData,
 		}
 	}
 
-	pub fn public_key(&self, h: &H2::Parameters) -> Result<H2::Output, Error> {
+	pub fn public_key(&self, h: &H::Parameters) -> Result<H::Output, Error> {
 		let bytes = to_bytes![&self.private_key]?;
-		H2::evaluate(&h, &bytes)
+		H::evaluate(&h, &bytes)
 	}
 
 	// Computes the signature = hash(privKey, commitment, pathIndices)
-	pub fn signature<H4: CRH, H5: CRH>(
+	pub fn signature(
 		&self,
-		commitment: &H5::Output,
+		commitment: &H::Output,
 		index: &B,
-		h_w4: &H4::Parameters,
-	) -> Result<H4::Output, Error> {
+		h_w4: &H::Parameters,
+	) -> Result<H::Output, Error> {
 		let bytes = to_bytes![self.private_key.clone(), commitment, index]?;
-		H4::evaluate(&h_w4, &bytes)
+		H::evaluate(&h_w4, &bytes)
 	}
 }
 
@@ -96,7 +96,7 @@ mod test {
 		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
 		let ev_res = PoseidonCRH::evaluate(&params4, &inputs_signature).unwrap();
 		let signature = keypair
-			.signature::<PoseidonCRH, PoseidonCRH>(&commitment, &index, &params4)
+			.signature(&commitment, &index, &params4)
 			.unwrap();
 		assert_eq!(ev_res, signature);
 	}

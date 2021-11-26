@@ -16,12 +16,8 @@ use ark_std::{rand::Rng, vec::Vec};
 
 pub struct VAnchorProverSetup<
 	F: PrimeField,
-	H2: CRHTrait,
-	HG2: CRHGadget<H2, F>,
-	H4: CRHTrait,
-	HG4: CRHGadget<H4, F>,
-	H5: CRHTrait,
-	HG5: CRHGadget<H5, F>,
+	H: CRHTrait,
+	HG: CRHGadget<H, F>,
 	LHGT: CRHGadget<P::LeafH, F>,
 	HGT: CRHGadget<P::H, F>,
 	P: Config,
@@ -30,18 +26,14 @@ pub struct VAnchorProverSetup<
 	const INS: usize,
 	const OUTS: usize,
 > {
-	h2_params: H2::Parameters,
-	h4_params: H4::Parameters,
-	h5_params: H5::Parameters,
+	h2_params: H::Parameters,
+	h4_params: H::Parameters,
+	h5_params: H::Parameters,
 	leaf_params: <P::LeafH as CRHTrait>::Parameters,
 	inner_params: <P::H as CRHTrait>::Parameters,
 	_field: PhantomData<F>,
-	_h2: PhantomData<H2>,
-	_hg2: PhantomData<HG2>,
-	_h4: PhantomData<H4>,
-	_hg4: PhantomData<HG4>,
-	_h5: PhantomData<H5>,
-	_hg5: PhantomData<HG5>,
+	_h: PhantomData<H>,
+	_hg: PhantomData<HG>,
 	_lhgt: PhantomData<LHGT>,
 	_hgt: PhantomData<HGT>,
 	_p: PhantomData<P>,
@@ -49,12 +41,8 @@ pub struct VAnchorProverSetup<
 
 impl<
 		F: PrimeField,
-		H2: CRHTrait,
-		HG2: CRHGadget<H2, F>,
-		H4: CRHTrait,
-		HG4: CRHGadget<H4, F>,
-		H5: CRHTrait,
-		HG5: CRHGadget<H5, F>,
+		H: CRHTrait,
+		HG: CRHGadget<H, F>,
 		LHGT: CRHGadget<P::LeafH, F>,
 		HGT: CRHGadget<P::H, F>,
 		P: Config,
@@ -66,9 +54,9 @@ impl<
 		const INS: usize,
 		// Numer of output transactions
 		const OUTS: usize,
-	> VAnchorProverSetup<F, H2, HG2, H4, HG4, H5, HG5, LHGT, HGT, P, K, M, INS, OUTS>
+	> VAnchorProverSetup<F, H, HG, LHGT, HGT, P, K, M, INS, OUTS>
 {
-	pub fn new_key_pairs(&self, private_keys: &[F]) -> (Vec<Keypair<F, H2>>, Vec<H2::Output>) {
+	pub fn new_key_pairs(&self, private_keys: &[F]) -> (Vec<Keypair<F, H>>, Vec<H::Output>) {
 		let mut keypairs = Vec::new();
 		let mut pub_keys = Vec::new();
 		for i in 0..OUTS {
@@ -79,7 +67,7 @@ impl<
 		(keypairs, pub_keys)
 	}
 
-	pub fn new_key_pair(&self, private_key: F) -> (Keypair<F, H2>, H2::Output) {
+	pub fn new_key_pair(&self, private_key: F) -> (Keypair<F, H>, H::Output) {
 		let kp = Keypair::new(private_key);
 		let pub_key = kp.public_key(&self.h2_params).unwrap();
 		(kp, pub_key)
@@ -91,12 +79,12 @@ impl<
 		amounts: Vec<F>,
 		blindings: Vec<F>,
 		indices: &[F],
-		keypairs: &[Keypair<F, H2>],
+		keypairs: &[Keypair<F, H>],
 	) -> (
 		Vec<LeafPrivate<F>>,
 		Vec<LeafPublic<F>>,
-		Vec<H5::Output>,
-		Vec<H4::Output>,
+		Vec<H::Output>,
+		Vec<H::Output>,
 	) {
 		self.new_n_leaves(chain_ids, amounts, blindings, indices, keypairs, INS)
 	}
@@ -107,12 +95,12 @@ impl<
 		amounts: Vec<F>,
 		blindings: Vec<F>,
 		indices: &[F],
-		keypairs: &[Keypair<F, H2>],
+		keypairs: &[Keypair<F, H>],
 	) -> (
 		Vec<LeafPrivate<F>>,
 		Vec<LeafPublic<F>>,
-		Vec<H5::Output>,
-		Vec<H4::Output>,
+		Vec<H::Output>,
+		Vec<H::Output>,
 	) {
 		self.new_n_leaves(chain_ids, amounts, blindings, indices, keypairs, OUTS)
 	}
@@ -123,13 +111,13 @@ impl<
 		amounts: Vec<F>,
 		blindings: Vec<F>,
 		indices: &[F],
-		keypairs: &[Keypair<F, H2>],
+		keypairs: &[Keypair<F, H>],
 		n: usize,
 	) -> (
 		Vec<LeafPrivate<F>>,
 		Vec<LeafPublic<F>>,
-		Vec<H5::Output>,
-		Vec<H4::Output>,
+		Vec<H::Output>,
+		Vec<H::Output>,
 	) {
 		let mut private = Vec::new();
 		let mut public = Vec::new();
@@ -157,13 +145,13 @@ impl<
 		amount: F,
 		blinding: F,
 		index: &F,
-		keypair: &Keypair<F, H2>,
-	) -> (LeafPrivate<F>, LeafPublic<F>, H5::Output, H4::Output) {
+		keypair: &Keypair<F, H>,
+	) -> (LeafPrivate<F>, LeafPublic<F>, H::Output, H::Output) {
 		let leaf_private = LeafPrivate::new(amount, blinding);
 		let leaf_public = LeafPublic::new(chain_id);
 
 		let public_key = keypair.public_key(&self.h2_params).unwrap();
-		let leaf = VAnchorLeaf::<F, H4, H5>::create_leaf(
+		let leaf = VAnchorLeaf::<F, H>::create_leaf(
 			&leaf_private,
 			&leaf_public,
 			&public_key,
@@ -171,7 +159,7 @@ impl<
 		)
 		.unwrap();
 
-		let nullifier = VAnchorLeaf::<F, H4, H5>::create_nullifier(
+		let nullifier = VAnchorLeaf::<F, H>::create_nullifier(
 			&keypair.private_key,
 			&leaf,
 			&self.h4_params,
@@ -217,7 +205,7 @@ impl<
 		self,
 		rng: &mut R,
 	) -> (
-		VAnchorCircuit<F, H2, HG2, H4, HG4, H5, HG5, P, LHGT, HGT, K, INS, OUTS, M>,
+		VAnchorCircuit<F, H, HG, P, LHGT, HGT, K, INS, OUTS, M>,
 		Vec<F>,
 	) {
 		let in_chain_ids: Vec<F> = (0..INS).into_iter().map(|_| F::rand(rng)).collect();
@@ -227,6 +215,7 @@ impl<
 		let in_private_keys: Vec<F> = (0..INS).into_iter().map(|_| F::rand(rng)).collect();
 
 		let out_chain_ids: Vec<F> = (0..OUTS).into_iter().map(|_| F::rand(rng)).collect();
+		// TODO: set proper output amounts
 		let out_amounts: Vec<F> = (0..OUTS).into_iter().map(|_| F::rand(rng)).collect();
 		let out_blindings: Vec<F> = (0..OUTS).into_iter().map(|_| F::rand(rng)).collect();
 		let out_public_keys: Vec<F> = (0..OUTS).into_iter().map(|_| F::rand(rng)).collect();
