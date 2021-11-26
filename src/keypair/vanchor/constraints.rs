@@ -35,9 +35,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> KeypairVar<F, H, HG> {
 		HG::evaluate(&parameters2, &bytes)
 	}
 
-	pub fn signature<
-		BG: ToBytesGadget<F>,
-	>(
+	pub fn signature(
 		&self,
 		commitment: &HG::OutputVar,
 		index: &FpVar<F>,
@@ -168,7 +166,7 @@ mod test {
 
 		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(signature)).unwrap();
 		let new_signature_var = keypair_var
-			.signature::<FpVar<Fq>>(
+			.signature(
 				&commitment_var,
 				&index_var,
 				&params_var,
