@@ -40,27 +40,23 @@ impl<F: PrimeField> PrivateVar<F> {
 
 pub struct VAnchorLeafGadget<
 	F: PrimeField,
-	H4: CRH,
-	HG4: CRHGadget<H4, F>,
-	H5: CRH,
-	HG5: CRHGadget<H5, F>,
+	H: CRH,
+	HG: CRHGadget<H, F>,
 > {
 	field: PhantomData<F>,
-	hasher4: PhantomData<H4>,
-	hasher_gadget4: PhantomData<HG4>,
-	hasher5: PhantomData<H5>,
-	hasher_gadget5: PhantomData<HG5>,
+	hasher: PhantomData<H>,
+	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, F>>
-	VAnchorLeafGadget<F, H4, HG4, H5, HG5>
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>,>
+	VAnchorLeafGadget<F, H, HG>
 {
 	pub fn create_leaf<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
 		public: &PublicVar<F>,
 		public_key: &BG,
-		h_w5: &HG5::ParametersVar,
-	) -> Result<HG5::OutputVar, SynthesisError> {
+		h_w5: &HG::ParametersVar,
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let pubkey = public_key;
 
 		let mut bytes = Vec::new();
@@ -68,20 +64,20 @@ impl<F: PrimeField, H4: CRH, HG4: CRHGadget<H4, F>, H5: CRH, HG5: CRHGadget<H5, 
 		bytes.extend(private.amount.to_bytes()?);
 		bytes.extend(pubkey.to_bytes()?);
 		bytes.extend(private.blinding.to_bytes()?);
-		HG5::evaluate(h_w5, &bytes)
+		HG::evaluate(h_w5, &bytes)
 	}
 
 	pub fn create_nullifier<BG: ToBytesGadget<F>>(
 		signature: &BG,
-		commitment: &HG5::OutputVar,
-		h_w4: &HG4::ParametersVar,
+		commitment: &HG::OutputVar,
+		h_w4: &HG::ParametersVar,
 		index: &FpVar<F>,
-	) -> Result<HG4::OutputVar, SynthesisError> {
+	) -> Result<HG::OutputVar, SynthesisError> {
 		let mut bytes = Vec::new();
 		bytes.extend(commitment.to_bytes()?);
 		bytes.extend(index.to_bytes()?);
 		bytes.extend(signature.to_bytes()?);
-		HG4::evaluate(h_w4, &bytes)
+		HG::evaluate(h_w4, &bytes)
 	}
 }
 
@@ -138,17 +134,13 @@ mod test {
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 
-	type PoseidonCRH2 = CRH<Fq>;
-	type PoseidonCRH4 = CRH<Fq>;
-	type PoseidonCRH5 = CRH<Fq>;
+	type PoseidonCRH = CRH<Fq>;
+	
+	type PoseidonCRHGadget = CRHGadget<Fq>;
 
-	type PoseidonCRH2Gadget = CRHGadget<Fq>;
-	type PoseidonCRH4Gadget = CRHGadget<Fq>;
-	type PoseidonCRH5Gadget = CRHGadget<Fq>;
-
-	type Leaf = VAnchorLeaf<Fq, PoseidonCRH4, PoseidonCRH5>;
+	type Leaf = VAnchorLeaf<Fq, PoseidonCRH>;
 	type LeafGadget =
-		VAnchorLeafGadget<Fq, PoseidonCRH4, PoseidonCRH4Gadget, PoseidonCRH5, PoseidonCRH5Gadget>;
+		VAnchorLeafGadget<Fq, PoseidonCRH, PoseidonCRHGadget,>;
 	use crate::ark_std::{One, UniformRand};
 	#[test]
 	fn should_crate_new_leaf_constraints() {
@@ -167,7 +159,7 @@ mod test {
 		let secrets = Private::generate(rng);
 		let private_key = Fq::rand(rng);
 		let privkey = to_bytes![private_key].unwrap();
-		let public_key = PoseidonCRH2::evaluate(&params5_2, &privkey).unwrap();
+		let public_key = PoseidonCRH::evaluate(&params5_2, &privkey).unwrap();
 		let leaf = Leaf::create_leaf(&secrets, &public, &public_key, &params5_5).unwrap();
 
 		// Constraints version
@@ -190,7 +182,7 @@ mod test {
 
 		let mut bytes = Vec::new();
 		bytes.extend(private_key_var.to_bytes().unwrap());
-		let public_key_var = PoseidonCRH2Gadget::evaluate(&params_var5_2, &bytes).unwrap();
+		let public_key_var = PoseidonCRHGadget::evaluate(&params_var5_2, &bytes).unwrap();
 
 		let leaf_var =
 			LeafGadget::create_leaf(&secrets_var, &public_var, &public_key_var, &params_var5_5)
