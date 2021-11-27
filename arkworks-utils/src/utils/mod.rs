@@ -1,10 +1,11 @@
-use crate::poseidon::sbox::PoseidonSbox;
 use ark_crypto_primitives::Error;
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
 use ethabi::{encode, Token};
 use tiny_keccak::{Hasher, Keccak};
+
+pub mod common;
 
 use crate::Vec;
 
@@ -46,8 +47,7 @@ pub mod bn254_x3_3;
 #[cfg(feature = "poseidon_bls381_x3_5")]
 pub mod bn254_x3_5;
 
-#[cfg(feature = "mimc_220_ed_on_bn254")]
-pub mod mimc;
+
 
 pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 	let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
@@ -148,7 +148,7 @@ pub fn get_results_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
 
 #[cfg(feature = "mimc_220_ed_on_bn254")]
 pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
-	parse_vec(crate::utils::mimc::CONSTANTS.to_vec())
+	parse_vec(crate::mimc::CONSTANTS.to_vec())
 }
 
 pub fn check_inputs_arbitrary_ethabi(

@@ -1,1 +1,0 @@
-cargo test --release --features test
