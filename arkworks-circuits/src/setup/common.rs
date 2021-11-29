@@ -2,7 +2,6 @@ use arkworks_gadgets::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
 	poseidon::{
-		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
 		CRH,
 	},
@@ -28,14 +27,14 @@ pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F>;
 pub type PoseidonCRH_x5_4<F> = CRH<F>;
 pub type PoseidonCRH_x5_4Gadget<F> = CRHGadget<F>;
 
-pub type PoseidonCircomCRH_x5_3<F> = CircomCRH<F>;
-pub type PoseidonCircomCRH_x5_3Gadget<F> = CircomCRHGadget<F>;
+pub type PoseidonCircomCRH_x5_3<F> = CRH<F>;
+pub type PoseidonCircomCRH_x5_3Gadget<F> = CRHGadget<F>;
 
 pub type PoseidonCRH_x5_2<F> = CRH<F>;
 pub type PoseidonCRH_x5_2Gadget<F> = CRHGadget<F>;
 
-pub type PoseidonCircomCRH_x5_5<F> = CircomCRH<F>;
-pub type PoseidonCircomCRH_x5_5Gadget<F> = CircomCRHGadget<F>;
+pub type PoseidonCircomCRH_x5_5<F> = CRH<F>;
+pub type PoseidonCircomCRH_x5_5Gadget<F> = CRHGadget<F>;
 
 pub type PoseidonCRH_x17_3<F> = CRH<F>;
 pub type PoseidonCRH_x17_3Gadget<F> = CRHGadget<F>;

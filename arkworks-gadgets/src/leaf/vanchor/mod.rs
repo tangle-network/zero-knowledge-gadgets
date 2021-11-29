@@ -74,7 +74,7 @@ impl<F: PrimeField, H: CRH> VAnchorLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::poseidon::{circom::CircomCRH, CRH};
+	use crate::poseidon::{CRH};
 	use arkworks_utils::utils::{
 		common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
 		parse_vec,
@@ -146,9 +146,7 @@ mod test {
 		assert_eq!(ev_res, nullifier);
 	}
 
-	type PoseidonCircomCRH = CircomCRH<Fq>;
-
-	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH>;
+	type LeafCircom = VAnchorLeaf<Fq, PoseidonCRH>;
 
 	#[test]
 	fn should_be_the_same_as_circom() {
@@ -169,7 +167,7 @@ mod test {
 
 		let input = private_key[0].into_repr().to_bytes_le();
 
-		let computed_public_key = PoseidonCircomCRH::evaluate(&parameters2, &input).unwrap();
+		let computed_public_key = PoseidonCRH::evaluate(&parameters2, &input).unwrap();
 
 		assert_eq!(
 			expected_public_key[0], computed_public_key,
@@ -202,7 +200,7 @@ mod test {
 		let mut tmp = blinding[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
 		let computed_leaf_without_vanchorleaf =
-			PoseidonCircomCRH::evaluate(&parameters5, &input).unwrap();
+			PoseidonCRH::evaluate(&parameters5, &input).unwrap();
 
 		// Computing the leaf with vanchorleaf
 		let private = Private::new(amount[0], blinding[0]);
@@ -239,7 +237,7 @@ mod test {
 		input.append(&mut tmp);
 
 		let computed_nullifier_without_vanchorleaf =
-			PoseidonCircomCRH::evaluate(&parameters4, &input).unwrap();
+			PoseidonCRH::evaluate(&parameters4, &input).unwrap();
 
 		// Computing the nullifier with vanchorleaf
 		let nullifier_from_vanchorleaf = LeafCircom::create_nullifier(
