@@ -4,9 +4,6 @@ use ark_std::{error::Error as ArkError, rand::Rng, vec::Vec};
 pub mod ed_on_bn254_mimc;
 pub use ed_on_bn254_mimc::*;
 
-#[cfg(feature = "r1cs")]
-pub mod constraints;
-
 #[derive(Debug)]
 pub enum MiMCError {
 	InvalidInputs,

@@ -9,9 +9,6 @@ use ark_std::{error::Error as ArkError, rand::Rng, vec::Vec};
 
 pub mod sbox;
 
-#[cfg(feature = "r1cs")]
-pub mod constraints;
-
 #[derive(Debug)]
 pub enum PoseidonError {
 	InvalidSboxSize(i8),
