@@ -38,10 +38,6 @@ pub mod bls381_x3_5;
 pub mod bls381_x5_3;
 #[cfg(feature = "poseidon_bls381_x5_5")]
 pub mod bls381_x5_5;
-#[cfg(feature = "poseidon_circom_bn254_x5_3")]
-pub mod bn254_circom_x5_3;
-#[cfg(feature = "poseidon_circom_bn254_x5_5")]
-pub mod bn254_circom_x5_5;
 #[cfg(feature = "poseidon_bls381_x3_3")]
 pub mod bn254_x3_3;
 #[cfg(feature = "poseidon_bls381_x3_5")]

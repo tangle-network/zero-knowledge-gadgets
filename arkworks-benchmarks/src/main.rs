@@ -7,6 +7,7 @@ use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant};
+use arkworks_circuits::circuit::bridge::BridgeCircuit;
 use arkworks_gadgets::{
 	arbitrary::bridge_data::Input as BridgeDataInput,
 	leaf::bridge::{
@@ -16,16 +17,14 @@ use arkworks_gadgets::{
 	poseidon::{constraints::CRHGadget, CRH},
 	set::membership::{constraints::SetMembershipGadget, SetMembership},
 };
-use arkworks_circuits::circuit::bridge::BridgeCircuit;
 
- use arkworks_utils::utils::common::{setup_params_x5_5, setup_params_x5_3};
+use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5};
 use blake2::Blake2s;
 
 macro_rules! setup_circuit {
 	($test_field:ty) => {{
 		const M: usize = 4;
 		const N: usize = 30;
-
 
 		type PoseidonCRH = CRH<$test_field>;
 		type PoseidonCRHGadget = CRHGadget<$test_field>;
@@ -81,7 +80,7 @@ macro_rules! setup_circuit {
 		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund, commitment);
 
 		// Making params for poseidon in merkle tree
-	
+
 		let params3 = setup_params_x5_3(curve);
 		let leaves = vec![
 			<$test_field>::rand(rng),

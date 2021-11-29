@@ -13,9 +13,7 @@ use arkworks_gadgets::{
 use arkworks_utils::{
 	poseidon::PoseidonParameters,
 	utils::common::{
-		setup_circom_params_x5_3, setup_circom_params_x5_5, setup_params_x17_3, setup_params_x17_5,
-		setup_params_x5_3,
-		setup_params_x5_5, Curve,
+		setup_params_x17_3, setup_params_x17_5, setup_params_x5_3, setup_params_x5_5, Curve,
 	},
 };
 
@@ -273,8 +271,8 @@ impl_setup_bridge_circuit!(
 );
 impl_setup_bridge_circuit!(
 	circuit: Circuit_Circomx5,
-	params3_fn: setup_circom_params_x5_3,
-	params5_fn: setup_circom_params_x5_5,
+	params3_fn: setup_params_x5_3,
+	params5_fn: setup_params_x5_5,
 	leaf_setup_fn: setup_leaf_circomx5,
 	tree_setup_fn: setup_tree_and_create_path_tree_circomx5
 );

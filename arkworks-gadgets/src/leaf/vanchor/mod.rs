@@ -74,7 +74,7 @@ impl<F: PrimeField, H: CRH> VAnchorLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::poseidon::{CRH};
+	use crate::poseidon::CRH;
 	use arkworks_utils::utils::{
 		common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
 		parse_vec,

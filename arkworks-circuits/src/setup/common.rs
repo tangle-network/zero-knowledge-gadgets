@@ -1,10 +1,7 @@
 use arkworks_gadgets::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
-	poseidon::{
-		constraints::CRHGadget,
-		CRH,
-	},
+	poseidon::{constraints::CRHGadget, CRH},
 };
 use arkworks_utils::{mimc::MiMCParameters, poseidon::PoseidonParameters};
 

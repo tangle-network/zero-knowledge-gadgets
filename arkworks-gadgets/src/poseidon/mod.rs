@@ -1,9 +1,7 @@
-use arkworks_utils::{
-	poseidon::{PoseidonError, PoseidonParameters},
-};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::fields::PrimeField;
 use ark_std::{marker::PhantomData, rand::Rng, vec::Vec};
+use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -109,7 +107,7 @@ impl<F: PrimeField> TwoToOneCRH for CRH<F> {
 	}
 }
 
-#[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
+#[cfg(all(test, feature = "poseidon_bn254_x5_3"))]
 mod test {
 	use super::*;
 	// use ark_bn254::Fq as Bn254Fq;
@@ -120,8 +118,7 @@ mod test {
 
 	use arkworks_utils::utils::{
 		common::{
-			setup_circom_params_x5_3, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5,
-			Curve,
+			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
 		},
 		parse_vec,
 	};
@@ -131,7 +128,7 @@ mod test {
 	fn test_width_3_circom_bn_254() {
 		let curve = Curve::Bn254;
 
-		let params = setup_circom_params_x5_3(curve);
+		let params = setup_params_x5_3(curve);
 		// output from circomlib, and here is the code.
 		// ```js
 		// const { poseidon } = require('circomlib');
@@ -144,8 +141,7 @@ mod test {
 		let left_input = Fq::one().into_repr().to_bytes_le();
 		let right_input = Fq::one().double().into_repr().to_bytes_le();
 		let poseidon_res =
-			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&params, &left_input, &right_input)
-				.unwrap();
+			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&params, &left_input, &right_input).unwrap();
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 
 		// test two with 32 bytes.
@@ -190,8 +186,7 @@ mod test {
 			"0x0a13ad844d3487ad3dbaf3876760eb971283d48333fa5a9e97e6ee422af9554b",
 		]);
 		let poseidon_res =
-			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&params, &left_input, &right_input)
-				.unwrap();
+			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&params, &left_input, &right_input).unwrap();
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
 
@@ -245,8 +240,7 @@ mod test {
 		input.append(&mut tmp);
 		let mut tmp = blinding[0].into_repr().to_bytes_le();
 		input.append(&mut tmp);
-		let computed_leaf =
-			<PoseidonCRH5 as CRHTrait>::evaluate(&parameters5, &input).unwrap();
+		let computed_leaf = <PoseidonCRH5 as CRHTrait>::evaluate(&parameters5, &input).unwrap();
 
 		assert_eq!(
 			expected_leaf[0], computed_leaf,

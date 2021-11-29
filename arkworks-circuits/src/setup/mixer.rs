@@ -8,9 +8,8 @@ use arkworks_utils::{
 	mimc::MiMCParameters,
 	poseidon::PoseidonParameters,
 	utils::common::{
-		setup_circom_params_x5_3, setup_circom_params_x5_5, setup_mimc_220, setup_params_x17_3,
-		setup_params_x17_5,
-		setup_params_x5_3, setup_params_x5_5, Curve,
+		setup_mimc_220, setup_params_x17_3, setup_params_x17_5, setup_params_x5_3,
+		setup_params_x5_5, Curve,
 	},
 };
 
@@ -212,8 +211,8 @@ impl_setup_mixer_circuit!(
 );
 impl_setup_mixer_circuit!(
 	circuit: Circuit_Circomx5,
-	params3_fn: setup_circom_params_x5_3,
-	params5_fn: setup_circom_params_x5_5,
+	params3_fn: setup_params_x5_3,
+	params5_fn: setup_params_x5_5,
 	leaf_setup_fn: setup_leaf_circomx5,
 	tree_setup_fn: setup_tree_and_create_path_tree_circomx5
 );
@@ -288,7 +287,7 @@ mod test {
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
-use arkworks_utils::utils::common::verify_groth16;
+	use arkworks_utils::utils::common::verify_groth16;
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30

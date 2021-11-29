@@ -2,16 +2,21 @@ use crate::poseidon::CRH;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
+	alloc::AllocVar,
 	fields::{fp::FpVar, FieldVar},
+	prelude::*,
 	uint8::UInt8,
 };
-use ark_r1cs_std::{alloc::AllocVar, prelude::*};
-use core::borrow::Borrow;
-use ark_relations::r1cs::SynthesisError;
-use ark_relations::r1cs::Namespace;
+use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
-use arkworks_utils::poseidon::{PoseidonParameters, sbox::{PoseidonSbox, constraints::SboxConstraints}};
-use core::ops::{Add, AddAssign, Mul};
+use arkworks_utils::poseidon::{
+	sbox::{constraints::SboxConstraints, PoseidonSbox},
+	PoseidonParameters,
+};
+use core::{
+	borrow::Borrow,
+	ops::{Add, AddAssign, Mul},
+};
 
 #[derive(Default, Clone)]
 pub struct PoseidonParametersVar<F: PrimeField> {
@@ -164,7 +169,7 @@ mod test {
 		R1CSVar,
 	};
 	use ark_relations::r1cs::ConstraintSystem;
-	use arkworks_utils::utils::common::setup_circom_params_x5_3;
+	use arkworks_utils::utils::common::setup_params_x5_3;
 
 	type PoseidonCRH3 = CRH<Fq>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq>;
@@ -175,7 +180,7 @@ mod test {
 
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
 
-		let params = setup_circom_params_x5_3(curve);
+		let params = setup_params_x5_3(curve);
 
 		let params_var = PoseidonParametersVar::new_variable(
 			cs.clone(),
@@ -189,11 +194,9 @@ mod test {
 			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
 
 		let res = PoseidonCRH3::evaluate(&params, &aligned_inp).unwrap();
-		let res_var = <PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(
-			&params_var,
-			&aligned_inp_var,
-		)
-		.unwrap();
+		let res_var =
+			<PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(&params_var, &aligned_inp_var)
+				.unwrap();
 		assert_eq!(res, res_var.value().unwrap());
 
 		// Test Poseidon on an input of 6 bytes. This will require padding, since the
@@ -203,11 +206,9 @@ mod test {
 			Vec::<UInt8<Fq>>::new_input(cs, || Ok(unaligned_inp.clone())).unwrap();
 
 		let res = PoseidonCRH3::evaluate(&params, &unaligned_inp).unwrap();
-		let res_var = <PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(
-			&params_var,
-			&unaligned_inp_var,
-		)
-		.unwrap();
+		let res_var =
+			<PoseidonCRH3Gadget as CRHGadgetTrait<_, _>>::evaluate(&params_var, &unaligned_inp_var)
+				.unwrap();
 		assert_eq!(res, res_var.value().unwrap());
 	}
 }
