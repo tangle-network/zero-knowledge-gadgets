@@ -80,11 +80,11 @@ mod test {
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
 		},
-		setup::common::{setup_params_x5_3, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::setup_params_x5_3;
 
 	type PoseidonCRH3 = CRH<Fq>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq>;
@@ -94,7 +94,7 @@ mod test {
 	#[test]
 	fn should_crate_basic_leaf_constraints() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
+		let curve = arkworks_utils::utils::common::Curve::Bls381;
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 

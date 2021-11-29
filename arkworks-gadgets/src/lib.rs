@@ -15,8 +15,6 @@ pub mod merkle_tree;
 pub mod mimc;
 pub mod poseidon;
 pub mod set;
-pub mod setup;
-
 
 pub type Error = Box<dyn ark_std::error::Error>;
 

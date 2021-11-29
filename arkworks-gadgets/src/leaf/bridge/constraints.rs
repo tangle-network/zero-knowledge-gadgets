@@ -103,13 +103,13 @@ mod test {
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
 		},
-		setup::common::{setup_params_x5_5, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_ff::One;
 	use ark_r1cs_std::R1CSVar;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::setup_params_x5_5;
 
 	type PoseidonCRH5 = CRH<Fq>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq>;
@@ -119,7 +119,7 @@ mod test {
 	#[test]
 	fn should_create_bridge_leaf_constraints() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
+		let curve = arkworks_utils::utils::common::Curve::Bls381;
 
 		let cs = ConstraintSystem::<Fq>::new_ref();
 

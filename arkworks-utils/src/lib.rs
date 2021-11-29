@@ -6,10 +6,12 @@ pub extern crate ark_std;
 use ark_std::boxed::Box;
 pub(crate) use ark_std::vec::Vec;
 
-
 #[cfg(feature = "mimc_220_ed_on_bn254")]
-pub mod mimc;pub mod poseidon;
+pub mod mimc;
+pub mod poseidon;
 pub mod utils;
+
+pub use mimc::*;
 
 pub type Error = Box<dyn ark_std::error::Error>;
 

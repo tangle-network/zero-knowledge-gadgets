@@ -47,8 +47,6 @@ pub mod bn254_x3_3;
 #[cfg(feature = "poseidon_bls381_x3_5")]
 pub mod bn254_x3_5;
 
-
-
 pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 	let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
 

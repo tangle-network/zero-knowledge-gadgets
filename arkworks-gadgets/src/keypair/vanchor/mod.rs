@@ -46,13 +46,11 @@ impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use crate::{
-		poseidon::CRH,
-		setup::common::{setup_params_x5_2, setup_params_x5_4, Curve},
-	};
+	use crate::poseidon::CRH;
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;
+	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
 
 	use crate::ark_std::Zero;
 	use ark_std::test_rng;
@@ -95,9 +93,7 @@ mod test {
 		// Since signature = hash(privKey, commitment, pathIndices)
 		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
 		let ev_res = PoseidonCRH::evaluate(&params4, &inputs_signature).unwrap();
-		let signature = keypair
-			.signature(&commitment, &index, &params4)
-			.unwrap();
+		let signature = keypair.signature(&commitment, &index, &params4).unwrap();
 		assert_eq!(ev_res, signature);
 	}
 }

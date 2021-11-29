@@ -78,11 +78,11 @@ mod test {
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
 		},
-		setup::common::{setup_params_x5_5, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{setup_params_x5_5, Curve};
 
 	type PoseidonCRH5 = CRH<Fq>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq>;

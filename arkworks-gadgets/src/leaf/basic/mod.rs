@@ -41,14 +41,12 @@ impl<F: PrimeField, H: CRH> BasicLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::CRH,
-		setup::common::{setup_params_x5_3, Curve},
-	};
+	use crate::poseidon::CRH;
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::setup_params_x5_3;
 
 	type PoseidonCRH3 = CRH<Fq>;
 
@@ -56,7 +54,7 @@ mod test {
 	#[test]
 	fn should_create_leaf() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
+		let curve = arkworks_utils::utils::common::Curve::Bls381;
 
 		let secrets = Private::<Fq>::generate(rng);
 

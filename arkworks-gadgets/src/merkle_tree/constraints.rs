@@ -311,12 +311,12 @@ mod test {
 		ark_std::UniformRand,
 		merkle_tree::{Config, SparseMerkleTree},
 		poseidon::{constraints::CRHGadget as PoseidonCRHGadget, CRH as PoseidonCRH},
-		setup::common::{setup_params_x5_3, Curve},
 	};
 	use ark_bls12_381::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{rc::Rc, test_rng};
+	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 	use crate::merkle_tree::Path;
 

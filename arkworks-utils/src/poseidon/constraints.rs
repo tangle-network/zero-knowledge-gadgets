@@ -1,12 +1,8 @@
-use super::PoseidonParameters ;
+use super::PoseidonParameters;
 use crate::poseidon::PoseidonSbox;
 
 use ark_ff::PrimeField;
-use ark_r1cs_std::{
-	alloc::AllocVar,
-	fields::fp::FpVar,
-	prelude::*,
-};
+use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::vec::Vec;
 use core::borrow::Borrow;

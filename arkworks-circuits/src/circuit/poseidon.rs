@@ -1,12 +1,12 @@
 use crate::Vec;
-use ark_crypto_primitives::crh::{CRHGadget, CRH};
+use ark_crypto_primitives::crh::{CRHGadget as CRHTraitGadget, CRH as CRHTrait};
 use ark_ff::{to_bytes, PrimeField};
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 
 #[derive(Copy)]
-struct PoseidonCircuit<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
+struct PoseidonCircuit<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> {
 	pub a: F,
 	pub b: F,
 	pub c: H::Output,
@@ -15,7 +15,7 @@ struct PoseidonCircuit<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> PoseidonCircuit<F, H, HG> {
+impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> PoseidonCircuit<F, H, HG> {
 	pub fn new(a: F, b: F, c: H::Output, params: H::Parameters) -> Self {
 		Self {
 			a,
@@ -28,7 +28,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> PoseidonCircuit<F, H, HG> {
 	}
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> Clone for PoseidonCircuit<F, H, HG> {
+impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> Clone for PoseidonCircuit<F, H, HG> {
 	fn clone(&self) -> Self {
 		PoseidonCircuit {
 			a: self.a.clone(),
@@ -41,7 +41,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> Clone for PoseidonCircuit<F, H,
 	}
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> ConstraintSynthesizer<F>
+impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> ConstraintSynthesizer<F>
 	for PoseidonCircuit<F, H, HG>
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
@@ -63,17 +63,15 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> ConstraintSynthesizer<F>
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::{constraints::CRHGadget, CRH},
-		setup::common::{setup_params_x5_3, Curve},
-	};
 	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-	use ark_crypto_primitives::{crh::CRH as CRHTrait, SNARK};
+	use ark_crypto_primitives::SNARK;
 	use ark_groth16::Groth16;
 	use ark_marlin::Marlin;
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::marlin_pc::MarlinKZG10;
 	use ark_std::UniformRand;
+	use arkworks_gadgets::poseidon::{constraints::CRHGadget, CRH};
+	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 	use blake2::Blake2s;
 
 	type PoseidonCRH3 = CRH<BlsFr>;

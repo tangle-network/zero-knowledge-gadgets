@@ -1,11 +1,19 @@
 use super::common::*;
-use crate::{
+use crate::circuit::mixer::MixerCircuit;
+use arkworks_gadgets::{
 	arbitrary::mixer_data::Input as MixerDataInput,
-	circuit::mixer::MixerCircuit,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
+};
+use arkworks_utils::{
 	mimc::MiMCParameters,
 	poseidon::PoseidonParameters,
+	utils::common::{
+		setup_circom_params_x5_3, setup_circom_params_x5_5, setup_mimc_220, setup_params_x17_3,
+		setup_params_x17_5,
+		setup_params_x5_3, setup_params_x5_5, Curve,
+	},
 };
+
 use ark_crypto_primitives::{CRH as CRHTrait, SNARK};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
@@ -280,6 +288,7 @@ mod test {
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
+use arkworks_utils::utils::common::verify_groth16;
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30

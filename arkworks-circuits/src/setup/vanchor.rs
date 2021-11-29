@@ -1,16 +1,16 @@
 use std::marker::PhantomData;
 
-use crate::{
+use crate::circuit::vanchor::VAnchorCircuit;
+use ark_crypto_primitives::{CRHGadget, CRH as CRHTrait};
+use ark_ff::{to_bytes, PrimeField, ToBytes};
+use ark_std::{self, rc::Rc};
+use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
-	circuit::vanchor::VAnchorCircuit,
 	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private as LeafPrivate, Public as LeafPublic, VAnchorLeaf},
 	merkle_tree::{Config, Path, SparseMerkleTree},
 	set::membership::{Private as SetMembershipPrivate, SetMembership},
 };
-use ark_crypto_primitives::{CRHGadget, CRH as CRHTrait};
-use ark_ff::{to_bytes, PrimeField, ToBytes};
-use ark_std::{self, rc::Rc};
 
 use ark_std::{rand::Rng, vec::Vec};
 

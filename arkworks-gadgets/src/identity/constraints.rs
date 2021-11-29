@@ -1,10 +1,10 @@
 use super::CRH;
-use crate::utils::to_field_var_elements;
 use ark_crypto_primitives::crh::constraints::CRHGadget as CRHGadgetTrait;
 use ark_ff::PrimeField;
 use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
+use arkworks_utils::utils::to_field_var_elements;
 use core::borrow::Borrow;
 
 pub struct CRHGadget<F: PrimeField> {

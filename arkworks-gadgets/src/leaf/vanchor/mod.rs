@@ -74,11 +74,12 @@ impl<F: PrimeField, H: CRH> VAnchorLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::{
-		poseidon::{circom::CircomCRH, CRH},
-		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
-		utils::parse_vec,
+	use crate::poseidon::{circom::CircomCRH, CRH};
+	use arkworks_utils::utils::{
+		common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
+		parse_vec,
 	};
+
 	use ark_ed_on_bn254::Fq;
 
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
@@ -146,7 +147,6 @@ mod test {
 	}
 
 	type PoseidonCircomCRH = CircomCRH<Fq>;
-	
 
 	type LeafCircom = VAnchorLeaf<Fq, PoseidonCircomCRH>;
 

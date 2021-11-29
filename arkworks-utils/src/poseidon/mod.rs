@@ -165,12 +165,7 @@ mod test {
 	use super::*;
 	use ark_ed_on_bn254::Fq;
 
-	use crate::{
-		utils::{
-			bn254_x5_3::get_poseidon_bn254_x5_3,
-		},
-	};
-
+	use crate::utils::bn254_x5_3::get_poseidon_bn254_x5_3;
 
 	#[test]
 	fn test_parameter_to_and_from_bytes() {

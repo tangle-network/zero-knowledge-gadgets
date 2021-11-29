@@ -73,7 +73,6 @@ mod test {
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
 		},
-		setup::common::{setup_params_x5_2, setup_params_x5_4, Curve},
 	};
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
@@ -85,6 +84,7 @@ mod test {
 	};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
 
 	type PoseidonCRH = CRH<Fq>;
 	type PoseidonCRHGadget = CRHGadget<Fq>;
@@ -146,9 +146,7 @@ mod test {
 		let index = Fq::zero();
 
 		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
-		let signature = keypair
-			.signature(&commitment, &index, &params)
-			.unwrap();
+		let signature = keypair.signature(&commitment, &index, &params).unwrap();
 
 		// Constraints version
 		let params_var = PoseidonParametersVar::new_variable(
@@ -166,11 +164,7 @@ mod test {
 
 		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(signature)).unwrap();
 		let new_signature_var = keypair_var
-			.signature(
-				&commitment_var,
-				&index_var,
-				&params_var,
-			)
+			.signature(&commitment_var, &index_var, &params_var)
 			.unwrap();
 
 		// Check equality

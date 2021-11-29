@@ -1,4 +1,9 @@
-use crate::{
+use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
+use ark_ff::fields::PrimeField;
+use ark_r1cs_std::{eq::EqGadget, prelude::*};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_std::marker::PhantomData;
+use arkworks_gadgets::{
 	arbitrary::mixer_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
 	leaf::mixer::{
 		constraints::{MixerLeafGadget, PrivateVar as LeafPrivateVar},
@@ -9,11 +14,6 @@ use crate::{
 		Config as MerkleConfig, Path,
 	},
 };
-use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
-use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, prelude::*};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
-use ark_std::marker::PhantomData;
 
 pub struct MixerCircuit<
 	F: PrimeField,
@@ -159,6 +159,9 @@ mod test {
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
 	use ark_std::{test_rng, One, Zero};
+	use arkworks_utils::utils::common::{
+		setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve,
+	};
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30

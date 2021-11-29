@@ -1,4 +1,11 @@
-use crate::{
+use crate::Vec;
+
+use ark_crypto_primitives::{crh::CRHGadget, CRH};
+use ark_ff::fields::PrimeField;
+use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_std::{cmp::Ordering::Less, marker::PhantomData};
+use arkworks_gadgets::{
 	arbitrary::vanchor_data::{
 		constraints::VAnchorArbitraryDataVar as ArbitraryInputVar,
 		VAnchorArbitraryData as ArbitraryInput,
@@ -15,13 +22,7 @@ use crate::{
 		constraints::{PrivateVar as SetPrivateInputsVar, SetMembershipGadget},
 		Private as SetPrivateInputs,
 	},
-	Vec,
 };
-use ark_crypto_primitives::{crh::CRHGadget, CRH};
-use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
-use ark_std::{cmp::Ordering::Less, marker::PhantomData};
 
 pub struct VAnchorCircuit<
 	F: PrimeField,
@@ -219,9 +220,7 @@ where
 	}
 
 	//Check that there are no same nullifiers among all inputs
-	pub fn verify_no_same_nul(
-		in_nullifier_var: &Vec<HG::OutputVar>,
-	) -> Result<(), SynthesisError> {
+	pub fn verify_no_same_nul(in_nullifier_var: &Vec<HG::OutputVar>) -> Result<(), SynthesisError> {
 		for i in 0..N_INS - 1 {
 			for j in (i + 1)..N_INS {
 				in_nullifier_var[i].enforce_not_equal(&in_nullifier_var[j])?;
@@ -315,8 +314,7 @@ impl<
 		const N_INS: usize,
 		const N_OUTS: usize,
 		const M: usize,
-	> ConstraintSynthesizer<F>
-	for VAnchorCircuit<F, H, HG, C, LHGT, HGT, K, N_INS, N_OUTS, M>
+	> ConstraintSynthesizer<F> for VAnchorCircuit<F, H, HG, C, LHGT, HGT, K, N_INS, N_OUTS, M>
 where
 	F: PrimeField,
 	H: CRH,
@@ -434,12 +432,21 @@ mod test {
 	use super::*;
 	use crate::{
 		ark_std::{One, Zero},
+		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+	};
+	use arkworks_gadgets::{
 		keypair::vanchor::Keypair,
 		leaf::vanchor::VAnchorLeaf,
 		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-		poseidon::{constraints::CRHGadget as PCRHGadget, PoseidonParameters, CRH as PCRH},
-		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+		poseidon::{constraints::CRHGadget as PCRHGadget, CRH as PCRH},
 	};
+	use arkworks_utils::{
+		poseidon::PoseidonParameters,
+		utils::common::{
+			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
+		},
+	};
+
 	use ark_bn254::{Bn254, Fr as BnFr};
 	use ark_ff::{to_bytes, UniformRand};
 	use ark_groth16::Groth16;

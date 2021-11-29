@@ -56,7 +56,7 @@ impl<F: PrimeField> CRHTrait for CircomCRH<F> {
 
 	fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
 		let eval_time = start_timer!(|| "PoseidonCircomCRH::Eval");
-		let f_inputs = crate::utils::to_field_elements(input)?;
+		let f_inputs = arkworks_utils::utils::to_field_elements(input)?;
 		if f_inputs.len() >= parameters.width.into() {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
@@ -111,16 +111,19 @@ impl<F: PrimeField> TwoToOneCRH for CircomCRH<F> {
 #[cfg(all(test, feature = "poseidon_circom_bn254_x5_3"))]
 mod test {
 	use super::*;
-	use crate::setup::common::{
-		setup_circom_params_x5_3, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
-	};
 	// use ark_bn254::Fq as Bn254Fq;
 	use ark_ed_on_bn254::Fq;
 
 	use ark_ff::{BigInteger, Field};
 	use ark_std::One;
 
-	use crate::utils::parse_vec;
+	use arkworks_utils::utils::{
+		common::{
+			setup_circom_params_x5_3, setup_params_x5_2, setup_params_x5_4, setup_params_x5_5,
+			Curve,
+		},
+		parse_vec,
+	};
 
 	type PoseidonCircomCRH3 = CircomCRH<Fq>;
 	#[test]

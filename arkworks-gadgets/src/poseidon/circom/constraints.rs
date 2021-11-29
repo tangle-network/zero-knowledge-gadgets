@@ -1,6 +1,4 @@
-use crate::poseidon::{
-	circom::CircomCRH, constraints::PoseidonParametersVar, sbox::constraints::SboxConstraints,
-};
+use crate::poseidon::{circom::CircomCRH, constraints::PoseidonParametersVar};
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -9,6 +7,7 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::SynthesisError;
 use ark_std::{marker::PhantomData, vec::Vec};
+use arkworks_utils::poseidon::sbox::constraints::SboxConstraints;
 use core::ops::{Add, AddAssign, Mul};
 
 pub struct CircomCRHGadget<F: PrimeField>(PhantomData<F>);
@@ -60,7 +59,7 @@ impl<F: PrimeField> CRHGadgetTrait<CircomCRH<F>, F> for CircomCRHGadget<F> {
 		parameters: &Self::ParametersVar,
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
-		let f_var_inputs = crate::utils::to_field_var_elements(input)?;
+		let f_var_inputs = arkworks_utils::utils::to_field_var_elements(input)?;
 		if f_var_inputs.len() >= parameters.width.into() {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
@@ -103,7 +102,6 @@ impl<F: PrimeField> TwoToOneCRHGadget<CircomCRH<F>, F> for CircomCRHGadget<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::setup::common::{setup_circom_params_x5_3, Curve};
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
@@ -112,6 +110,7 @@ mod test {
 		R1CSVar,
 	};
 	use ark_relations::r1cs::ConstraintSystem;
+	use arkworks_utils::utils::common::setup_circom_params_x5_3;
 
 	type PoseidonCircomCRH3 = CircomCRH<Fq>;
 	type PoseidonCircomCRH3Gadget = CircomCRHGadget<Fq>;
@@ -120,7 +119,7 @@ mod test {
 	fn circom_poseidon_native_equality() {
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let curve = Curve::Bn254;
+		let curve = arkworks_utils::utils::common::Curve::Bn254;
 
 		let params = setup_circom_params_x5_3(curve);
 

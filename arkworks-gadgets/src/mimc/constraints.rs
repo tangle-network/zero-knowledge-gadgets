@@ -1,5 +1,4 @@
 use super::{MiMCParameters, Rounds, CRH};
-use crate::utils::to_field_var_elements;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -10,6 +9,7 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
+use arkworks_utils::utils::to_field_var_elements;
 use core::borrow::Borrow;
 
 #[derive(Clone)]
@@ -231,7 +231,7 @@ mod test {
 			MiMCRounds220_3::ROUNDS,
 			MiMCRounds220_3::WIDTH,
 			MiMCRounds220_3::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
+			arkworks_utils::utils::get_rounds_mimc_220(),
 		);
 
 		let params_var =
@@ -270,7 +270,7 @@ mod test {
 			MiMCRounds220_2::ROUNDS,
 			MiMCRounds220_2::WIDTH,
 			MiMCRounds220_2::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
+			arkworks_utils::utils::get_rounds_mimc_220(),
 		);
 
 		let params_var =

@@ -52,11 +52,9 @@ mod test {
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{setup_params_x5_5, Curve};
 
-	use crate::{
-		poseidon::CRH,
-		setup::common::{setup_params_x5_5, Curve},
-	};
+	use crate::poseidon::CRH;
 
 	use super::*;
 

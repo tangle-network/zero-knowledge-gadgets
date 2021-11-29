@@ -1,9 +1,4 @@
-use crate::{
-	mimc::{Rounds as MiMCRounds},
-	poseidon::{
-		PoseidonParameters,
-	},
-};
+use crate::{mimc::Rounds as MiMCRounds, poseidon::PoseidonParameters};
 use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
@@ -23,7 +18,6 @@ pub enum Curve {
 	Bls381,
 	Bn254,
 }
-
 
 pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree

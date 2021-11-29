@@ -1,6 +1,4 @@
-use super::{CRH};
-use arkworks_utils::{poseidon::PoseidonParameters, utils::to_field_var_elements};
-use arkworks_utils::poseidon::sbox::PoseidonSbox;
+use super::CRH;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -11,6 +9,13 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
+use arkworks_utils::{
+	poseidon::{
+		sbox::{constraints::SboxConstraints, PoseidonSbox},
+		PoseidonParameters,
+	},
+	utils::to_field_var_elements,
+};
 use core::borrow::Borrow;
 
 #[derive(Default, Clone)]
@@ -185,14 +190,12 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 
 #[cfg(test)]
 mod test {
-	use crate::setup::common::{setup_params_x5_3};
-
 	use super::*;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
-use arkworks_utils::utils::common::Curve;
+	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 	type PoseidonCRH3 = CRH<Fq>;
 	type PoseidonCRH3Gadget = CRHGadget<Fq>;

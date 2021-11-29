@@ -1,4 +1,10 @@
-use crate::{
+use crate::Vec;
+use ark_crypto_primitives::{crh::CRHGadget, CRH};
+use ark_ff::fields::PrimeField;
+use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_std::marker::PhantomData;
+use arkworks_gadgets::{
 	arbitrary::bridge_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
 	leaf::bridge::{
 		constraints::{
@@ -14,13 +20,7 @@ use crate::{
 		constraints::{PrivateVar as SetPrivateInputsVar, SetMembershipGadget},
 		Private as SetPrivateInputs,
 	},
-	Vec,
 };
-use ark_crypto_primitives::{crh::CRHGadget, CRH};
-use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
-use ark_std::marker::PhantomData;
 
 pub struct BridgeCircuit<
 	F: PrimeField,
@@ -197,6 +197,9 @@ mod test {
 	use ark_groth16::Groth16;
 	use ark_snark::SNARK;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{
+		setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve,
+	};
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30

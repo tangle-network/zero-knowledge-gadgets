@@ -1,7 +1,10 @@
-use arkworks_utils::{poseidon::{PoseidonError, PoseidonParameters}, utils::{from_field_elements, to_field_elements}};
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
-use ark_ff::{fields::PrimeField};
+use ark_ff::fields::PrimeField;
 use ark_std::{marker::PhantomData, rand::Rng, vec::Vec};
+use arkworks_utils::{
+	poseidon::{PoseidonError, PoseidonParameters},
+	utils::to_field_elements,
+};
 
 pub mod circom;
 
@@ -150,11 +153,11 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 
-	use crate::{
-		setup::common::{setup_params_x5_3, setup_params_x5_5},
+	use arkworks_utils::utils::{
+		bn254_x5_3::get_poseidon_bn254_x5_3,
+		common::{setup_params_x5_3, setup_params_x5_5, Curve},
+		get_results_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_5,
 	};
-
-	use arkworks_utils::utils::{bn254_x5_3::get_poseidon_bn254_x5_3, common::Curve, get_results_poseidon_bn254_x5_3, get_results_poseidon_bn254_x5_5};
 
 	type PoseidonCRH = CRH<Fq>;
 

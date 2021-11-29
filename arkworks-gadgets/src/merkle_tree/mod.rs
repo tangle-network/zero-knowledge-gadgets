@@ -402,14 +402,15 @@ pub fn gen_empty_hashes<P: Config>(
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, hash_inner_node, hash_leaf, Config, SparseMerkleTree};
-	use crate::{
-		poseidon::CRH as PoseidonCRH,
-		setup::common::{setup_params_x5_3, Curve},
-	};
+	use crate::poseidon::CRH as PoseidonCRH;
 	use ark_bls12_381::Fq;
 	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::{ToBytes, UniformRand};
 	use ark_std::{borrow::Borrow, collections::BTreeMap, rc::Rc, test_rng};
+	use arkworks_utils::{
+		mimc::MiMCParameters,
+		utils::common::{setup_params_x5_3, Curve},
+	};
 
 	type SMTCRH = PoseidonCRH<Fq>;
 
@@ -536,12 +537,12 @@ mod test {
 	#[test]
 	fn should_create_tree_mimc() {
 		let rng = &mut test_rng();
-		let params = crate::mimc::MiMCParameters::<Bn254Fq>::new(
+		let params = MiMCParameters::<Bn254Fq>::new(
 			Bn254Fq::from(0),
 			MiMCRounds220_2::ROUNDS,
 			MiMCRounds220_2::WIDTH,
 			MiMCRounds220_2::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
+			arkworks_utils::utils::get_rounds_mimc_220(),
 		);
 
 		let inner_params = Rc::new(params);
@@ -575,12 +576,12 @@ mod test {
 	#[test]
 	fn should_generate_and_validate_proof_mimc() {
 		let rng = &mut test_rng();
-		let params = crate::mimc::MiMCParameters::<Bn254Fq>::new(
+		let params = MiMCParameters::<Bn254Fq>::new(
 			Bn254Fq::from(0),
 			MiMCRounds220_2::ROUNDS,
 			MiMCRounds220_2::WIDTH,
 			MiMCRounds220_2::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
+			arkworks_utils::utils::get_rounds_mimc_220(),
 		);
 		let inner_params = Rc::new(params);
 		let leaf_params = inner_params.clone();
@@ -597,12 +598,12 @@ mod test {
 	#[test]
 	fn should_find_the_index_mimc() {
 		let rng = &mut test_rng();
-		let params = crate::mimc::MiMCParameters::<Bn254Fq>::new(
+		let params = MiMCParameters::<Bn254Fq>::new(
 			Bn254Fq::from(0),
 			MiMCRounds220_2::ROUNDS,
 			MiMCRounds220_2::WIDTH,
 			MiMCRounds220_2::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
+			arkworks_utils::utils::get_rounds_mimc_220(),
 		);
 		let inner_params = Rc::new(params);
 		let leaf_params = inner_params.clone();

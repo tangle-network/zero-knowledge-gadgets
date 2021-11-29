@@ -1,15 +1,24 @@
 use super::common::*;
-use crate::{
+use crate::circuit::bridge::BridgeCircuit;
+
+use arkworks_gadgets::{
 	arbitrary::bridge_data::Input as BridgeDataInput,
-	circuit::bridge::BridgeCircuit,
 	leaf::bridge::{
 		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
-	poseidon::PoseidonParameters,
 	set::membership::{
 		constraints::SetMembershipGadget, Private as SetMembershipPrivate, SetMembership,
 	},
 };
+use arkworks_utils::{
+	poseidon::PoseidonParameters,
+	utils::common::{
+		setup_circom_params_x5_3, setup_circom_params_x5_5, setup_params_x17_3, setup_params_x17_5,
+		setup_params_x5_3,
+		setup_params_x5_5, Curve,
+	},
+};
+
 use ark_crypto_primitives::{CRH as CRHTrait, SNARK};
 use ark_ec::PairingEngine;
 use ark_ff::PrimeField;
@@ -334,6 +343,7 @@ mod test {
 	use ark_bls12_381::{Bls12_381, Fr as Bls381};
 	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5, verify_groth16};
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30

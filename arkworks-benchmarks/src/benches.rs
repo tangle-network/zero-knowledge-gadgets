@@ -9,18 +9,16 @@ use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_p
 use ark_std::{self, rc::Rc, test_rng, time::Instant};
 use arkworks_gadgets::{
 	arbitrary::bridge_data::Input as BridgeDataInput,
-	circuit::bridge::BridgeCircuit,
 	leaf::bridge::{
 		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-	poseidon::{constraints::CRHGadget, sbox::PoseidonSbox, PoseidonParameters, CRH},
+	poseidon::{constraints::CRHGadget, CRH},
 	set::membership::{constraints::SetMembershipGadget, SetMembership},
-	utils::{
-		get_mds_poseidon_bn254_x5_3, get_mds_poseidon_bn254_x5_5, get_rounds_poseidon_bn254_x5_3,
-		get_rounds_poseidon_bn254_x5_5,
-	},
 };
+use arkworks_circuits::circuit::bridge::BridgeCircuit;
+
+ use arkworks_utils::utils::common::{setup_params_x5_5, setup_params_x5_3};
 use blake2::Blake2s;
 
 macro_rules! setup_circuit {
@@ -28,40 +26,18 @@ macro_rules! setup_circuit {
 		const M: usize = 4;
 		const N: usize = 30;
 
-		#[derive(Default, Clone)]
-		struct PoseidonRounds5;
 
-		impl Rounds for PoseidonRounds5 {
-			const FULL_ROUNDS: usize = 8;
-			const PARTIAL_ROUNDS: usize = 57;
-			const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-			const WIDTH: usize = 5;
-		}
+		type PoseidonCRH = CRH<$test_field>;
+		type PoseidonCRHGadget = CRHGadget<$test_field>;
 
-		type PoseidonCRH5 = CRH<$test_field, PoseidonRounds5>;
-		type PoseidonCRH5Gadget = CRHGadget<$test_field, PoseidonRounds5>;
-
-		#[derive(Default, Clone)]
-		struct PoseidonRounds3;
-
-		impl Rounds for PoseidonRounds3 {
-			const FULL_ROUNDS: usize = 8;
-			const PARTIAL_ROUNDS: usize = 57;
-			const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-			const WIDTH: usize = 3;
-		}
-
-		type PoseidonCRH3 = CRH<$test_field, PoseidonRounds3>;
-		type PoseidonCRH3Gadget = CRHGadget<$test_field, PoseidonRounds3>;
-
-		type Leaf = BridgeLeaf<$test_field, PoseidonCRH5>;
-		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH5, PoseidonCRH5Gadget>;
+		type Leaf = BridgeLeaf<$test_field, PoseidonCRH>;
+		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH, PoseidonCRHGadget>;
 
 		#[derive(Clone, PartialEq)]
 		struct BridgeTreeConfig;
 		impl MerkleConfig for BridgeTreeConfig {
-			type H = PoseidonCRH3;
-			type LeafH = PoseidonCRH3;
+			type H = PoseidonCRH;
+			type LeafH = PoseidonCRH;
 
 			const HEIGHT: u8 = N as _;
 		}
@@ -73,17 +49,17 @@ macro_rules! setup_circuit {
 
 		type Circuit = BridgeCircuit<
 			$test_field,
-			PoseidonCRH5,
-			PoseidonCRH5Gadget,
+			PoseidonCRH,
+			PoseidonCRHGadget,
 			BridgeTreeConfig,
-			PoseidonCRH3Gadget,
-			PoseidonCRH3Gadget,
+			PoseidonCRHGadget,
+			PoseidonCRHGadget,
 			N,
 			M,
 		>;
 
 		let rng = &mut test_rng();
-
+		let curve = arkworks_utils::utils::common::Curve::Bn254;
 		// Secret inputs for the leaf
 		let leaf_private = LeafPrivate::generate(rng);
 		// Public inputs for the leaf
@@ -91,9 +67,7 @@ macro_rules! setup_circuit {
 		let leaf_public = LeafPublic::new(chain_id);
 
 		// Round params for the poseidon in leaf creation gadget
-		let rounds5 = get_rounds_poseidon_bn254_x5_5::<$test_field>();
-		let mds5 = get_mds_poseidon_bn254_x5_5::<$test_field>();
-		let params5 = PoseidonParameters::<$test_field>::new(rounds5, mds5);
+		let params5 = setup_params_x5_5(curve);
 		// Creating the leaf
 		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
 		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
@@ -107,9 +81,8 @@ macro_rules! setup_circuit {
 		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund, commitment);
 
 		// Making params for poseidon in merkle tree
-		let rounds3 = get_rounds_poseidon_bn254_x5_3::<$test_field>();
-		let mds3 = get_mds_poseidon_bn254_x5_3::<$test_field>();
-		let params3 = PoseidonParameters::<$test_field>::new(rounds3, mds3);
+	
+		let params3 = setup_params_x5_3(curve);
 		let leaves = vec![
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),

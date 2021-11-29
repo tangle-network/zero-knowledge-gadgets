@@ -1,7 +1,7 @@
-use crate::utils::to_field_elements;
 use ark_crypto_primitives::{CryptoError, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_std::{marker::PhantomData, rand::Rng, vec::Vec};
+use arkworks_utils::utils::to_field_elements;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;

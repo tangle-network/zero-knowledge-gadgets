@@ -1,7 +1,7 @@
-use crate::utils::to_field_elements;
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
+use arkworks_utils::{mimc::MiMCParameters, utils::to_field_elements};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
@@ -28,48 +28,6 @@ pub trait Rounds: Default + Clone {
 	const WIDTH: usize;
 	/// Number of mimc rounds
 	const ROUNDS: usize;
-}
-
-/// The Poseidon permutation.
-#[derive(Default, Clone)]
-pub struct MiMCParameters<F> {
-	pub k: F,
-	pub rounds: usize,
-	pub num_inputs: usize,
-	pub num_outputs: usize,
-	pub round_keys: Vec<F>,
-}
-
-impl<F: PrimeField> MiMCParameters<F> {
-	pub fn new(
-		k: F,
-		rounds: usize,
-		num_inputs: usize,
-		num_outputs: usize,
-		round_keys: Vec<F>,
-	) -> Self {
-		Self {
-			k,
-			rounds,
-			num_inputs,
-			num_outputs,
-			round_keys,
-		}
-	}
-
-	pub fn generate<R: Rng>(rng: &mut R) -> Self {
-		Self {
-			round_keys: Self::create_round_keys(rng),
-			rounds: 220,
-			k: F::zero(),
-			num_inputs: 2,
-			num_outputs: 1,
-		}
-	}
-
-	pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
-		todo!();
-	}
 }
 
 pub struct CRH<F: PrimeField, P: Rounds> {
@@ -241,7 +199,7 @@ mod test {
 			MiMCRounds220::ROUNDS,
 			MiMCRounds220::WIDTH,
 			MiMCRounds220::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
+			arkworks_utils::utils::get_rounds_mimc_220(),
 		);
 
 		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();

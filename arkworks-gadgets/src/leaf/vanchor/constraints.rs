@@ -38,19 +38,13 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct VAnchorLeafGadget<
-	F: PrimeField,
-	H: CRH,
-	HG: CRHGadget<H, F>,
-> {
+pub struct VAnchorLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>,>
-	VAnchorLeafGadget<F, H, HG>
-{
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> VAnchorLeafGadget<F, H, HG> {
 	pub fn create_leaf<BG: ToBytesGadget<F>>(
 		private: &PrivateVar<F>,
 		public: &PublicVar<F>,
@@ -124,7 +118,6 @@ mod test {
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
 		},
-		setup::common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
 	};
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
@@ -133,14 +126,16 @@ mod test {
 	use ark_ff::to_bytes;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{
+		setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
+	};
 
 	type PoseidonCRH = CRH<Fq>;
-	
+
 	type PoseidonCRHGadget = CRHGadget<Fq>;
 
 	type Leaf = VAnchorLeaf<Fq, PoseidonCRH>;
-	type LeafGadget =
-		VAnchorLeafGadget<Fq, PoseidonCRH, PoseidonCRHGadget,>;
+	type LeafGadget = VAnchorLeafGadget<Fq, PoseidonCRH, PoseidonCRHGadget>;
 	use crate::ark_std::{One, UniformRand};
 	#[test]
 	fn should_crate_new_leaf_constraints() {

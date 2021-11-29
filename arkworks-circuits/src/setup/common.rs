@@ -1,17 +1,15 @@
-use crate::{
+use arkworks_gadgets::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
-	mimc::{MiMCParameters, Rounds as MiMCRounds},
 	poseidon::{
 		circom::{constraints::CircomCRHGadget, CircomCRH},
 		constraints::CRHGadget,
-		PoseidonParameters, CRH,
+		CRH,
 	},
 };
-use ark_crypto_primitives::SNARK;
-use ark_ec::PairingEngine;
+use arkworks_utils::{mimc::MiMCParameters, poseidon::PoseidonParameters};
+
 use ark_ff::fields::PrimeField;
-use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_std::{marker::PhantomData, rc::Rc};
 use paste::paste;
 
@@ -48,13 +46,13 @@ pub type PoseidonCRH_x17_5Gadget<F> = CRHGadget<F>;
 #[derive(Default, Clone)]
 pub struct MiMCRounds_220_3;
 
-impl crate::mimc::Rounds for MiMCRounds_220_3 {
+impl arkworks_gadgets::mimc::Rounds for MiMCRounds_220_3 {
 	const ROUNDS: usize = 220;
 	const WIDTH: usize = 3;
 }
 
-pub type MiMCCRH_220<F> = crate::mimc::CRH<F, MiMCRounds_220_3>;
-pub type MiMCCRH_220Gadget<F> = crate::mimc::constraints::CRHGadget<F, MiMCRounds_220_3>;
+pub type MiMCCRH_220<F> = arkworks_gadgets::mimc::CRH<F, MiMCRounds_220_3>;
+pub type MiMCCRH_220Gadget<F> = arkworks_gadgets::mimc::constraints::CRHGadget<F, MiMCRounds_220_3>;
 
 pub type LeafCRH<F> = IdentityCRH<F>;
 pub type LeafCRHGadget<F> = IdentityCRHGadget<F>;
@@ -62,12 +60,6 @@ pub type Tree_x5<F> = SparseMerkleTree<TreeConfig_x5<F>>;
 pub type Tree_Circomx5<F> = SparseMerkleTree<TreeConfig_Circomx5<F>>;
 pub type Tree_x17<F> = SparseMerkleTree<TreeConfig_x17<F>>;
 pub type Tree_MiMC220<F> = SparseMerkleTree<TreeConfig_MiMC220<F>>;
-
-#[derive(Copy, Clone)]
-pub enum Curve {
-	Bls381,
-	Bn254,
-}
 
 #[derive(Clone, PartialEq)]
 pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
@@ -160,117 +152,3 @@ impl_setup_tree!(
 	config: TreeConfig_MiMC220,
 	params: MiMCParameters
 );
-
-pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => crate::utils::bls381_x3_3::get_poseidon_bls381_x3_3(),
-		Curve::Bn254 => crate::utils::bn254_x3_3::get_poseidon_bn254_x3_3(),
-	}
-}
-pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => crate::utils::bls381_x3_5::get_poseidon_bls381_x3_5(),
-		Curve::Bn254 => crate::utils::bn254_x3_5::get_poseidon_bn254_x3_5(),
-	}
-}
-
-pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => crate::utils::bls381_x5_3::get_poseidon_bls381_x5_3(),
-		Curve::Bn254 => crate::utils::bn254_x5_3::get_poseidon_bn254_x5_3(),
-	}
-}
-
-pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => {
-			unimplemented!("we don't hava parameters for bls381 curve yet");
-		}
-		Curve::Bn254 => crate::utils::bn254_x5_2::get_poseidon_bn254_x5_2(),
-	}
-}
-
-pub fn setup_circom_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => {
-			unimplemented!("we don't hava parameters for bls381 curve yet");
-		}
-		Curve::Bn254 => crate::utils::bn254_circom_x5_3::get_poseidon_circom_bn254_x5_3(),
-	}
-}
-
-pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => {
-			unimplemented!("we don't hava parameters for bls381 curve yet");
-		}
-		Curve::Bn254 => crate::utils::bn254_x5_4::get_poseidon_bn254_x5_4(),
-	}
-}
-
-pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => crate::utils::bls381_x5_5::get_poseidon_bls381_x5_5(),
-		Curve::Bn254 => crate::utils::bn254_x5_5::get_poseidon_bn254_x5_5(),
-	}
-}
-
-pub fn setup_circom_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => {
-			unimplemented!("we don't hava parameters for bls381 curve yet");
-		}
-		Curve::Bn254 => crate::utils::bn254_circom_x5_5::get_poseidon_circom_bn254_x5_5(),
-	}
-}
-
-pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => crate::utils::bls381_x17_3::get_poseidon_bls381_x17_3(),
-		Curve::Bn254 => crate::utils::bn254_x17_3::get_poseidon_bn254_x17_3(),
-	}
-}
-
-pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
-	// Making params for poseidon in merkle tree
-	match curve {
-		Curve::Bls381 => crate::utils::bls381_x17_5::get_poseidon_bls381_x17_5(),
-		Curve::Bn254 => crate::utils::bn254_x17_5::get_poseidon_bn254_x17_5(),
-	}
-}
-
-pub fn setup_mimc_220<F: PrimeField>(curve: Curve) -> crate::mimc::MiMCParameters<F> {
-	match curve {
-		Curve::Bls381 => {
-			unimplemented!();
-		}
-		Curve::Bn254 => crate::mimc::MiMCParameters::<F>::new(
-			F::zero(),
-			MiMCRounds_220_3::ROUNDS,
-			MiMCRounds_220_3::WIDTH,
-			MiMCRounds_220_3::WIDTH,
-			crate::utils::get_rounds_mimc_220(),
-		),
-	}
-}
-
-pub fn verify_groth16<E: PairingEngine>(
-	vk: &VerifyingKey<E>,
-	public_inputs: &[E::Fr],
-	proof: &Proof<E>,
-) -> bool {
-	let res = Groth16::<E>::verify(vk, public_inputs, proof);
-	match res {
-		Ok(is_valid) => is_valid,
-		Err(e) => panic!("{}", e),
-	}
-}
