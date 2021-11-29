@@ -182,14 +182,13 @@ mod test {
 	}
 
 	#[test]
-	fn setup_and_prove_random_circom_mixer_groth16() {
+	fn setup_and_prove_random_mixer_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let (circuit, .., public_inputs) =
-			setup_random_circuit_circomx5::<_, Bn254Fr, LEN>(rng, curve);
+		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, Bn254Fr, LEN>(rng, curve);
 
-		let (pk, vk) = setup_groth16_circuit_circomx5::<_, Bn254, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_circomx5::<_, Bn254, LEN>(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_circuit_x5::<_, Bn254, LEN>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5::<_, Bn254, LEN>(&pk, circuit, rng);
 
 		let res = verify_groth16::<Bn254>(&vk, &public_inputs, &proof);
 		println!("{}", res);
@@ -197,7 +196,7 @@ mod test {
 	}
 
 	#[test]
-	fn setup_and_prove_mixer_circom_groth16() {
+	fn setup_and_prove_mixer__groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
@@ -208,17 +207,17 @@ mod test {
 		let fee = Bn254Fr::zero();
 		let refund = Bn254Fr::zero();
 
-		let (circuit, .., public_inputs) = setup_circuit_circomx5::<_, Bn254Fr, LEN>(
+		let (circuit, .., public_inputs) = setup_circuit_x5::<_, Bn254Fr, LEN>(
 			&leaves, index, recipient, relayer, fee, refund, rng, curve,
 		);
 
-		let (pk, vk) = setup_groth16_circuit_circomx5::<_, Bn254, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_circomx5(&pk, circuit, rng);
+		let (pk, vk) = setup_groth16_circuit_x5::<_, Bn254, LEN>(rng, circuit.clone());
+		let proof = prove_groth16_circuit_x5(&pk, circuit, rng);
 
 		let res = verify_groth16(&vk, &public_inputs, &proof);
 		assert!(
 			res,
-			"Failed to verify Circom Proof, here is the inputs:
+			"Failed to verify  Proof, here is the inputs:
 			recipient = {},
 			relayer = {},
 			fee = {},

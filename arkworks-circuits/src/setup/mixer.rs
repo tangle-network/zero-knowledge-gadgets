@@ -26,11 +26,8 @@ use paste::paste;
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 
 pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
-pub type Leaf_Circomx5<F> = MixerLeaf<F, PoseidonCircomCRH_x5_5<F>>;
 
 pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>>;
-pub type LeafGadget_Circomx5<F> =
-	MixerLeafGadget<F, PoseidonCircomCRH_x5_5<F>, PoseidonCircomCRH_x5_5Gadget<F>>;
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
@@ -39,16 +36,6 @@ pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x5_3Gadget<F>,
-	N,
->;
-
-pub type Circuit_Circomx5<F, const N: usize> = MixerCircuit<
-	F,
-	PoseidonCircomCRH_x5_5<F>,
-	PoseidonCircomCRH_x5_5Gadget<F>,
-	TreeConfig_Circomx5<F>,
-	LeafCRHGadget<F>,
-	PoseidonCircomCRH_x5_3Gadget<F>,
 	N,
 >;
 
@@ -129,13 +116,9 @@ macro_rules! impl_setup_mixer_leaf {
 }
 
 impl_setup_mixer_leaf!(name: x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
+impl_setup_mixer_leaf!(name: _x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
 impl_setup_mixer_leaf!(
-	name: Circomx5,
-	crh: PoseidonCircomCRH_x5_5,
-	params: PoseidonParameters
-);
-impl_setup_mixer_leaf!(
-	name: x17,
+	name: _x17,
 	crh: PoseidonCRH_x17_5,
 	params: PoseidonParameters
 );
@@ -206,21 +189,15 @@ impl_setup_mixer_circuit!(
 	circuit: Circuit_x5,
 	params3_fn: setup_params_x5_3,
 	params5_fn: setup_params_x5_5,
-	leaf_setup_fn: setup_leaf_x5,
+	leaf_setup_fn: setup_leaf__x5,
 	tree_setup_fn: setup_tree_and_create_path_tree_x5
 );
-impl_setup_mixer_circuit!(
-	circuit: Circuit_Circomx5,
-	params3_fn: setup_params_x5_3,
-	params5_fn: setup_params_x5_5,
-	leaf_setup_fn: setup_leaf_circomx5,
-	tree_setup_fn: setup_tree_and_create_path_tree_circomx5
-);
+
 impl_setup_mixer_circuit!(
 	circuit: Circuit_x17,
 	params3_fn: setup_params_x17_3,
 	params5_fn: setup_params_x17_5,
-	leaf_setup_fn: setup_leaf_x17,
+	leaf_setup_fn: setup_leaf__x17,
 	tree_setup_fn: setup_tree_and_create_path_tree_x17
 );
 impl_setup_mixer_circuit!(
@@ -276,7 +253,6 @@ macro_rules! impl_groth16_api_wrappers {
 }
 
 impl_groth16_api_wrappers!(circuit: Circuit_x5);
-impl_groth16_api_wrappers!(circuit: Circuit_Circomx5);
 impl_groth16_api_wrappers!(circuit: Circuit_x17);
 impl_groth16_api_wrappers!(circuit: Circuit_MiMC220);
 

@@ -24,14 +24,8 @@ pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F>;
 pub type PoseidonCRH_x5_4<F> = CRH<F>;
 pub type PoseidonCRH_x5_4Gadget<F> = CRHGadget<F>;
 
-pub type PoseidonCircomCRH_x5_3<F> = CRH<F>;
-pub type PoseidonCircomCRH_x5_3Gadget<F> = CRHGadget<F>;
-
 pub type PoseidonCRH_x5_2<F> = CRH<F>;
 pub type PoseidonCRH_x5_2Gadget<F> = CRHGadget<F>;
-
-pub type PoseidonCircomCRH_x5_5<F> = CRH<F>;
-pub type PoseidonCircomCRH_x5_5Gadget<F> = CRHGadget<F>;
 
 pub type PoseidonCRH_x17_3<F> = CRH<F>;
 pub type PoseidonCRH_x17_3Gadget<F> = CRHGadget<F>;
@@ -53,7 +47,6 @@ pub type MiMCCRH_220Gadget<F> = arkworks_gadgets::mimc::constraints::CRHGadget<F
 pub type LeafCRH<F> = IdentityCRH<F>;
 pub type LeafCRHGadget<F> = IdentityCRHGadget<F>;
 pub type Tree_x5<F> = SparseMerkleTree<TreeConfig_x5<F>>;
-pub type Tree_Circomx5<F> = SparseMerkleTree<TreeConfig_Circomx5<F>>;
 pub type Tree_x17<F> = SparseMerkleTree<TreeConfig_x17<F>>;
 pub type Tree_MiMC220<F> = SparseMerkleTree<TreeConfig_MiMC220<F>>;
 
@@ -61,15 +54,6 @@ pub type Tree_MiMC220<F> = SparseMerkleTree<TreeConfig_MiMC220<F>>;
 pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
 impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
 	type H = PoseidonCRH_x5_3<F>;
-	type LeafH = LeafCRH<F>;
-
-	const HEIGHT: u8 = 30;
-}
-
-#[derive(Clone, PartialEq)]
-pub struct TreeConfig_Circomx5<F: PrimeField>(PhantomData<F>);
-impl<F: PrimeField> MerkleConfig for TreeConfig_Circomx5<F> {
-	type H = PoseidonCircomCRH_x5_3<F>;
 	type LeafH = LeafCRH<F>;
 
 	const HEIGHT: u8 = 30;
@@ -136,11 +120,6 @@ impl_setup_tree!(
 impl_setup_tree!(
 	tree: Tree_x17,
 	config: TreeConfig_x17,
-	params: PoseidonParameters
-);
-impl_setup_tree!(
-	tree: Tree_Circomx5,
-	config: TreeConfig_Circomx5,
 	params: PoseidonParameters
 );
 impl_setup_tree!(

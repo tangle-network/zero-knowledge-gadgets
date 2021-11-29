@@ -30,11 +30,8 @@ use paste::paste;
 pub type BridgeConstraintDataInput<F> = BridgeDataInput<F>;
 
 pub type Leaf_x5<F> = BridgeLeaf<F, PoseidonCRH_x5_5<F>>;
-pub type Leaf_Circomx5<F> = BridgeLeaf<F, PoseidonCircomCRH_x5_5<F>>;
 
 pub type LeafGadget_x5<F> = BridgeLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>>;
-pub type LeafGadget_Circomx5<F> =
-	BridgeLeafGadget<F, PoseidonCircomCRH_x5_5<F>, PoseidonCircomCRH_x5_5Gadget<F>>;
 
 pub type TestSetMembership<F, const M: usize> = SetMembership<F, M>;
 pub type TestSetMembershipGadget<F, const M: usize> = SetMembershipGadget<F, M>;
@@ -46,17 +43,6 @@ pub type Circuit_x5<F, const N: usize, const M: usize> = BridgeCircuit<
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x5_3Gadget<F>,
-	N,
-	M,
->;
-
-pub type Circuit_Circomx5<F, const N: usize, const M: usize> = BridgeCircuit<
-	F,
-	PoseidonCircomCRH_x5_5<F>,
-	PoseidonCircomCRH_x5_5Gadget<F>,
-	TreeConfig_Circomx5<F>,
-	LeafCRHGadget<F>,
-	PoseidonCircomCRH_x5_3Gadget<F>,
 	N,
 	M,
 >;
@@ -158,13 +144,9 @@ macro_rules! impl_setup_bridge_leaf {
 }
 
 impl_setup_bridge_leaf!(name: x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
+impl_setup_bridge_leaf!(name: _x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
 impl_setup_bridge_leaf!(
-	name: Circomx5,
-	crh: PoseidonCircomCRH_x5_5,
-	params: PoseidonParameters
-);
-impl_setup_bridge_leaf!(
-	name: x17,
+	name: _x17,
 	crh: PoseidonCRH_x17_5,
 	params: PoseidonParameters
 );
@@ -270,17 +252,10 @@ impl_setup_bridge_circuit!(
 	tree_setup_fn: setup_tree_and_create_path_tree_x5
 );
 impl_setup_bridge_circuit!(
-	circuit: Circuit_Circomx5,
-	params3_fn: setup_params_x5_3,
-	params5_fn: setup_params_x5_5,
-	leaf_setup_fn: setup_leaf_circomx5,
-	tree_setup_fn: setup_tree_and_create_path_tree_circomx5
-);
-impl_setup_bridge_circuit!(
 	circuit: Circuit_x17,
 	params3_fn: setup_params_x17_3,
 	params5_fn: setup_params_x17_5,
-	leaf_setup_fn: setup_leaf_x17,
+	leaf_setup_fn: setup_leaf__x17,
 	tree_setup_fn: setup_tree_and_create_path_tree_x17
 );
 
@@ -333,7 +308,6 @@ macro_rules! impl_groth16_api_wrappers {
 }
 
 impl_groth16_api_wrappers!(circuit: Circuit_x5);
-impl_groth16_api_wrappers!(circuit: Circuit_Circomx5);
 impl_groth16_api_wrappers!(circuit: Circuit_x17);
 #[cfg(test)]
 mod test {
