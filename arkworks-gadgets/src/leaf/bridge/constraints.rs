@@ -93,7 +93,6 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;

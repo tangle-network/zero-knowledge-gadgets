@@ -46,7 +46,6 @@ impl<F: PrimeField, H: CRH> MixerLeaf<F, H> {
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use ark_bls12_381::Fq;

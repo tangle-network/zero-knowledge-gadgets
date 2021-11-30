@@ -107,7 +107,7 @@ impl<F: PrimeField> TwoToOneCRH for CRH<F> {
 	}
 }
 
-#[cfg(all(test, feature = "poseidon_bn254_x5_3"))]
+#[cfg(test)]
 mod test {
 	use super::*;
 	// use ark_bn254::Fq as Bn254Fq;

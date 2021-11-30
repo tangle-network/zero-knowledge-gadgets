@@ -149,7 +149,6 @@ where
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use crate::setup::{common::*, mixer::*};
@@ -196,7 +195,7 @@ mod test {
 	}
 
 	#[test]
-	fn setup_and_prove_mixer__groth16() {
+	fn setup_and_prove_mixer_groth16_2() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 

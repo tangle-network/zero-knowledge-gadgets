@@ -63,7 +63,6 @@ impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> AllocVar<Keypair<F, H2>, F>
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;

@@ -187,7 +187,6 @@ where
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;

@@ -39,64 +39,6 @@ ethabi = {version = "15.0.0"}
 hex-literal = {version = "0.3.4"}
 tiny-keccak = {version = "2.0.2"}
 [features]
-default = ["std", "default_poseidon", "r1cs", "default_mimc"]
-default_mimc = ["mimc_220_ed_on_bn254"]
-default_poseidon = [
-    "poseidon_bls381_x3_3",
-    "poseidon_bls381_x3_5",
-    "poseidon_bls381_x5_5",
-    "poseidon_bls381_x5_3",
-    "poseidon_bn254_x5_5",
-    "poseidon_bn254_x5_4",
-    "poseidon_bn254_x5_3",
-    "poseidon_bn254_x5_2",
-    "poseidon_bls381_x17_5",
-    "poseidon_bls381_x17_3",
-    "poseidon_bn254_x17_5",
-    "poseidon_bn254_x17_3",
-    "poseidon_bn254_x3_3",
-    "poseidon_bn254_x3_5",
-]
-
-test = ["poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
+default = ["std", "r1cs",]
 r1cs = []
 std = ["ark-std/std"]
-all = [
-    "poseidon_bls381_x3_5",
-    "poseidon_bls381_x3_3",
-    "poseidon_bls381_x5_5",
-    "poseidon_bls381_x5_3",
-    "poseidon_bls381_x17_5",
-    "poseidon_bls381_x17_3",
-    "poseidon_bn254_x3_5",
-    "poseidon_bn254_x3_3",
-    "poseidon_bn254_x5_5",
-    "poseidon_bn254_x5_4",
-    "poseidon_bn254_x5_3",
-    "poseidon_bn254_x5_2",
-    "poseidon_bn254_x17_5",
-    "poseidon_bn254_x17_3",
-]
-poseidon_bls381_x3_5 = []
-poseidon_bls381_x3_3 = []
-poseidon_bls381_x5_5 = []
-poseidon_bls381_x5_3 = []
-poseidon_bls381_x17_5 = []
-poseidon_bls381_x17_3 = []
-
-poseidon_bn254_x3_5 = []
-poseidon_bn254_x3_3 = []
-poseidon_bn254_x5_5 = []
-poseidon_bn254_x5_4 = []
-poseidon_bn254_x5_3 = []
-poseidon_bn254_x5_2 = []
-poseidon_bn254_x17_5 = []
-poseidon_bn254_x17_3 = []
-
-mimc_220_ed_on_bn254 = []
-
-[[bench]]
-name = "bridge_bench"
-path = "benches/bench.rs"
-harness = false
-required-features = ["r1cs", "std", "default_poseidon", "test"]

@@ -116,9 +116,8 @@ macro_rules! impl_setup_mixer_leaf {
 }
 
 impl_setup_mixer_leaf!(name: x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
-impl_setup_mixer_leaf!(name: _x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
 impl_setup_mixer_leaf!(
-	name: _x17,
+	name: x17,
 	crh: PoseidonCRH_x17_5,
 	params: PoseidonParameters
 );
@@ -189,7 +188,7 @@ impl_setup_mixer_circuit!(
 	circuit: Circuit_x5,
 	params3_fn: setup_params_x5_3,
 	params5_fn: setup_params_x5_5,
-	leaf_setup_fn: setup_leaf__x5,
+	leaf_setup_fn: setup_leaf_x5,
 	tree_setup_fn: setup_tree_and_create_path_tree_x5
 );
 
@@ -197,7 +196,7 @@ impl_setup_mixer_circuit!(
 	circuit: Circuit_x17,
 	params3_fn: setup_params_x17_3,
 	params5_fn: setup_params_x17_5,
-	leaf_setup_fn: setup_leaf__x17,
+	leaf_setup_fn: setup_leaf_x17,
 	tree_setup_fn: setup_tree_and_create_path_tree_x17
 );
 impl_setup_mixer_circuit!(

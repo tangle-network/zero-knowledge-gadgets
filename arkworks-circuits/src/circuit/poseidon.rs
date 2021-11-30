@@ -59,7 +59,6 @@ impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> ConstraintSynthesizer
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use super::*;

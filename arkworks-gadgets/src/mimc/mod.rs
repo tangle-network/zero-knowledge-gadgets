@@ -175,7 +175,6 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 	}
 }
 
-#[cfg(all(feature = "mimc_220_ed_on_bn254"))]
 #[cfg(test)]
 mod test {
 	use super::*;

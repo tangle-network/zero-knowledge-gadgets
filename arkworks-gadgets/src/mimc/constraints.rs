@@ -189,7 +189,6 @@ impl<F: PrimeField> AllocVar<MiMCParameters<F>, F> for MiMCParametersVar<F> {
 	}
 }
 
-#[cfg(all(feature = "mimc_220_ed_on_bn254"))]
 #[cfg(test)]
 mod test {
 	#![allow(non_camel_case_types)]

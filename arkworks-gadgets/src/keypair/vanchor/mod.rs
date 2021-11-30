@@ -43,7 +43,6 @@ impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 	}
 }
 
-#[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
 	use crate::{

@@ -144,9 +144,8 @@ macro_rules! impl_setup_bridge_leaf {
 }
 
 impl_setup_bridge_leaf!(name: x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
-impl_setup_bridge_leaf!(name: _x5, crh: PoseidonCRH_x5_5, params: PoseidonParameters);
 impl_setup_bridge_leaf!(
-	name: _x17,
+	name: x17,
 	crh: PoseidonCRH_x17_5,
 	params: PoseidonParameters
 );
@@ -255,7 +254,7 @@ impl_setup_bridge_circuit!(
 	circuit: Circuit_x17,
 	params3_fn: setup_params_x17_3,
 	params5_fn: setup_params_x17_5,
-	leaf_setup_fn: setup_leaf__x17,
+	leaf_setup_fn: setup_leaf_x17,
 	tree_setup_fn: setup_tree_and_create_path_tree_x17
 );
 
