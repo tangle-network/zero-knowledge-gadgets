@@ -122,7 +122,6 @@ impl_setup_mixer_leaf!(
 	params: PoseidonParameters
 );
 impl_setup_mixer_leaf!(name: MiMC220, crh: MiMCCRH_220, params: MiMCParameters);
-
 // Generate code for mixer circuit setup functions:
 //	1. `setup_<circuit>`
 //	2. `setup_random_<circuit>`
@@ -135,6 +134,7 @@ macro_rules! impl_setup_mixer_circuit {
 		tree_setup_fn: $tree_setup_fn:ident
 	) => {
 		paste! {
+					#[allow(clippy::too_many_arguments)]
 					pub fn [<setup_ $circuit_ty:lower>]<R: Rng, F: PrimeField, const N: usize>(
 						leaves: &[F],
 						index: u64,
