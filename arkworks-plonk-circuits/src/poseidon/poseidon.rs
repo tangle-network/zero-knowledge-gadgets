@@ -135,6 +135,14 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 				.collect();
 		}
 
+		let computed_hash = state.get(0).cloned().ok_or(Error::CircuitInputsNotFound)?;
+		let add_result = composer.add(
+			(E::Fr::one(), computed_hash),
+			(E::Fr::one(), composer.zero_var()),
+			E::Fr::zero(),
+			Some(-self.c),
+		);
+		composer.assert_equal(add_result, composer.zero_var());
 		Ok(())
 	}
 
@@ -150,16 +158,15 @@ mod tests {
 	use ark_crypto_primitives::{CRHGadget, CRH};
 	use ark_ed_on_bn254::EdwardsParameters as JubjubParameters;
 	use ark_plonk::{
-		circuit::{self},
+		circuit::{self, FeIntoPubInput},
 		constraint_system::StandardComposer,
 		prelude::*,
 	};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::kzg10::{UniversalParams, KZG10};
+	use arkworks_utils::utils::common::setup_params_x5_3;
 	use num_traits::{One, Zero};
 	use rand_core::OsRng;
-
-	use arkworks_utils::utils::common::setup_params_x5_3;
 
 	#[test]
 	fn should_not_verify_plonk_poseidon() {
@@ -175,9 +182,7 @@ mod tests {
 			width: util_params.width,
 		};
 
-		//this step seems to be needed to tell the subsequent step what the curve E is
-
-		let mut test_circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
 			a: Bn254Fr::zero(),
 			b: Bn254Fr::zero(),
 			c: Bn254Fr::zero(),
@@ -188,6 +193,40 @@ mod tests {
 		let u_params: UniversalParams<Bn254> =
 			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
 
-		let (prover_key, verifier_data) = test_circuit.compile(&u_params).unwrap();
+		let (pk, vd) = circuit.compile(&u_params).unwrap();
+
+		let proof = {
+			let util_params = setup_params_x5_3(curve);
+			let params = PoseidonParameters {
+				round_keys: util_params.round_keys,
+				mds_matrix: util_params.mds_matrix,
+				full_rounds: util_params.full_rounds,
+				partial_rounds: util_params.partial_rounds,
+				sbox: PoseidonSbox::Exponentiation(5),
+				width: util_params.width,
+			};
+
+			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+				a: Bn254Fr::zero(),
+				b: Bn254Fr::zero(),
+				c: Bn254Fr::zero(),
+				params,
+				_marker: std::marker::PhantomData,
+			};
+			circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
+		};
+
+		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
+			vec![Bn254Fr::from(25u64).into_pi()];
+
+		circuit::verify_proof(
+			&u_params,
+			vd.clone().key(),
+			&proof,
+			&public_inputs,
+			vd.clone().pi_pos(),
+			b"Test",
+		)
+		.unwrap();
 	}
 }
