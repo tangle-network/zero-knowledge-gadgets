@@ -83,6 +83,7 @@ impl<F: PrimeField, const M: usize> AllocVar<Private<F, M>, F> for PrivateVar<F,
 mod test {
 	use super::*;
 	use crate::set::membership::SetMembership;
+	use crate::ark_std::{One, Zero};
 	use ark_bls12_381::Fq;
 	use ark_ff::UniformRand;
 	use ark_relations::r1cs::ConstraintSystem;
@@ -116,7 +117,6 @@ mod test {
 		assert!(is_member.cs().is_satisfied().unwrap());
 	}
 
-	use crate::ark_std::{One, Zero};
 
 	#[test]
 	fn test_native_equality_is_enabled() {

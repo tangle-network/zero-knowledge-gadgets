@@ -74,9 +74,9 @@ mod test {
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 	use blake2::Blake2s;
 
-	type PoseidonCRH3 = CRH<BlsFr>;
-	type PoseidonCRH3Gadget = CRHGadget<BlsFr>;
-	type PoseidonC = PoseidonCircuit<BlsFr, PoseidonCRH3, PoseidonCRH3Gadget>;
+	type PoseidonCRH = CRH<BlsFr>;
+	type PoseidonCRHGadget = CRHGadget<BlsFr>;
+	type PoseidonC = PoseidonCircuit<BlsFr, PoseidonCRH, PoseidonCRHGadget>;
 
 	#[test]
 	fn should_verify_poseidon_circuit() {
@@ -88,7 +88,7 @@ mod test {
 		let bytes = to_bytes![a, b].unwrap();
 		let parameters = setup_params_x5_3(curve);
 
-		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
+		let c = PoseidonCRH::evaluate(&parameters, &bytes).unwrap();
 		let nc = 3000;
 		let nv = 2;
 		let circuit = PoseidonC::new(a, b, c, parameters);
@@ -114,7 +114,7 @@ mod test {
 		let bytes = to_bytes![a, b].unwrap();
 		let parameters = setup_params_x5_3(curve);
 
-		let c = PoseidonCRH3::evaluate(&parameters, &bytes).unwrap();
+		let c = PoseidonCRH::evaluate(&parameters, &bytes).unwrap();
 		let circuit = PoseidonC::new(a, b, c, parameters);
 
 		type GrothSetup = Groth16<Bls12_381>;

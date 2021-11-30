@@ -46,20 +46,22 @@ impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 #[cfg(feature = "default_poseidon")]
 #[cfg(test)]
 mod test {
-	use crate::poseidon::CRH;
+	use crate::{
+		ark_std::{UniformRand, Zero},
+		poseidon::CRH,
+	};
+
 	use ark_bn254::Fq;
 	use ark_crypto_primitives::crh::CRH as CRHTrait;
 	use ark_ff::to_bytes;
 	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
 
-	use crate::ark_std::Zero;
 	use ark_std::test_rng;
 
 	use super::Keypair;
 
 	type PoseidonCRH = CRH<Fq>;
 
-	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_crate_new_public_key() {
 		let rng = &mut test_rng();

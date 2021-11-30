@@ -113,12 +113,14 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 mod test {
 	use super::*;
 	use crate::{
+		ark_std::{One, UniformRand},
 		leaf::vanchor::VAnchorLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
 		},
 	};
+
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
@@ -136,7 +138,6 @@ mod test {
 
 	type Leaf = VAnchorLeaf<Fq, PoseidonCRH>;
 	type LeafGadget = VAnchorLeafGadget<Fq, PoseidonCRH, PoseidonCRHGadget>;
-	use crate::ark_std::{One, UniformRand};
 	#[test]
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();

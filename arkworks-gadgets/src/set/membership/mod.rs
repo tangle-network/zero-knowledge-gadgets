@@ -80,6 +80,7 @@ impl<F: PrimeField, const M: usize> SetMembership<F, M> {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::ark_std::Zero;
 	use ark_bls12_381::Fq;
 	use ark_ff::UniformRand;
 	use ark_std::test_rng;
@@ -98,7 +99,7 @@ mod test {
 
 		assert!(is_member);
 	}
-	use crate::ark_std::Zero;
+
 	#[test]
 	fn should_test_membership_with_is_enabled() {
 		let rng = &mut test_rng();

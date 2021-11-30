@@ -74,7 +74,11 @@ impl<F: PrimeField, H: CRH> VAnchorLeaf<F, H> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::poseidon::CRH;
+	use crate::{
+		ark_std::{UniformRand, Zero},
+		poseidon::CRH,
+	};
+
 	use arkworks_utils::utils::{
 		common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},
 		parse_vec,
@@ -89,7 +93,6 @@ mod test {
 	type PoseidonCRH = CRH<Fq>;
 
 	type Leaf = VAnchorLeaf<Fq, PoseidonCRH>;
-	use crate::ark_std::UniformRand;
 	#[test]
 	fn should_create_leaf() {
 		let rng = &mut test_rng();
@@ -112,7 +115,6 @@ mod test {
 		let leaf = Leaf::create_leaf(&secrets, &publics, &pubkey, &params5).unwrap();
 		assert_eq!(ev_res, leaf);
 	}
-	use crate::ark_std::Zero;
 	#[test]
 	fn should_create_nullifier() {
 		let rng = &mut test_rng();
