@@ -44,7 +44,7 @@ pub trait Rounds: Default + Clone {
 	const SBOX: PoseidonSbox;
 }
 
-//will get rid of H,HG and implement poseidonhash directly in fnc
+
 impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, R: Rounds> Circuit<E, P>
 	for PoseidonCircuit<E, R>
 {
@@ -131,4 +131,73 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, R: Rounds> Circu
 	fn padded_circuit_size(&self) -> usize {
 		1 << 11
 	}
+}
+
+
+mod tests {
+	//copied from ark-plonk
+	use super::*;
+	use ark_crypto_primitives::{CRH, CRHGadget};
+	use ark_plonk::constraint_system::StandardComposer;
+	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use ark_ec::twisted_edwards_extended::GroupAffine;
+	use ark_ec::AffineCurve;
+	use ark_poly_commit::kzg10::KZG10;
+	use ark_poly::polynomial::univariate::DensePolynomial;
+	use num_traits::{One,Zero};
+	use rand_core::OsRng; 
+	
+	//copied from arkworks-gadgets
+	// use crate::{
+
+	// 	utils::get_mds_poseidon_bls381_x5_3,
+	// };
+	use crate::utils::{get_mds_poseidon_bls381_x5_3, get_rounds_poseidon_bls381_x5_3};
+
+	//to satisfy trait bounds below
+	#[derive(Default,Clone)]
+
+	//this seems to be a struct to hold details 
+	struct PoseidonRounds1;
+
+	//then you put in some actual numbers
+	impl Rounds for PoseidonRounds1 {
+		const FULL_ROUNDS: usize = 8;
+		const PARTIAL_ROUNDS: usize = 57;
+		const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+		const WIDTH: usize = 3;
+	}
+
+	#[test]
+	fn should_not_verify_plonk_poseidon() {
+		let params = PoseidonParameters{
+			round_keys: get_rounds_poseidon_bls381_x5_3::<BlsFr>(),
+			mds_matrix: get_mds_poseidon_bls381_x5_3::<BlsFr>(),
+		};
+
+		//this step seems to be needed to tell the subsequent step what the curve E is
+		type PoseidonTestCircuit = PoseidonCircuit<Bls12_381, PoseidonRounds1>;
+
+		let test_circuit = PoseidonTestCircuit{
+			a: BlsFr::zero(),
+			b: BlsFr::zero(),
+			c: BlsFr::zero(),
+			params: params,
+			rounds: PhantomData,
+		};
+
+		let u_params = KZG10::<Bls12_381, DensePolynomial<BlsFr>>::setup(
+			1 << 12 ,
+			false,
+			&mut OsRng,
+		)?; //removed a ? from output
+		//is this step necessary? passing &u_params to compile below doesnt work
+		let u_params_ref = &u_params;
+
+		let (prover_key, verifier_data) = test_circuit.compile( u_params_ref )?;
+
+	}
+
+	
+	
 }

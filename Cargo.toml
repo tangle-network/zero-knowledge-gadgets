@@ -28,6 +28,8 @@ ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 num-traits = "0.2.14"
+rand_core = {version="0.6", default-features=false}
+
 
 # curves
 ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
