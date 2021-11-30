@@ -43,15 +43,16 @@ pub struct PoseidonParametersVar {
 }
 
 #[derive(Debug, Default)]
-struct PoseidonCircuit<E: PairingEngine> {
+struct PoseidonCircuit<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
 	pub a: E::Fr,
 	pub b: E::Fr,
 	pub c: E::Fr,
 	pub params: PoseidonParameters<E::Fr>,
+	pub _marker: PhantomData<P>,
 }
 
 impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
-	for PoseidonCircuit<E>
+	for PoseidonCircuit<E, P>
 {
 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
@@ -147,10 +148,14 @@ mod tests {
 	use super::*;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_crypto_primitives::{CRHGadget, CRH};
-	use ark_ec::{twisted_edwards_extended::GroupAffine, AffineCurve};
-	use ark_plonk::constraint_system::StandardComposer;
+	use ark_ed_on_bn254::EdwardsParameters as JubjubParameters;
+	use ark_plonk::{
+		circuit::{self},
+		constraint_system::StandardComposer,
+		prelude::*,
+	};
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::kzg10::KZG10;
+	use ark_poly_commit::kzg10::{UniversalParams, KZG10};
 	use num_traits::{One, Zero};
 	use rand_core::OsRng;
 
@@ -171,20 +176,19 @@ mod tests {
 		};
 
 		//this step seems to be needed to tell the subsequent step what the curve E is
-		type PoseidonTestCircuit = PoseidonCircuit<Bn254>;
+		type PoseidonTestCircuit = PoseidonCircuit<Bn254, JubjubParameters>;
 
-		let test_circuit = PoseidonTestCircuit {
+		let mut test_circuit = PoseidonTestCircuit {
 			a: Bn254Fr::zero(),
 			b: Bn254Fr::zero(),
 			c: Bn254Fr::zero(),
 			params,
+			_marker: std::marker::PhantomData,
 		};
 
-		let u_params =
-			KZG10::<Bls12_381, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng)?; //removed a ? from output
-																				  //is this step necessary? passing &u_params to compile below doesnt work
-		let u_params_ref = &u_params;
+		let u_params: UniversalParams<Bn254> =
+			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
 
-		let (prover_key, verifier_data) = test_circuit.compile(u_params_ref)?;
+		let (prover_key, verifier_data) = test_circuit.compile(&u_params).unwrap();
 	}
 }
