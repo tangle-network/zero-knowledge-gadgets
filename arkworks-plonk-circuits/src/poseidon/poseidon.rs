@@ -136,6 +136,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		}
 
 		let computed_hash = state.get(0).cloned().ok_or(Error::CircuitInputsNotFound)?;
+		println!("GADGET {:?}", computed_hash);
 		let add_result = composer.add(
 			(E::Fr::one(), computed_hash),
 			(E::Fr::one(), composer.zero_var()),
@@ -189,10 +190,10 @@ mod tests {
 		let poseidon_res =
 			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
 				.unwrap();
-
+		println!("RESULT: {:?}", poseidon_res.to_string());
 		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-			a: Fq::one(),
-			b: Fq::one().double(),
+			a: Fq::from_le_bytes_mod_order(&left_input),
+			b: Fq::from_le_bytes_mod_order(&right_input),
 			c: poseidon_res,
 			params,
 			_marker: std::marker::PhantomData,
@@ -216,8 +217,8 @@ mod tests {
 			};
 
 			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-				a: Fq::one(),
-				b: Fq::one().double(),
+				a: Fq::from_le_bytes_mod_order(&left_input),
+				b: Fq::from_le_bytes_mod_order(&right_input),
 				c: poseidon_res,
 				params,
 				_marker: std::marker::PhantomData,
