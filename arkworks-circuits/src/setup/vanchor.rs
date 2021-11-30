@@ -201,7 +201,7 @@ impl<
 		SetMembership::generate_secrets(root, roots).unwrap()
 	}
 
-	pub fn setup_circuit<R: Rng>(
+	/* pub fn setup_circuit<R: Rng>(
 		self,
 		rng: &mut R,
 	) -> (
@@ -300,7 +300,7 @@ impl<
 			),
 			public_inputs,
 		)
-	}
+	} */
 }
 
 // For backwards compatability
