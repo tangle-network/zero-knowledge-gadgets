@@ -91,9 +91,7 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		// Check levels between leaf level and root.
 		for &(ref left_hash, ref right_hash) in &self.path {
 			// Check if the previous hash is for a left node or right node.
-			if &prev == left_hash {
-				index = index;
-			} else {
+			if &prev != left_hash {
 				index = index + twopower;
 			}
 			twopower = twopower + twopower;

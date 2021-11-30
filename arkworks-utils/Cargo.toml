@@ -94,9 +94,3 @@ poseidon_bn254_x17_5 = []
 poseidon_bn254_x17_3 = []
 
 mimc_220_ed_on_bn254 = []
-
-[[bench]]
-name = "bridge_bench"
-path = "benches/bench.rs"
-harness = false
-required-features = ["r1cs", "std", "default_poseidon", "test"]
