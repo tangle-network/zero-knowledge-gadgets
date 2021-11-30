@@ -11,9 +11,9 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = {path = "../arkworks-utils"}
-arkworks-gadgets = {path = "../arkworks-gadgets"}
-arkworks-circuits = {path = "../arkworks-circuits"}
+arkworks-utils = {path = "../arkworks-utils", version = "0.4.0"}
+arkworks-gadgets = {path = "../arkworks-gadgets", version = "0.4.0"}
+arkworks-circuits = {path = "../arkworks-circuits", version = "0.4.0"}
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
