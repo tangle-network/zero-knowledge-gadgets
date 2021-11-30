@@ -176,9 +176,8 @@ mod tests {
 		};
 
 		//this step seems to be needed to tell the subsequent step what the curve E is
-		type PoseidonTestCircuit = PoseidonCircuit<Bn254, JubjubParameters>;
 
-		let mut test_circuit = PoseidonTestCircuit {
+		let mut test_circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
 			a: Bn254Fr::zero(),
 			b: Bn254Fr::zero(),
 			c: Bn254Fr::zero(),
