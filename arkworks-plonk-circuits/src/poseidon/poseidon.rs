@@ -155,8 +155,9 @@ mod tests {
 	//copied from ark-plonk
 	use super::*;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_crypto_primitives::{CRHGadget, CRH};
-	use ark_ed_on_bn254::EdwardsParameters as JubjubParameters;
+	use ark_crypto_primitives::crh::TwoToOneCRH;
+	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
+	use ark_ff::{BigInteger, Field};
 	use ark_plonk::{
 		circuit::{self, FeIntoPubInput},
 		constraint_system::StandardComposer,
@@ -167,6 +168,7 @@ mod tests {
 	use arkworks_utils::utils::common::setup_params_x5_3;
 	use num_traits::{One, Zero};
 	use rand_core::OsRng;
+	type PoseidonCRH3 = arkworks_gadgets::poseidon::CRH<Fq>;
 
 	#[test]
 	fn should_not_verify_plonk_poseidon() {
@@ -174,18 +176,24 @@ mod tests {
 
 		let util_params = setup_params_x5_3(curve);
 		let params = PoseidonParameters {
-			round_keys: util_params.round_keys,
-			mds_matrix: util_params.mds_matrix,
-			full_rounds: util_params.full_rounds,
-			partial_rounds: util_params.partial_rounds,
+			round_keys: util_params.clone().round_keys,
+			mds_matrix: util_params.clone().mds_matrix,
+			full_rounds: util_params.clone().full_rounds,
+			partial_rounds: util_params.clone().partial_rounds,
 			sbox: PoseidonSbox::Exponentiation(5),
-			width: util_params.width,
+			width: util_params.clone().width,
 		};
 
+		let left_input = Fq::one().into_repr().to_bytes_le();
+		let right_input = Fq::one().double().into_repr().to_bytes_le();
+		let poseidon_res =
+			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
+				.unwrap();
+
 		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-			a: Bn254Fr::zero(),
-			b: Bn254Fr::zero(),
-			c: Bn254Fr::zero(),
+			a: Fq::one(),
+			b: Fq::one().double(),
+			c: poseidon_res,
 			params,
 			_marker: std::marker::PhantomData,
 		};
@@ -195,6 +203,7 @@ mod tests {
 
 		let (pk, vd) = circuit.compile(&u_params).unwrap();
 
+		// PROVER
 		let proof = {
 			let util_params = setup_params_x5_3(curve);
 			let params = PoseidonParameters {
@@ -207,17 +216,18 @@ mod tests {
 			};
 
 			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-				a: Bn254Fr::zero(),
-				b: Bn254Fr::zero(),
-				c: Bn254Fr::zero(),
+				a: Fq::one(),
+				b: Fq::one().double(),
+				c: poseidon_res,
 				params,
 				_marker: std::marker::PhantomData,
 			};
 			circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
 		};
 
+		// VERIFIER
 		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
-			vec![Bn254Fr::from(25u64).into_pi()];
+			vec![poseidon_res.into_pi()];
 
 		circuit::verify_proof(
 			&u_params,
@@ -225,7 +235,7 @@ mod tests {
 			&proof,
 			&public_inputs,
 			vd.clone().pi_pos(),
-			b"Test",
+			b"Poseidon Test",
 		)
 		.unwrap();
 	}
