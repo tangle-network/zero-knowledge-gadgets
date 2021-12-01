@@ -51,6 +51,7 @@ impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> ConstraintSynthesizer
 		let input = Vec::<UInt8<F>>::new_witness(cs.clone(), || Ok(bytes))?;
 
 		let params_var = HG::ParametersVar::new_witness(cs, || Ok(self.params))?;
+
 		let res_var = HG::evaluate(&params_var, &input)?;
 
 		res_var.enforce_equal(&res_target)?;

@@ -19,6 +19,7 @@ impl<F: PrimeField> Clone for DummyCircuit<F> {
 			b: self.b,
 			num_variables: self.num_variables,
 			num_constraints: self.num_constraints,
+
 		}
 	}
 }
