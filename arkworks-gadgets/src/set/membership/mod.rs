@@ -44,7 +44,7 @@ impl<F: PrimeField, const M: usize> SetMembership<F, M> {
 	pub fn check<T: ToBytes>(target: &T, set: &[F; M], s: &Private<F, M>) -> Result<bool, Error> {
 		let target_bytes = to_bytes![target]?;
 		let target = F::read(target_bytes.as_slice())?;
-		let mut product = target.clone();
+		let mut product = target;
 
 		for (diff, real) in s.diffs.iter().zip(set.iter()) {
 			if *real != (*diff + target) {
@@ -64,7 +64,7 @@ impl<F: PrimeField, const M: usize> SetMembership<F, M> {
 	) -> Result<bool, Error> {
 		let target_bytes = to_bytes![target]?;
 		let target = F::read(target_bytes.as_slice())?;
-		let mut product = target.clone();
+		let mut product = target;
 		let z = F::zero();
 		for (diff, real) in s.diffs.iter().zip(set.iter()) {
 			if z != ((*real - *diff - target) * enabled) {

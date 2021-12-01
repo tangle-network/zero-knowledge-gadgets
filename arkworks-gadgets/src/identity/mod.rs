@@ -28,7 +28,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 		Ok(f_inputs
 			.get(0)
 			.cloned()
-			.ok_or(CryptoError::IncorrectInputLength(f_inputs.len()))?)
+			.ok_or_else(|| CryptoError::IncorrectInputLength(f_inputs.len()))?)
 	}
 }
 

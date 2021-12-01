@@ -89,7 +89,7 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 		let blinding = secrets.blinding;
 
 		let amount_var = FpVar::new_variable(cs.clone(), || Ok(amount), mode)?;
-		let blinding_var = FpVar::new_variable(cs.clone(), || Ok(blinding), mode)?;
+		let blinding_var = FpVar::new_variable(cs, || Ok(blinding), mode)?;
 		Ok(PrivateVar::new(amount_var, blinding_var))
 	}
 }
@@ -103,7 +103,7 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 		let public = f()?.borrow().clone();
 		let ns = into_ns.into();
 		let cs = ns.cs();
-		let chain_id = FpVar::new_variable(cs.clone(), || Ok(public.chain_id), mode)?;
+		let chain_id = FpVar::new_variable(cs, || Ok(public.chain_id), mode)?;
 		Ok(PublicVar::new(chain_id))
 	}
 }

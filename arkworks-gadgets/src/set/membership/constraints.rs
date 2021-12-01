@@ -32,7 +32,7 @@ pub struct SetMembershipGadget<F: PrimeField, const M: usize> {
 impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 	pub fn check<T: ToBytesGadget<F>>(
 		target: &T,
-		set: &Vec<FpVar<F>>,
+		set: &[FpVar<F>],
 		private: &PrivateVar<F, M>,
 	) -> Result<Boolean<F>, SynthesisError> {
 		assert_eq!(set.len(), M); // FIXME Should we enforce it in constrain system?
@@ -43,12 +43,12 @@ impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 			product *= diff;
 		}
 
-		Ok(product.is_eq(&FpVar::<F>::zero())?)
+		product.is_eq(&FpVar::<F>::zero())
 	}
 
 	pub fn check_is_enabled<T: ToBytesGadget<F>>(
 		target: &T,
-		set: &Vec<FpVar<F>>,
+		set: &[FpVar<F>],
 		private: &PrivateVar<F, M>,
 		is_enabled: &FpVar<F>,
 	) -> Result<Boolean<F>, SynthesisError> {
@@ -63,7 +63,7 @@ impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 		}
 
 		product *= is_enabled;
-		Ok(product.is_eq(&FpVar::<F>::zero())?)
+		product.is_eq(&FpVar::<F>::zero())
 	}
 }
 

@@ -46,14 +46,15 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
 		assert!(state.len() == parameters.num_inputs);
 		let mut l_out: FpVar<F> = FpVar::<F>::zero();
 		let mut r_out: FpVar<F> = FpVar::<F>::zero();
-		for i in 0..state.len() {
+
+		for (i, s) in state.iter().enumerate() {
 			let l: FpVar<F>;
 			let r: FpVar<F>;
 			if i == 0 {
-				l = state[i].clone();
+				l = s.clone();
 				r = FpVar::<F>::zero();
 			} else {
-				l = l_out.clone() + state[i].clone();
+				l = l_out.clone() + s.clone();
 				r = r_out.clone();
 			}
 
@@ -62,8 +63,7 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
 			r_out = res[1].clone();
 		}
 
-		let mut outs = vec![];
-		outs.push(l_out.clone());
+		let mut outs = vec![l_out.clone()];
 		for _ in 0..parameters.num_outputs {
 			let res = Self::feistel(parameters, l_out.clone(), r_out.clone())?;
 			l_out = res[0].clone();
@@ -79,8 +79,8 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
 		left: FpVar<F>,
 		right: FpVar<F>,
 	) -> Result<[FpVar<F>; 2], SynthesisError> {
-		let mut x_l = left.clone();
-		let mut x_r = right.clone();
+		let mut x_l = left;
+		let mut x_r = right;
 		let mut c: FpVar<F>;
 		let mut t: FpVar<F>;
 		let mut t2: FpVar<F>;
@@ -141,7 +141,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> 
 			.zip(f_var_inputs)
 			.for_each(|(b, l_b)| *b = l_b);
 
-		let result = Self::mimc(&parameters, buffer);
+		let result = Self::mimc(parameters, buffer);
 		result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
 	}
 }
