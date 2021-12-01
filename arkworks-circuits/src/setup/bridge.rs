@@ -77,7 +77,7 @@ pub fn setup_arbitrary_data<F: PrimeField>(
 ) -> BridgeConstraintDataInput<F> {
 	BridgeConstraintDataInput::new(recipient, relayer, fee, refund, commitment)
 }
-
+#[allow(clippy::too_many_arguments)]
 pub fn get_public_inputs<F: PrimeField, const M: usize>(
 	chain_id: F,
 	nullifier_hash: F,

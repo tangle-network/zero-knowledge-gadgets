@@ -27,6 +27,9 @@ jobs:
 
       - name: Set-Up
         run: ./scripts/init.sh
+      
+      - name: Checks
+        run: ./scripts/checks.sh
 
       - name: Build
         run: ./scripts/build.sh

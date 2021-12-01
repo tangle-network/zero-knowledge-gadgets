@@ -34,9 +34,9 @@ impl<F: PrimeField> AllocVar<VAnchorArbitraryData<F>, F> for VAnchorArbitraryDat
 		let ns = into_ns.into();
 		let cs = ns.cs();
 
-		let ext_data = input.ext_data.clone();
+		let ext_data = input.ext_data;
 
-		let ext_data = FpVar::new_variable(cs.clone(), || Ok(&ext_data), mode)?;
+		let ext_data = FpVar::new_variable(cs, || Ok(&ext_data), mode)?;
 
 		Ok(VAnchorArbitraryDataVar::new(ext_data))
 	}

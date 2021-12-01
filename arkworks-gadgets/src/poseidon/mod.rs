@@ -69,7 +69,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 		for f in f_inputs {
 			buffer.push(f);
 		}
-		let result = Self::permute(&parameters, buffer)?;
+		let result = Self::permute(parameters, buffer)?;
 
 		end_timer!(eval_time);
 

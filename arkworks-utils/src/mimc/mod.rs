@@ -13,7 +13,7 @@ impl core::fmt::Display for MiMCError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		use MiMCError::*;
 		let msg = match self {
-			InvalidInputs => format!("invalid inputs"),
+			InvalidInputs => "invalid inputs".to_string(),
 		};
 		write!(f, "{}", msg)
 	}

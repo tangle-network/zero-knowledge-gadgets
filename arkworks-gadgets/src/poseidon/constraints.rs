@@ -132,7 +132,7 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 		for f in f_var_inputs {
 			buffer.push(f);
 		}
-		let result = Self::permute(&parameters, buffer);
+		let result = Self::permute(parameters, buffer);
 
 		result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
 	}

@@ -15,7 +15,7 @@ impl core::fmt::Display for MiMCError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		use MiMCError::*;
 		let msg = match self {
-			InvalidInputs => format!("invalid inputs"),
+			InvalidInputs => "invalid inputs".to_string(),
 		};
 		write!(f, "{}", msg)
 	}
@@ -40,14 +40,14 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 		assert!(state.len() == params.num_inputs);
 		let mut l_out: F = F::zero();
 		let mut r_out: F = F::zero();
-		for i in 0..state.len() {
+		for (i, s) in state.iter().enumerate() {
 			let l: F;
 			let r: F;
 			if i == 0 {
-				l = state[i];
+				l = *s;
 				r = F::zero();
 			} else {
-				l = l_out + state[i];
+				l = l_out + s;
 				r = r_out;
 			}
 
@@ -56,8 +56,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 			r_out = res[1];
 		}
 
-		let mut outs = vec![];
-		outs.push(l_out);
+		let mut outs = vec![l_out];
 		for _ in 0..params.num_outputs {
 			let res = Self::feistel(params, l_out, r_out)?;
 			l_out = res[0];
@@ -90,8 +89,8 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 			t2 = t * t;
 			t4 = t2 * t2;
 
-			let temp_x_l = x_l.clone();
-			let temp_x_r = x_r.clone();
+			let temp_x_l = x_l;
+			let temp_x_r = x_r;
 
 			if i < params.rounds - 1 {
 				x_l = if i == 0 {
@@ -139,7 +138,7 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 
 		let mut buffer = vec![F::zero(); P::WIDTH];
 		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
-		let result = Self::mimc(&parameters, buffer)?;
+		let result = Self::mimc(parameters, buffer)?;
 		end_timer!(eval_time);
 		Ok(result.get(0).cloned().ok_or(MiMCError::InvalidInputs)?)
 	}
@@ -168,7 +167,7 @@ impl<F: PrimeField, P: Rounds> TwoToOneCRH for CRH<F, P> {
 		let chained: Vec<_> = left_input
 			.iter()
 			.chain(right_input.iter())
-			.map(|x| *x)
+			.copied()
 			.collect();
 
 		<Self as CRHTrait>::evaluate(parameters, &chained)

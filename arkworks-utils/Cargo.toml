@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-utils"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's utils for zero-knowledge gadgets written using Arkworks"
@@ -95,8 +95,3 @@ poseidon_bn254_x17_3 = []
 
 mimc_220_ed_on_bn254 = []
 
-[[bench]]
-name = "bridge_bench"
-path = "benches/bench.rs"
-harness = false
-required-features = ["r1cs", "std", "default_poseidon", "test"]

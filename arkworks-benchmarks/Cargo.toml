@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-benchmarks"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's zero-knowledge gadgets written using Arkworks"

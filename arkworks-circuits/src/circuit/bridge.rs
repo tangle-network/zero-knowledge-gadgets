@@ -60,6 +60,7 @@ where
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		arbitrary_input: ArbitraryInput<F>,
 		leaf_private_inputs: LeafPrivateInputs<F>,
@@ -160,7 +161,7 @@ where
 		let leaf_private_var = LeafPrivateInputsVar::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let set_input_private_var =
 			SetPrivateInputsVar::new_witness(cs.clone(), || Ok(set_private))?;
-		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs.clone(), || Ok(path))?;
+		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs, || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let bridge_leaf = BridgeLeafGadget::<F, H, HG>::create_leaf(

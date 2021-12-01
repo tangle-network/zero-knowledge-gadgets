@@ -14,7 +14,7 @@ struct PoseidonCircuit<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> {
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
-
+#[allow(dead_code)]
 impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> PoseidonCircuit<F, H, HG> {
 	pub fn new(a: F, b: F, c: H::Output, params: H::Parameters) -> Self {
 		Self {
@@ -31,8 +31,8 @@ impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> PoseidonCircuit<F, H,
 impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> Clone for PoseidonCircuit<F, H, HG> {
 	fn clone(&self) -> Self {
 		PoseidonCircuit {
-			a: self.a.clone(),
-			b: self.b.clone(),
+			a: self.a,
+			b: self.b,
 			c: self.c.clone(),
 			params: self.params.clone(),
 			hasher: PhantomData,
@@ -50,7 +50,8 @@ impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> ConstraintSynthesizer
 		let bytes = to_bytes![self.a, self.b].unwrap();
 		let input = Vec::<UInt8<F>>::new_witness(cs.clone(), || Ok(bytes))?;
 
-		let params_var = HG::ParametersVar::new_witness(cs.clone(), || Ok(self.params))?;
+		let params_var = HG::ParametersVar::new_witness(cs, || Ok(self.params))?;
+
 		let res_var = HG::evaluate(&params_var, &input)?;
 
 		res_var.enforce_equal(&res_target)?;
