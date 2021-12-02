@@ -54,7 +54,6 @@ mod test {
 	use ark_snark::SNARK;
 	use ark_std::{ops::*, UniformRand};
 	use blake2::Blake2s;
-	use ark_std::vec::Vec;
 
 	#[test]
 	fn should_verify_basic_circuit() {
