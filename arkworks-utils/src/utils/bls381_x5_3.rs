@@ -4,7 +4,7 @@ use crate::{
 	utils::parse_vec,
 };
 use ark_ff::PrimeField;
-
+use ark_ff::vec::Vec;
 // https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon
 
 // Parameter for:

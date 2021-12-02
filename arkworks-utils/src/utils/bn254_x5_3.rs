@@ -4,7 +4,7 @@ use crate::{
 	utils::parse_vec,
 };
 use ark_ff::PrimeField;
-
+use ark_ff::vec::Vec;
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 57;
 pub const WIDTH: u8 = 3;

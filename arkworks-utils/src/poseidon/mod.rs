@@ -21,8 +21,8 @@ impl core::fmt::Display for PoseidonError {
 		use PoseidonError::*;
 		let msg = match self {
 			InvalidSboxSize(s) => format!("sbox is not supported: {}", s),
-			ApplySboxFailed => "failed to apply sbox".to_string(),
-			InvalidInputs => "invalid inputs".to_string(),
+			ApplySboxFailed => format!{"failed to apply sbox"},
+			InvalidInputs => format!{"invalid inputs"},
 		};
 		write!(f, "{}", msg)
 	}
