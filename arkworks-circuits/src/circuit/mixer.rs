@@ -161,6 +161,7 @@ mod test {
 	use arkworks_utils::utils::common::{
 		setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve,
 	};
+	use ark_std::vec::Vec;
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30

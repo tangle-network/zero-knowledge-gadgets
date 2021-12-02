@@ -454,8 +454,7 @@ mod test {
 
 	use ark_snark::SNARK;
 	use ark_std::test_rng;
-	use std::{rc::Rc, str::FromStr};
-
+	use crate::prelude::ark_std::{rc::Rc, str::FromStr};
 	pub const TEST_K: usize = 30;
 	pub const TEST_N_INS_2: usize = 2;
 	pub const TEST_N_OUTS_2: usize = 2;

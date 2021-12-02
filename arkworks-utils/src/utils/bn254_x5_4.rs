@@ -3,7 +3,8 @@ use crate::{
 	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
 	utils::parse_vec,
 };
-use ark_ff::{vec::Vec, PrimeField};
+use ark_ff::PrimeField;
+use crate::Vec;
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 56;
 pub const WIDTH: u8 = 4;

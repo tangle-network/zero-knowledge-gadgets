@@ -17,6 +17,7 @@ use arkworks_gadgets::{
 	poseidon::{constraints::CRHGadget, CRH},
 	set::membership::{constraints::SetMembershipGadget, SetMembership},
 };
+use ark_std::vec::Vec;
 
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5};
 use blake2::Blake2s;
