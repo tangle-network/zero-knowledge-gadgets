@@ -41,5 +41,9 @@ paste = { version = "1.0.5" }
 [features]
 default = ["std", "r1cs"]
 r1cs = []
-std = ["ark-std/std"]
+std = [
+  "ark-std/std",
+  "arkworks-utils/std",
+  "arkworks-gadgets/std",
+]
 
