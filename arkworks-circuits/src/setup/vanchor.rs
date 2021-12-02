@@ -1,8 +1,7 @@
-use ark_std::marker::PhantomData;
 use crate::circuit::vanchor::VAnchorCircuit;
 use ark_crypto_primitives::{CRHGadget, CRH as CRHTrait};
 use ark_ff::{to_bytes, PrimeField, ToBytes};
-use ark_std::{self, rc::Rc};
+use ark_std::{self, marker::PhantomData, rc::Rc};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
@@ -71,6 +70,7 @@ impl<
 		let pub_key = kp.public_key(&self.h2_params).unwrap();
 		(kp, pub_key)
 	}
+
 	#[allow(clippy::type_complexity)]
 	fn new_input_leaves(
 		&self,
@@ -87,6 +87,7 @@ impl<
 	) {
 		self.new_n_leaves(chain_ids, amounts, blindings, indices, keypairs, INS)
 	}
+
 	#[allow(clippy::type_complexity)]
 	fn new_output_leaves(
 		&self,
@@ -103,7 +104,7 @@ impl<
 	) {
 		self.new_n_leaves(chain_ids, amounts, blindings, indices, keypairs, OUTS)
 	}
-	
+
 	#[allow(clippy::type_complexity)]
 	fn new_n_leaves(
 		&self,
@@ -200,7 +201,7 @@ impl<
 	pub fn new_set(root: &F, roots: &[F; M]) -> SetMembershipPrivate<F, M> {
 		SetMembership::generate_secrets(root, roots).unwrap()
 	}
-	
+
 	#[allow(clippy::type_complexity)]
 	pub fn setup_circuit<R: Rng>(
 		self,

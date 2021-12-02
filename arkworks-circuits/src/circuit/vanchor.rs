@@ -130,6 +130,7 @@ where
 			_merkle_config: PhantomData,
 		}
 	}
+
 	#[allow(clippy::too_many_arguments)]
 	pub fn verify_input_var(
 		hasher_params_w2_var: &HG::ParametersVar,

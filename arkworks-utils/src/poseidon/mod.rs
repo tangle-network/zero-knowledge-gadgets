@@ -1,4 +1,5 @@
 use crate::{
+	ark_std::string::ToString,
 	poseidon::sbox::PoseidonSbox,
 	utils::{from_field_elements, to_field_elements},
 };
@@ -21,8 +22,8 @@ impl core::fmt::Display for PoseidonError {
 		use PoseidonError::*;
 		let msg = match self {
 			InvalidSboxSize(s) => format!("sbox is not supported: {}", s),
-			ApplySboxFailed => format!{"failed to apply sbox"},
-			InvalidInputs => format!{"invalid inputs"},
+			ApplySboxFailed => "failed to apply sbox".to_string(),
+			InvalidInputs => "invalid inputs".to_string(),
 		};
 		write!(f, "{}", msg)
 	}

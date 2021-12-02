@@ -3,8 +3,7 @@ use crate::{
 	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
 	utils::parse_vec,
 };
-use ark_ff::PrimeField;
-use ark_ff::vec::Vec;
+use ark_ff::{vec::Vec, PrimeField};
 // https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon
 
 // Parameter for:

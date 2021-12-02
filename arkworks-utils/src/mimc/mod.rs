@@ -1,3 +1,4 @@
+use crate::ark_std::string::ToString;
 use ark_ff::fields::PrimeField;
 use ark_std::{error::Error as ArkError, rand::Rng, vec::Vec};
 
@@ -13,7 +14,7 @@ impl core::fmt::Display for MiMCError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		use MiMCError::*;
 		let msg = match self {
-			InvalidInputs => format!{"invalid inputs"},
+			InvalidInputs => "invalid inputs".to_string(),
 		};
 		write!(f, "{}", msg)
 	}
