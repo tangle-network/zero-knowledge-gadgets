@@ -11,7 +11,7 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = {path = "../arkworks-utils",  version = "0.4.3", features = ["default_poseidon", "default_mimc"], default-features = false }
+arkworks-utils = {path = "../arkworks-utils",  version = "0.4.3", default-features = false }
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
@@ -40,10 +40,10 @@ hex-literal = { version = "0.3.4" }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
-default = ["std", "r1cs",]
-r1cs = [
-  "arkworks-utils/r1cs",
-]
+default = ["std", "r1cs", "mimc", "poseidon"]
+default_poseidon = ["arkworks-utils/default_poseidon"]
+default_mimc = ["arkworks-utils/default_mimc"]
+r1cs = ["arkworks-utils/r1cs"]
 std = [
   "ark-std/std",
   "arkworks-utils/std",

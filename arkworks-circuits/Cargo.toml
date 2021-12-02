@@ -39,8 +39,19 @@ ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve"
 paste = { version = "1.0.5" }
 
 [features]
-default = ["std", "r1cs"]
-r1cs = []
+default = ["std", "r1cs", "default_mimc", "default_poseidon"]
+default_poseidon = [
+  "arkworks-gadgets/default_poseidon",
+  "arkworks-utils/default_poseidon"
+]
+default_mimc = [
+  "arkworks-gadgets/default_mimc",
+  "arkworks-utils/default_mimc"
+]
+r1cs = [
+  "arkworks-utils/r1cs",
+  "arkworks-gadgets/r1cs",
+]
 std = [
   "ark-std/std",
   "arkworks-utils/std",
