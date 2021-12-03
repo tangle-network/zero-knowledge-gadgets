@@ -1,5 +1,4 @@
-use crate::{mimc::Rounds as MiMCRounds};
-use crate::{poseidon::PoseidonParameters};
+use crate::{mimc::Rounds as MiMCRounds, poseidon::PoseidonParameters};
 use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;

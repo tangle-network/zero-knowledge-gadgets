@@ -15,7 +15,6 @@ arkworks-utils = {path = "../arkworks-utils", version = "0.4.5" }
 arkworks-gadgets = {path = "../arkworks-gadgets", version = "0.4.5" }
 arkworks-circuits = {path = "../arkworks-circuits", version = "0.4.5" }
 
-
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
