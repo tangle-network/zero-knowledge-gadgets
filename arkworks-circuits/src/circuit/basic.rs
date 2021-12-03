@@ -19,7 +19,6 @@ impl<F: PrimeField> Clone for DummyCircuit<F> {
 			b: self.b,
 			num_variables: self.num_variables,
 			num_constraints: self.num_constraints,
-
 		}
 	}
 }
@@ -55,6 +54,7 @@ mod test {
 	use ark_snark::SNARK;
 	use ark_std::{ops::*, UniformRand};
 	use blake2::Blake2s;
+
 	#[test]
 	fn should_verify_basic_circuit() {
 		let rng = &mut ark_std::test_rng();

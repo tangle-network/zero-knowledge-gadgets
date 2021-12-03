@@ -1,3 +1,4 @@
+use crate::ark_std::string::ToString;
 use ark_ff::fields::PrimeField;
 use ark_std::{error::Error as ArkError, rand::Rng, vec::Vec};
 

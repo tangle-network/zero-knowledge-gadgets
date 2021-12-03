@@ -130,6 +130,7 @@ where
 			_merkle_config: PhantomData,
 		}
 	}
+
 	#[allow(clippy::too_many_arguments)]
 	pub fn verify_input_var(
 		hasher_params_w2_var: &HG::ParametersVar,
@@ -451,10 +452,9 @@ mod test {
 	use ark_ff::{to_bytes, UniformRand};
 	use ark_groth16::Groth16;
 
+	use crate::prelude::ark_std::{rc::Rc, str::FromStr};
 	use ark_snark::SNARK;
 	use ark_std::test_rng;
-	use std::{rc::Rc, str::FromStr};
-
 	pub const TEST_K: usize = 30;
 	pub const TEST_N_INS_2: usize = 2;
 	pub const TEST_N_OUTS_2: usize = 2;
