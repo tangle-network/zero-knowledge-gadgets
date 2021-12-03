@@ -76,7 +76,6 @@ all = [
     "poseidon_bn254_x5_2",
     "poseidon_bn254_x17_5",
     "poseidon_bn254_x17_3",
-
 ]
 poseidon_bls381_x3_5 = []
 poseidon_bls381_x3_3 = []
