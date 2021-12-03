@@ -2,7 +2,9 @@ use ark_crypto_primitives::Error;
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
+#[cfg(feature = "etherhash")]
 use ethabi::{encode, Token};
+#[cfg(feature = "etherhash")]
 use tiny_keccak::{Hasher, Keccak};
 
 pub mod common;
@@ -145,6 +147,7 @@ pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
 	parse_vec(crate::mimc::CONSTANTS.to_vec())
 }
 
+#[cfg(feature = "etherhash")]
 pub fn check_inputs_arbitrary_ethabi(
 	recipient: &Token,
 	ext_amount: &Token,
@@ -191,6 +194,7 @@ pub fn check_inputs_arbitrary_ethabi(
 	}
 }
 
+#[cfg(feature = "etherhash")]
 pub fn vanchor_arbitrary_hash(
 	recipient: Token,
 	ext_amount: Token,
@@ -220,6 +224,7 @@ pub fn vanchor_arbitrary_hash(
 	keccak_256(bytes)
 }
 
+#[cfg(feature = "etherhash")]
 pub fn keccak_256(input: &[u8]) -> Vec<u8> {
 	let mut hasher = Keccak::v256();
 	hasher.update(input);
