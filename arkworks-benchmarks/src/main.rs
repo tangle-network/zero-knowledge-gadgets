@@ -6,7 +6,7 @@ use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
-use ark_std::{self, rc::Rc, test_rng, time::Instant};
+use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
 use arkworks_circuits::circuit::bridge::BridgeCircuit;
 use arkworks_gadgets::{
 	arbitrary::bridge_data::Input as BridgeDataInput,
@@ -17,7 +17,6 @@ use arkworks_gadgets::{
 	poseidon::{constraints::CRHGadget, CRH},
 	set::membership::{constraints::SetMembershipGadget, SetMembership},
 };
-use ark_std::vec::Vec;
 
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5};
 use blake2::Blake2s;

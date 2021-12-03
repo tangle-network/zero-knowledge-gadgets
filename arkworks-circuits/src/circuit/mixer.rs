@@ -157,11 +157,10 @@ mod test {
 	use ark_crypto_primitives::SNARK;
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
-	use ark_std::{test_rng, One, Zero};
+	use ark_std::{test_rng, vec::Vec, One, Zero};
 	use arkworks_utils::utils::common::{
 		setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve,
 	};
-	use ark_std::vec::Vec;
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
