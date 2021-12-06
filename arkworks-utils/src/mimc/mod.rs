@@ -2,7 +2,9 @@ use crate::ark_std::string::ToString;
 use ark_ff::fields::PrimeField;
 use ark_std::{error::Error as ArkError, rand::Rng, vec::Vec};
 
+#[cfg(feature = "mimc_220_ed_on_bn254")]
 pub mod ed_on_bn254_mimc;
+#[cfg(feature = "mimc_220_ed_on_bn254")]
 pub use ed_on_bn254_mimc::*;
 
 #[derive(Debug)]
