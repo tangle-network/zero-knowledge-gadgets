@@ -102,12 +102,12 @@ pub fn parse_proof_bn254_json(json: &Value) -> Proof<Bn254> {
 }
 
 pub fn parse_public_inputs_bn254_json(json: &Value) -> Vec<BnFr> {
-	let chain_id = json_to_fr(json, "chainID");
 	let public_amount = json_to_fr(json, "publicAmount");
-	let root_set = json_to_fr_vec(json, "roots");
+	let ext_data_hash = json_to_fr(json, "extDataHash");
 	let nullifier_hash = json_to_fr_vec(json, "inputNullifier");
 	let output_commitment = json_to_fr_vec(json, "outputCommitment");
-	let ext_data_hash = json_to_fr(json, "extDataHash");
+	let chain_id = json_to_fr(json, "chainID");
+	let root_set = json_to_fr_vec(json, "roots");
 
 	let mut public_inputs = Vec::new();
 	public_inputs.push(public_amount);
@@ -116,13 +116,6 @@ pub fn parse_public_inputs_bn254_json(json: &Value) -> Vec<BnFr> {
 	public_inputs.extend(output_commitment);
 	public_inputs.push(chain_id);
 	public_inputs.extend(root_set);
-		
-	/* public_inputs.push(chain_id);
-	public_inputs.push(public_amount);
-	public_inputs.extend(root_set);
-	public_inputs.extend(nullifier_hash);
-	public_inputs.extend(output_commitment);
-	public_inputs.push(ext_data_hash); */
 	
 	public_inputs
 }
