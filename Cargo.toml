@@ -4,5 +4,6 @@ members = [
     "arkworks-gadgets",
     "arkworks-circuits",
     "arkworks-utils",
+    "arkworks-corcom-verifier",
     "arkworks-benchmarks"
 ]
