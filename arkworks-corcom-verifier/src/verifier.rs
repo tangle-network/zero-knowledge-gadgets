@@ -1,3 +1,4 @@
+// Some parts of this file are used from https://github.com/gakonst/ark-circom
 use ark_bn254::{Bn254, Fq, Fq2, Fr as BnFr, G1Affine, G1Projective, G2Affine, G2Projective};
 use ark_ff::BigInteger256;
 use ark_groth16::Proof;
@@ -135,20 +136,20 @@ mod test {
 
 	#[test]
 	fn circom_test() {
-		//let path = "./arkworks-circom-verifier/src/circuit_final.zkey";
-		let path = "./test-vectors/circuit_final.zkey";
+		//let path = "./arkworks-circom-verifier/src/vanchor_circuit_final_2_2.zkey";
+		let path = "./test-vectors/vanchor_circuit_final_2_2.zkey";
 		let mut file = File::open(path).unwrap();
 		let (params, _matrices) = read_zkey(&mut file).unwrap();
 		//let mut _wtns = WitnessCalculator::new("./src/poseidon_vanchor_2_2.wasm").unwrap();
 		//let mut _inputs: HashMap<String, Vec<num_bigint::BigInt>> = HashMap::new();
-		let json = std::fs::read_to_string("./test-vectors/proof.json").unwrap();
+		let json = ark_std::fs::read_to_string("./test-vectors/proof.json").unwrap();
 		let json: Value = serde_json::from_str(&json).unwrap();
 		let proof = parse_proof_bn254_json(&json);
 
 		
 		let pvk = prepare_verifying_key(&params.vk);
 		
-		let json = std::fs::read_to_string("./test-vectors/inputs.json").unwrap();
+		let json = ark_std::fs::read_to_string("./test-vectors/inputs.json").unwrap();
 		let json: Value = serde_json::from_str(&json).unwrap();
 		let inputs = parse_public_inputs_bn254_json(&json);
 		let verified = verify_proof(&pvk, &proof, &inputs).unwrap();
