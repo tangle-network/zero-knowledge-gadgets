@@ -272,12 +272,12 @@ impl<
 			.map(|x| F::from_be_bytes_mod_order(&to_bytes![x].unwrap()))
 			.collect();
 
-		let mut public_inputs = vec![in_leaf_public.chain_id];
-		public_inputs.push(public_amount);
-		public_inputs.extend(&root_set);
+		let mut public_inputs = vec![public_amount];
+		public_inputs.push(ext_data);
 		public_inputs.extend(in_nullifier_hashes_f);
 		public_inputs.extend(out_commitments_f);
-		public_inputs.push(ext_data);
+		public_inputs.push(in_leaf_public.chain_id);
+		public_inputs.extend(&root_set);
 
 		(
 			VAnchorCircuit::new(

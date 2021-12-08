@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-gadgets"
-version = "0.4.5"
+version = "0.4.6"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's zero-knowledge gadgets written using Arkworks"
@@ -11,7 +11,7 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = {path = "../arkworks-utils",  version = "0.4.5", default-features = false }
+arkworks-utils = {path = "../arkworks-utils",  version = "0.4.6", default-features = false }
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
