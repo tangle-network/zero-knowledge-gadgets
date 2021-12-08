@@ -161,27 +161,118 @@ mod tests {
 	use ark_ff::{BigInteger, Field};
 	use ark_plonk::{
 		circuit::{self, FeIntoPubInput},
-		constraint_system::StandardComposer,
-		prelude::*,
-	};
+		constraint_system::StandardComposer,};
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::kzg10::{UniversalParams, KZG10};
-	use arkworks_utils::utils::common::setup_params_x5_3;
+	use ark_poly_commit::kzg10::{self, UniversalParams, KZG10, Powers};
+	use ark_poly_commit::sonic_pc::SonicKZG10;
+	use ark_poly_commit::PolynomialCommitment;
+
+	use arkworks_utils::utils::common::setup_params_x3_5; //changed x5_3 to x3_5
 	use num_traits::{One, Zero};
-	use rand_core::OsRng;
+	use rand_core::{CryptoRng, OsRng};
+	use ark_plonk::proof_system::{Prover,Verifier};
+	use ark_plonk::prelude::*;
+
 	type PoseidonCRH3 = arkworks_gadgets::poseidon::CRH<Fq>;
+	type StandardComposerBn254 = ark_plonk::constraint_system::StandardComposer<Bn254,JubjubParameters>;
+
+	/// Takes a generic gadget function with no auxillary input and
+/// tests whether it passes an end-to-end test
+pub(crate) fn gadget_tester<
+	E: PairingEngine, 
+	P: TEModelParameters<BaseField = E::Fr>,
+	>(
+    gadget: fn(composer: &mut StandardComposer<E,P>),
+    n: usize,
+) -> Result<(), Error> {
+    // Common View
+    let universal_params =
+        KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut OsRng)?;
+    // Provers View
+    let (proof, public_inputs ) = {
+        // Create a prover struct
+        let mut prover = Prover::new(b"demo");
+
+        // Additionally key the transcript
+        prover.key_transcript(b"key", b"additional seed information");
+
+        // Add gadgets
+        gadget(&mut prover.mut_cs());
+
+        // Commit Key
+        let (ck, _) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
+            &universal_params,
+            prover.circuit_size().next_power_of_two(),
+            0,
+            None,
+        )
+        .unwrap();
+		let powers = Powers {
+            powers_of_g: ck.powers_of_g.into(),
+            powers_of_gamma_g: ck.powers_of_gamma_g.into(),
+        };
+        // Preprocess circuit
+        prover.preprocess(&powers)?;
+
+        // Once the prove method is called, the public inputs are cleared
+        // So pre-fetch these before calling Prove
+        let public_inputs = prover.mut_cs().construct_dense_pi_vec();
+       //? let lookup_table = prover.mut_cs().lookup_table.clone();
+
+        // Compute Proof
+        (prover.prove(&powers)?, public_inputs)
+    };
+    // Verifiers view
+    //
+    // Create a Verifier object
+    let mut verifier = Verifier::new(b"demo");
+
+    // Additionally key the transcript
+    verifier.key_transcript(b"key", b"additional seed information");
+
+    // Add gadgets
+    gadget(&mut verifier.mut_cs());
+
+    // Compute Commit and Verifier Key
+    let (sonic_ck, sonic_vk) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
+        &universal_params,
+        verifier.circuit_size().next_power_of_two(),
+        0,
+        None,
+    )
+    .unwrap();
+    let powers = Powers {
+        powers_of_g: sonic_ck.powers_of_g.into(),
+        powers_of_gamma_g: sonic_ck.powers_of_gamma_g.into(),
+    };
+
+    let vk = kzg10::VerifierKey {
+        g: sonic_vk.g,
+        gamma_g: sonic_vk.gamma_g,
+        h: sonic_vk.h,
+        beta_h: sonic_vk.beta_h,
+        prepared_h: sonic_vk.prepared_h,
+        prepared_beta_h: sonic_vk.prepared_beta_h,
+    };
+
+    // Preprocess circuit
+    verifier.preprocess(&powers)?;
+
+    // Verify proof
+    Ok(verifier.verify(&proof, &vk, &public_inputs)?)
+}
 
 	#[test]
-	fn should_not_verify_plonk_poseidon() {
+	fn should_verify_plonk_poseidon() {
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
 
-		let util_params = setup_params_x5_3(curve);
+		let util_params = setup_params_x3_5(curve);
 		let params = PoseidonParameters {
 			round_keys: util_params.clone().round_keys,
 			mds_matrix: util_params.clone().mds_matrix,
 			full_rounds: util_params.clone().full_rounds,
 			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(5),
+			sbox: PoseidonSbox::Exponentiation(3), //does this need to change from 5 to 3 with x5_3 -> x3_5?
 			width: util_params.clone().width,
 		};
 
@@ -206,7 +297,7 @@ mod tests {
 
 		// PROVER
 		let proof = {
-			let util_params = setup_params_x5_3(curve);
+			let util_params = setup_params_x3_5(curve);
 			let params = PoseidonParameters {
 				round_keys: util_params.round_keys,
 				mds_matrix: util_params.mds_matrix,
@@ -240,4 +331,44 @@ mod tests {
 		)
 		.unwrap();
 	}
+
+
+	// #[test]
+	// fn test_correct_poseidon_hash() 
+	// 	{
+	// 	let curve = arkworks_utils::utils::common::Curve::Bn254;
+
+	// 	let util_params = setup_params_x5_3(curve);
+	// 	let params = PoseidonParameters {
+	// 		round_keys: util_params.clone().round_keys,
+	// 		mds_matrix: util_params.clone().mds_matrix,
+	// 		full_rounds: util_params.clone().full_rounds,
+	// 		partial_rounds: util_params.clone().partial_rounds,
+	// 		sbox: PoseidonSbox::Exponentiation(5),
+	// 		width: util_params.clone().width,
+	// 	};
+
+	// 	let left_input = Fq::one().into_repr().to_bytes_le();
+	// 	let right_input = Fq::one().double().into_repr().to_bytes_le();
+	// 	let poseidon_res =
+	// 		<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
+	// 			.unwrap();
+	// 	println!("RESULT: {:?}", poseidon_res.to_string());
+	// 	let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+	// 		a: Fq::from_le_bytes_mod_order(&left_input),
+	// 		b: Fq::from_le_bytes_mod_order(&right_input),
+	// 		c: poseidon_res,
+	// 		params,
+	// 		_marker: std::marker::PhantomData,
+	// 	};
+
+
+	// 	let res = gadget_tester(|cs: &mut StandardComposer<E,P>| {
+	// 		circuit.gadget(cs);
+	// 		}, 
+	// 		200, //what's a reasonable value?
+	// 	);
+	// 	assert!(res.is_ok(), "{:?}", res.err().unwrap());
+
+	// }	
 }

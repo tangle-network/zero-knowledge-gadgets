@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/Users/thomascnorton/Documents/Webb/arkworks-gadgets/arkworks-plonk-circuits/target/rls/debug/build/typenum-7d2646edbad51ddc/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/Users/thomascnorton/Documents/Webb/arkworks-gadgets/arkworks-plonk-circuits/target/rls/debug/build/typenum-7d2646edbad51ddc/out/op.rs
