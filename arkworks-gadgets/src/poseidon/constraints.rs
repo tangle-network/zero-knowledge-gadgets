@@ -72,7 +72,7 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 pub struct CRHGadget<F: PrimeField>(PhantomData<F>);
 
 impl<F: PrimeField> CRHGadget<F> {
-	fn permute(
+	pub fn permute(
 		params: &PoseidonParametersVar<F>,
 		mut state: Vec<FpVar<F>>,
 	) -> Result<Vec<FpVar<F>>, SynthesisError> {
