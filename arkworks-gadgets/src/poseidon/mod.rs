@@ -9,7 +9,10 @@ pub mod constraints;
 pub struct CRH<F: PrimeField>(PhantomData<F>);
 
 impl<F: PrimeField> CRH<F> {
-	fn permute(params: &PoseidonParameters<F>, mut state: Vec<F>) -> Result<Vec<F>, PoseidonError> {
+	pub fn permute(
+		params: &PoseidonParameters<F>,
+		mut state: Vec<F>,
+	) -> Result<Vec<F>, PoseidonError> {
 		let nr = (params.full_rounds + params.partial_rounds) as usize;
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
