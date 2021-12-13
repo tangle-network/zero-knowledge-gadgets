@@ -41,7 +41,8 @@ fn synthesize_exp5_sbox<F: PrimeField>(input_var: &FpVar<F>) -> Result<FpVar<F>,
 fn synthesize_exp17_sbox<F: PrimeField>(input_var: &FpVar<F>) -> Result<FpVar<F>, SynthesisError> {
 	let sqr = input_var * input_var;
 	let fourth = &sqr * &sqr;
-	let sixteenth = &fourth * &fourth;
+	let eigth = &fourth * &fourth;
+	let sixteenth = &eigth * &eigth;
 	let seventeenth = &sixteenth * input_var;
 	Ok(seventeenth)
 }
