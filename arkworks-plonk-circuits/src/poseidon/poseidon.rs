@@ -1,10 +1,10 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
 use ark_plonk::{
-	circuit::{self, Circuit},
+	circuit::Circuit,
 	constraint_system::StandardComposer,
 	error::Error,
-	prelude::{Variable, *},
+	prelude::Variable,
 };
 use ark_std::{marker::PhantomData, vec::Vec};
 use num_traits::{One, Zero};
@@ -60,6 +60,8 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		// ADD INPUTS
 		let a = composer.add_input(self.a);
 		let b = composer.add_input(self.b);
+		let state_zero = composer.add_input(E::Fr::zero());
+
 
 		let mut round_key_vars = vec![];
 		for i in 0..self.params.round_keys.len() {
@@ -87,13 +89,13 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		};
 
 		// COMPUTE HASH
-		let mut state = vec![a, b];
+		let mut state = vec![state_zero, a, b];
 		let nr = params.full_rounds + params.partial_rounds;
 		for r in 0..nr {
-			state.iter_mut().enumerate().for_each(|(i, mut a)| {
+			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c_temp = params.round_keys[(r as usize * params.width as usize + i)];
 				// a = a + c_temp
-				a = &mut composer.add(
+				*a = composer.add(
 					(E::Fr::one(), *a),
 					(E::Fr::one(), c_temp),
 					E::Fr::zero(),
@@ -120,7 +122,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 						.fold(composer.zero_var(), |acc, (j, a)| {
 							let m = &params.mds_matrix[i][j];
 
-							let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::one(), None);
+							let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::zero(), None);
 
 							let add_result = composer.add(
 								(E::Fr::one(), acc),
@@ -152,6 +154,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 	}
 }
 
+#[cfg(test)]
 mod tests {
 	//copied from ark-plonk
 	use super::*;
@@ -159,29 +162,27 @@ mod tests {
 	use ark_crypto_primitives::crh::TwoToOneCRH;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::{BigInteger, Field};
-	use ark_plonk::{
-		circuit::{self, FeIntoPubInput},
-		constraint_system::StandardComposer,
-	};
+	use ark_plonk::
+		circuit::{self, FeIntoPubInput};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{
 		kzg10::{self, Powers, UniversalParams, KZG10},
 		sonic_pc::SonicKZG10,
 		PolynomialCommitment,
 	};
-
 	use ark_plonk::{
 		prelude::*,
 		proof_system::{Prover, Verifier},
 	};
-	use arkworks_utils::utils::common::setup_params_x3_5; //changed x5_3 to x3_5
-	use num_traits::{One, Zero};
-	use rand_core::{CryptoRng, OsRng};
+	use arkworks_utils::utils::common::{setup_params_x3_5, setup_params_x5_3, setup_params_x17_5}; 
+	use num_traits::{One};
+	use rand_core::OsRng;
 
 	type PoseidonCRH3 = arkworks_gadgets::poseidon::CRH<Fq>;
 	type StandardComposerBn254 =
 		ark_plonk::constraint_system::StandardComposer<Bn254, JubjubParameters>;
 
+	
 	/// Takes a generic gadget function with no auxillary input and
 	/// tests whether it passes an end-to-end test
 	pub(crate) fn gadget_tester<
@@ -269,7 +270,7 @@ mod tests {
 	}
 
 	#[test]
-	fn should_verify_plonk_poseidon() {
+	fn should_verify_plonk_poseidon_x3_5() {
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
 
 		let util_params = setup_params_x3_5(curve);
@@ -278,8 +279,7 @@ mod tests {
 			mds_matrix: util_params.clone().mds_matrix,
 			full_rounds: util_params.clone().full_rounds,
 			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(3), /* does this need to change from 5 to 3 with
-			                                        * x5_3 -> x3_5? */
+			sbox: PoseidonSbox::Exponentiation(3), 
 			width: util_params.clone().width,
 		};
 
@@ -310,7 +310,150 @@ mod tests {
 				mds_matrix: util_params.mds_matrix,
 				full_rounds: util_params.full_rounds,
 				partial_rounds: util_params.partial_rounds,
+				sbox: PoseidonSbox::Exponentiation(3),
+				width: util_params.width,
+			};
+
+			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+				a: Fq::from_le_bytes_mod_order(&left_input),
+				b: Fq::from_le_bytes_mod_order(&right_input),
+				c: poseidon_res,
+				params,
+				_marker: std::marker::PhantomData,
+			};
+			circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
+		};
+
+		// VERIFIER
+		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
+			vec![poseidon_res.into_pi()];
+
+		circuit::verify_proof(
+			&u_params,
+			vd.clone().key(),
+			&proof,
+			&public_inputs,
+			vd.clone().pi_pos(),
+			b"Poseidon Test",
+		)
+		.unwrap();
+	}
+
+	#[test]
+	fn should_verify_plonk_poseidon_x5_3() {
+		let curve = arkworks_utils::utils::common::Curve::Bn254;
+
+		let util_params = setup_params_x5_3(curve);
+		let params = PoseidonParameters {
+			round_keys: util_params.clone().round_keys,
+			mds_matrix: util_params.clone().mds_matrix,
+			full_rounds: util_params.clone().full_rounds,
+			partial_rounds: util_params.clone().partial_rounds,
+			sbox: PoseidonSbox::Exponentiation(5), 
+			width: util_params.clone().width,
+		};
+
+		let left_input = Fq::one().into_repr().to_bytes_le();
+		let right_input = Fq::one().double().into_repr().to_bytes_le();
+		let poseidon_res =
+			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
+				.unwrap();
+		println!("RESULT: {:?}", poseidon_res.to_string());
+		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+			a: Fq::from_le_bytes_mod_order(&left_input),
+			b: Fq::from_le_bytes_mod_order(&right_input),
+			c: poseidon_res,
+			params,
+			_marker: std::marker::PhantomData,
+		};
+
+		let u_params: UniversalParams<Bn254> =
+			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
+
+		let (pk, vd) = circuit.compile(&u_params).unwrap();
+
+		// PROVER
+		let proof = {
+			let util_params = setup_params_x5_3(curve);
+			let params = PoseidonParameters {
+				round_keys: util_params.round_keys,
+				mds_matrix: util_params.mds_matrix,
+				full_rounds: util_params.full_rounds,
+				partial_rounds: util_params.partial_rounds,
 				sbox: PoseidonSbox::Exponentiation(5),
+				width: util_params.width,
+			};
+
+			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+				a: Fq::from_le_bytes_mod_order(&left_input),
+				b: Fq::from_le_bytes_mod_order(&right_input),
+				c: poseidon_res,
+				params,
+				_marker: std::marker::PhantomData,
+			};
+			circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
+		};
+
+		// VERIFIER
+		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
+			vec![poseidon_res.into_pi()];
+
+		circuit::verify_proof(
+			&u_params,
+			vd.clone().key(),
+			&proof,
+			&public_inputs,
+			vd.clone().pi_pos(),
+			b"Poseidon Test",
+		)
+		.unwrap();
+	}
+
+	#[test]
+	fn should_verify_plonk_poseidon_x17_5() {
+		let curve = arkworks_utils::utils::common::Curve::Bn254;
+
+		let util_params = setup_params_x17_5(curve);
+		let params = PoseidonParameters {
+			round_keys: util_params.clone().round_keys,
+			mds_matrix: util_params.clone().mds_matrix,
+			full_rounds: util_params.clone().full_rounds,
+			partial_rounds: util_params.clone().partial_rounds,
+			sbox: PoseidonSbox::Exponentiation(17), 
+			width: util_params.clone().width,
+		};
+
+		println!("Full rounds: {:?}, Par Rounds: {:?}, Len Round Keys: {:?}",util_params.full_rounds,util_params.partial_rounds,util_params.round_keys.len());
+
+
+		let left_input = Fq::one().into_repr().to_bytes_le();
+		let right_input = Fq::one().double().into_repr().to_bytes_le();
+		let poseidon_res =
+			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
+				.unwrap();
+		println!("RESULT: {:?}", poseidon_res.to_string());
+		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
+			a: Fq::from_le_bytes_mod_order(&left_input),
+			b: Fq::from_le_bytes_mod_order(&right_input),
+			c: poseidon_res,
+			params,
+			_marker: std::marker::PhantomData,
+		};
+
+		let u_params: UniversalParams<Bn254> =
+			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
+
+		let (pk, vd) = circuit.compile(&u_params).unwrap();
+
+		// PROVER
+		let proof = {
+			let util_params = setup_params_x17_5(curve);
+			let params = PoseidonParameters {
+				round_keys: util_params.round_keys,
+				mds_matrix: util_params.mds_matrix,
+				full_rounds: util_params.full_rounds,
+				partial_rounds: util_params.partial_rounds,
+				sbox: PoseidonSbox::Exponentiation(17),
 				width: util_params.width,
 			};
 
@@ -349,11 +492,11 @@ mod tests {
 			mds_matrix: util_params.clone().mds_matrix,
 			full_rounds: util_params.clone().full_rounds,
 			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(5),
+			sbox: PoseidonSbox::Exponentiation(3),
 			width: util_params.clone().width,
 		};
 
-		let left_input = Fq::one().into_repr().to_bytes_le();
+		let left_input = Fq::one().double().into_repr().to_bytes_le();
 		let right_input = Fq::one().double().into_repr().to_bytes_le();
 		let poseidon_res =
 			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
@@ -375,7 +518,7 @@ mod tests {
 
 		let res = gadget_tester(
 			&mut circuit,
-			200, //what's a reasonable value?
+			2000, //what's a reasonable value?
 		);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
