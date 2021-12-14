@@ -1,12 +1,10 @@
 // Some parts of this file are used from https://github.com/gakonst/ark-circom
 use ark_bn254::{Bn254, Fq, Fq2, Fr as BnFr, G1Affine, G1Projective, G2Affine, G2Projective};
-use ark_ff::{BigInteger256, FromBytes, Zero, PrimeField};
+use ark_ff::BigInteger256;
 
 use ark_serialize::CanonicalDeserialize;
-use ark_std::log2;
 use ark_std::str::FromStr;
 use ark_std::string::ToString;
-use ark_groth16::Groth16;
 use arkworks_gadgets::prelude::ark_groth16::ProvingKey;
 use arkworks_utils::prelude::ark_groth16::{Proof, VerifyingKey};
 
@@ -119,8 +117,7 @@ pub fn parse_public_inputs_bn254_json(json: &Value) -> Vec<BnFr> {
 	let chain_id = json_to_fr(json, "chainID");
 	let root_set = json_to_fr_vec(json, "roots");
 
-	let mut public_inputs = Vec::new();
-	public_inputs.push(public_amount);
+	let mut public_inputs =vec![public_amount];
 	public_inputs.push(ext_data_hash);
 	public_inputs.extend(nullifier_hash);
 	public_inputs.extend(output_commitment);
@@ -134,8 +131,7 @@ pub fn parse_public_inputs_bn254_json(json: &Value) -> Vec<BnFr> {
 pub fn verify(public_inputs: Vec<BnFr>, vk: &[u8], proof: &[u8]) -> bool {
 	let vk = VerifyingKey::<Bn254>::deserialize(vk).unwrap();
 	let proof = Proof::<Bn254>::deserialize(proof).unwrap();
-	let ver_res = verify_groth16(&vk, &public_inputs, &proof);
-	ver_res
+	verify_groth16(&vk, &public_inputs, &proof)
 }
 
 
@@ -143,7 +139,7 @@ pub fn verify(public_inputs: Vec<BnFr>, vk: &[u8], proof: &[u8]) -> bool {
 /// Reads a SnarkJS ZKey file into an Arkworks ProvingKey.
 pub fn read_zkey<R: Read + Seek>(
     reader: &mut R,
-) -> IoResult<(ProvingKey<Bn254>)> {
+) -> IoResult<ProvingKey<Bn254>> {
     let mut binfile = BinFile::new(reader)?;
     let proving_key = binfile.proving_key()?;
     Ok(proving_key)

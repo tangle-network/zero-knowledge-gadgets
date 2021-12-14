@@ -12,7 +12,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 #[derive(Clone, Debug)]
 struct Section {
     position: u64,
-    size: usize,
+    _size: usize,
 }
 
 #[derive(Default, Clone, Debug, CanonicalDeserialize)]
@@ -49,8 +49,8 @@ impl ZVerifyingKey {
 
 #[derive(Debug)]
 pub(crate) struct BinFile<'a, R> {
-    ftype: String,
-    version: u32,
+    _ftype: String,
+    _version: u32,
     sections: HashMap<u32, Vec<Section>>,
     reader: &'a mut R,
 }
@@ -60,7 +60,7 @@ impl<'a, R: Read + Seek> BinFile<'a, R> {
         let mut magic = [0u8; 4];
         reader.read_exact(&mut magic)?;
 
-        let version = reader.read_u32::<LittleEndian>()?;
+        let _version = reader.read_u32::<LittleEndian>()?;
 
         let num_sections = reader.read_u32::<LittleEndian>()?;
 
@@ -72,15 +72,15 @@ impl<'a, R: Read + Seek> BinFile<'a, R> {
             let section = sections.entry(section_id).or_insert_with(Vec::new);
             section.push(Section {
                 position: reader.stream_position()?,
-                size: section_length as usize,
+                _size: section_length as usize,
             });
 
             reader.seek(SeekFrom::Current(section_length as i64))?;
         }
 
         Ok(Self {
-            ftype: std::str::from_utf8(&magic[..]).unwrap().to_string(),
-            version,
+            _ftype: std::str::from_utf8(&magic[..]).unwrap().to_string(),
+            _version,
             sections,
             reader,
         })
@@ -167,22 +167,22 @@ impl<'a, R: Read + Seek> BinFile<'a, R> {
     }
 }
 
-fn deserialize_g1_vec<R: Read>(reader: &mut R, n_vars: u32) -> IoResult<Vec<G1Affine>> {
+pub fn deserialize_g1_vec<R: Read>(reader: &mut R, n_vars: u32) -> IoResult<Vec<G1Affine>> {
     (0..n_vars).map(|_| deserialize_g1(reader)).collect()
 }
 
-fn deserialize_g2_vec<R: Read>(reader: &mut R, n_vars: u32) -> IoResult<Vec<G2Affine>> {
+pub fn deserialize_g2_vec<R: Read>(reader: &mut R, n_vars: u32) -> IoResult<Vec<G2Affine>> {
     (0..n_vars).map(|_| deserialize_g2(reader)).collect()
 }
 
-fn deserialize_g1<R: Read>(reader: &mut R) -> IoResult<G1Affine> {
+pub fn deserialize_g1<R: Read>(reader: &mut R) -> IoResult<G1Affine> {
     let x = deserialize_field(reader)?;
     let y = deserialize_field(reader)?;
     let infinity = x.is_zero() && y.is_zero();
     Ok(G1Affine::new(x, y, infinity))
 }
 
-fn deserialize_g2<R: Read>(reader: &mut R) -> IoResult<G2Affine> {
+pub fn deserialize_g2<R: Read>(reader: &mut R) -> IoResult<G2Affine> {
     let f1 = deserialize_field2(reader)?;
     let f2 = deserialize_field2(reader)?;
     let infinity = f1.is_zero() && f2.is_zero();
@@ -192,13 +192,13 @@ fn deserialize_g2<R: Read>(reader: &mut R) -> IoResult<G2Affine> {
 
 // need to divide by R, since snarkjs outputs the zkey with coefficients
 // multiplieid by R^2
-fn deserialize_field_fr<R: Read>(reader: &mut R) -> IoResult<BnFr> {
+pub fn deserialize_field_fr<R: Read>(reader: &mut R) -> IoResult<BnFr> {
     let bigint = BigInteger256::read(reader)?;
     Ok(BnFr::new(BnFr::new(bigint).into_repr()))
 }
 
 // skips the multiplication by R because Circom points are already in Montgomery form
-fn deserialize_field<R: Read>(reader: &mut R) -> IoResult<Fq> {
+pub fn deserialize_field<R: Read>(reader: &mut R) -> IoResult<Fq> {
     let bigint = BigInteger256::read(reader)?;
     // if you use ark_ff::PrimeField::from_repr it multiplies by R
     Ok(Fq::new(bigint))
@@ -218,31 +218,31 @@ impl HeaderGroth {
 
     fn read<R: Read>(mut reader: &mut R) -> IoResult<Self> {
         // TODO: Impl From<u32> in Arkworks
-        let n8q: u32 = FromBytes::read(&mut reader)?;
+        let _n8q: u32 = FromBytes::read(&mut reader)?;
         // group order r of Bn254
-        let q = BigInteger256::read(&mut reader)?;
+        let _q = BigInteger256::read(&mut reader)?;
 
-        let n8r: u32 = FromBytes::read(&mut reader)?;
+        let _n8r: u32 = FromBytes::read(&mut reader)?;
         // Prime field modulus
-        let r = BigInteger256::read(&mut reader)?;
+        let _r = BigInteger256::read(&mut reader)?;
 
         let n_vars = u32::read(&mut reader)? as usize;
         let n_public = u32::read(&mut reader)? as usize;
 
         let domain_size: u32 = FromBytes::read(&mut reader)?;
-        let power = log2(domain_size as usize);
+        let _power = log2(domain_size as usize);
 
         let verifying_key = ZVerifyingKey::new(&mut reader)?;
 
         Ok(Self {
-            n8q,
-            q,
-            n8r,
-            r,
+            _n8q,
+            _q,
+            _n8r,
+            _r,
             n_vars,
             n_public,
             domain_size,
-            power,
+            _power,
             verifying_key,
         })
     }
@@ -250,17 +250,17 @@ impl HeaderGroth {
 
 #[derive(Clone, Debug)]
 struct HeaderGroth {
-    n8q: u32,
-    q: BigInteger256,
+    _n8q: u32,
+    _q: BigInteger256,
 
-    n8r: u32,
-    r: BigInteger256,
+    _n8r: u32,
+    _r: BigInteger256,
 
     n_vars: usize,
     n_public: usize,
 
     domain_size: u32,
-    power: u32,
+    _power: u32,
 
     verifying_key: ZVerifyingKey,
 }
