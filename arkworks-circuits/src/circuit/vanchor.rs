@@ -432,7 +432,11 @@ mod test {
 	use super::*;
 	use crate::{
 		ark_std::{One, Zero},
-		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+		setup::{
+			bridge::*,
+			common::*,
+			vanchor::{setup_vanchor_arbitrary_data, VAnchorProverBn2542x2},
+		},
 	};
 	use arkworks_gadgets::{
 		keypair::vanchor::Keypair,
@@ -493,153 +497,42 @@ mod test {
 	fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = BnFr::from(6u32);
+		let recipient = vec![1u8; 20];
+		let relayer = vec![2u8; 20];
+		let ext_amount = vec![3u8; 20];
+		let fee = vec![4u8; 20];
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_id = BnFr::from(0u8);
+		let in_amounts = vec![BnFr::from(2u32); 2];
+		let out_chain_ids = vec![BnFr::from(0u32); 2];
+		let out_amounts = vec![BnFr::from(5u32); 2];
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + &leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let (circuit, pub_ins, ..) = prover.setup_circuit_with_data(
+			public_amount,
+			recipient,
+			relayer,
+			ext_amount,
+			fee,
+			in_chain_id,
+			in_amounts,
+			out_chain_ids,
+			out_amounts,
+			rng,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(res);
 	}
