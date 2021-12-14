@@ -360,12 +360,10 @@ where
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 		let in_nullifier_var = Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let output_commitment_var =
-		Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(output_commitment))?;
+			Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(output_commitment))?;
 		let leaf_public_input_var =
 			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		
-
 
 		// Constants
 		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
