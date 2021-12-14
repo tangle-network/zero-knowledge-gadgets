@@ -221,7 +221,6 @@ mod test {
 		assert!(res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
@@ -236,11 +235,10 @@ mod test {
 
 		// Without chain_id and nullifier
 		let pi = public_inputs[2..].to_vec();
-		let res = GrothSetup::verify(&vk, &pi, &proof).unwrap();
-		assert!(res);
+		let res = GrothSetup::verify(&vk, &pi, &proof);
+		assert!(res.is_err());
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
 		let rng = &mut test_rng();
@@ -282,15 +280,15 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
+		public_inputs.push(arbitrary_input.refund);
 		public_inputs.push(arbitrary_input.commitment);
 		let (pk, vk) =
 			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
 		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_set() {
 		let rng = &mut test_rng();
@@ -333,15 +331,15 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
+		public_inputs.push(arbitrary_input.refund);
 		public_inputs.push(arbitrary_input.commitment);
 		let (pk, vk) =
 			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
 		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_leaf() {
 		let rng = &mut test_rng();
@@ -383,15 +381,15 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
+		public_inputs.push(arbitrary_input.refund);
 		public_inputs.push(arbitrary_input.commitment);
 		let (pk, vk) =
 			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
 		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_nullifier() {
 		let rng = &mut test_rng();
@@ -433,11 +431,12 @@ mod test {
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
+		public_inputs.push(arbitrary_input.refund);
 		public_inputs.push(arbitrary_input.commitment);
 		let (pk, vk) =
 			setup_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(rng, circuit.clone());
 		let proof = prove_groth16_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&pk, circuit, rng);
 		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
-		assert!(res);
+		assert!(!res);
 	}
 }
