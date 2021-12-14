@@ -12,6 +12,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{
+	convert::TryInto,
 	rand::{CryptoRng, RngCore},
 	rc::Rc,
 	vec::Vec,
@@ -105,14 +106,14 @@ pub fn get_hash_params<F: PrimeField>(
 }
 
 #[derive(Clone)]
-pub struct Utxos<F: PrimeField> {
-	pub chain_ids: Vec<F>,
-	pub amounts: Vec<F>,
-	pub keypairs: Vec<Keypair<F, PoseidonCRH_x5_2<F>>>,
-	pub leaf_privates: Vec<LeafPrivateInput<F>>,
-	pub leaf_publics: Vec<LeafPublicInput<F>>,
-	pub nullifiers: Vec<F>,
-	pub commitments: Vec<F>,
+pub struct Utxos<F: PrimeField, const N: usize> {
+	pub chain_ids: [F; N],
+	pub amounts: [F; N],
+	pub keypairs: [Keypair<F, PoseidonCRH_x5_2<F>>; N],
+	pub leaf_privates: [LeafPrivateInput<F>; N],
+	pub leaf_publics: [LeafPublicInput<F>; N],
+	pub nullifiers: [F; N],
+	pub commitments: [F; N],
 }
 
 pub struct VAnchorProverSetup<
@@ -150,13 +151,13 @@ impl<
 		}
 	}
 
-	pub fn new_utxos<R: RngCore>(
+	pub fn new_utxos<R: RngCore, const N: usize>(
 		&self,
-		chain_ids: Vec<F>,
-		amounts: Vec<F>,
+		chain_ids: [F; N],
+		amounts: [F; N],
 		rng: &mut R,
-	) -> Utxos<F> {
-		let keypairs = Self::setup_keypairs(amounts.len(), rng);
+	) -> Utxos<F, N> {
+		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
 			self.setup_leaves(&chain_ids, &amounts, &keypairs, rng);
 
@@ -193,9 +194,9 @@ impl<
 		let fee = F::rand(rng);
 
 		let in_chain_id = F::rand(rng);
-		let in_amounts = vec![F::rand(rng); INS];
-		let out_chain_ids = vec![F::rand(rng); OUTS];
-		let out_amounts = vec![F::rand(rng); OUTS];
+		let in_amounts = [F::rand(rng); INS];
+		let out_chain_ids = [F::rand(rng); OUTS];
+		let out_amounts = [F::rand(rng); OUTS];
 
 		let (circuit, ..) = self.setup_circuit_with_data(
 			public_amount,
@@ -221,10 +222,10 @@ impl<
 		ext_amount: Vec<u8>,
 		fee: Vec<u8>,
 		// Input transactions
-		in_utxos: Utxos<F>,
+		in_utxos: Utxos<F, INS>,
 		// Output data
-		out_chain_ids: Vec<F>,
-		out_amounts: Vec<F>,
+		out_chain_ids: [F; OUTS],
+		out_amounts: [F; OUTS],
 		rng: &mut R,
 	) -> (
 		VACircuit<
@@ -240,7 +241,7 @@ impl<
 			M,
 		>,
 		Vec<F>,
-		Utxos<F>,
+		Utxos<F, OUTS>,
 	) {
 		// Tree + set for proving input txos
 		let (in_paths, in_indices, in_root_set, in_set_private_inputs) =
@@ -277,8 +278,8 @@ impl<
 			in_utxos.leaf_publics[0].chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers,
-			out_utxos.commitments.clone(),
+			in_utxos.nullifiers.to_vec(),
+			out_utxos.commitments.to_vec(),
 			ext_data_hash_f,
 		);
 
@@ -294,9 +295,9 @@ impl<
 		ext_amount: Vec<u8>,
 		fee: Vec<u8>,
 		in_chain_id: F,
-		in_amounts: Vec<F>,
-		out_chain_ids: Vec<F>,
-		out_amounts: Vec<F>,
+		in_amounts: [F; INS],
+		out_chain_ids: [F; OUTS],
+		out_amounts: [F; OUTS],
 		rng: &mut R,
 	) -> (
 		VACircuit<
@@ -312,11 +313,11 @@ impl<
 			M,
 		>,
 		Vec<F>,
-		Utxos<F>,
-		Utxos<F>,
+		Utxos<F, INS>,
+		Utxos<F, OUTS>,
 	) {
 		// Making a vec of same chain ids to be passed into setup_leaves
-		let in_chain_ids = vec![in_chain_id; in_amounts.len()];
+		let in_chain_ids = [in_chain_id; INS];
 
 		// Input leaves (txos)
 		let in_utxos = self.new_utxos(in_chain_ids, in_amounts, rng);
@@ -357,8 +358,8 @@ impl<
 			in_utxos.leaf_publics[0].chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.clone(),
-			out_utxos.commitments.clone(),
+			in_utxos.nullifiers.to_vec(),
+			out_utxos.commitments.to_vec(),
 			ext_data_hash_f,
 		);
 
@@ -370,14 +371,14 @@ impl<
 		public_amount: F,
 		arbitrary_data: VAnchorArbitraryData<F>,
 		// Input transactions
-		in_utxos: Utxos<F>,
+		in_utxos: Utxos<F, INS>,
 		// Data related to tree
 		in_indicies: Vec<F>,
 		in_paths: Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		in_set_private_inputs: Vec<SetPrivateInputs<F, M>>,
 		in_root_set: [F; M],
 		// Output transactions
-		out_utxos: Utxos<F>,
+		out_utxos: Utxos<F, OUTS>,
 	) -> VACircuit<
 		F,
 		PoseidonCRH_x5_2<F>,
@@ -410,8 +411,8 @@ impl<
 		>::new(
 			public_amount,
 			arbitrary_data,
-			in_utxos.leaf_privates,
-			in_utxos.keypairs,
+			in_utxos.leaf_privates.to_vec(),
+			in_utxos.keypairs.to_vec(),
 			in_utxos.leaf_publics[0].clone(),
 			in_set_private_inputs,
 			in_root_set,
@@ -420,10 +421,10 @@ impl<
 			self.params5,
 			in_paths,
 			in_indicies,
-			in_utxos.nullifiers.clone(),
-			out_utxos.commitments.clone(),
-			out_utxos.leaf_privates,
-			out_utxos.leaf_publics,
+			in_utxos.nullifiers.to_vec(),
+			out_utxos.commitments.to_vec(),
+			out_utxos.leaf_privates.to_vec(),
+			out_utxos.leaf_publics.to_vec(),
 			out_pub_keys,
 		);
 
@@ -485,30 +486,23 @@ impl<
 		ver_res
 	}
 
-	pub fn setup_keypairs<R: RngCore>(
-		n: usize,
+	pub fn setup_keypairs<R: RngCore, const N: usize>(
 		rng: &mut R,
-	) -> Vec<Keypair<F, PoseidonCRH_x5_2<F>>> {
-		let mut keypairs = Vec::new();
-		for _ in 0..n {
-			let priv_key = F::rand(rng);
-			let keypair = Keypair::<_, PoseidonCRH_x5_2<F>>::new(priv_key);
-			keypairs.push(keypair);
-		}
-		keypairs
+	) -> [Keypair<F, PoseidonCRH_x5_2<F>>; N] {
+		[(); N].map(|_| Keypair::<_, PoseidonCRH_x5_2<F>>::new(F::rand(rng)))
 	}
 
-	pub fn setup_leaves<R: RngCore>(
+	pub fn setup_leaves<R: RngCore, const N: usize>(
 		&self,
-		chain_ids: &Vec<F>,
-		amounts: &Vec<F>,
-		keypairs: &Vec<Keypair<F, PoseidonCRH_x5_2<F>>>,
+		chain_ids: &[F; N],
+		amounts: &[F; N],
+		keypairs: &[Keypair<F, PoseidonCRH_x5_2<F>>; N],
 		rng: &mut R,
 	) -> (
-		Vec<F>,
-		Vec<F>,
-		Vec<LeafPrivateInput<F>>,
-		Vec<LeafPublicInput<F>>,
+		[F; N],
+		[F; N],
+		[LeafPrivateInput<F>; N],
+		[LeafPublicInput<F>; N],
 	) {
 		let num_inputs = amounts.len();
 
@@ -552,15 +546,20 @@ impl<
 			public_inputs.push(public_input);
 		}
 
-		(leaves, nullifiers, private_inputs, public_inputs)
+		(
+			leaves.try_into().unwrap(),
+			nullifiers.try_into().unwrap(),
+			private_inputs.try_into().unwrap(),
+			public_inputs.try_into().unwrap(),
+		)
 	}
 
 	pub fn setup_tree(
 		&self,
-		leaves: &Vec<F>,
+		leaves: &[F; INS],
 	) -> (Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>, Vec<F>, F) {
 		let inner_params = Rc::new(self.params3.clone());
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves.to_vec()).unwrap();
 		let root = tree.root();
 
 		let num_leaves = leaves.len();
@@ -591,7 +590,7 @@ impl<
 
 	pub fn setup_tree_and_set(
 		&self,
-		leaves: &Vec<F>,
+		leaves: &[F; INS],
 	) -> (
 		Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		Vec<F>,

@@ -510,9 +510,9 @@ mod test {
 		let fee = vec![4u8; 20];
 
 		let in_chain_id = BnFr::from(0u8);
-		let in_amounts = vec![BnFr::from(2u32); 2];
-		let out_chain_ids = vec![BnFr::from(0u32); 2];
-		let out_amounts = vec![BnFr::from(5u32); 2];
+		let in_amounts = [BnFr::from(2u32); 2];
+		let out_chain_ids = [BnFr::from(0u32); 2];
+		let out_amounts = [BnFr::from(5u32); 2];
 
 		let (circuit, pub_ins, ..) = prover.setup_circuit_with_data(
 			public_amount,
