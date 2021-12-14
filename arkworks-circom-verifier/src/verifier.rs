@@ -200,4 +200,30 @@ mod test {
 		let verified = verify(inputs, &pvk_serialized, &proof_serialized);
 		assert!(verified);
 	}
+
+	#[should_panic(expected = "assertion failed: verified")]
+	#[test]
+	fn should_fail_with_invalid_proof() {
+		//let path = "./arkworks-circom-verifier/src/vanchor_circuit_final_2_2.zkey";
+		let path = "./test-vectors/vanchor_circuit_final_2_2.zkey";
+		let mut file = File::open(path).unwrap();
+		let params = read_zkey(&mut file).unwrap();
+		//let mut _wtns = WitnessCalculator::new("./src/poseidon_vanchor_2_2.wasm").unwrap();
+		//let mut _inputs: HashMap<String, Vec<num_bigint::BigInt>> = HashMap::new();
+		let json = ark_std::fs::read_to_string("./test-vectors/proof_wrong.json").unwrap();
+		let json: Value = serde_json::from_str(&json).unwrap();
+		let proof = parse_proof_bn254_json(&json);
+		
+		let json = ark_std::fs::read_to_string("./test-vectors/inputs.json").unwrap();
+		let json: Value = serde_json::from_str(&json).unwrap();
+		let mut proof_serialized =Vec::new();
+		Proof::<Bn254>::serialize(&proof, &mut  proof_serialized).unwrap();
+		
+		let mut pvk_serialized =Vec::new();
+		VerifyingKey::<Bn254>::serialize(&params.vk, &mut  pvk_serialized).unwrap();
+		let inputs = parse_public_inputs_bn254_json(&json);
+		//let verified = verify_proof(&pvk, &proof, &inputs).unwrap();
+		let verified = verify(inputs, &pvk_serialized, &proof_serialized);
+		assert!(verified);
+	}
 }
