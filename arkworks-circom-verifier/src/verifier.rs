@@ -148,9 +148,6 @@ pub fn read_zkey<R: Read + Seek>(
 #[cfg(test)]
 mod test {
 	use super::*;
-	//use ark_circom::*;
-	use arkworks_utils::prelude::ark_groth16::{prepare_verifying_key, verify_proof,
-	};
 	use ark_std::fs::File;
 	use ark_serialize::CanonicalSerialize;
 	#[test]
@@ -165,9 +162,6 @@ mod test {
 		let json: Value = serde_json::from_str(&json).unwrap();
 		let proof = parse_proof_bn254_json(&json);
 
-		
-		let pvk = prepare_verifying_key(&params.vk);
-		
 		let json = ark_std::fs::read_to_string("./test-vectors/inputs.json").unwrap();
 		let json: Value = serde_json::from_str(&json).unwrap();
 		let mut proof_serialized =Vec::new();
@@ -192,9 +186,6 @@ mod test {
 		let json = ark_std::fs::read_to_string("./test-vectors/proof.json").unwrap();
 		let json: Value = serde_json::from_str(&json).unwrap();
 		let proof = parse_proof_bn254_json(&json);
-
-		
-		let pvk = prepare_verifying_key(&params.vk);
 		
 		let json = ark_std::fs::read_to_string("./test-vectors/inputs.json").unwrap();
 		let json: Value = serde_json::from_str(&json).unwrap();
