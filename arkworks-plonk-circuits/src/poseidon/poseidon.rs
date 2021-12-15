@@ -198,7 +198,7 @@ mod tests {
 	) -> Result<(), Error> {
 		let rng = &mut test_rng();
 		// Common View
-		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut rng)?;
+		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, rng)?;
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
@@ -303,7 +303,7 @@ mod tests {
 
 		let rng = &mut test_rng();
 		let u_params: UniversalParams<Bn254> =
-			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut rng).unwrap();
+			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, rng).unwrap();
 
 		let (pk, vd) = circuit.compile(&u_params).unwrap();
 

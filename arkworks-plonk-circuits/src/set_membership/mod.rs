@@ -72,7 +72,7 @@ mod tests {
 	) -> Result<(), Error> {
 		let rng = &mut test_rng();
 		// Common View
-		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut rng)?;
+		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, rng)?;
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
