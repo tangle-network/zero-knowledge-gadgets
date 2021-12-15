@@ -196,7 +196,7 @@ impl<
 		Vec<F>,
 	) {
 		// Tree + set for proving input txos
-		let (in_paths, in_indices, in_root_set, in_set_private_inputs) =
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
 			self.setup_tree_and_set(&in_utxos.commitments);
 
 		let ext_data = ExtData::new(
@@ -518,14 +518,14 @@ impl<
 		&self,
 		leaves: &[F; INS],
 	) -> (
-		Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		Vec<F>,
-		[F; M],
+		Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		Vec<SetPrivateInputs<F, M>>,
+		[F; M],
 	) {
 		let (paths, indices, root) = self.setup_tree(&leaves);
 		let (root_set, set_private_inputs) = Self::setup_root_set(root);
-		(paths, indices, root_set, set_private_inputs)
+		(indices, paths, set_private_inputs, root_set)
 	}
 
 	pub fn construct_public_inputs(
