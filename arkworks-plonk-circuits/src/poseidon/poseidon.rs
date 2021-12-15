@@ -1,13 +1,10 @@
+use ark_crypto_primitives::crh::poseidon::Poseidon;
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
 use ark_plonk::{
-	circuit::Circuit,
-	constraint_system::StandardComposer,
-	error::Error,
-	prelude::Variable,
+	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
-use ark_std::{marker::PhantomData, vec::Vec};
-use num_traits::{One, Zero};
+use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
@@ -51,6 +48,64 @@ struct PoseidonCircuit<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>
 	pub _marker: PhantomData<P>,
 }
 
+pub fn hash<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+	state_var: Vec<Variable>,
+	params: PoseidonParametersVar,
+	composer: &mut StandardComposer<E, P>,
+) -> Result<Variable, Error> {
+	let mut state = state_var.clone();
+	// COMPUTE HASH
+	let nr = params.full_rounds + params.partial_rounds;
+	for r in 0..nr {
+		state.iter_mut().enumerate().for_each(|(i, a)| {
+			let c_temp = params.round_keys[(r as usize * params.width as usize + i)];
+			// a = a + c_temp
+			*a = composer.add(
+				(E::Fr::one(), *a),
+				(E::Fr::one(), c_temp),
+				E::Fr::zero(),
+				None,
+			);
+		});
+
+		let half_rounds = params.full_rounds / 2;
+		if r < half_rounds || r >= half_rounds + params.partial_rounds {
+			state
+				.iter_mut()
+				.try_for_each(|a| params.sbox.synthesize_sbox(a, composer).map(|f| *a = f))?;
+		} else {
+			state[0] = params.sbox.synthesize_sbox(&state[0], composer)?;
+		}
+
+		state = state
+			.iter()
+			.enumerate()
+			.map(|(i, _)| {
+				state
+					.iter()
+					.enumerate()
+					.fold(composer.zero_var(), |acc, (j, a)| {
+						let m = &params.mds_matrix[i][j];
+
+						let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::zero(), None);
+
+						let add_result = composer.add(
+							(E::Fr::one(), acc),
+							(E::Fr::one(), mul_result),
+							E::Fr::zero(),
+							None,
+						);
+
+						add_result
+					})
+			})
+			.collect();
+	}
+
+	let computed_hash = state.get(0).cloned().ok_or(Error::CircuitInputsNotFound)?;
+	Ok(computed_hash)
+}
+
 impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 	for PoseidonCircuit<E, P>
 {
@@ -61,7 +116,6 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		let a = composer.add_input(self.a);
 		let b = composer.add_input(self.b);
 		let state_zero = composer.add_input(E::Fr::zero());
-
 
 		let mut round_key_vars = vec![];
 		for i in 0..self.params.round_keys.len() {
@@ -88,56 +142,8 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 			sbox: self.params.sbox,
 		};
 
-		// COMPUTE HASH
-		let mut state = vec![state_zero, a, b];
-		let nr = params.full_rounds + params.partial_rounds;
-		for r in 0..nr {
-			state.iter_mut().enumerate().for_each(|(i, a)| {
-				let c_temp = params.round_keys[(r as usize * params.width as usize + i)];
-				// a = a + c_temp
-				*a = composer.add(
-					(E::Fr::one(), *a),
-					(E::Fr::one(), c_temp),
-					E::Fr::zero(),
-					None,
-				);
-			});
-
-			let half_rounds = params.full_rounds / 2;
-			if r < half_rounds || r >= half_rounds + params.partial_rounds {
-				state
-					.iter_mut()
-					.try_for_each(|a| params.sbox.synthesize_sbox(a, composer).map(|f| *a = f))?;
-			} else {
-				state[0] = params.sbox.synthesize_sbox(&state[0], composer)?;
-			}
-
-			state = state
-				.iter()
-				.enumerate()
-				.map(|(i, _)| {
-					state
-						.iter()
-						.enumerate()
-						.fold(composer.zero_var(), |acc, (j, a)| {
-							let m = &params.mds_matrix[i][j];
-
-							let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::zero(), None);
-
-							let add_result = composer.add(
-								(E::Fr::one(), acc),
-								(E::Fr::one(), mul_result),
-								E::Fr::zero(),
-								None,
-							);
-
-							add_result
-						})
-				})
-				.collect();
-		}
-
-		let computed_hash = state.get(0).cloned().ok_or(Error::CircuitInputsNotFound)?;
+		let state = vec![state_zero, a, b];
+		let computed_hash = hash(state, params, composer)?;
 
 		let add_result = composer.add(
 			(E::Fr::one(), computed_hash),
@@ -162,27 +168,24 @@ mod tests {
 	use ark_crypto_primitives::crh::TwoToOneCRH;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::{BigInteger, Field};
-	use ark_plonk::
-		circuit::{self, FeIntoPubInput};
+	use ark_plonk::{
+		circuit::{self, FeIntoPubInput},
+		prelude::*,
+		proof_system::{Prover, Verifier},
+	};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{
 		kzg10::{self, Powers, UniversalParams, KZG10},
 		sonic_pc::SonicKZG10,
 		PolynomialCommitment,
 	};
-	use ark_plonk::{
-		prelude::*,
-		proof_system::{Prover, Verifier},
-	};
-	use arkworks_utils::utils::common::{setup_params_x3_5, setup_params_x5_3, }; 
-	use num_traits::{One};
-	use rand_core::OsRng;
+	use ark_std::{test_rng, One};
+	use arkworks_utils::utils::common::{setup_params_x3_5, setup_params_x5_3};
 
 	type PoseidonCRH3 = arkworks_gadgets::poseidon::CRH<Fq>;
 	type StandardComposerBn254 =
 		ark_plonk::constraint_system::StandardComposer<Bn254, JubjubParameters>;
 
-	
 	/// Takes a generic gadget function with no auxillary input and
 	/// tests whether it passes an end-to-end test
 	pub(crate) fn gadget_tester<
@@ -193,8 +196,9 @@ mod tests {
 		circuit: &mut C,
 		n: usize,
 	) -> Result<(), Error> {
+		let rng = &mut test_rng();
 		// Common View
-		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut OsRng)?;
+		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut rng)?;
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
@@ -269,8 +273,6 @@ mod tests {
 		Ok(verifier.verify(&proof, &vk, &public_inputs)?)
 	}
 
-
-
 	#[test]
 	fn should_verify_plonk_poseidon_x5_3() {
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
@@ -281,7 +283,7 @@ mod tests {
 			mds_matrix: util_params.clone().mds_matrix,
 			full_rounds: util_params.clone().full_rounds,
 			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(5), 
+			sbox: PoseidonSbox::Exponentiation(5),
 			width: util_params.clone().width,
 		};
 
@@ -299,8 +301,9 @@ mod tests {
 			_marker: std::marker::PhantomData,
 		};
 
+		let rng = &mut test_rng();
 		let u_params: UniversalParams<Bn254> =
-			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
+			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut rng).unwrap();
 
 		let (pk, vd) = circuit.compile(&u_params).unwrap();
 
@@ -327,9 +330,8 @@ mod tests {
 		};
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<JubjubParameters>> =
-			vec![poseidon_res.into_pi()];
-	        
+		let public_inputs: Vec<PublicInputValue<JubjubParameters>> = vec![poseidon_res.into_pi()];
+
 		let VerifierData { key, pi_pos } = vd;
 
 		circuit::verify_proof(
@@ -342,7 +344,6 @@ mod tests {
 		)
 		.unwrap();
 	}
-
 
 	#[test]
 	fn test_correct_poseidon_hash() {
@@ -372,10 +373,7 @@ mod tests {
 			_marker: std::marker::PhantomData,
 		};
 
-		let res = gadget_tester(
-			&mut circuit,
-			2000,
-		);
+		let res = gadget_tester(&mut circuit, 2000);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 }

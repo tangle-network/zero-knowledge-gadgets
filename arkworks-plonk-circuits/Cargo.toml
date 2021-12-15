@@ -21,14 +21,11 @@ ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
-num-traits = "0.2.14"
 
 # curves
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
-rand_core = { version = "0.6", default-features = false }
 arkworks-gadgets = {path = "../arkworks-gadgets",  version = "0.4.0", default-features = false }
-
 
 [features]
 default = ["std"]

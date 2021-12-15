@@ -1,7 +1,7 @@
 use ark_ec::{PairingEngine, TEModelParameters};
 use ark_ff::Field;
 use ark_plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
-use ark_std::{One,Zero};
+use ark_std::{One, Zero};
 
 #[derive(Debug)]
 pub enum PoseidonError {

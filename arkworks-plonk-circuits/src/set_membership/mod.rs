@@ -2,8 +2,7 @@ use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_plonk::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
-use ark_std::{marker::PhantomData, vec::Vec};
-use num_traits::{One, Zero};
+use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
 
 #[derive(Debug, Default)]
 struct SetMembershipCircuit<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
@@ -61,7 +60,6 @@ mod tests {
 		sonic_pc::SonicKZG10,
 		PolynomialCommitment,
 	};
-	use rand_core::OsRng;
 
 	pub(crate) fn gadget_tester<
 		E: PairingEngine,
@@ -71,8 +69,9 @@ mod tests {
 		circuit: &mut C,
 		n: usize,
 	) -> Result<(), Error> {
+		let rng = &mut test_rng();
 		// Common View
-		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut OsRng)?;
+		let universal_params = KZG10::<E, DensePolynomial<E::Fr>>::setup(2 * n, false, &mut rng)?;
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
@@ -154,7 +153,7 @@ mod tests {
 		let mut circuit = SetMembershipCircuit::<Bn254, JubjubParameters> {
 			roots,
 			target,
-			_te: std::marker::PhantomData,
+			_te: PhantomData,
 		};
 
 		let res = gadget_tester(&mut circuit, 2000);
@@ -169,7 +168,7 @@ mod tests {
 		let mut circuit = SetMembershipCircuit::<Bn254, JubjubParameters> {
 			roots,
 			target,
-			_te: std::marker::PhantomData,
+			_te: PhantomData,
 		};
 
 		let res = gadget_tester(&mut circuit, 2000);
