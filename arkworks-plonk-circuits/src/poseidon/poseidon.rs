@@ -138,7 +138,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		}
 
 		let computed_hash = state.get(0).cloned().ok_or(Error::CircuitInputsNotFound)?;
-		println!("GADGET {:?}", computed_hash);
+
 		let add_result = composer.add(
 			(E::Fr::one(), computed_hash),
 			(E::Fr::one(), composer.zero_var()),
@@ -174,7 +174,7 @@ mod tests {
 		prelude::*,
 		proof_system::{Prover, Verifier},
 	};
-	use arkworks_utils::utils::common::{setup_params_x3_5, setup_params_x5_3, setup_params_x17_5}; 
+	use arkworks_utils::utils::common::{setup_params_x3_5, setup_params_x5_3, }; 
 	use num_traits::{One};
 	use rand_core::OsRng;
 
@@ -269,75 +269,7 @@ mod tests {
 		Ok(verifier.verify(&proof, &vk, &public_inputs)?)
 	}
 
-	#[test]
-	fn should_verify_plonk_poseidon_x3_5() {
-		let curve = arkworks_utils::utils::common::Curve::Bn254;
 
-		let util_params = setup_params_x3_5(curve);
-		let params = PoseidonParameters {
-			round_keys: util_params.clone().round_keys,
-			mds_matrix: util_params.clone().mds_matrix,
-			full_rounds: util_params.clone().full_rounds,
-			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(3), 
-			width: util_params.clone().width,
-		};
-
-		let left_input = Fq::one().into_repr().to_bytes_le();
-		let right_input = Fq::one().double().into_repr().to_bytes_le();
-		let poseidon_res =
-			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
-				.unwrap();
-		println!("RESULT: {:?}", poseidon_res.to_string());
-		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-			a: Fq::from_le_bytes_mod_order(&left_input),
-			b: Fq::from_le_bytes_mod_order(&right_input),
-			c: poseidon_res,
-			params,
-			_marker: std::marker::PhantomData,
-		};
-
-		let u_params: UniversalParams<Bn254> =
-			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
-
-		let (pk, vd) = circuit.compile(&u_params).unwrap();
-
-		// PROVER
-		let proof = {
-			let util_params = setup_params_x3_5(curve);
-			let params = PoseidonParameters {
-				round_keys: util_params.round_keys,
-				mds_matrix: util_params.mds_matrix,
-				full_rounds: util_params.full_rounds,
-				partial_rounds: util_params.partial_rounds,
-				sbox: PoseidonSbox::Exponentiation(3),
-				width: util_params.width,
-			};
-
-			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-				a: Fq::from_le_bytes_mod_order(&left_input),
-				b: Fq::from_le_bytes_mod_order(&right_input),
-				c: poseidon_res,
-				params,
-				_marker: std::marker::PhantomData,
-			};
-			circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
-		};
-
-		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
-			vec![poseidon_res.into_pi()];
-
-		circuit::verify_proof(
-			&u_params,
-			vd.clone().key(),
-			&proof,
-			&public_inputs,
-			vd.clone().pi_pos(),
-			b"Poseidon Test",
-		)
-		.unwrap();
-	}
 
 	#[test]
 	fn should_verify_plonk_poseidon_x5_3() {
@@ -395,92 +327,22 @@ mod tests {
 		};
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
+		let public_inputs: Vec<PublicInputValue<JubjubParameters>> =
 			vec![poseidon_res.into_pi()];
+	        
+		let VerifierData { key, pi_pos } = vd;
 
 		circuit::verify_proof(
 			&u_params,
-			vd.clone().key(),
+			key,
 			&proof,
 			&public_inputs,
-			vd.clone().pi_pos(),
+			&pi_pos,
 			b"Poseidon Test",
 		)
 		.unwrap();
 	}
 
-	#[test]
-	fn should_verify_plonk_poseidon_x17_5() {
-		let curve = arkworks_utils::utils::common::Curve::Bn254;
-
-		let util_params = setup_params_x17_5(curve);
-		let params = PoseidonParameters {
-			round_keys: util_params.clone().round_keys,
-			mds_matrix: util_params.clone().mds_matrix,
-			full_rounds: util_params.clone().full_rounds,
-			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(17), 
-			width: util_params.clone().width,
-		};
-
-		println!("Full rounds: {:?}, Par Rounds: {:?}, Len Round Keys: {:?}",util_params.full_rounds,util_params.partial_rounds,util_params.round_keys.len());
-
-
-		let left_input = Fq::one().into_repr().to_bytes_le();
-		let right_input = Fq::one().double().into_repr().to_bytes_le();
-		let poseidon_res =
-			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
-				.unwrap();
-		println!("RESULT: {:?}", poseidon_res.to_string());
-		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-			a: Fq::from_le_bytes_mod_order(&left_input),
-			b: Fq::from_le_bytes_mod_order(&right_input),
-			c: poseidon_res,
-			params,
-			_marker: std::marker::PhantomData,
-		};
-
-		let u_params: UniversalParams<Bn254> =
-			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, &mut OsRng).unwrap();
-
-		let (pk, vd) = circuit.compile(&u_params).unwrap();
-
-		// PROVER
-		let proof = {
-			let util_params = setup_params_x17_5(curve);
-			let params = PoseidonParameters {
-				round_keys: util_params.round_keys,
-				mds_matrix: util_params.mds_matrix,
-				full_rounds: util_params.full_rounds,
-				partial_rounds: util_params.partial_rounds,
-				sbox: PoseidonSbox::Exponentiation(17),
-				width: util_params.width,
-			};
-
-			let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-				a: Fq::from_le_bytes_mod_order(&left_input),
-				b: Fq::from_le_bytes_mod_order(&right_input),
-				c: poseidon_res,
-				params,
-				_marker: std::marker::PhantomData,
-			};
-			circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
-		};
-
-		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr, JubjubParameters>> =
-			vec![poseidon_res.into_pi()];
-
-		circuit::verify_proof(
-			&u_params,
-			vd.clone().key(),
-			&proof,
-			&public_inputs,
-			vd.clone().pi_pos(),
-			b"Poseidon Test",
-		)
-		.unwrap();
-	}
 
 	#[test]
 	fn test_correct_poseidon_hash() {
@@ -510,15 +372,9 @@ mod tests {
 			_marker: std::marker::PhantomData,
 		};
 
-		// fn circuit_gadget<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
-		// 	composer: &mut StandardComposer<E, P>,
-		// ) {
-		// 	circuit.gadget(cs);
-		// }
-
 		let res = gadget_tester(
 			&mut circuit,
-			2000, //what's a reasonable value?
+			2000,
 		);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
