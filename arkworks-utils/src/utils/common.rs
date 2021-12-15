@@ -19,6 +19,7 @@ pub enum Curve {
 	Bn254,
 }
 
+#[cfg(all(feature = "poseidon_bls381_x3_3", feature = "poseidon_bn254_x3_3"))]
 pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -26,6 +27,8 @@ pub fn setup_params_x3_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 		Curve::Bn254 => crate::utils::bn254_x3_3::get_poseidon_bn254_x3_3(),
 	}
 }
+
+#[cfg(all(feature = "poseidon_bls381_x3_5", feature = "poseidon_bn254_x3_5"))]
 pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -34,6 +37,7 @@ pub fn setup_params_x3_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	}
 }
 
+#[cfg(all(feature = "poseidon_bls381_x5_3", feature = "poseidon_bn254_x5_3"))]
 pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -42,6 +46,7 @@ pub fn setup_params_x5_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	}
 }
 
+#[cfg(feature = "poseidon_bn254_x5_2")]
 pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -52,6 +57,7 @@ pub fn setup_params_x5_2<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	}
 }
 
+#[cfg(feature = "poseidon_bn254_x5_4")]
 pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -62,6 +68,7 @@ pub fn setup_params_x5_4<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	}
 }
 
+#[cfg(all(feature = "poseidon_bls381_x5_5", feature = "poseidon_bn254_x5_5"))]
 pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -70,6 +77,7 @@ pub fn setup_params_x5_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	}
 }
 
+#[cfg(all(feature = "poseidon_bls381_x17_3", feature = "poseidon_bn254_x17_3"))]
 pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -78,6 +86,7 @@ pub fn setup_params_x17_3<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 	}
 }
 
+#[cfg(all(feature = "poseidon_bls381_x17_5", feature = "poseidon_bn254_x17_5"))]
 pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> {
 	// Making params for poseidon in merkle tree
 	match curve {
@@ -86,6 +95,7 @@ pub fn setup_params_x17_5<F: PrimeField>(curve: Curve) -> PoseidonParameters<F> 
 	}
 }
 
+#[cfg(feature = "default_mimc")]
 pub fn setup_mimc_220<F: PrimeField>(curve: Curve) -> crate::mimc::MiMCParameters<F> {
 	match curve {
 		Curve::Bls381 => {

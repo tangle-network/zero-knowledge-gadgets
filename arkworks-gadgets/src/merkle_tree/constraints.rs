@@ -125,6 +125,7 @@ where
 	HG: CRHGadget<P::H, F>,
 	LHG: CRHGadget<P::LeafH, F>,
 {
+	#[allow(clippy::type_complexity)]
 	path: [(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>); N],
 	inner_params: Rc<HG::ParametersVar>,
 	leaf_params: Rc<LHG::ParametersVar>,
@@ -155,7 +156,7 @@ where
 		assert_eq!(self.path.len(), P::HEIGHT as usize);
 		// Check that the hash of the given leaf matches the leaf hash in the membership
 		// proof.
-		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), &leaf)?;
+		let leaf_hash = hash_leaf_gadget::<F, P, HG, LHG, L>(self.leaf_params.borrow(), leaf)?;
 
 		// Check if leaf is one of the bottom-most siblings.
 		let leaf_is_left = leaf_hash.is_eq(&self.path[0].0)?;
@@ -170,7 +171,7 @@ where
 		let mut previous_hash = leaf_hash;
 		for &(ref left_hash, ref right_hash) in self.path.iter() {
 			// Check if the previous_hash matches the correct current hash.
-			let previous_is_left = previous_hash.is_eq(&left_hash)?;
+			let previous_is_left = previous_hash.is_eq(left_hash)?;
 
 			previous_hash.enforce_equal(&NodeVar::conditionally_select(
 				&previous_is_left,
@@ -208,7 +209,7 @@ where
 		let mut previous_hash = leaf_hash;
 		for &(ref left_hash, ref right_hash) in self.path.iter() {
 			// Check if the previous_hash is for a left node.
-			let previous_is_left = previous_hash.is_eq(&left_hash)?;
+			let previous_is_left = previous_hash.is_eq(left_hash)?;
 
 			rightvalue = index.clone() + twopower.clone();
 			index = FpVar::<F>::conditionally_select(&previous_is_left, &index, &rightvalue)?;
@@ -237,7 +238,7 @@ where
 	LHG: CRHGadget<P::LeafH, F>,
 {
 	Ok(NodeVar::Leaf(LHG::evaluate(
-		&leaf_params,
+		leaf_params,
 		&leaf.to_bytes()?,
 	)?))
 }
@@ -293,6 +294,7 @@ where
 
 		Ok(PathVar {
 			path: path.try_into().unwrap_or_else(
+				#[allow(clippy::type_complexity)]
 				|v: Vec<(NodeVar<F, P, HG, LHG>, NodeVar<F, P, HG, LHG>)>| {
 					panic!("Expected a Vec of length {} but it was {}", N, v.len())
 				},

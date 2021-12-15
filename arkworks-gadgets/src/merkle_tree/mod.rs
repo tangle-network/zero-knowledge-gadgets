@@ -91,10 +91,8 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		// Check levels between leaf level and root.
 		for &(ref left_hash, ref right_hash) in &self.path {
 			// Check if the previous hash is for a left node or right node.
-			if &prev == left_hash {
-				index = index;
-			} else {
-				index = index + twopower;
+			if &prev != left_hash {
+				index += twopower;
 			}
 			twopower = twopower + twopower;
 			prev = hash_inner_node::<P>(self.inner_params.borrow(), left_hash, right_hash)?;
@@ -178,10 +176,10 @@ impl<P: Config> SparseMerkleTree<P> {
 				let empty_hash = self.empty_hashes[level as usize].clone();
 				let left = self.tree.get(&left_index).unwrap_or(&empty_hash);
 				let right = self.tree.get(&right_index).unwrap_or(&empty_hash);
-
+				#[allow(mutable_borrow_reservation_conflict)]
 				self.tree.insert(
 					i,
-					hash_inner_node::<P>(self.inner_params.borrow(), &left, &right)?,
+					hash_inner_node::<P>(self.inner_params.borrow(), left, right)?,
 				);
 
 				let parent = match parent(i) {
@@ -261,12 +259,12 @@ impl<P: Config> SparseMerkleTree<P> {
 				.tree
 				.get(&current_node)
 				.cloned()
-				.unwrap_or(empty_hash.clone());
+				.unwrap_or_else(|| empty_hash.clone());
 			let sibling = self
 				.tree
 				.get(&sibling_node)
 				.cloned()
-				.unwrap_or(empty_hash.clone());
+				.unwrap_or_else(|| empty_hash.clone());
 
 			if is_left_child(current_node) {
 				path.push((current, sibling));
@@ -391,7 +389,7 @@ pub fn gen_empty_hashes<P: Config>(
 	empty_hashes.push(empty_hash.clone());
 
 	for _ in 1..=P::HEIGHT {
-		empty_hash = hash_inner_node::<P>(&inner_params, &empty_hash, &empty_hash)?;
+		empty_hash = hash_inner_node::<P>(inner_params, &empty_hash, &empty_hash)?;
 		empty_hashes.push(empty_hash.clone());
 	}
 

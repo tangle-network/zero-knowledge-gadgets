@@ -2,9 +2,9 @@ use super::parse_matrix;
 use crate::{
 	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
 	utils::parse_vec,
+	Vec,
 };
 use ark_ff::PrimeField;
-
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 56;
 pub const WIDTH: u8 = 4;

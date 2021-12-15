@@ -1,9 +1,7 @@
-use std::marker::PhantomData;
-
 use crate::circuit::vanchor::VAnchorCircuit;
 use ark_crypto_primitives::{CRHGadget, CRH as CRHTrait};
 use ark_ff::{to_bytes, PrimeField, ToBytes};
-use ark_std::{self, rc::Rc};
+use ark_std::{self, marker::PhantomData, rc::Rc};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
@@ -59,8 +57,8 @@ impl<
 	pub fn new_key_pairs(&self, private_keys: &[F]) -> (Vec<Keypair<F, H>>, Vec<H::Output>) {
 		let mut keypairs = Vec::new();
 		let mut pub_keys = Vec::new();
-		for i in 0..OUTS {
-			let (kp, pub_key) = self.new_key_pair(private_keys[i]);
+		for prk in private_keys {
+			let (kp, pub_key) = self.new_key_pair(*prk);
 			keypairs.push(kp);
 			pub_keys.push(pub_key);
 		}
@@ -73,6 +71,7 @@ impl<
 		(kp, pub_key)
 	}
 
+	#[allow(clippy::type_complexity)]
 	fn new_input_leaves(
 		&self,
 		chain_ids: Vec<F>,
@@ -89,6 +88,7 @@ impl<
 		self.new_n_leaves(chain_ids, amounts, blindings, indices, keypairs, INS)
 	}
 
+	#[allow(clippy::type_complexity)]
 	fn new_output_leaves(
 		&self,
 		chain_ids: Vec<F>,
@@ -105,6 +105,7 @@ impl<
 		self.new_n_leaves(chain_ids, amounts, blindings, indices, keypairs, OUTS)
 	}
 
+	#[allow(clippy::type_complexity)]
 	fn new_n_leaves(
 		&self,
 		chain_ids: Vec<F>,
@@ -201,6 +202,7 @@ impl<
 		SetMembership::generate_secrets(root, roots).unwrap()
 	}
 
+	#[allow(clippy::type_complexity)]
 	pub fn setup_circuit<R: Rng>(
 		self,
 		rng: &mut R,
@@ -220,7 +222,7 @@ impl<
 		let out_blindings: Vec<F> = (0..OUTS).into_iter().map(|_| F::rand(rng)).collect();
 		let out_public_keys: Vec<F> = (0..OUTS).into_iter().map(|_| F::rand(rng)).collect();
 
-		let public_amount = F::from(5 as u32);
+		let public_amount = F::from(5_u32);
 		let ext_data = F::rand(rng);
 		let indices: Vec<u64> = (0..INS).into_iter().map(|x| x as u64).collect();
 		let indices_f: Vec<F> = (0..INS).into_iter().map(|x| F::from(x as u64)).collect();
@@ -253,8 +255,8 @@ impl<
 		}
 
 		let mut in_set_privates = Vec::new();
-		for root in root_set {
-			let in_set_private = Self::new_set(&root, &root_set);
+		for root in root_set.iter() {
+			let in_set_private = Self::new_set(root, &root_set);
 			in_set_privates.push(in_set_private);
 		}
 
@@ -270,13 +272,12 @@ impl<
 			.map(|x| F::from_be_bytes_mod_order(&to_bytes![x].unwrap()))
 			.collect();
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(in_leaf_public.chain_id);
-		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		let mut public_inputs = vec![public_amount];
+		public_inputs.push(ext_data);
 		public_inputs.extend(in_nullifier_hashes_f);
 		public_inputs.extend(out_commitments_f);
-		public_inputs.push(ext_data);
+		public_inputs.push(in_leaf_public.chain_id);
+		public_inputs.extend(&root_set);
 
 		(
 			VAnchorCircuit::new(

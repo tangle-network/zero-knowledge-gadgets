@@ -32,7 +32,7 @@ impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> KeypairVar<F, H, HG> {
 	) -> Result<<HG as CRHGadget<H, F>>::OutputVar, SynthesisError> {
 		let mut bytes = Vec::<UInt8<F>>::new();
 		bytes.extend(self.private_key.to_bytes()?);
-		HG::evaluate(&parameters2, &bytes)
+		HG::evaluate(parameters2, &bytes)
 	}
 
 	pub fn signature(
@@ -59,7 +59,7 @@ impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> AllocVar<Keypair<F, H2>, F>
 	) -> Result<Self, SynthesisError> {
 		let inp = f()?.borrow().clone();
 		let private_key_in = FpVar::<F>::new_variable(into_ns, || Ok(inp.private_key), mode)?;
-		Ok(KeypairVar::new(&private_key_in)?)
+		KeypairVar::new(&private_key_in)
 	}
 }
 

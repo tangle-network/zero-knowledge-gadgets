@@ -2,9 +2,9 @@ use super::parse_matrix;
 use crate::{
 	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
 	utils::parse_vec,
+	Vec,
 };
 use ark_ff::PrimeField;
-
 // https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon
 
 // Parameter for:

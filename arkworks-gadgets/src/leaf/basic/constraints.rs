@@ -65,7 +65,7 @@ impl<F: PrimeField> AllocVar<Private<F>, F> for PrivateVar<F> {
 		let r = secrets.r;
 		let nullifier = secrets.nullifier;
 		let r_var = FpVar::new_variable(cs.clone(), || Ok(r), mode)?;
-		let nullifier_var = FpVar::new_variable(cs.clone(), || Ok(nullifier), mode)?;
+		let nullifier_var = FpVar::new_variable(cs, || Ok(nullifier), mode)?;
 		Ok(PrivateVar::new(r_var, nullifier_var))
 	}
 }

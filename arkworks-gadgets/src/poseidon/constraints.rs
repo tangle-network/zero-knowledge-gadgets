@@ -72,7 +72,7 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 pub struct CRHGadget<F: PrimeField>(PhantomData<F>);
 
 impl<F: PrimeField> CRHGadget<F> {
-	fn permute(
+	pub fn permute(
 		params: &PoseidonParametersVar<F>,
 		mut state: Vec<FpVar<F>>,
 	) -> Result<Vec<FpVar<F>>, SynthesisError> {
@@ -132,7 +132,7 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 		for f in f_var_inputs {
 			buffer.push(f);
 		}
-		let result = Self::permute(&parameters, buffer);
+		let result = Self::permute(parameters, buffer);
 
 		result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
 	}

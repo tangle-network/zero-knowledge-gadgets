@@ -1,18 +1,16 @@
 [package]
-name = "arkworks-circuits"
-version = "0.4.6"
-authors = ["Webb Developers"]
-edition = "2018"
-description = "Webb protocol's circuit's using zero-knowledge gadgets written using Arkworks"
-license = "MIT/Apache-2.0"
-repository = "https://github.com/webb-tools/arkworks-gadgets"
-homepage = "https://webb.tools"
+name = "arkworks-circom-verifier"
+version = "0.1.0"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = {path = "../arkworks-utils", version = "0.4.6", default-features = false }
-arkworks-gadgets = {path = "../arkworks-gadgets", version = "0.4.6", default-features = false }
+arkworks-utils = {path = "../arkworks-utils", version = "0.4.5", default-features = false }
+arkworks-gadgets = {path = "../arkworks-gadgets", version = "0.4.5", default-features = false }
+ark-circom = { git = "https://github.com/gakonst/ark-circom", version ="0.1.0", default-features = false }
+num-bigint = { version = "0.4", default-features = false, features = ["rand"] }
+serde_json = "1.0.64"
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
@@ -21,7 +19,9 @@ ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
 
 ark-marlin = {version = "^0.3.0", default-features = false }
-ark-groth16 = {version = "^0.3.0", default-features = false }
+#ark-groth16 = {version = "^0.3.0", default-features = false }
+ark-groth16 = { git = "https://github.com/arkworks-rs/groth16", rev = "765817f", features = ["parallel"] }
+
 blake2 = { version = "0.9", default-features = false }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
@@ -37,6 +37,7 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "cu
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
 paste = { version = "1.0.5" }
+byteorder = "1.4.3"
 
 [features]
 default = ["std", "r1cs", "default_mimc", "default_poseidon"]

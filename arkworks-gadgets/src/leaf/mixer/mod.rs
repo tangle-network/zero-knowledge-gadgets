@@ -19,6 +19,10 @@ impl<F: PrimeField> Private<F> {
 		}
 	}
 
+	pub fn new(secret: F, nullifier: F) -> Self {
+		Self { secret, nullifier }
+	}
+
 	pub fn secret(&self) -> F {
 		self.secret
 	}

@@ -32,7 +32,7 @@ pub struct SetMembershipGadget<F: PrimeField, const M: usize> {
 impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 	pub fn check<T: ToBytesGadget<F>>(
 		target: &T,
-		set: &Vec<FpVar<F>>,
+		set: &[FpVar<F>],
 		private: &PrivateVar<F, M>,
 	) -> Result<Boolean<F>, SynthesisError> {
 		assert_eq!(set.len(), M); // FIXME Should we enforce it in constrain system?
@@ -43,12 +43,12 @@ impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 			product *= diff;
 		}
 
-		Ok(product.is_eq(&FpVar::<F>::zero())?)
+		product.is_eq(&FpVar::<F>::zero())
 	}
 
 	pub fn check_is_enabled<T: ToBytesGadget<F>>(
 		target: &T,
-		set: &Vec<FpVar<F>>,
+		set: &[FpVar<F>],
 		private: &PrivateVar<F, M>,
 		is_enabled: &FpVar<F>,
 	) -> Result<Boolean<F>, SynthesisError> {
@@ -63,7 +63,7 @@ impl<F: PrimeField, const M: usize> SetMembershipGadget<F, M> {
 		}
 
 		product *= is_enabled;
-		Ok(product.is_eq(&FpVar::<F>::zero())?)
+		product.is_eq(&FpVar::<F>::zero())
 	}
 }
 
@@ -82,8 +82,10 @@ impl<F: PrimeField, const M: usize> AllocVar<Private<F, M>, F> for PrivateVar<F,
 #[cfg(test)]
 mod test {
 	use super::*;
-	use crate::set::membership::SetMembership;
-	use crate::ark_std::{One, Zero};
+	use crate::{
+		ark_std::{One, Zero},
+		set::membership::SetMembership,
+	};
 	use ark_bls12_381::Fq;
 	use ark_ff::UniformRand;
 	use ark_relations::r1cs::ConstraintSystem;
@@ -116,7 +118,6 @@ mod test {
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 		assert!(is_member.cs().is_satisfied().unwrap());
 	}
-
 
 	#[test]
 	fn test_native_equality_is_enabled() {

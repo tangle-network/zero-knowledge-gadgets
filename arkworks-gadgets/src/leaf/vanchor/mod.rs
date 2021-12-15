@@ -77,6 +77,7 @@ mod test {
 		ark_std::{UniformRand, Zero},
 		poseidon::CRH,
 	};
+	use ark_std::vec::Vec;
 
 	use arkworks_utils::utils::{
 		common::{setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve},

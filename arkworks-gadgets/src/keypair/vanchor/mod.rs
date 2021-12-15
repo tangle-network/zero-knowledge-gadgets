@@ -21,7 +21,7 @@ impl<B: Clone + ToBytes, H: CRH> Keypair<B, H> {
 
 	pub fn public_key(&self, h: &H::Parameters) -> Result<H::Output, Error> {
 		let bytes = to_bytes![&self.private_key]?;
-		H::evaluate(&h, &bytes)
+		H::evaluate(h, &bytes)
 	}
 
 	// Computes the signature = hash(privKey, commitment, pathIndices)
@@ -32,7 +32,7 @@ impl<B: Clone + ToBytes, H: CRH> Keypair<B, H> {
 		h_w4: &H::Parameters,
 	) -> Result<H::Output, Error> {
 		let bytes = to_bytes![self.private_key.clone(), commitment, index]?;
-		H::evaluate(&h_w4, &bytes)
+		H::evaluate(h_w4, &bytes)
 	}
 }
 

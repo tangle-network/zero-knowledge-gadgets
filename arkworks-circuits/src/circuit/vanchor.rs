@@ -85,6 +85,7 @@ where
 	LHGT: CRHGadget<C::LeafH, F>,
 	HGT: CRHGadget<C::H, F>,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		public_amount: F,
 		ext_data_hash: ArbitraryInput<F>,
@@ -130,18 +131,19 @@ where
 		}
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	pub fn verify_input_var(
 		hasher_params_w2_var: &HG::ParametersVar,
 		hasher_params_w4_var: &HG::ParametersVar,
 		hasher_params_w5_var: &HG::ParametersVar,
-		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
-		inkeypair_var: &Vec<KeypairVar<F, H, HG>>,
+		leaf_private_var: &[LeafPrivateInputsVar<F>],
+		inkeypair_var: &[KeypairVar<F, H, HG>],
 		leaf_public_input_var: &LeafPublicInputsVar<F>,
-		in_path_indices_var: &Vec<FpVar<F>>,
-		in_path_elements_var: &Vec<PathVar<F, C, HGT, LHGT, K>>,
-		in_nullifier_var: &Vec<HG::OutputVar>,
-		root_set_var: &Vec<FpVar<F>>,
-		set_input_private_var: &Vec<SetPrivateInputsVar<F, M>>,
+		in_path_indices_var: &[FpVar<F>],
+		in_path_elements_var: &[PathVar<F, C, HGT, LHGT, K>],
+		in_nullifier_var: &[HG::OutputVar],
+		root_set_var: &[FpVar<F>],
+		set_input_private_var: &[SetPrivateInputsVar<F, M>],
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
 
@@ -151,22 +153,22 @@ where
 			// Computing the hash
 			let in_utxo_hasher_var = VAnchorLeafGadget::<F, H, HG>::create_leaf(
 				&leaf_private_var[tx],
-				&leaf_public_input_var,
+				leaf_public_input_var,
 				&pub_key,
-				&hasher_params_w5_var,
+				hasher_params_w5_var,
 			)?;
 			// End of computing the hash
 
 			let signature = inkeypair_var[tx].signature(
 				&in_utxo_hasher_var,
 				&in_path_indices_var[tx],
-				&hasher_params_w4_var,
+				hasher_params_w4_var,
 			)?;
 			// Nullifier
 			let nullifier_hash = VAnchorLeafGadget::<F, H, HG>::create_nullifier(
 				&signature,
 				&in_utxo_hasher_var,
-				&hasher_params_w4_var,
+				hasher_params_w4_var,
 				&in_path_indices_var[tx],
 			)?;
 
@@ -177,9 +179,9 @@ where
 			let in_amount_tx = &leaf_private_var[tx].amount;
 			let check = SetMembershipGadget::check_is_enabled(
 				&roothash,
-				&root_set_var,
+				&root_set_var.to_vec(),
 				&set_input_private_var[tx],
-				&in_amount_tx,
+				in_amount_tx,
 			)?;
 			check.enforce_equal(&Boolean::TRUE)?;
 
@@ -191,10 +193,10 @@ where
 	// Verify correctness of transaction outputs
 	pub fn verify_output_var(
 		hasher_params_w5_var: &HG::ParametersVar,
-		output_commitment_var: &Vec<HG::OutputVar>,
-		leaf_private_var: &Vec<LeafPrivateInputsVar<F>>,
-		leaf_public_var: &Vec<LeafPublicInputsVar<F>>,
-		out_pubkey_var: &Vec<FpVar<F>>,
+		output_commitment_var: &[HG::OutputVar],
+		leaf_private_var: &[LeafPrivateInputsVar<F>],
+		leaf_public_var: &[LeafPublicInputsVar<F>],
+		out_pubkey_var: &[FpVar<F>],
 		limit_var: &FpVar<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_outs_var = FpVar::<F>::zero();
@@ -205,22 +207,22 @@ where
 				&leaf_private_var[tx],
 				&leaf_public_var[tx],
 				&out_pubkey_var[tx],
-				&hasher_params_w5_var,
+				hasher_params_w5_var,
 			)?;
 			// End of computing the hash
 			let out_amount_var = &leaf_private_var[tx].amount;
 			out_utxo_hasher_var.enforce_equal(&output_commitment_var[tx])?;
 
 			// Check that amount is less than 2^248 in the field (to prevent overflow)
-			out_amount_var.enforce_cmp_unchecked(&limit_var, Less, false)?;
+			out_amount_var.enforce_cmp_unchecked(limit_var, Less, false)?;
 
-			sums_outs_var = sums_outs_var + out_amount_var;
+			sums_outs_var += out_amount_var;
 		}
 		Ok(sums_outs_var)
 	}
 
 	//Check that there are no same nullifiers among all inputs
-	pub fn verify_no_same_nul(in_nullifier_var: &Vec<HG::OutputVar>) -> Result<(), SynthesisError> {
+	pub fn verify_no_same_nul(in_nullifier_var: &[HG::OutputVar]) -> Result<(), SynthesisError> {
 		for i in 0..N_INS - 1 {
 			for j in (i + 1)..N_INS {
 				in_nullifier_var[i].enforce_not_equal(&in_nullifier_var[j])?;
@@ -237,7 +239,7 @@ where
 		sum_outs_var: &FpVar<F>,
 	) -> Result<(), SynthesisError> {
 		let res = sum_ins_var + public_amount_var;
-		res.enforce_equal(&sum_outs_var)?;
+		res.enforce_equal(sum_outs_var)?;
 		Ok(())
 	}
 }
@@ -263,7 +265,7 @@ where
 	HGT: CRHGadget<C::H, F>,
 {
 	fn clone(&self) -> Self {
-		let public_amount = self.public_amount.clone();
+		let public_amount = self.public_amount;
 		let ext_data_hash = self.ext_data_hash.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_input = self.leaf_public_input.clone();
@@ -354,15 +356,14 @@ where
 
 		// Generating vars
 		// Public inputs
-		let leaf_public_input_var =
-			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input))?;
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
-		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
+		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
 		let in_nullifier_var = Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let output_commitment_var =
 			Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(output_commitment))?;
-
-		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
+		let leaf_public_input_var =
+			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input))?;
+		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 
 		// Constants
 		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
@@ -386,7 +387,7 @@ where
 			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_private))?;
 		let out_leaf_public_var =
 			Vec::<LeafPublicInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_public))?;
-		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_pubkey))?;
+		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs, || Ok(out_pubkey))?;
 
 		// verify correctness of transaction inputs
 		let sum_ins_var = Self::verify_input_var(
@@ -450,10 +451,9 @@ mod test {
 	use ark_ff::{to_bytes, UniformRand};
 	use ark_groth16::Groth16;
 
+	use crate::prelude::ark_std::{rc::Rc, str::FromStr};
 	use ark_snark::SNARK;
 	use ark_std::test_rng;
-	use std::{rc::Rc, str::FromStr};
-
 	pub const TEST_K: usize = 30;
 	pub const TEST_N_INS_2: usize = 2;
 	pub const TEST_N_OUTS_2: usize = 2;
@@ -630,12 +630,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -785,12 +785,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -941,12 +941,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1093,12 +1093,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1244,12 +1244,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1403,12 +1403,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1567,12 +1567,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -1724,12 +1724,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let truncated_public_inputs = public_inputs[2..].to_vec();
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
@@ -1857,12 +1857,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2001,12 +2001,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2155,12 +2155,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2584,12 +2584,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
@@ -2958,12 +2958,12 @@ mod test {
 		);
 
 		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
 		public_inputs.push(public_amount);
-		public_inputs.extend(root_set);
+		public_inputs.push(ext_data_hash.ext_data);
 		public_inputs.extend(nullifier_hash);
 		public_inputs.extend(output_commitment);
-		public_inputs.push(ext_data_hash.ext_data);
+		public_inputs.push(chain_id);
+		public_inputs.extend(root_set);
 
 		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
 		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();

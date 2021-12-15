@@ -7,8 +7,8 @@ pub mod constraints;
 
 #[derive(Default, Clone)]
 pub struct Private<F: PrimeField> {
-	secret: F,
-	nullifier: F,
+	pub secret: F,
+	pub nullifier: F,
 }
 
 impl<F: PrimeField> Private<F> {
@@ -17,6 +17,10 @@ impl<F: PrimeField> Private<F> {
 			secret: F::rand(rng),
 			nullifier: F::rand(rng),
 		}
+	}
+
+	pub fn new(secret: F, nullifier: F) -> Self {
+		Self { secret, nullifier }
 	}
 }
 
