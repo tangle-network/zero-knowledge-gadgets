@@ -503,16 +503,16 @@ mod test {
 		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
 		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let public_amount = BnFr::from(6u32);
+		let public_amount = 6;
 		let recipient = vec![1u8; 20];
 		let relayer = vec![2u8; 20];
-		let ext_amount = vec![3u8; 20];
-		let fee = vec![4u8; 20];
+		let ext_amount = 10;
+		let fee = 0;
 
-		let in_chain_id = BnFr::from(0u8);
-		let in_amounts = [BnFr::from(2u32); 2];
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
+		let in_chain_id = 0;
+		let in_amounts = [2; 2];
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
 
 		let (circuit, pub_ins, ..) = prover.setup_circuit_with_data(
 			public_amount,

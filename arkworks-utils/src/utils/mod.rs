@@ -145,79 +145,58 @@ pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
 	parse_vec(crate::mimc::CONSTANTS.to_vec())
 }
 
-pub fn check_inputs_arbitrary_ethabi(
-	recipient: &Token,
-	ext_amount: &Token,
-	relayer: &Token,
-	fee: &Token,
-	encrypted_output1: &Token,
-	encrypted_output2: &Token,
-) {
-	match recipient {
-		Token::Address(_address) => {}
-		_ => {
-			panic!("recipient address is not valid");
-		}
-	}
-	match ext_amount {
-		Token::Int(_u256) => {}
-		_ => {
-			panic!("the ext_amount is not valid");
-		}
-	}
-	match relayer {
-		Token::Address(_address) => {}
-		_ => {
-			panic!("relayer address is not valid");
-		}
-	}
-	match fee {
-		Token::Uint(_u256) => {}
-		_ => {
-			panic!("fee is not valid");
-		}
-	}
-	match encrypted_output1 {
-		Token::Bytes(_bytes) => {}
-		_ => {
-			panic!("encrypted_output1 is not valid");
-		}
-	}
-	match encrypted_output2 {
-		Token::Bytes(_bytes) => {}
-		_ => {
-			panic!("encrypted_output2 is not valid");
-		}
-	}
+#[derive(Debug)]
+pub struct ExtData {
+	pub recipient_bytes: Vec<u8>,
+	pub relayer_bytes: Vec<u8>,
+	pub ext_amount_bytes: Vec<u8>,
+	pub fee_bytes: Vec<u8>,
+	pub encrypted_output1_bytes: Vec<u8>,
+	pub encrypted_output2_bytes: Vec<u8>,
 }
 
-pub fn vanchor_arbitrary_hash(
-	recipient: Token,
-	ext_amount: Token,
-	relayer: Token,
-	fee: Token,
-	encrypted_output1: Token,
-	encrypted_output2: Token,
-) -> Vec<u8> {
-	check_inputs_arbitrary_ethabi(
-		&recipient,
-		&ext_amount,
-		&relayer,
-		&fee,
-		&encrypted_output1,
-		&encrypted_output2,
-	);
-	let tuple = [Token::Tuple(vec![
-		recipient,
-		ext_amount,
-		relayer,
-		fee,
-		encrypted_output1,
-		encrypted_output2,
-	])];
-	let encoded_input = encode(&tuple);
-	let bytes: &[u8] = &encoded_input;
-	keccak_256(bytes)
+impl ExtData {
+	pub fn new(
+		recipient_bytes: Vec<u8>,
+		relayer_bytes: Vec<u8>,
+		ext_amount_bytes: Vec<u8>,
+		fee_bytes: Vec<u8>,
+		encrypted_output1_bytes: Vec<u8>,
+		encrypted_output2_bytes: Vec<u8>,
+	) -> Self {
+		Self {
+			recipient_bytes,
+			relayer_bytes,
+			ext_amount_bytes,
+			fee_bytes,
+			encrypted_output1_bytes,
+			encrypted_output2_bytes,
+		}
+	}
+
+	// TODO: fix types of tokens
+	fn into_abi(&self) -> Token {
+		let recipient = Token::Bytes(self.recipient_bytes.clone());
+		let ext_amount = Token::Bytes(self.ext_amount_bytes.clone());
+		let relayer = Token::Bytes(self.relayer_bytes.clone());
+		let fee = Token::Bytes(self.fee_bytes.clone());
+		let encrypted_output1 = Token::Bytes(self.encrypted_output1_bytes.clone());
+		let encrypted_output2 = Token::Bytes(self.encrypted_output2_bytes.clone());
+		Token::Tuple(vec![
+			recipient,
+			relayer,
+			ext_amount,
+			fee,
+			encrypted_output1,
+			encrypted_output2,
+		])
+	}
+
+	pub fn encode_abi(&self) -> Vec<u8> {
+		let token = self.into_abi();
+		let encoded_input = encode(&[token]);
+		encoded_input
+	}
 }
 
 pub fn keccak_256(input: &[u8]) -> Vec<u8> {

@@ -31,63 +31,9 @@ use arkworks_utils::{
 			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5,
 			verify_groth16, Curve,
 		},
-		keccak_256,
+		keccak_256, ExtData,
 	},
 };
-use ethabi::{encode, Token};
-
-#[derive(Debug)]
-pub struct ExtData {
-	pub recipient_bytes: Vec<u8>,
-	pub relayer_bytes: Vec<u8>,
-	pub ext_amount_bytes: Vec<u8>,
-	pub fee_bytes: Vec<u8>,
-	pub encrypted_output1_bytes: Vec<u8>,
-	pub encrypted_output2_bytes: Vec<u8>,
-}
-
-impl ExtData {
-	pub fn new(
-		recipient_bytes: Vec<u8>,
-		relayer_bytes: Vec<u8>,
-		ext_amount_bytes: Vec<u8>,
-		fee_bytes: Vec<u8>,
-		encrypted_output1_bytes: Vec<u8>,
-		encrypted_output2_bytes: Vec<u8>,
-	) -> Self {
-		Self {
-			recipient_bytes,
-			relayer_bytes,
-			ext_amount_bytes,
-			fee_bytes,
-			encrypted_output1_bytes,
-			encrypted_output2_bytes,
-		}
-	}
-
-	fn into_abi(&self) -> Token {
-		let recipient = Token::Bytes(self.recipient_bytes.clone());
-		let ext_amount = Token::Bytes(self.ext_amount_bytes.clone());
-		let relayer = Token::Bytes(self.relayer_bytes.clone());
-		let fee = Token::Bytes(self.fee_bytes.clone());
-		let encrypted_output1 = Token::Bytes(self.encrypted_output1_bytes.clone());
-		let encrypted_output2 = Token::Bytes(self.encrypted_output2_bytes.clone());
-		Token::Tuple(vec![
-			recipient,
-			relayer,
-			ext_amount,
-			fee,
-			encrypted_output1,
-			encrypted_output2,
-		])
-	}
-
-	fn encode_abi(&self) -> Vec<u8> {
-		let token = self.into_abi();
-		let encoded_input = encode(&[token]);
-		encoded_input
-	}
-}
 
 pub fn get_hash_params<F: PrimeField>(
 	curve: Curve,
@@ -153,17 +99,20 @@ impl<
 
 	pub fn new_utxos<R: RngCore, const N: usize>(
 		&self,
-		chain_ids: [F; N],
-		amounts: [F; N],
+		chain_ids: [u128; N],
+		amounts: [u128; N],
 		rng: &mut R,
 	) -> Utxos<F, N> {
+		let chain_ids_f = chain_ids.map(|x| F::from(x));
+		let amounts_f = amounts.map(|x| F::from(x));
+
 		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves(&chain_ids, &amounts, &keypairs, rng);
+			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng);
 
 		Utxos {
-			chain_ids,
-			amounts,
+			chain_ids: chain_ids_f,
+			amounts: amounts_f,
 			keypairs,
 			leaf_privates,
 			leaf_publics,
@@ -187,23 +136,28 @@ impl<
 		OUTS,
 		M,
 	> {
-		let public_amount = F::rand(rng);
-		let recipient = F::rand(rng);
-		let relayer = F::rand(rng);
-		let ext_amount = F::rand(rng);
-		let fee = F::rand(rng);
+		let public_amount = rng.next_u64() as i128;
 
-		let in_chain_id = F::rand(rng);
-		let in_amounts = [F::rand(rng); INS];
-		let out_chain_ids = [F::rand(rng); OUTS];
-		let out_amounts = [F::rand(rng); OUTS];
+		let mut recipient = [0u8; 20];
+		rng.fill_bytes(&mut recipient);
+
+		let mut relayer = [0u8; 20];
+		rng.fill_bytes(&mut relayer);
+
+		let ext_amount = rng.next_u64() as i128;
+		let fee = rng.next_u64() as u128;
+
+		let in_chain_id = rng.next_u64() as u128;
+		let in_amounts = [rng.next_u64() as u128; INS];
+		let out_chain_ids = [rng.next_u64() as u128; OUTS];
+		let out_amounts = [rng.next_u64() as u128; OUTS];
 
 		let (circuit, ..) = self.setup_circuit_with_data(
 			public_amount,
-			recipient.into_repr().to_bytes_le(),
-			relayer.into_repr().to_bytes_le(),
-			ext_amount.into_repr().to_bytes_le(),
-			fee.into_repr().to_bytes_le(),
+			recipient.to_vec(),
+			relayer.to_vec(),
+			ext_amount,
+			fee,
 			in_chain_id,
 			in_amounts,
 			out_chain_ids,
@@ -214,19 +168,18 @@ impl<
 		circuit
 	}
 
-	pub fn setup_circuit_with_input_utxos<R: RngCore>(
+	pub fn setup_circuit_with_utxos(
 		self,
-		public_amount: F,
+		// External data
+		public_amount: i128,
 		recipient: Vec<u8>,
 		relayer: Vec<u8>,
-		ext_amount: Vec<u8>,
-		fee: Vec<u8>,
+		ext_amount: i128,
+		fee: u128,
 		// Input transactions
 		in_utxos: Utxos<F, INS>,
-		// Output data
-		out_chain_ids: [F; OUTS],
-		out_amounts: [F; OUTS],
-		rng: &mut R,
+		// Output transactions
+		out_utxos: Utxos<F, OUTS>,
 	) -> (
 		VACircuit<
 			F,
@@ -241,20 +194,16 @@ impl<
 			M,
 		>,
 		Vec<F>,
-		Utxos<F, OUTS>,
 	) {
 		// Tree + set for proving input txos
 		let (in_paths, in_indices, in_root_set, in_set_private_inputs) =
 			self.setup_tree_and_set(&in_utxos.commitments);
 
-		// Output leaves (txos)
-		let out_utxos = self.new_utxos(out_chain_ids, out_amounts, rng);
-
 		let ext_data = ExtData::new(
 			recipient,
 			relayer,
-			ext_amount,
-			fee,
+			ext_amount.to_le_bytes().to_vec(),
+			fee.to_le_bytes().to_vec(),
 			out_utxos.commitments[0].into_repr().to_bytes_le(),
 			out_utxos.commitments[1].into_repr().to_bytes_le(),
 		);
@@ -263,8 +212,13 @@ impl<
 		// Arbitrary data
 		let arbitrary_data = Self::setup_arbitrary_data(ext_data_hash_f);
 
+		let mut public_amount_f = F::from(public_amount.unsigned_abs());
+		if public_amount.is_negative() {
+			public_amount_f = -public_amount_f;
+		}
+
 		let circuit = self.setup_circuit(
-			public_amount,
+			public_amount_f,
 			arbitrary_data,
 			in_utxos.clone(),
 			in_indices,
@@ -276,28 +230,28 @@ impl<
 
 		let public_inputs = Self::construct_public_inputs(
 			in_utxos.leaf_publics[0].chain_id,
-			public_amount,
+			public_amount_f,
 			in_root_set.to_vec(),
 			in_utxos.nullifiers.to_vec(),
 			out_utxos.commitments.to_vec(),
 			ext_data_hash_f,
 		);
 
-		(circuit, public_inputs, out_utxos)
+		(circuit, public_inputs)
 	}
 
 	// This function is used only for first transaction, when the tree is empty
 	pub fn setup_circuit_with_data<R: RngCore>(
 		self,
-		public_amount: F,
+		public_amount: i128,
 		recipient: Vec<u8>,
 		relayer: Vec<u8>,
-		ext_amount: Vec<u8>,
-		fee: Vec<u8>,
-		in_chain_id: F,
-		in_amounts: [F; INS],
-		out_chain_ids: [F; OUTS],
-		out_amounts: [F; OUTS],
+		ext_amount: i128,
+		fee: u128,
+		in_chain_id: u128,
+		in_amounts: [u128; INS],
+		out_chain_ids: [u128; OUTS],
+		out_amounts: [u128; OUTS],
 		rng: &mut R,
 	) -> (
 		VACircuit<
@@ -322,45 +276,17 @@ impl<
 		// Input leaves (txos)
 		let in_utxos = self.new_utxos(in_chain_ids, in_amounts, rng);
 
-		// Tree + set for proving input txos
-		let (in_paths, in_indices, in_root_set, in_set_private_inputs) =
-			self.setup_tree_and_set(&in_utxos.commitments);
-
 		// Output leaves (txos)
 		let out_utxos = self.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let ext_data = ExtData::new(
+		let (circuit, public_inputs) = self.setup_circuit_with_utxos(
+			public_amount,
 			recipient,
 			relayer,
 			ext_amount,
 			fee,
-			out_utxos.commitments[0].into_repr().to_bytes_le(),
-			out_utxos.commitments[1].into_repr().to_bytes_le(),
-		);
-
-		let ext_data_hash = keccak_256(&ext_data.encode_abi());
-		let ext_data_hash_f = F::from_le_bytes_mod_order(&ext_data_hash);
-		// Arbitrary data
-		let arbitrary_data = setup_vanchor_arbitrary_data(ext_data_hash_f);
-
-		let circuit = self.setup_circuit(
-			public_amount,
-			arbitrary_data,
 			in_utxos.clone(),
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
 			out_utxos.clone(),
-		);
-
-		let public_inputs = Self::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
-			public_amount,
-			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
-			ext_data_hash_f,
 		);
 
 		(circuit, public_inputs, in_utxos, out_utxos)
