@@ -60,6 +60,7 @@ mod tests {
 		sonic_pc::SonicKZG10,
 		PolynomialCommitment,
 	};
+	use ark_std::test_rng;
 
 	pub(crate) fn gadget_tester<
 		E: PairingEngine,
