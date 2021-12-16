@@ -121,6 +121,27 @@ impl<
 		}
 	}
 
+	pub fn new_utxos_f<R: RngCore, const N: usize>(
+		&self,
+		chain_ids_f: [F; N],
+		amounts_f: [F; N],
+		rng: &mut R,
+	) -> Utxos<F, N> {
+		let keypairs = Self::setup_keypairs::<_, N>(rng);
+		let (commitments, nullifiers, leaf_privates, leaf_publics) =
+			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng);
+
+		Utxos {
+			chain_ids: chain_ids_f,
+			amounts: amounts_f,
+			keypairs,
+			leaf_privates,
+			leaf_publics,
+			nullifiers,
+			commitments,
+		}
+	}
+
 	pub fn setup_random_circuit<R: RngCore>(
 		self,
 		rng: &mut R,
