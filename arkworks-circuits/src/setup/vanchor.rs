@@ -52,17 +52,6 @@ pub fn get_hash_params<F: PrimeField>(
 }
 
 #[derive(Clone)]
-pub struct Utxos<F: PrimeField, const N: usize> {
-	pub chain_ids: [F; N],
-	pub amounts: [F; N],
-	pub keypairs: [Keypair<F, PoseidonCRH_x5_2<F>>; N],
-	pub leaf_privates: [LeafPrivateInput<F>; N],
-	pub leaf_publics: [LeafPublicInput<F>; N],
-	pub nullifiers: [F; N],
-	pub commitments: [F; N],
-}
-
-#[derive(Clone)]
 pub struct UTXO<F: PrimeField> {
 	pub chain_id: F,
 	pub amount: F,
@@ -395,8 +384,14 @@ impl<
 			in_indicies,
 			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<F>>(),
 			out_utxos.iter().map(|x| x.commitment).collect::<Vec<F>>(),
-		out_utxos.iter().map(|x| x.leaf_private.clone()).collect::<Vec<LeafPrivateInput<F>>>(),
-			out_utxos.iter().map(|x| x.leaf_public.clone()).collect::<Vec<LeafPublicInput<F>>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.leaf_private.clone())
+				.collect::<Vec<LeafPrivateInput<F>>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.leaf_public.clone())
+				.collect::<Vec<LeafPublicInput<F>>>(),
 			out_pub_keys,
 		);
 
