@@ -5,6 +5,7 @@ use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+pub mod field_hasher;
 
 pub struct CRH<F: PrimeField>(PhantomData<F>);
 

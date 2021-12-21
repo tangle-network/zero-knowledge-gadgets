@@ -61,33 +61,6 @@ impl PoseidonSbox {
 	}
 }
 
-// added this to allow sbox to accept field elements directly, i.e. without some EC in the background
-impl PoseidonSbox {
-	pub fn apply_sbox_on_field_element<F: PrimeField>(&self, elem: F) -> Result<F, PoseidonError> {
-		match self {
-			PoseidonSbox::Exponentiation(val) => {
-				let res = match val {
-					3 => elem * elem * elem,
-					5 => {
-						let sqr = elem.square();
-						sqr.square() * elem
-					}
-					17 => {
-						let sqr = elem * elem;
-						let quad = sqr * sqr;
-						let eighth = quad * quad;
-						let sixteenth = eighth * eighth;
-						sixteenth * elem
-					}
-					// default to cubed
-					n => return Err(PoseidonError::InvalidSboxSize(*n)),
-				};
-				Ok(res)
-			}
-			_ => return Err(PoseidonError::InvalidSboxSize(0)),
-		}
-	}
-}
 
 pub trait SboxConstraints {
 	fn synthesize_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
