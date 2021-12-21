@@ -221,7 +221,7 @@ where
 		Ok(sums_outs_var)
 	}
 
-	//Check that there are no same nullifiers among all inputs
+	// Check that there are no same nullifiers among all inputs
 	pub fn verify_no_same_nul(in_nullifier_var: &[HG::OutputVar]) -> Result<(), SynthesisError> {
 		for i in 0..N_INS - 1 {
 			for j in (i + 1)..N_INS {
@@ -513,18 +513,21 @@ mod test {
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let (in_indices, in_paths, in_set_private_inputs, _) =
-			prover.setup_tree_and_set(&in_utxos.commitments);
+		let (in_indices, in_paths, in_set_private_inputs, _) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
 		// Invalid root set
 		let in_root_set = [BnFr::rand(rng); 2];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
+			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
 			ext_data_hash,
 		);
 
@@ -566,21 +569,24 @@ mod test {
 		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
 		// Adding invalid nullifier
-		in_utxos.nullifiers[0] = BnFr::rand(rng);
+		in_utxos[0].nullifier = BnFr::rand(rng);
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&in_utxos.commitments);
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
+			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
 			ext_data_hash,
 		);
 
@@ -621,25 +627,25 @@ mod test {
 		let in_amounts = [5; 2];
 		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
-		// Sinc the nullifiers are the same, everything else should also be
-		in_utxos.keypairs[0] = in_utxos.keypairs[1].clone();
-		in_utxos.leaf_privates[0] = in_utxos.leaf_privates[1].clone();
-		in_utxos.nullifiers[0] = in_utxos.nullifiers[1].clone();
-		in_utxos.commitments[0] = in_utxos.commitments[1].clone();
+		// Enure both nullifiers are the same
+		in_utxos[0] = in_utxos[1].clone();
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&in_utxos.commitments);
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
+			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
 			ext_data_hash,
 		);
 
@@ -684,15 +690,18 @@ mod test {
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&in_utxos.commitments);
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
+			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
 			ext_data_hash,
 		);
 
@@ -743,15 +752,18 @@ mod test {
 		let out_amounts = [limit + BnFr::one(); 2];
 		let out_utxos = prover.new_utxos_f(out_chain_ids, out_amounts, rng);
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&in_utxos.commitments);
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
+			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
 			ext_data_hash,
 		);
 
@@ -796,15 +808,18 @@ mod test {
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&in_utxos.commitments);
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
-			in_utxos.leaf_publics[0].chain_id,
+			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_utxos.nullifiers.to_vec(),
-			out_utxos.commitments.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
 			ext_data_hash,
 		);
 
