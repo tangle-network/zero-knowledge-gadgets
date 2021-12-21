@@ -1,5 +1,5 @@
 use ark_ec::{PairingEngine, TEModelParameters};
-use ark_ff::Field;
+use ark_ff::{Field, PrimeField};
 use ark_plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 use ark_std::{One, Zero};
 
@@ -36,6 +36,34 @@ impl Default for PoseidonSbox {
 
 impl PoseidonSbox {
 	pub fn apply_sbox<E: PairingEngine>(&self, elem: E::Fr) -> Result<E::Fr, PoseidonError> {
+		match self {
+			PoseidonSbox::Exponentiation(val) => {
+				let res = match val {
+					3 => elem * elem * elem,
+					5 => {
+						let sqr = elem.square();
+						sqr.square() * elem
+					}
+					17 => {
+						let sqr = elem * elem;
+						let quad = sqr * sqr;
+						let eighth = quad * quad;
+						let sixteenth = eighth * eighth;
+						sixteenth * elem
+					}
+					// default to cubed
+					n => return Err(PoseidonError::InvalidSboxSize(*n)),
+				};
+				Ok(res)
+			}
+			_ => return Err(PoseidonError::InvalidSboxSize(0)),
+		}
+	}
+}
+
+// added this to allow sbox to accept field elements directly, i.e. without some EC in the background
+impl PoseidonSbox {
+	pub fn apply_sbox_on_field_element<F: PrimeField>(&self, elem: F) -> Result<F, PoseidonError> {
 		match self {
 			PoseidonSbox::Exponentiation(val) => {
 				let res = match val {
