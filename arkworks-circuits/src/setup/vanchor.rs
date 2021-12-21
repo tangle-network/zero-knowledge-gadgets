@@ -522,7 +522,6 @@ impl<
 	}
 
 	pub fn setup_tree(&self, leaves: &[F]) -> (Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>, Vec<F>, F) {
-		assert_eq!(leaves.len(), INS);
 		let inner_params = Rc::new(self.params3.clone());
 		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves.to_vec()).unwrap();
 		let root = tree.root();
@@ -562,7 +561,6 @@ impl<
 		Vec<SetPrivateInputs<F, M>>,
 		[F; M],
 	) {
-		assert_eq!(leaves.len(), INS);
 		let (paths, indices, root) = self.setup_tree(&leaves);
 		let (root_set, set_private_inputs) = Self::setup_root_set(root);
 		(indices, paths, set_private_inputs, root_set)

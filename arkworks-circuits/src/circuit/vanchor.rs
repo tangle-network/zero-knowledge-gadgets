@@ -662,9 +662,7 @@ mod test {
 
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		println!("{:?}", proving_key.len());
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		println!("{:?}", proof.len());
 		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(!res);
