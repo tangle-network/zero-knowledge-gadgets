@@ -52,7 +52,7 @@ pub fn get_hash_params<F: PrimeField>(
 }
 
 #[derive(Clone)]
-pub struct UTXO<F: PrimeField> {
+pub struct Utxo<F: PrimeField> {
 	pub chain_id: F,
 	pub amount: F,
 	pub keypair: Keypair<F, PoseidonCRH_x5_2<F>>,
@@ -102,7 +102,7 @@ impl<
 		chain_ids: [u128; N],
 		amounts: [u128; N],
 		rng: &mut R,
-	) -> Vec<UTXO<F>> {
+	) -> Vec<Utxo<F>> {
 		let chain_ids_f = chain_ids.map(|x| F::from(x));
 		let amounts_f = amounts.map(|x| F::from(x));
 
@@ -110,7 +110,7 @@ impl<
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
 			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng);
 
-		let utxos: Vec<UTXO<F>> = (0..N)
+		let utxos: Vec<Utxo<F>> = (0..N)
 			.map(|i| UTXO {
 				chain_id: chain_ids_f[i],
 				amount: amounts_f[i],
@@ -129,12 +129,12 @@ impl<
 		chain_ids_f: [F; N],
 		amounts_f: [F; N],
 		rng: &mut R,
-	) -> Vec<UTXO<F>> {
+	) -> Vec<Utxo<F>> {
 		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
 			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng);
 
-		let utxos: Vec<UTXO<F>> = (0..N)
+		let utxos: Vec<Utxo<F>> = (0..N)
 			.map(|i| UTXO {
 				chain_id: chain_ids_f[i],
 				amount: amounts_f[i],
@@ -204,9 +204,9 @@ impl<
 		ext_amount: i128,
 		fee: u128,
 		// Input transactions
-		in_utxos: Vec<UTXO<F>>,
+		in_utxos: Vec<Utxo<F>>,
 		// Output transactions
-		out_utxos: Vec<UTXO<F>>,
+		out_utxos: Vec<Utxo<F>>,
 	) -> (
 		VACircuit<
 			F,
@@ -296,8 +296,8 @@ impl<
 			M,
 		>,
 		Vec<F>,
-		Vec<UTXO<F>>,
-		Vec<UTXO<F>>,
+		Vec<Utxo<F>>,
+		Vec<Utxo<F>>,
 	) {
 		// Making a vec of same chain ids to be passed into setup_leaves
 		let in_chain_ids = [in_chain_id; INS];
@@ -326,14 +326,14 @@ impl<
 		public_amount: F,
 		arbitrary_data: VAnchorArbitraryData<F>,
 		// Input transactions
-		in_utxos: Vec<UTXO<F>>,
+		in_utxos: Vec<Utxo<F>>,
 		// Data related to tree
 		in_indicies: Vec<F>,
 		in_paths: Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		in_set_private_inputs: Vec<SetPrivateInputs<F, M>>,
 		in_root_set: [F; M],
 		// Output transactions
-		out_utxos: Vec<UTXO<F>>,
+		out_utxos: Vec<Utxo<F>>,
 	) -> VACircuit<
 		F,
 		PoseidonCRH_x5_2<F>,
