@@ -111,7 +111,7 @@ impl<
 			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng);
 
 		let utxos: Vec<Utxo<F>> = (0..N)
-			.map(|i| UTXO {
+			.map(|i| Utxo {
 				chain_id: chain_ids_f[i],
 				amount: amounts_f[i],
 				keypair: keypairs[i].clone(),
@@ -135,7 +135,7 @@ impl<
 			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng);
 
 		let utxos: Vec<Utxo<F>> = (0..N)
-			.map(|i| UTXO {
+			.map(|i| Utxo {
 				chain_id: chain_ids_f[i],
 				amount: amounts_f[i],
 				keypair: keypairs[i].clone(),
