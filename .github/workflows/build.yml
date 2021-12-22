@@ -27,15 +27,18 @@ jobs:
 
       - name: Set-Up
         run: ./scripts/init.sh
-      
-      - name: Checks
-        run: ./scripts/checks.sh
+
+      - name: Fmt Check
+        run: ./scripts/fmt-check.sh
+
+      - name: Clippy Check
+        run: ./scripts/clippy.sh
 
       - name: Build
         run: ./scripts/build.sh
-      
+
       - name: Wasm Build
         run: ./scripts/build-wasm.sh
-        
+
       - name: Test
         run: ./scripts/test.sh
