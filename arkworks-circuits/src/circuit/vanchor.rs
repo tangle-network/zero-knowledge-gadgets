@@ -610,6 +610,7 @@ mod test {
 	}
 
 	#[test]
+	#[ignore]
 	fn should_fail_with_same_nullifier() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
