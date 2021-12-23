@@ -22,19 +22,19 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 
 		let mut diffs = Vec::new();
 		for x in roots {
-			let diff = composer.add(
-				(-E::Fr::one(), target),
-				(E::Fr::one(), x),
-				E::Fr::zero(),
-				None,
-			);
+			let diff = composer.arithmetic_gate(|gate| {
+				gate.witness(target, x, None)
+				.add(-E::Fr::one(), E::Fr::one())
+			});
 			diffs.push(diff);
 		}
 
 		let mut sum = composer.add_input(E::Fr::one());
 
 		for diff in diffs {
-			sum = composer.mul(E::Fr::one(), sum, diff, E::Fr::zero(), None);
+			sum = composer.arithmetic_gate(|gate| {
+				gate.witness(sum, diff, None).mul(E::Fr::one())
+			});
 		}
 
 		composer.assert_equal(sum, composer.zero_var());
