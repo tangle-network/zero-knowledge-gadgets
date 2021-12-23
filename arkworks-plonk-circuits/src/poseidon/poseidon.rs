@@ -59,13 +59,6 @@ pub fn hash<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
 	for r in 0..nr {
 		state.iter_mut().enumerate().for_each(|(i, a)| {
 			let c_temp = params.round_keys[(r as usize * params.width as usize + i)];
-			// a = a + c_temp
-			// *a = composer.add(
-			// 	(E::Fr::one(), *a),
-			// 	(E::Fr::one(), c_temp),
-			// 	E::Fr::zero(),
-			// 	None,
-			// );
 			*a = composer.arithmetic_gate(|gate| {
 				gate.witness(*a, c_temp, None)
 					.add(E::Fr::one(), E::Fr::one())
@@ -91,17 +84,10 @@ pub fn hash<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
 					.fold(composer.zero_var(), |acc, (j, a)| {
 						let m = &params.mds_matrix[i][j];
 
-						// let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::zero(), None);
 						let mul_result = composer.arithmetic_gate(|gate| {
 							gate.witness(*a, *m, None).mul(E::Fr::one())
 						});
 
-						// let add_result = composer.add(
-						// 	(E::Fr::one(), acc),
-						// 	(E::Fr::one(), mul_result),
-						// 	E::Fr::zero(),
-						// 	None,
-						// );
 						let add_result = composer.arithmetic_gate(|gate| {
 							gate.witness(acc, mul_result, None)
 							.add(E::Fr::one(), E::Fr::one())
@@ -156,12 +142,6 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		let state = vec![zero_var, a, b];
 		let computed_hash = hash(state, params, composer)?;
 
-		// let add_result = composer.add(
-		// 	(E::Fr::one(), computed_hash),
-		// 	(E::Fr::one(), composer.zero_var()),
-		// 	E::Fr::zero(),
-		// 	Some(-self.c),
-		// );
 		let add_result = composer.arithmetic_gate(|gate| {
 			gate.witness(computed_hash, zero_var, None)
 			.add(E::Fr::one(), E::Fr::one())
@@ -178,7 +158,6 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 
 #[cfg(test)]
 mod tests {
-	//copied from ark-plonk
 	use super::*;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_crypto_primitives::crh::TwoToOneCRH;
@@ -196,7 +175,7 @@ mod tests {
 		PolynomialCommitment,
 	};
 	use ark_std::{test_rng, One};
-	use arkworks_utils::utils::common::{setup_params_x3_5, setup_params_x5_3};
+	use arkworks_utils::utils::common::setup_params_x5_3;
 
 	type PoseidonCRH3 = arkworks_gadgets::poseidon::CRH<Fq>;
 	type StandardComposerBn254 =
@@ -361,35 +340,4 @@ mod tests {
 		.unwrap();
 	}
 
-	#[test]
-	fn test_correct_poseidon_hash() {
-		let curve = arkworks_utils::utils::common::Curve::Bn254;
-
-		let util_params = setup_params_x3_5(curve);
-		let params = PoseidonParameters {
-			round_keys: util_params.clone().round_keys,
-			mds_matrix: util_params.clone().mds_matrix,
-			full_rounds: util_params.clone().full_rounds,
-			partial_rounds: util_params.clone().partial_rounds,
-			sbox: PoseidonSbox::Exponentiation(3),
-			width: util_params.clone().width,
-		};
-
-		let left_input = Fq::one().double().into_repr().to_bytes_le();
-		let right_input = Fq::one().double().into_repr().to_bytes_le();
-		let poseidon_res =
-			<PoseidonCRH3 as TwoToOneCRH>::evaluate(&util_params, &left_input, &right_input)
-				.unwrap();
-		println!("RESULT: {:?}", poseidon_res.to_string());
-		let mut circuit = PoseidonCircuit::<Bn254, JubjubParameters> {
-			a: Fq::from_le_bytes_mod_order(&left_input),
-			b: Fq::from_le_bytes_mod_order(&right_input),
-			c: poseidon_res,
-			params,
-			_marker: std::marker::PhantomData,
-		};
-
-		let res = gadget_tester(&mut circuit, 2000);
-		assert!(res.is_ok(), "{:?}", res.err().unwrap());
-	}
 }
