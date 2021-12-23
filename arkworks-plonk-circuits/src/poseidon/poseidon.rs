@@ -60,12 +60,16 @@ pub fn hash<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
 		state.iter_mut().enumerate().for_each(|(i, a)| {
 			let c_temp = params.round_keys[(r as usize * params.width as usize + i)];
 			// a = a + c_temp
-			*a = composer.add(
-				(E::Fr::one(), *a),
-				(E::Fr::one(), c_temp),
-				E::Fr::zero(),
-				None,
-			);
+			// *a = composer.add(
+			// 	(E::Fr::one(), *a),
+			// 	(E::Fr::one(), c_temp),
+			// 	E::Fr::zero(),
+			// 	None,
+			// );
+			*a = composer.arithmetic_gate(|gate| {
+				gate.witness(*a, c_temp, None)
+					.add(E::Fr::one(), E::Fr::one())
+			});
 		});
 
 		let half_rounds = params.full_rounds / 2;
@@ -87,14 +91,21 @@ pub fn hash<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
 					.fold(composer.zero_var(), |acc, (j, a)| {
 						let m = &params.mds_matrix[i][j];
 
-						let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::zero(), None);
+						// let mul_result = composer.mul(E::Fr::one(), *a, *m, E::Fr::zero(), None);
+						let mul_result = composer.arithmetic_gate(|gate| {
+							gate.witness(*a, *m, None).mul(E::Fr::one())
+						});
 
-						let add_result = composer.add(
-							(E::Fr::one(), acc),
-							(E::Fr::one(), mul_result),
-							E::Fr::zero(),
-							None,
-						);
+						// let add_result = composer.add(
+						// 	(E::Fr::one(), acc),
+						// 	(E::Fr::one(), mul_result),
+						// 	E::Fr::zero(),
+						// 	None,
+						// );
+						let add_result = composer.arithmetic_gate(|gate| {
+							gate.witness(acc, mul_result, None)
+							.add(E::Fr::one(), E::Fr::one())
+						});
 
 						add_result
 					})
@@ -115,7 +126,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		// ADD INPUTS
 		let a = composer.add_input(self.a);
 		let b = composer.add_input(self.b);
-		let state_zero = composer.add_input(E::Fr::zero());
+		let zero_var = composer.zero_var();
 
 		let mut round_key_vars = vec![];
 		for i in 0..self.params.round_keys.len() {
@@ -142,15 +153,20 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 			sbox: self.params.sbox,
 		};
 
-		let state = vec![state_zero, a, b];
+		let state = vec![zero_var, a, b];
 		let computed_hash = hash(state, params, composer)?;
 
-		let add_result = composer.add(
-			(E::Fr::one(), computed_hash),
-			(E::Fr::one(), composer.zero_var()),
-			E::Fr::zero(),
-			Some(-self.c),
-		);
+		// let add_result = composer.add(
+		// 	(E::Fr::one(), computed_hash),
+		// 	(E::Fr::one(), composer.zero_var()),
+		// 	E::Fr::zero(),
+		// 	Some(-self.c),
+		// );
+		let add_result = composer.arithmetic_gate(|gate| {
+			gate.witness(computed_hash, zero_var, None)
+			.add(E::Fr::one(), E::Fr::one())
+			.pi(-self.c)
+		});
 		composer.assert_equal(add_result, composer.zero_var());
 		Ok(())
 	}
