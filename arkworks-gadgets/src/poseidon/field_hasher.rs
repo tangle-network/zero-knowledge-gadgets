@@ -3,44 +3,49 @@ use ark_std::vec::Vec;
 
 use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
-struct Poseidon<F: PrimeField> {
+pub struct Poseidon<F: PrimeField> {
 	params: PoseidonParameters<F>,
 }
 
 impl<F: PrimeField> Poseidon<F> {
-	fn new(params: PoseidonParameters<F>) -> Self {
+	pub fn new(params: PoseidonParameters<F>) -> Self {
 		Poseidon { params }
 	}
 }
 
 trait FieldHasher<F: PrimeField> {
-	fn hash(&self, inputs: &Vec<F>) -> Result<F, PoseidonError>;
+	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError>;
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError>;
 }
 
 impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
-	fn hash(&self, inputs: &Vec<F>) -> Result<F, PoseidonError> {
+	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError> {
+		// Casting params to usize
+		let width = self.params.width as usize;
+		let partial_rounds = self.params.partial_rounds as usize;
+		let full_rounds = self.params.full_rounds as usize;
+
 		// Populate a state vector with 0 and then inputs, pad with zeros if necessary
-		if inputs.len() > (self.params.width - 1) as usize {
+		if inputs.len() > width - 1 {
 			return Err(PoseidonError::InvalidInputs);
 		}
 		let mut state = vec![F::zero()];
 		for f in inputs {
 			state.push(*f);
 		}
-		while state.len() < self.params.width as usize {
+		while state.len() < width {
 			state.push(F::zero());
 		}
 
-		let nr = (self.params.full_rounds + self.params.partial_rounds) as usize;
+		let nr = full_rounds + partial_rounds;
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
-				let c = self.params.round_keys[(r * (self.params.width as usize) + i)];
+				let c = self.params.round_keys[(r * width + i)];
 				a.add_assign(c);
 			});
 
-			let half_rounds = (self.params.full_rounds as usize) / 2;
-			if r < half_rounds || r >= half_rounds + (self.params.partial_rounds as usize) {
+			let half_rounds = full_rounds / 2;
+			if r < half_rounds || r >= half_rounds + partial_rounds {
 				state
 					.iter_mut()
 					.try_for_each(|a| self.params.sbox.apply_sbox(*a).map(|f| *a = f))?;
@@ -61,14 +66,10 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 		}
 
 		Ok(state[0])
-
-		// let result = permute( &self.params, state)?;
-
-		// Ok(result.get(0).cloned().ok_or(PoseidonError::InvalidInputs)?)
 	}
 
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError> {
-		self.hash(&vec![*left, *right])
+		self.hash(&[*left, *right])
 	}
 }
 
@@ -78,7 +79,6 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::fields::Field;
 	use ark_std::One;
-	// use ark_crypto_primitives::crh::TwoToOneCRH;
 	use arkworks_utils::utils::{
 		common::{
 			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
@@ -92,7 +92,7 @@ mod test {
 		let curve = Curve::Bn254;
 
 		let params = setup_params_x5_3(curve);
-		let poseidon = PoseidonHasher { params };
+		let poseidon = PoseidonHasher::new(params);
 
 		// output from circomlib, and here is the code.
 		// ```js
@@ -159,15 +159,9 @@ mod test {
 		let parameters4 = setup_params_x5_4(curve);
 		let parameters5 = setup_params_x5_5(curve);
 
-		let poseidon2 = Poseidon {
-			params: parameters2,
-		};
-		let poseidon4 = Poseidon {
-			params: parameters4,
-		};
-		let poseidon5 = Poseidon {
-			params: parameters5,
-		};
+		let poseidon2 = Poseidon::new(parameters2);
+		let poseidon4 = Poseidon::new(parameters4);
+		let poseidon5 = Poseidon::new(parameters5);
 
 		let expected_public_key: Vec<Fq> = parse_vec(vec![
 			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
