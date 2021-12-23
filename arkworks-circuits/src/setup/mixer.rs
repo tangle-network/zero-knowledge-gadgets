@@ -1,8 +1,10 @@
 use super::common::*;
 use crate::circuit::mixer::MixerCircuit;
+use ark_std::rc::Rc;
 use arkworks_gadgets::{
 	arbitrary::mixer_data::Input as MixerDataInput,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
+	merkle_tree::Path,
 };
 use arkworks_utils::{
 	mimc::MiMCParameters,
@@ -64,6 +66,136 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	MiMCCRH_220Gadget<F>,
 	N,
 >;
+
+pub fn setup_leaf<F: PrimeField, R: Rng>(
+	params5: &PoseidonParameters<F>,
+	rng: &mut R,
+) -> (LeafPrivate<F>, F, F) {
+	// Secret inputs for the leaf
+	let leaf_private = LeafPrivate::generate(rng);
+
+	// Creating the leaf
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, params5).unwrap();
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, params5).unwrap();
+	(leaf_private, leaf_hash, nullifier_hash)
+}
+
+struct MixerProverSetup<F: PrimeField, const N: usize> {
+	params3: PoseidonParameters<F>,
+	params5: PoseidonParameters<F>,
+}
+
+impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
+	pub fn setup_arbitrary_data(
+		recipient: F,
+		relayer: F,
+		fee: F,
+		refund: F,
+	) -> MixerConstraintDataInput<F> {
+		MixerConstraintDataInput::new(recipient, relayer, fee, refund)
+	}
+
+	pub fn construct_public_inputs(
+		nullifier_hash: F,
+		root: F,
+		recipient: F,
+		relayer: F,
+		fee: F,
+		refund: F,
+	) -> Vec<F> {
+		vec![nullifier_hash, root, recipient, relayer, fee, refund]
+	}
+
+	pub fn deconstruct_public_inputs(
+		public_inputs: &[F],
+	) -> (
+		F, // nullifier hash
+		F, // root
+		F, // recipient
+		F, // relayer
+		F, // fee
+		F, // refund
+	) {
+		(
+			public_inputs[0],
+			public_inputs[1],
+			public_inputs[2],
+			public_inputs[3],
+			public_inputs[4],
+			public_inputs[6],
+		)
+	}
+
+	pub fn setup_leaf<R: Rng>(&self, rng: &mut R) -> (LeafPrivate<F>, F, F) {
+		// Secret inputs for the leaf
+		let leaf_private = LeafPrivate::generate(rng);
+
+		// Creating the leaf
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5).unwrap();
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5).unwrap();
+		(leaf_private, leaf_hash, nullifier_hash)
+	}
+
+	pub fn setup_leaf_with_privates(&self, secret: F, nullfier: F) -> (LeafPrivate<F>, F, F) {
+		// Secret inputs for the leaf
+		let leaf_private = LeafPrivate::new(secret, nullfier);
+
+		// Creating the leaf
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5).unwrap();
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5).unwrap();
+		(leaf_private, leaf_hash, nullifier_hash)
+	}
+
+	#[allow(clippy::too_many_arguments)]
+	pub fn setup_circuit<R: Rng>(
+		self,
+		leaves: &[F],
+		index: u64,
+		recipient: F,
+		relayer: F,
+		fee: F,
+		refund: F,
+		rng: &mut R,
+	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
+		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng);
+		let mut leaves_new = leaves.to_vec();
+		leaves_new.push(leaf);
+		let (tree, path) =
+			setup_tree_and_create_path_tree_x5::<F, N>(&leaves_new, index, &self.params3);
+		let root = tree.root().inner();
+
+		let mc = Circuit_x5::new(
+			arbitrary_input,
+			leaf_private,
+			self.params5,
+			path,
+			root,
+			nullifier_hash,
+		);
+		let public_inputs =
+			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
+		(mc, leaf, nullifier_hash, root, public_inputs)
+	}
+
+	pub fn setup_tree(&self, leaves: &[F]) -> Tree_x5<F> {
+		let inner_params = Rc::new(self.params3.clone());
+		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
+		mt
+	}
+
+	pub fn setup_tree_and_create_path(
+		&self,
+		leaves: &[F],
+		index: u64,
+	) -> (Tree_x5<F>, Path<TreeConfig_x5<F>, N>) {
+		// Making the merkle tree
+		let mt = self.setup_tree(leaves);
+		// Getting the proof path
+		let path = mt.generate_membership_proof(index);
+		(mt, path)
+	}
+}
 
 pub fn setup_arbitrary_data<F: PrimeField>(
 	recipient: F,
