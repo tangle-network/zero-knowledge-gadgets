@@ -165,17 +165,20 @@ mod test {
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
 	pub const LEN: usize = 30;
+	type MixerProverSetupBn254_30 = MixerProverSetup<Bn254Fr, LEN>;
 
 	#[test]
 	fn setup_and_prove_mixer_groth16() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr, LEN>(rng, curve);
+		let curve = Curve::Bn254;
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let (circuit, .., public_inputs) = prover.setup_random_circuit(rng);
 
-		let (pk, vk) = setup_groth16_circuit_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
-
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
+		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
 		println!("{}", res);
 		assert!(res);
 	}

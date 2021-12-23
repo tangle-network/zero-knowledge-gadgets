@@ -1,5 +1,6 @@
 use super::common::*;
 use crate::circuit::mixer::MixerCircuit;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::rc::Rc;
 use arkworks_gadgets::{
 	arbitrary::mixer_data::Input as MixerDataInput,
@@ -11,7 +12,7 @@ use arkworks_utils::{
 	poseidon::PoseidonParameters,
 	utils::common::{
 		setup_mimc_220, setup_params_x17_3, setup_params_x17_5, setup_params_x5_3,
-		setup_params_x5_5, Curve,
+		setup_params_x5_5, verify_groth16, Curve,
 	},
 };
 
@@ -80,12 +81,16 @@ pub fn setup_leaf<F: PrimeField, R: Rng>(
 	(leaf_private, leaf_hash, nullifier_hash)
 }
 
-struct MixerProverSetup<F: PrimeField, const N: usize> {
+pub struct MixerProverSetup<F: PrimeField, const N: usize> {
 	params3: PoseidonParameters<F>,
 	params5: PoseidonParameters<F>,
 }
 
 impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
+	pub fn new(params3: PoseidonParameters<F>, params5: PoseidonParameters<F>) -> Self {
+		Self { params3, params5 }
+	}
+
 	pub fn setup_arbitrary_data(
 		recipient: F,
 		relayer: F,
@@ -178,6 +183,16 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		(mc, leaf, nullifier_hash, root, public_inputs)
 	}
 
+	pub fn setup_random_circuit<R: Rng>(self, rng: &mut R) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+		let leaves = Vec::new();
+		let index = 0;
+		let recipient = F::rand(rng);
+		let relayer = F::rand(rng);
+		let fee = F::rand(rng);
+		let refund = F::rand(rng);
+		self.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng)
+	}
+
 	pub fn setup_tree(&self, leaves: &[F]) -> Tree_x5<F> {
 		let inner_params = Rc::new(self.params3.clone());
 		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
@@ -194,6 +209,39 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		// Getting the proof path
 		let path = mt.generate_membership_proof(index);
 		(mt, path)
+	}
+
+	pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng>(
+		circuit: Circuit_x5<E::Fr, N>,
+		rng: &mut R,
+	) -> (Vec<u8>, Vec<u8>) {
+		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
+
+		let mut pk_bytes = Vec::new();
+		let mut vk_bytes = Vec::new();
+		pk.serialize(&mut pk_bytes).unwrap();
+		vk.serialize(&mut vk_bytes).unwrap();
+		(pk_bytes, vk_bytes)
+	}
+
+	pub fn prove<E: PairingEngine, R: RngCore + CryptoRng>(
+		circuit: Circuit_x5<E::Fr, N>,
+		pk_bytes: &[u8],
+		rng: &mut R,
+	) -> Vec<u8> {
+		let pk = ProvingKey::<E>::deserialize(pk_bytes).unwrap();
+
+		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
+		let mut proof_bytes = Vec::new();
+		proof.serialize(&mut proof_bytes).unwrap();
+		proof_bytes
+	}
+
+	pub fn verify<E: PairingEngine>(public_inputs: &Vec<E::Fr>, vk: &[u8], proof: &[u8]) -> bool {
+		let vk = VerifyingKey::<E>::deserialize(vk).unwrap();
+		let proof = Proof::<E>::deserialize(proof).unwrap();
+		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
+		ver_res
 	}
 }
 
