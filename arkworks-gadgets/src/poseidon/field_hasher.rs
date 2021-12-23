@@ -3,14 +3,13 @@ use ark_std::vec::Vec;
 
 use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
-
 struct Poseidon<F: PrimeField> {
 	params: PoseidonParameters<F>,
 }
 
 impl<F: PrimeField> Poseidon<F> {
 	fn new(params: PoseidonParameters<F>) -> Self {
-		Poseidon{ params }
+		Poseidon { params }
 	}
 }
 
@@ -22,8 +21,8 @@ trait FieldHasher<F: PrimeField> {
 impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 	fn hash(&self, inputs: &Vec<F>) -> Result<F, PoseidonError> {
 		// Populate a state vector with 0 and then inputs, pad with zeros if necessary
-		if inputs.len() > (self.params.width -1) as usize {
-			return Err(PoseidonError::InvalidInputs)
+		if inputs.len() > (self.params.width - 1) as usize {
+			return Err(PoseidonError::InvalidInputs);
 		}
 		let mut state = vec![F::zero()];
 		for f in inputs {
@@ -67,7 +66,7 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 
 		// Ok(result.get(0).cloned().ok_or(PoseidonError::InvalidInputs)?)
 	}
-	
+
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError> {
 		self.hash(&vec![*left, *right])
 	}
@@ -76,12 +75,16 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_ff::fields::Field;
 	use ark_ed_on_bn254::Fq;
+	use ark_ff::fields::Field;
 	use ark_std::One;
 	// use ark_crypto_primitives::crh::TwoToOneCRH;
-	use arkworks_utils::utils::{common::{Curve, setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5,}
-		, parse_vec};
+	use arkworks_utils::utils::{
+		common::{
+			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
+		},
+		parse_vec,
+	};
 
 	type PoseidonHasher = Poseidon<Fq>;
 	#[test]
@@ -89,7 +92,7 @@ mod test {
 		let curve = Curve::Bn254;
 
 		let params = setup_params_x5_3(curve);
-		let poseidon = PoseidonHasher{ params };
+		let poseidon = PoseidonHasher { params };
 
 		// output from circomlib, and here is the code.
 		// ```js
@@ -101,10 +104,9 @@ mod test {
 		]);
 		let left_input = Fq::one();
 		let right_input = Fq::one().double();
-		let poseidon_res =
-			poseidon.hash_two(&left_input, &right_input).unwrap();
-		
-		assert_eq!(res[0], poseidon_res,"{} != {}", res[0], poseidon_res);
+		let poseidon_res = poseidon.hash_two(&left_input, &right_input).unwrap();
+
+		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 
 		// test two with 32 bytes.
 		// these bytes are randomly generated.
@@ -145,8 +147,7 @@ mod test {
 		let res: Vec<Fq> = parse_vec(vec![
 			"0x0a13ad844d3487ad3dbaf3876760eb971283d48333fa5a9e97e6ee422af9554b",
 		]);
-		let poseidon_res =
-			poseidon.hash_two(&left_input, &right_input).unwrap();
+		let poseidon_res = poseidon.hash_two(&left_input, &right_input).unwrap();
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
 
@@ -158,10 +159,15 @@ mod test {
 		let parameters4 = setup_params_x5_4(curve);
 		let parameters5 = setup_params_x5_5(curve);
 
-		let poseidon2 = Poseidon{ params: parameters2};
-		let poseidon4 = Poseidon{ params: parameters4};
-		let poseidon5 = Poseidon{ params: parameters5};
-
+		let poseidon2 = Poseidon {
+			params: parameters2,
+		};
+		let poseidon4 = Poseidon {
+			params: parameters4,
+		};
+		let poseidon5 = Poseidon {
+			params: parameters5,
+		};
 
 		let expected_public_key: Vec<Fq> = parse_vec(vec![
 			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
@@ -198,7 +204,7 @@ mod test {
 		input.push(amount[0]);
 		input.push(expected_public_key[0]);
 		input.push(blinding[0]);
-		let computed_leaf = poseidon5.hash( &input).unwrap();
+		let computed_leaf = poseidon5.hash(&input).unwrap();
 
 		assert_eq!(
 			expected_leaf[0], computed_leaf,
