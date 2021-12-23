@@ -24,7 +24,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		for x in roots {
 			let diff = composer.arithmetic_gate(|gate| {
 				gate.witness(target, x, None)
-				.add(-E::Fr::one(), E::Fr::one())
+					.add(-E::Fr::one(), E::Fr::one())
 			});
 			diffs.push(diff);
 		}
@@ -32,9 +32,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		let mut sum = composer.add_input(E::Fr::one());
 
 		for diff in diffs {
-			sum = composer.arithmetic_gate(|gate| {
-				gate.witness(sum, diff, None).mul(E::Fr::one())
-			});
+			sum = composer.arithmetic_gate(|gate| gate.witness(sum, diff, None).mul(E::Fr::one()));
 		}
 
 		composer.assert_equal(sum, composer.zero_var());

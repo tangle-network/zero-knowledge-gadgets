@@ -84,13 +84,12 @@ pub fn hash<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
 					.fold(composer.zero_var(), |acc, (j, a)| {
 						let m = &params.mds_matrix[i][j];
 
-						let mul_result = composer.arithmetic_gate(|gate| {
-							gate.witness(*a, *m, None).mul(E::Fr::one())
-						});
+						let mul_result = composer
+							.arithmetic_gate(|gate| gate.witness(*a, *m, None).mul(E::Fr::one()));
 
 						let add_result = composer.arithmetic_gate(|gate| {
 							gate.witness(acc, mul_result, None)
-							.add(E::Fr::one(), E::Fr::one())
+								.add(E::Fr::one(), E::Fr::one())
 						});
 
 						add_result
@@ -144,8 +143,8 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 
 		let add_result = composer.arithmetic_gate(|gate| {
 			gate.witness(computed_hash, zero_var, None)
-			.add(E::Fr::one(), E::Fr::one())
-			.pi(-self.c)
+				.add(E::Fr::one(), E::Fr::one())
+				.pi(-self.c)
 		});
 		composer.assert_equal(add_result, composer.zero_var());
 		Ok(())
@@ -339,5 +338,4 @@ mod tests {
 		)
 		.unwrap();
 	}
-
 }
