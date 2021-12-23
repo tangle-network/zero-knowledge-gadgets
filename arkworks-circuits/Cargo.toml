@@ -37,6 +37,9 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "cu
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
 paste = { version = "1.0.5" }
+ethabi = { version = "15.0.0", default-features = false }
+hex-literal = { version = "0.3.4" }
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
 default = ["std", "r1cs", "default_mimc", "default_poseidon"]

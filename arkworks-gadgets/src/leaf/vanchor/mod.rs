@@ -6,13 +6,13 @@ use ark_std::{marker::PhantomData, rand::Rng};
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Private<F: PrimeField> {
 	pub amount: F,
 	blinding: F,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Public<F: PrimeField> {
 	pub chain_id: F,
 }

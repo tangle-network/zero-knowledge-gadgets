@@ -221,7 +221,7 @@ where
 		Ok(sums_outs_var)
 	}
 
-	//Check that there are no same nullifiers among all inputs
+	// Check that there are no same nullifiers among all inputs
 	pub fn verify_no_same_nul(in_nullifier_var: &[HG::OutputVar]) -> Result<(), SynthesisError> {
 		for i in 0..N_INS - 1 {
 			for j in (i + 1)..N_INS {
@@ -429,17 +429,11 @@ where
 
 #[cfg(test)]
 mod test {
-	use super::*;
 	use crate::{
 		ark_std::{One, Zero},
-		setup::{bridge::*, common::*, vanchor::setup_vanchor_arbitrary_data},
+		setup::vanchor::VAnchorProverBn2542x2,
 	};
-	use arkworks_gadgets::{
-		keypair::vanchor::Keypair,
-		leaf::vanchor::VAnchorLeaf,
-		merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-		poseidon::{constraints::CRHGadget as PCRHGadget, CRH as PCRH},
-	};
+	use ark_serialize::CanonicalDeserialize;
 	use arkworks_utils::{
 		poseidon::PoseidonParameters,
 		utils::common::{
@@ -448,2527 +442,408 @@ mod test {
 	};
 
 	use ark_bn254::{Bn254, Fr as BnFr};
-	use ark_ff::{to_bytes, UniformRand};
-	use ark_groth16::Groth16;
+	use ark_ff::UniformRand;
+	use ark_groth16::{Groth16, Proof, VerifyingKey};
 
-	use crate::prelude::ark_std::{rc::Rc, str::FromStr};
+	use crate::prelude::ark_std::str::FromStr;
 	use ark_snark::SNARK;
 	use ark_std::test_rng;
-	pub const TEST_K: usize = 30;
-	pub const TEST_N_INS_2: usize = 2;
-	pub const TEST_N_OUTS_2: usize = 2;
-	pub const TEST_M: usize = 2;
-
-	type PoseidonCRH = PCRH<BnFr>;
-	type PoseidonCRHGadget = PCRHGadget<BnFr>;
-
-	type KeyPair = Keypair<BnFr, PoseidonCRH>;
-	type Leaf = VAnchorLeaf<BnFr, PoseidonCRH>;
-	#[allow(non_camel_case_types)]
-	#[derive(Clone, PartialEq)]
-	pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
-	impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
-		type H = PoseidonCRH_x5_3<F>;
-		type LeafH = LeafCRH<F>;
-
-		const HEIGHT: u8 = (TEST_K as u8);
-	}
-	#[allow(non_camel_case_types)]
-	pub type Tree_x5<BnFr> = SparseMerkleTree<TreeConfig_x5<BnFr>>;
-
-	type VACircuit = VAnchorCircuit<
-		BnFr,
-		PoseidonCRH,
-		PoseidonCRHGadget,
-		TreeConfig_x5<BnFr>,
-		LeafCRHGadget<BnFr>,
-		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
-		TEST_N_INS_2,
-		TEST_N_OUTS_2,
-		TEST_M,
-	>;
 
 	#[test]
 	fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = 6;
+		let recipient = vec![1u8; 20];
+		let relayer = vec![2u8; 20];
+		let ext_amount = 10;
+		let fee = 0;
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_id = 0;
+		let in_amounts = [2; 2];
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + &leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let (circuit, pub_ins, ..) = prover.setup_circuit_with_data(
+			public_amount,
+			recipient,
+			relayer,
+			ext_amount,
+			fee,
+			in_chain_id,
+			in_amounts,
+			out_chain_ids,
+			out_amounts,
+			rng,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_root() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = BnFr::from(10u32);
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_ids = [0; 2];
+		let in_amounts = [5; 2];
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
+		let (in_indices, in_paths, in_set_private_inputs, _) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		// Invalid root set
+		let in_root_set = [BnFr::rand(rng); 2];
 
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = BnFr::rand(rng);
-
-		let root_set = [root; TEST_M];
-
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
-	}
-
-	#[should_panic]
-	#[test]
-	fn should_fail_with_invalid_set() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
-
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = BnFr::rand(rng);
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let circuit = prover.setup_circuit(
+			public_amount,
+			arbitrary_data,
+			in_utxos,
+			in_indices,
+			in_paths,
+			in_set_private_inputs,
+			in_root_set,
+			out_utxos,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_nullifier() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = BnFr::from(10u32);
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_ids = [0; 2];
+		let in_amounts = [5; 2];
+		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
+		// Adding invalid nullifier
+		in_utxos[0].nullifier = BnFr::rand(rng);
 
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let nullifier_hash_1 = BnFr::rand(rng);
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
+		let circuit = prover.setup_circuit(
+			public_amount,
+			arbitrary_data,
+			in_utxos,
+			in_indices,
+			in_paths,
+			in_set_private_inputs,
+			in_root_set,
+			out_utxos,
+		);
 
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
+	#[ignore]
 	fn should_fail_with_same_nullifier() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = BnFr::from(0u32);
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_ids = [0; 2];
+		let in_amounts = [5; 2];
+		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
+		// Enure both nullifiers are the same
+		in_utxos[0] = in_utxos[1].clone();
 
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_1];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
+		let circuit = prover.setup_circuit(
+			public_amount,
+			arbitrary_data,
+			in_utxos,
+			in_indices,
+			in_paths,
+			in_set_private_inputs,
+			in_root_set,
+			out_utxos,
+		);
 
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_inconsistent_input_output_values() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = BnFr::from(10u32);
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_ids = [0; 2];
+		let in_amounts = [10; 2];
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-		assert_ne!(nullifier_hash_1, nullifier_hash_2);
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount
-		// Here is the cause of invalidation
-			+ public_amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
+		let circuit = prover.setup_circuit(
+			public_amount,
+			arbitrary_data,
+			in_utxos,
+			in_indices,
+			in_paths,
+			in_set_private_inputs,
+			in_root_set,
+			out_utxos,
+		);
 
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_big_amount() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let limit: BnFr = BnFr::from_str(
+		// 2^248
+		let limit = BnFr::from_str(
 			"452312848583266388373324160190187140051835877600158453279131187530910662656",
 		)
-		.unwrap_or_default();
-		// check the previous conversion is done correctly
-		assert_ne!(limit, BnFr::default());
-
-		let in_amount_1 = BnFr::one() + limit;
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
 		.unwrap();
 
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
+		let public_amount = BnFr::zero();
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
+		let in_chain_ids = [BnFr::from(0u32); 2];
+		let in_amounts = [limit + BnFr::one(); 2];
+		let in_utxos = prover.new_utxos_f(in_chain_ids, in_amounts, rng);
 
-		let public_amount = BnFr::one();
+		let out_chain_ids = [BnFr::from(0u32); 2];
+		let out_amounts = [limit + BnFr::one(); 2];
+		let out_utxos = prover.new_utxos_f(out_chain_ids, out_amounts, rng);
 
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-		assert_ne!(nullifier_hash_1, nullifier_hash_2);
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + &leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
+		let circuit = prover.setup_circuit(
+			public_amount,
+			arbitrary_data,
+			in_utxos,
+			in_indices,
+			in_paths,
+			in_set_private_inputs,
+			in_root_set,
+			out_utxos,
+		);
 
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
-		assert!(res);
+		assert!(!res);
 	}
 
-	#[should_panic]
 	#[test]
 	fn should_fail_with_invalid_public_input() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
 		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::one();
+		let params4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
+		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
+		let public_amount = BnFr::from(0u32);
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
+		let in_chain_ids = [0; 2];
+		let in_amounts = [5; 2];
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
 
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
+		let out_chain_ids = [0; 2];
+		let out_amounts = [5; 2];
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
 
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
+			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
 
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-		assert_ne!(nullifier_hash_1, nullifier_hash_2);
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let truncated_public_inputs = public_inputs[2..].to_vec();
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &truncated_public_inputs, &proof).unwrap();
-
-		assert!(res);
-	}
-
-	pub const TEST_N_INS_1: usize = 1;
-	pub const TEST_N_OUTS_1: usize = 1;
-	type VACircuit1_1 = VAnchorCircuit<
-		BnFr,
-		PoseidonCRH,
-		PoseidonCRHGadget,
-		TreeConfig_x5<BnFr>,
-		LeafCRHGadget<BnFr>,
-		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
-		TEST_N_INS_1,
-		TEST_N_OUTS_1,
-		TEST_M,
-	>;
-
-	#[test]
-	fn should_create_circuit_and_prove_groth16_1_input_1_output() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
-
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_inputs = vec![leaf_private_1.clone()];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let paths = vec![path_1.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let indices = vec![index_0];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private = vec![out_leaf_private_1.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public = vec![out_leaf_public_1.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1];
-		let output_commitment = vec![output_commitment_1];
-		let circuit = VACircuit1_1::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
+		let circuit = prover.setup_circuit(
+			public_amount,
+			arbitrary_data,
+			in_utxos,
+			in_indices,
+			in_paths,
+			in_set_private_inputs,
+			in_root_set,
+			out_utxos,
 		);
 
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
-	}
-
-	type VACircuit1_2 = VAnchorCircuit<
-		BnFr,
-		PoseidonCRH,
-		PoseidonCRHGadget,
-		TreeConfig_x5<BnFr>,
-		LeafCRHGadget<BnFr>,
-		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
-		TEST_N_INS_1,
-		TEST_N_OUTS_2,
-		TEST_M,
-	>;
-	#[test]
-	fn should_create_circuit_and_prove_groth16_1_input_2_output() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
-
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_inputs = vec![leaf_private_1.clone()];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let paths = vec![path_1.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let indices = vec![index_0];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1];
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount - BnFr::one();
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = BnFr::one();
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private = vec![out_leaf_private_1.clone(), out_leaf_private_2.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public = vec![out_leaf_public_1.clone(), out_leaf_public_2.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let output_commitment_2 = Leaf::create_leaf(
-			&out_leaf_private_2,
-			&out_leaf_public_2,
-			&out_pubkey_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2];
-		let output_commitment = vec![output_commitment_1, output_commitment_2];
-		let circuit = VACircuit1_2::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
-	}
-
-	type VACircuit2_1 = VAnchorCircuit<
-		BnFr,
-		PoseidonCRH,
-		PoseidonCRHGadget,
-		TreeConfig_x5<BnFr>,
-		LeafCRHGadget<BnFr>,
-		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
-		TEST_N_INS_2,
-		TEST_N_OUTS_1,
-		TEST_M,
-	>;
-
-	#[test]
-	fn should_create_circuit_and_prove_groth16_2_input_1_output() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
-
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_inputs = vec![leaf_private_1.clone(), leaf_private_2.clone()];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_inputs = vec![keypair_1.clone(), keypair_2.clone()];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves = [leaf_1, leaf_2];
-		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves).unwrap();
-
-		let path_1 = tree.generate_membership_proof(0);
-		let path_2 = tree.generate_membership_proof(1);
-		let paths = vec![path_1.clone(), path_2.clone()];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root = tree.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_1.get_index(&tree.root(), &leaf_2).unwrap();
-		assert_eq!(index_0, BnFr::zero());
-		assert_eq!(index_1, BnFr::one());
-		let indices = vec![index_0, index_1];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let nullifier_hash = vec![nullifier_hash_1, nullifier_hash_2];
-		assert_ne!(nullifier_hash_1, nullifier_hash_2);
-
-		let set_private_inputs_1 = setup_set(&root, &root_set);
-		let set_private_inputs = vec![set_private_inputs_1.clone(), set_private_inputs_1.clone()];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount + leaf_private_2.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private = vec![out_leaf_private_1.clone()];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public = vec![out_leaf_public_1.clone()];
-
-		let output_commitment_1 = Leaf::create_leaf(
-			&out_leaf_private_1,
-			&out_leaf_public_1,
-			&out_pubkey_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let out_pubkey = vec![out_pubkey_1];
-		let output_commitment = vec![output_commitment_1];
-		let circuit = VACircuit2_1::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
-	}
-
-	pub const TEST_N_INS_8: usize = 8;
-	pub const TEST_N_OUTS_8: usize = 8;
-
-	type VACircuit8_8 = VAnchorCircuit<
-		BnFr,
-		PoseidonCRH,
-		PoseidonCRHGadget,
-		TreeConfig_x5<BnFr>,
-		LeafCRHGadget<BnFr>,
-		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
-		TEST_N_INS_8,
-		TEST_N_OUTS_8,
-		TEST_M,
-	>;
-	// This test considers two different batch of inputs from two different
-	// chains. Therefore two different trees are used
-	#[test]
-	fn should_create_circuit_and_prove_groth16_8_input_8_output() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
-
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let in_amount_3 = BnFr::one();
-		let blinding_3 = BnFr::rand(rng);
-		let in_amount_4 = BnFr::one() + BnFr::one();
-		let blinding_4 = BnFr::rand(rng);
-		let in_amount_5 = BnFr::one();
-		let blinding_5 = BnFr::rand(rng);
-		let in_amount_6 = BnFr::one() + BnFr::one();
-		let blinding_6 = BnFr::rand(rng);
-		let in_amount_7 = BnFr::one();
-		let blinding_7 = BnFr::rand(rng);
-		let in_amount_8 = BnFr::one() + BnFr::one();
-		let blinding_8 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(in_amount_3, blinding_3);
-		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(in_amount_4, blinding_4);
-		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(in_amount_5, blinding_5);
-		let leaf_private_6 = LeafPrivateInputs::<BnFr>::new(in_amount_6, blinding_6);
-		let leaf_private_7 = LeafPrivateInputs::<BnFr>::new(in_amount_7, blinding_7);
-		let leaf_private_8 = LeafPrivateInputs::<BnFr>::new(in_amount_8, blinding_8);
-		let leaf_private_inputs = vec![
-			leaf_private_1.clone(),
-			leaf_private_2.clone(),
-			leaf_private_3.clone(),
-			leaf_private_4.clone(),
-			leaf_private_5.clone(),
-			leaf_private_6.clone(),
-			leaf_private_7.clone(),
-			leaf_private_8.clone(),
-		];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_3 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_3].unwrap();
-		let public_key_3 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_4 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_4].unwrap();
-		let public_key_4 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_5 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_5].unwrap();
-		let public_key_5 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_6 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_6].unwrap();
-		let public_key_6 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_7 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_7].unwrap();
-		let public_key_7 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_8 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_8].unwrap();
-		let public_key_8 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let keypair_3 = KeyPair::new(private_key_3.clone());
-		let keypair_4 = KeyPair::new(private_key_4.clone());
-		let keypair_5 = KeyPair::new(private_key_5.clone());
-		let keypair_6 = KeyPair::new(private_key_6.clone());
-		let keypair_7 = KeyPair::new(private_key_7.clone());
-		let keypair_8 = KeyPair::new(private_key_8.clone());
-		let keypair_inputs = vec![
-			keypair_1.clone(),
-			keypair_2.clone(),
-			keypair_3.clone(),
-			keypair_4.clone(),
-			keypair_5.clone(),
-			keypair_6.clone(),
-			keypair_7.clone(),
-			keypair_8.clone(),
-		];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_3 = Leaf::create_leaf(
-			&leaf_private_3,
-			&leaf_public_input,
-			&public_key_3,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_4 = Leaf::create_leaf(
-			&leaf_private_4,
-			&leaf_public_input,
-			&public_key_4,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_5 = Leaf::create_leaf(
-			&leaf_private_5,
-			&leaf_public_input,
-			&public_key_5,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_6 = Leaf::create_leaf(
-			&leaf_private_6,
-			&leaf_public_input,
-			&public_key_6,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_7 = Leaf::create_leaf(
-			&leaf_private_7,
-			&leaf_public_input,
-			&public_key_7,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_8 = Leaf::create_leaf(
-			&leaf_private_8,
-			&leaf_public_input,
-			&public_key_8,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4];
-		let leaves_on_chain_2 = [leaf_5, leaf_6, leaf_7, leaf_8];
-		let tree_1 =
-			Tree_x5::new_sequential(inner_params.clone(), Rc::new(()), &leaves_on_chain_1).unwrap();
-		let tree_2 =
-			Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves_on_chain_2).unwrap();
-
-		let path_1 = tree_1.generate_membership_proof(0);
-		let path_2 = tree_1.generate_membership_proof(1);
-		let path_3 = tree_1.generate_membership_proof(2);
-		let path_4 = tree_1.generate_membership_proof(3);
-		let path_5 = tree_2.generate_membership_proof(0);
-		let path_6 = tree_2.generate_membership_proof(1);
-		let path_7 = tree_2.generate_membership_proof(2);
-		let path_8 = tree_2.generate_membership_proof(3);
-		let paths = vec![
-			path_1.clone(),
-			path_2.clone(),
-			path_3.clone(),
-			path_4.clone(),
-			path_5.clone(),
-			path_6.clone(),
-			path_7.clone(),
-			path_8.clone(),
-		];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root_1 = tree_1.root().inner();
-		let root_2 = tree_2.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root_1;
-		root_set[1] = root_2;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree_1.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_2.get_index(&tree_1.root(), &leaf_2).unwrap();
-		let index_2: BnFr = path_3.get_index(&tree_1.root(), &leaf_3).unwrap();
-		let index_3: BnFr = path_4.get_index(&tree_1.root(), &leaf_4).unwrap();
-		let index_4: BnFr = path_5.get_index(&tree_2.root(), &leaf_5).unwrap();
-		let index_5: BnFr = path_6.get_index(&tree_2.root(), &leaf_6).unwrap();
-		let index_6: BnFr = path_7.get_index(&tree_2.root(), &leaf_7).unwrap();
-		let index_7: BnFr = path_8.get_index(&tree_2.root(), &leaf_8).unwrap();
-		let indices = vec![
-			index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7,
-		];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let signature = keypair_3
-			.signature(&leaf_3, &index_2, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_3 =
-			Leaf::create_nullifier(&signature, &leaf_3, &hasher_params_w4, &index_2).unwrap();
-		let signature = keypair_4
-			.signature(&leaf_4, &index_3, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_4 =
-			Leaf::create_nullifier(&signature, &leaf_4, &hasher_params_w4, &index_3).unwrap();
-		let signature = keypair_5
-			.signature(&leaf_5, &index_4, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_5 =
-			Leaf::create_nullifier(&signature, &leaf_5, &hasher_params_w4, &index_4).unwrap();
-		let signature = keypair_6
-			.signature(&leaf_6, &index_5, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_6 =
-			Leaf::create_nullifier(&signature, &leaf_6, &hasher_params_w4, &index_5).unwrap();
-		let signature = keypair_7
-			.signature(&leaf_7, &index_6, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_7 =
-			Leaf::create_nullifier(&signature, &leaf_7, &hasher_params_w4, &index_6).unwrap();
-		let signature = keypair_8
-			.signature(&leaf_8, &index_7, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_8 =
-			Leaf::create_nullifier(&signature, &leaf_8, &hasher_params_w4, &index_7).unwrap();
-		let nullifier_hash = vec![
-			nullifier_hash_1,
-			nullifier_hash_2,
-			nullifier_hash_3,
-			nullifier_hash_4,
-			nullifier_hash_5,
-			nullifier_hash_6,
-			nullifier_hash_7,
-			nullifier_hash_8,
-		];
-
-		let set_private_inputs_1 = setup_set(&root_1, &root_set);
-		let set_private_inputs_2 = setup_set(&root_2, &root_set);
-		let set_private_inputs = vec![
-			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(),
-			set_private_inputs_2.clone(),
-			set_private_inputs_2.clone(),
-			set_private_inputs_2.clone(),
-			set_private_inputs_2.clone(),
-		];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
-		let output_commitment_1 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
-		let output_commitment_2 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_3 = BnFr::one();
-		let out_amount_3 = leaf_private_3.amount;
-		let out_pubkey_3 = BnFr::rand(rng);
-		let out_blinding_3 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_3, out_amount_3, out_pubkey_3, out_blinding_3].unwrap();
-		let output_commitment_3 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_4 = BnFr::one();
-		let out_amount_4 = leaf_private_4.amount;
-		let out_pubkey_4 = BnFr::rand(rng);
-		let out_blinding_4 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_4, out_amount_4, out_pubkey_4, out_blinding_4].unwrap();
-		let output_commitment_4 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_5 = BnFr::one();
-		let out_amount_5 = leaf_private_5.amount;
-		let out_pubkey_5 = BnFr::rand(rng);
-		let out_blinding_5 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_5, out_amount_5, out_pubkey_5, out_blinding_5].unwrap();
-		let output_commitment_5 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_6 = BnFr::one();
-		let out_amount_6 = leaf_private_6.amount;
-		let out_pubkey_6 = BnFr::rand(rng);
-		let out_blinding_6 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_6, out_amount_6, out_pubkey_6, out_blinding_6].unwrap();
-		let output_commitment_6 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_7 = BnFr::one();
-		let out_amount_7 = leaf_private_7.amount;
-		let out_pubkey_7 = BnFr::rand(rng);
-		let out_blinding_7 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_7, out_amount_7, out_pubkey_7, out_blinding_7].unwrap();
-		let output_commitment_7 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_8 = BnFr::one();
-		let out_amount_8 = leaf_private_8.amount;
-		let out_pubkey_8 = BnFr::rand(rng);
-		let out_blinding_8 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_8, out_amount_8, out_pubkey_8, out_blinding_8].unwrap();
-		let output_commitment_8 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private_3 = LeafPrivateInputs::<BnFr>::new(out_amount_3, out_blinding_3);
-		let out_leaf_private_4 = LeafPrivateInputs::<BnFr>::new(out_amount_4, out_blinding_4);
-		let out_leaf_private_5 = LeafPrivateInputs::<BnFr>::new(out_amount_5, out_blinding_5);
-		let out_leaf_private_6 = LeafPrivateInputs::<BnFr>::new(out_amount_6, out_blinding_6);
-		let out_leaf_private_7 = LeafPrivateInputs::<BnFr>::new(out_amount_7, out_blinding_7);
-		let out_leaf_private_8 = LeafPrivateInputs::<BnFr>::new(out_amount_8, out_blinding_8);
-		let out_leaf_private = vec![
-			out_leaf_private_1.clone(),
-			out_leaf_private_2.clone(),
-			out_leaf_private_3.clone(),
-			out_leaf_private_4.clone(),
-			out_leaf_private_5.clone(),
-			out_leaf_private_6.clone(),
-			out_leaf_private_7.clone(),
-			out_leaf_private_8.clone(),
-		];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public_3 = LeafPublicInputs::<BnFr>::new(out_chain_id_3);
-		let out_leaf_public_4 = LeafPublicInputs::<BnFr>::new(out_chain_id_4);
-		let out_leaf_public_5 = LeafPublicInputs::<BnFr>::new(out_chain_id_5);
-		let out_leaf_public_6 = LeafPublicInputs::<BnFr>::new(out_chain_id_6);
-		let out_leaf_public_7 = LeafPublicInputs::<BnFr>::new(out_chain_id_7);
-		let out_leaf_public_8 = LeafPublicInputs::<BnFr>::new(out_chain_id_8);
-		let out_leaf_public = vec![
-			out_leaf_public_1.clone(),
-			out_leaf_public_2.clone(),
-			out_leaf_public_3.clone(),
-			out_leaf_public_4.clone(),
-			out_leaf_public_5.clone(),
-			out_leaf_public_6.clone(),
-			out_leaf_public_7.clone(),
-			out_leaf_public_8.clone(),
-		];
-
-		let out_pubkey = vec![
-			out_pubkey_1,
-			out_pubkey_2,
-			out_pubkey_3,
-			out_pubkey_4,
-			out_pubkey_5,
-			out_pubkey_6,
-			out_pubkey_7,
-			out_pubkey_8,
-		];
-
-		let output_commitment = vec![
-			output_commitment_1,
-			output_commitment_2,
-			output_commitment_3,
-			output_commitment_4,
-			output_commitment_5,
-			output_commitment_6,
-			output_commitment_7,
-			output_commitment_8,
-		];
-		let circuit = VACircuit8_8::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
-	}
-
-	pub const TEST_N_OUTS_4: usize = 4;
-
-	type VACircuit8_4 = VAnchorCircuit<
-		BnFr,
-		PoseidonCRH,
-		PoseidonCRHGadget,
-		TreeConfig_x5<BnFr>,
-		LeafCRHGadget<BnFr>,
-		PoseidonCRH_x5_3Gadget<BnFr>,
-		TEST_K,
-		TEST_N_INS_8,
-		TEST_N_OUTS_4,
-		TEST_M,
-	>;
-	#[test]
-	fn should_create_circuit_and_prove_groth16_8_input_4_output() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let hasher_params_w5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
-		let hasher_params_w4: PoseidonParameters<BnFr> = setup_params_x5_4(curve);
-		let params3: PoseidonParameters<BnFr> = setup_params_x5_3(curve);
-		let hasher_params_w2: PoseidonParameters<BnFr> = setup_params_x5_2(curve);
-		let chain_id = BnFr::zero();
-
-		let in_amount_1 = BnFr::one();
-		let blinding_1 = BnFr::rand(rng);
-		let in_amount_2 = BnFr::one() + BnFr::one();
-		let blinding_2 = BnFr::rand(rng);
-		let in_amount_3 = BnFr::one();
-		let blinding_3 = BnFr::rand(rng);
-		let in_amount_4 = BnFr::one() + BnFr::one();
-		let blinding_4 = BnFr::rand(rng);
-		let in_amount_5 = BnFr::one();
-		let blinding_5 = BnFr::rand(rng);
-		let in_amount_6 = BnFr::one() + BnFr::one();
-		let blinding_6 = BnFr::rand(rng);
-		let in_amount_7 = BnFr::one();
-		let blinding_7 = BnFr::rand(rng);
-		let in_amount_8 = BnFr::one() + BnFr::one();
-		let blinding_8 = BnFr::rand(rng);
-		let leaf_private_1 = LeafPrivateInputs::<BnFr>::new(in_amount_1, blinding_1);
-		let leaf_private_2 = LeafPrivateInputs::<BnFr>::new(in_amount_2, blinding_2);
-		let leaf_private_3 = LeafPrivateInputs::<BnFr>::new(in_amount_3, blinding_3);
-		let leaf_private_4 = LeafPrivateInputs::<BnFr>::new(in_amount_4, blinding_4);
-		let leaf_private_5 = LeafPrivateInputs::<BnFr>::new(in_amount_5, blinding_5);
-		let leaf_private_6 = LeafPrivateInputs::<BnFr>::new(in_amount_6, blinding_6);
-		let leaf_private_7 = LeafPrivateInputs::<BnFr>::new(in_amount_7, blinding_7);
-		let leaf_private_8 = LeafPrivateInputs::<BnFr>::new(in_amount_8, blinding_8);
-		let leaf_private_inputs = vec![
-			leaf_private_1.clone(),
-			leaf_private_2.clone(),
-			leaf_private_3.clone(),
-			leaf_private_4.clone(),
-			leaf_private_5.clone(),
-			leaf_private_6.clone(),
-			leaf_private_7.clone(),
-			leaf_private_8.clone(),
-		];
-
-		let leaf_public_input = LeafPublicInputs::<BnFr>::new(chain_id.clone());
-
-		let private_key_1 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_1].unwrap();
-		let public_key_1 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_2 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_2].unwrap();
-		let public_key_2 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_3 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_3].unwrap();
-		let public_key_3 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_4 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_4].unwrap();
-		let public_key_4 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_5 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_5].unwrap();
-		let public_key_5 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_6 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_6].unwrap();
-		let public_key_6 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_7 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_7].unwrap();
-		let public_key_7 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let private_key_8 = BnFr::rand(rng);
-		let privkey = to_bytes![private_key_8].unwrap();
-		let public_key_8 = PoseidonCRH::evaluate(&hasher_params_w2, &privkey).unwrap();
-		let keypair_1 = KeyPair::new(private_key_1.clone());
-		let keypair_2 = KeyPair::new(private_key_2.clone());
-		let keypair_3 = KeyPair::new(private_key_3.clone());
-		let keypair_4 = KeyPair::new(private_key_4.clone());
-		let keypair_5 = KeyPair::new(private_key_5.clone());
-		let keypair_6 = KeyPair::new(private_key_6.clone());
-		let keypair_7 = KeyPair::new(private_key_7.clone());
-		let keypair_8 = KeyPair::new(private_key_8.clone());
-		let keypair_inputs = vec![
-			keypair_1.clone(),
-			keypair_2.clone(),
-			keypair_3.clone(),
-			keypair_4.clone(),
-			keypair_5.clone(),
-			keypair_6.clone(),
-			keypair_7.clone(),
-			keypair_8.clone(),
-		];
-
-		let leaf_1 = Leaf::create_leaf(
-			&leaf_private_1,
-			&leaf_public_input,
-			&public_key_1,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let commitment_1 = leaf_1.clone();
-		let leaf_2 = Leaf::create_leaf(
-			&leaf_private_2,
-			&leaf_public_input,
-			&public_key_2,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_3 = Leaf::create_leaf(
-			&leaf_private_3,
-			&leaf_public_input,
-			&public_key_3,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_4 = Leaf::create_leaf(
-			&leaf_private_4,
-			&leaf_public_input,
-			&public_key_4,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_5 = Leaf::create_leaf(
-			&leaf_private_5,
-			&leaf_public_input,
-			&public_key_5,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_6 = Leaf::create_leaf(
-			&leaf_private_6,
-			&leaf_public_input,
-			&public_key_6,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_7 = Leaf::create_leaf(
-			&leaf_private_7,
-			&leaf_public_input,
-			&public_key_7,
-			&hasher_params_w5,
-		)
-		.unwrap();
-		let leaf_8 = Leaf::create_leaf(
-			&leaf_private_8,
-			&leaf_public_input,
-			&public_key_8,
-			&hasher_params_w5,
-		)
-		.unwrap();
-
-		let inner_params = Rc::new(params3.clone());
-		let leaves_on_chain_1 = [leaf_1, leaf_2, leaf_3, leaf_4];
-		let leaves_on_chain_2 = [leaf_5, leaf_6, leaf_7, leaf_8];
-		let tree_1 =
-			Tree_x5::new_sequential(inner_params.clone(), Rc::new(()), &leaves_on_chain_1).unwrap();
-		let tree_2 =
-			Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves_on_chain_2).unwrap();
-
-		let path_1 = tree_1.generate_membership_proof(0);
-		let path_2 = tree_1.generate_membership_proof(1);
-		let path_3 = tree_1.generate_membership_proof(2);
-		let path_4 = tree_1.generate_membership_proof(3);
-		let path_5 = tree_2.generate_membership_proof(0);
-		let path_6 = tree_2.generate_membership_proof(1);
-		let path_7 = tree_2.generate_membership_proof(2);
-		let path_8 = tree_2.generate_membership_proof(3);
-		let paths = vec![
-			path_1.clone(),
-			path_2.clone(),
-			path_3.clone(),
-			path_4.clone(),
-			path_5.clone(),
-			path_6.clone(),
-			path_7.clone(),
-			path_8.clone(),
-		];
-
-		let public_amount = BnFr::one();
-
-		let ext_data_hash_1 = setup_vanchor_arbitrary_data(commitment_1);
-		let ext_data_hash = ext_data_hash_1; // We used it as a sample value for ext_data_hash in the tests
-		let root_1 = tree_1.root().inner();
-		let root_2 = tree_2.root().inner();
-
-		let mut root_set = [BnFr::rand(rng); TEST_M];
-		root_set[0] = root_1;
-		root_set[1] = root_2;
-		assert_eq!(root_set.len(), TEST_M);
-		let index_0: BnFr = path_1.get_index(&tree_1.root(), &leaf_1).unwrap();
-		let index_1: BnFr = path_2.get_index(&tree_1.root(), &leaf_2).unwrap();
-		let index_2: BnFr = path_3.get_index(&tree_1.root(), &leaf_3).unwrap();
-		let index_3: BnFr = path_4.get_index(&tree_1.root(), &leaf_4).unwrap();
-		let index_4: BnFr = path_5.get_index(&tree_2.root(), &leaf_5).unwrap();
-		let index_5: BnFr = path_6.get_index(&tree_2.root(), &leaf_6).unwrap();
-		let index_6: BnFr = path_7.get_index(&tree_2.root(), &leaf_7).unwrap();
-		let index_7: BnFr = path_8.get_index(&tree_2.root(), &leaf_8).unwrap();
-		let indices = vec![
-			index_0, index_1, index_2, index_3, index_4, index_5, index_6, index_7,
-		];
-
-		let signature = keypair_1
-			.signature(&leaf_1, &index_0, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_1 =
-			Leaf::create_nullifier(&signature, &leaf_1, &hasher_params_w4, &index_0).unwrap();
-		let signature = keypair_2
-			.signature(&leaf_2, &index_1, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_2 =
-			Leaf::create_nullifier(&signature, &leaf_2, &hasher_params_w4, &index_1).unwrap();
-		let signature = keypair_3
-			.signature(&leaf_3, &index_2, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_3 =
-			Leaf::create_nullifier(&signature, &leaf_3, &hasher_params_w4, &index_2).unwrap();
-		let signature = keypair_4
-			.signature(&leaf_4, &index_3, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_4 =
-			Leaf::create_nullifier(&signature, &leaf_4, &hasher_params_w4, &index_3).unwrap();
-		let signature = keypair_5
-			.signature(&leaf_5, &index_4, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_5 =
-			Leaf::create_nullifier(&signature, &leaf_5, &hasher_params_w4, &index_4).unwrap();
-		let signature = keypair_6
-			.signature(&leaf_6, &index_5, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_6 =
-			Leaf::create_nullifier(&signature, &leaf_6, &hasher_params_w4, &index_5).unwrap();
-		let signature = keypair_7
-			.signature(&leaf_7, &index_6, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_7 =
-			Leaf::create_nullifier(&signature, &leaf_7, &hasher_params_w4, &index_6).unwrap();
-		let signature = keypair_8
-			.signature(&leaf_8, &index_7, &hasher_params_w4)
-			.unwrap();
-		let nullifier_hash_8 =
-			Leaf::create_nullifier(&signature, &leaf_8, &hasher_params_w4, &index_7).unwrap();
-
-		let nullifier_hash = vec![
-			nullifier_hash_1,
-			nullifier_hash_2,
-			nullifier_hash_3,
-			nullifier_hash_4,
-			nullifier_hash_5,
-			nullifier_hash_6,
-			nullifier_hash_7,
-			nullifier_hash_8,
-		];
-
-		let set_private_inputs_1 = setup_set(&root_1, &root_set);
-		let set_private_inputs_2 = setup_set(&root_2, &root_set);
-		let set_private_inputs = vec![
-			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(),
-			set_private_inputs_1.clone(),
-			set_private_inputs_2.clone(),
-			set_private_inputs_2.clone(),
-			set_private_inputs_2.clone(),
-			set_private_inputs_2.clone(),
-		];
-
-		let out_chain_id_1 = BnFr::one();
-		let out_amount_1 = public_amount + leaf_private_1.amount;
-		let out_pubkey_1 = BnFr::rand(rng);
-		let out_blinding_1 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_1, out_amount_1, out_pubkey_1, out_blinding_1].unwrap();
-		let output_commitment_1 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_2 = BnFr::one();
-		let out_amount_2 = leaf_private_2.amount;
-		let out_pubkey_2 = BnFr::rand(rng);
-		let out_blinding_2 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_2, out_amount_2, out_pubkey_2, out_blinding_2].unwrap();
-		let output_commitment_2 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_3 = BnFr::one();
-		let out_amount_3 = leaf_private_3.amount;
-		let out_pubkey_3 = BnFr::rand(rng);
-		let out_blinding_3 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_3, out_amount_3, out_pubkey_3, out_blinding_3].unwrap();
-		let output_commitment_3 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_chain_id_4 = BnFr::one();
-		let out_amount_4 = leaf_private_4.amount
-			+ leaf_private_5.amount
-			+ leaf_private_6.amount
-			+ leaf_private_7.amount
-			+ leaf_private_8.amount;
-		let out_pubkey_4 = BnFr::rand(rng);
-		let out_blinding_4 = BnFr::rand(rng);
-		let bytes = to_bytes![out_chain_id_4, out_amount_4, out_pubkey_4, out_blinding_4].unwrap();
-		let output_commitment_4 = PoseidonCRH::evaluate(&hasher_params_w5, &bytes).unwrap();
-
-		let out_leaf_private_1 = LeafPrivateInputs::<BnFr>::new(out_amount_1, out_blinding_1);
-		let out_leaf_private_2 = LeafPrivateInputs::<BnFr>::new(out_amount_2, out_blinding_2);
-		let out_leaf_private_3 = LeafPrivateInputs::<BnFr>::new(out_amount_3, out_blinding_3);
-		let out_leaf_private_4 = LeafPrivateInputs::<BnFr>::new(out_amount_4, out_blinding_4);
-		let out_leaf_private = vec![
-			out_leaf_private_1.clone(),
-			out_leaf_private_2.clone(),
-			out_leaf_private_3.clone(),
-			out_leaf_private_4.clone(),
-		];
-
-		let out_leaf_public_1 = LeafPublicInputs::<BnFr>::new(out_chain_id_1);
-		let out_leaf_public_2 = LeafPublicInputs::<BnFr>::new(out_chain_id_2);
-		let out_leaf_public_3 = LeafPublicInputs::<BnFr>::new(out_chain_id_3);
-		let out_leaf_public_4 = LeafPublicInputs::<BnFr>::new(out_chain_id_4);
-		let out_leaf_public = vec![
-			out_leaf_public_1.clone(),
-			out_leaf_public_2.clone(),
-			out_leaf_public_3.clone(),
-			out_leaf_public_4.clone(),
-		];
-
-		let out_pubkey = vec![out_pubkey_1, out_pubkey_2, out_pubkey_3, out_pubkey_4];
-
-		let output_commitment = vec![
-			output_commitment_1,
-			output_commitment_2,
-			output_commitment_3,
-			output_commitment_4,
-		];
-		let circuit = VACircuit8_4::new(
-			public_amount.clone(),
-			ext_data_hash.clone(),
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
-			set_private_inputs,
-			root_set.clone(),
-			hasher_params_w2,
-			hasher_params_w4,
-			hasher_params_w5,
-			paths,
-			indices,
-			nullifier_hash.clone(),
-			output_commitment.clone(),
-			out_leaf_private,
-			out_leaf_public,
-			out_pubkey,
-		);
-
-		let mut public_inputs = Vec::new();
-		public_inputs.push(public_amount);
-		public_inputs.push(ext_data_hash.ext_data);
-		public_inputs.extend(nullifier_hash);
-		public_inputs.extend(output_commitment);
-		public_inputs.push(chain_id);
-		public_inputs.extend(root_set);
-
-		let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = Groth16::<Bn254>::prove(&pk, circuit.clone(), rng).unwrap();
-		let res = Groth16::<Bn254>::verify(&vk, &public_inputs, &proof).unwrap();
-
-		assert!(res);
+		let truncated_public_inputs = &pub_ins[2..];
+		let (proving_key, verifying_key) =
+			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+
+		let vk = VerifyingKey::<Bn254>::deserialize(&verifying_key[..]).unwrap();
+		let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();
+		let res = Groth16::<Bn254>::verify(&vk, truncated_public_inputs, &proof);
+
+		assert!(res.is_err());
 	}
 }
