@@ -151,16 +151,12 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::setup::{common::*, mixer::*};
-	use ark_bls12_381::{Bls12_381, Fr as BlsFr};
+	use super::LeafPrivate;
+	use crate::setup::mixer::*;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_crypto_primitives::SNARK;
 	use ark_ff::UniformRand;
-	use ark_groth16::Groth16;
 	use ark_std::{test_rng, vec::Vec, One, Zero};
-	use arkworks_utils::utils::common::{
-		setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve,
-	};
+	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5, Curve};
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
@@ -184,39 +180,27 @@ mod test {
 	}
 
 	#[test]
-	fn setup_and_prove_random_mixer_groth16() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, Bn254Fr, LEN>(rng, curve);
-
-		let (pk, vk) = setup_groth16_circuit_x5::<_, Bn254, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bn254, LEN>(&pk, circuit, rng);
-
-		let res = verify_groth16::<Bn254>(&vk, &public_inputs, &proof);
-		println!("{}", res);
-		assert!(res);
-	}
-
-	#[test]
 	fn setup_and_prove_mixer_groth16_2() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let leaves = vec![];
+		let leaves = vec![Bn254Fr::one()];
 		let index = 0;
 		let recipient = Bn254Fr::one();
 		let relayer = Bn254Fr::zero();
 		let fee = Bn254Fr::zero();
 		let refund = Bn254Fr::zero();
 
-		let (circuit, .., public_inputs) = setup_circuit_x5::<_, Bn254Fr, LEN>(
-			&leaves, index, recipient, relayer, fee, refund, rng, curve,
-		);
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
-		let (pk, vk) = setup_groth16_circuit_x5::<_, Bn254, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5(&pk, circuit, rng);
+		let (circuit, .., public_inputs) =
+			prover.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng);
 
-		let res = verify_groth16(&vk, &public_inputs, &proof);
+		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
 		assert!(
 			res,
 			"Failed to verify  Proof, here is the inputs:
@@ -234,40 +218,59 @@ mod test {
 	#[test]
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let (circuit, .., public_inputs) = setup_random_circuit_x5::<_, BlsFr, LEN>(rng, curve);
+		let curve = Curve::Bn254;
 
-		type GrothSetup = Groth16<Bls12_381>;
+		let leaves = vec![Bn254Fr::one()];
+		let index = 0;
+		let recipient = Bn254Fr::one();
+		let relayer = Bn254Fr::zero();
+		let fee = Bn254Fr::zero();
+		let refund = Bn254Fr::zero();
 
-		let (pk, vk) = GrothSetup::circuit_specific_setup(circuit.clone(), rng).unwrap();
-		let proof = GrothSetup::prove(&pk, circuit, rng).unwrap();
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
-		// Without chain_id and nullifier
-		let pi = public_inputs[2..].to_vec();
-		let res = GrothSetup::verify(&vk, &pi, &proof);
-		assert!(res.is_err());
+		let (circuit, .., public_inputs) =
+			prover.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng);
+
+		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+
+		let pi = &public_inputs[1..];
+		let res = MixerProverSetupBn254_30::verify::<Bn254>(pi, &vk, &proof);
+		assert!(
+			!res,
+			"Proof is valid, here is the public inputs:
+			public_inputs = {:?},
+			",
+			public_inputs
+		);
 	}
 
 	#[test]
 	fn should_fail_with_invalid_root() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::from(0);
-		let refund = BlsFr::from(0);
-		let (leaf_private, leaf, nullifier_hash) = setup_leaf_x5(&params5, rng);
+		let curve = Curve::Bn254;
 
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
+		let recipient = Bn254Fr::one();
+		let relayer = Bn254Fr::zero();
+		let fee = Bn254Fr::zero();
+		let refund = Bn254Fr::zero();
 
-		let circuit = Circuit_x5::new(
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng);
+
+		let arbitrary_input =
+			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
+		let (_, path) = prover.setup_tree_and_create_path(&[leaf], 0);
+		let root = Bn254Fr::rand(rng);
+
+		let circuit = prover.create_circuit(
 			arbitrary_input.clone(),
 			leaf_private,
-			params5,
 			path,
 			root,
 			nullifier_hash,
@@ -280,32 +283,38 @@ mod test {
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
-		let (pk, vk) = setup_groth16_circuit_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
+
+		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+
 		assert!(!res);
 	}
 
 	#[test]
 	fn should_fail_with_invalid_leaf() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::from(0);
-		let refund = BlsFr::from(0);
-		let (leaf_private, _, nullifier_hash) = setup_leaf_x5(&params5, rng);
-		let leaf = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
+		let curve = Curve::Bn254;
 
-		let circuit = Circuit_x5::new(
+		let recipient = Bn254Fr::one();
+		let relayer = Bn254Fr::zero();
+		let fee = Bn254Fr::zero();
+		let refund = Bn254Fr::zero();
+
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let (leaf_private, _, nullifier_hash) = prover.setup_leaf(rng);
+		let leaf = Bn254Fr::rand(rng);
+
+		let arbitrary_input =
+			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
+		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0);
+		let root = tree.root().inner();
+
+		let circuit = prover.create_circuit(
 			arbitrary_input.clone(),
 			leaf_private,
-			params5,
 			path,
 			root,
 			nullifier_hash,
@@ -318,32 +327,40 @@ mod test {
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
-		let (pk, vk) = setup_groth16_circuit_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
+
+		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+
 		assert!(!res);
 	}
 
 	#[test]
 	fn should_fail_with_invalid_nullifier() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-		let params5 = setup_params_x5_5(curve);
-		let relayer = BlsFr::rand(rng);
-		let recipient = BlsFr::rand(rng);
-		let fee = BlsFr::from(0);
-		let refund = BlsFr::from(0);
-		let (leaf_private, leaf, _) = setup_leaf_x5(&params5, rng);
-		let nullifier_hash = BlsFr::rand(rng);
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-		let params3 = setup_params_x5_3(curve);
-		let (_, path) = setup_tree_and_create_path_tree_x5(&[leaf], 0, &params3);
-		let root = BlsFr::rand(rng);
+		let curve = Curve::Bn254;
 
-		let circuit = Circuit_x5::new(
+		let recipient = Bn254Fr::one();
+		let relayer = Bn254Fr::zero();
+		let fee = Bn254Fr::zero();
+		let refund = Bn254Fr::zero();
+
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng);
+
+		// Invalid nullifier
+		let leaf_private = LeafPrivate::new(leaf_private.secret(), Bn254Fr::rand(rng));
+
+		let arbitrary_input =
+			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
+		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0);
+		let root = tree.root().inner();
+
+		let circuit = prover.create_circuit(
 			arbitrary_input.clone(),
 			leaf_private,
-			params5,
 			path,
 			root,
 			nullifier_hash,
@@ -356,9 +373,11 @@ mod test {
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
-		let (pk, vk) = setup_groth16_circuit_x5::<_, Bls12_381, LEN>(rng, circuit.clone());
-		let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit, rng);
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
+
+		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+
 		assert!(!res);
 	}
 }

@@ -193,6 +193,25 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		self.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng)
 	}
 
+	pub fn create_circuit(
+		self,
+		arbitrary_input: MixerConstraintDataInput<F>,
+		leaf_private: LeafPrivate<F>,
+		path: Path<TreeConfig_x5<F>, N>,
+		root: F,
+		nullifier_hash: F,
+	) -> Circuit_x5<F, N> {
+		let mc = Circuit_x5::new(
+			arbitrary_input,
+			leaf_private,
+			self.params5,
+			path,
+			root,
+			nullifier_hash,
+		);
+		mc
+	}
+
 	pub fn setup_tree(&self, leaves: &[F]) -> Tree_x5<F> {
 		let inner_params = Rc::new(self.params3.clone());
 		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
@@ -237,7 +256,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		proof_bytes
 	}
 
-	pub fn verify<E: PairingEngine>(public_inputs: &Vec<E::Fr>, vk: &[u8], proof: &[u8]) -> bool {
+	pub fn verify<E: PairingEngine>(public_inputs: &[E::Fr], vk: &[u8], proof: &[u8]) -> bool {
 		let vk = VerifyingKey::<E>::deserialize(vk).unwrap();
 		let proof = Proof::<E>::deserialize(proof).unwrap();
 		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
