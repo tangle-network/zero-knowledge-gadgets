@@ -151,6 +151,18 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		(leaf_private, leaf_hash, nullifier_hash)
 	}
 
+	pub fn setup_leaf_with_privates_raw(
+		&self,
+		secret: Vec<u8>,
+		nullfier: Vec<u8>,
+	) -> (LeafPrivate<F>, F, F) {
+		// Secret inputs for the leaf
+		let secret_f = F::from_le_bytes_mod_order(&secret);
+		let nullifier_f = F::from_le_bytes_mod_order(&nullfier);
+
+		self.setup_leaf_with_privates(secret_f, nullifier_f)
+	}
+
 	#[allow(clippy::too_many_arguments)]
 	pub fn setup_circuit<R: Rng>(
 		self,
@@ -166,8 +178,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng);
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) =
-			setup_tree_and_create_path_tree_x5::<F, N>(&leaves_new, index, &self.params3);
+		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index);
 		let root = tree.root().inner();
 
 		let mc = Circuit_x5::new(
@@ -181,6 +192,73 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let public_inputs =
 			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
 		(mc, leaf, nullifier_hash, root, public_inputs)
+	}
+
+	#[allow(clippy::too_many_arguments)]
+	pub fn setup_circuit_with_privates(
+		self,
+		secret: F,
+		nullifier: F,
+		leaves: &[F],
+		index: u64,
+		recipient: F,
+		relayer: F,
+		fee: F,
+		refund: F,
+	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
+		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf_with_privates(secret, nullifier);
+		let mut leaves_new = leaves.to_vec();
+		leaves_new.push(leaf);
+		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index);
+		let root = tree.root().inner();
+
+		let mc = Circuit_x5::new(
+			arbitrary_input,
+			leaf_private,
+			self.params5,
+			path,
+			root,
+			nullifier_hash,
+		);
+		let public_inputs =
+			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
+		(mc, leaf, nullifier_hash, root, public_inputs)
+	}
+
+	#[allow(clippy::too_many_arguments)]
+	pub fn setup_circuit_with_privates_raw(
+		self,
+		secret: Vec<u8>,
+		nullifier: Vec<u8>,
+		leaves: &[Vec<u8>],
+		index: u64,
+		recipient: Vec<u8>,
+		relayer: Vec<u8>,
+		fee: u128,
+		refund: u128,
+	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+		let secret_f = F::from_le_bytes_mod_order(&secret);
+		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
+		let leaves_f: Vec<F> = leaves
+			.iter()
+			.map(|x| F::from_le_bytes_mod_order(x))
+			.collect();
+		let recipient_f = F::from_le_bytes_mod_order(&recipient);
+		let relayer_f = F::from_le_bytes_mod_order(&relayer);
+		let fee_f = F::from(fee);
+		let refund_f = F::from(refund);
+
+		self.setup_circuit_with_privates(
+			secret_f,
+			nullifier_f,
+			&leaves_f,
+			index,
+			recipient_f,
+			relayer_f,
+			fee_f,
+			refund_f,
+		)
 	}
 
 	pub fn setup_random_circuit<R: Rng>(self, rng: &mut R) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
