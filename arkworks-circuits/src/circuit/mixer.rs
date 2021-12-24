@@ -405,7 +405,7 @@ mod test {
 		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
 		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
-		let (circuit, .., public_inputs) = prover.setup_circuit_with_privates_raw(
+		let (circuit, .., public_inputs_raw) = prover.setup_circuit_with_privates_raw(
 			secret_raw,
 			nullifier_raw,
 			&leaves_raw,
@@ -415,6 +415,11 @@ mod test {
 			fee,
 			refund,
 		);
+
+		let public_inputs: Vec<Bn254Fr> = public_inputs_raw
+			.iter()
+			.map(|x| Bn254Fr::from_le_bytes_mod_order(x))
+			.collect();
 
 		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);

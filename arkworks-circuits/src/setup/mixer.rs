@@ -11,7 +11,7 @@ use arkworks_utils::{poseidon::PoseidonParameters, utils::common::verify_groth16
 
 use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;
-use ark_ff::PrimeField;
+use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
@@ -60,20 +60,27 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	N,
 >;
 
-pub fn setup_leaf_with_privates_raw<F: PrimeField>(
-	secret: Vec<u8>,
-	nullfier: Vec<u8>,
+pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
 	params5: &PoseidonParameters<F>,
-) -> (LeafPrivate<F>, F, F) {
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
 	// Secret inputs for the leaf
-	let secret_f = F::from_le_bytes_mod_order(&secret);
-	let nullifier_f = F::from_le_bytes_mod_order(&nullfier);
-
-	let leaf_private = LeafPrivate::new(secret_f, nullifier_f);
+	let leaf_private = LeafPrivate::generate(rng);
 
 	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5).unwrap();
 	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5).unwrap();
-	(leaf_private, leaf_hash, nullifier_hash)
+
+	let secret_bytes = leaf_private.secret().into_repr().to_bytes_le();
+	let nullifier_bytes = leaf_private.nullifier().into_repr().to_bytes_le();
+
+	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
+	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
+	(
+		secret_bytes,
+		nullifier_bytes,
+		leaf_bytes,
+		nullifier_hash_bytes,
+	)
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
@@ -232,7 +239,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		relayer: Vec<u8>,
 		fee: u128,
 		refund: u128,
-	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	) -> (Circuit_x5<F, N>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
 		let secret_f = F::from_le_bytes_mod_order(&secret);
 		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<F> = leaves
@@ -244,7 +251,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let fee_f = F::from(fee);
 		let refund_f = F::from(refund);
 
-		self.setup_circuit_with_privates(
+		let (mc, leaf, nullifier_hash, root, public_inputs) = self.setup_circuit_with_privates(
 			secret_f,
 			nullifier_f,
 			&leaves_f,
@@ -253,6 +260,22 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			relayer_f,
 			fee_f,
 			refund_f,
+		);
+
+		let leaf_raw = leaf.into_repr().to_bytes_le();
+		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_le();
+		let root_raw = root.into_repr().to_bytes_le();
+		let public_inputs_raw: Vec<Vec<u8>> = public_inputs
+			.iter()
+			.map(|x| x.into_repr().to_bytes_le())
+			.collect();
+
+		(
+			mc,
+			leaf_raw,
+			nullifier_hash_raw,
+			root_raw,
+			public_inputs_raw,
 		)
 	}
 
