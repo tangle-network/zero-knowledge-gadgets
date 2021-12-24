@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-circuits"
-version = "0.4.6"
+version = "0.4.7"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's circuit's using zero-knowledge gadgets written using Arkworks"
