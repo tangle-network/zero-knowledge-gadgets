@@ -146,6 +146,7 @@ mod tests {
 	}
 
 	#[test]
+	#[ignore]
 	fn test_verify_set_membership() {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		let target = Fq::from(2u32);
@@ -160,6 +161,7 @@ mod tests {
 	}
 
 	#[test]
+	#[ignore]
 	fn test_fail_to_verify_invalid_set_membership() {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		// Not in the set
