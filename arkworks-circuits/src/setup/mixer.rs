@@ -60,7 +60,7 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	N,
 >;
 
-pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
+pub fn setup_leaf<F: PrimeField, R: RngCore>(
 	params5: &PoseidonParameters<F>,
 	rng: &mut R,
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
@@ -81,6 +81,24 @@ pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
 		leaf_bytes,
 		nullifier_hash_bytes,
 	)
+}
+
+pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
+	params5: &PoseidonParameters<F>,
+	secret_bytes: Vec<u8>,
+	nullfier_bytes: Vec<u8>,
+) -> (Vec<u8>, Vec<u8>) {
+	let secret = F::from_le_bytes_mod_order(&secret_bytes);
+	let nullifier = F::from_le_bytes_mod_order(&nullfier_bytes);
+	// Secret inputs for the leaf
+	let leaf_private = LeafPrivate::new(secret, nullifier);
+
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5).unwrap();
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5).unwrap();
+
+	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
+	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
+	(leaf_bytes, nullifier_hash_bytes)
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
