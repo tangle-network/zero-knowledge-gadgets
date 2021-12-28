@@ -1,40 +1,43 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
-use ark_plonk::{
-	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
-};
-use ark_std::{vec::Vec, One};
+use ark_plonk::{circuit::Circuit, constraint_system::StandardComposer, error::Error};
+use ark_std::One;
 
 #[derive(Debug, Default)]
-struct SetMembershipCircuit<E: PairingEngine> {
-	pub roots: Vec<E::Fr>,
-	pub target: E::Fr,
+struct IsZero<E: PairingEngine> {
+	pub x: E::Fr,
+	pub x_inv: E::Fr,
 }
 
-impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
-	for SetMembershipCircuit<E>
-{
+impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P> for IsZero<E> {
 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
 	fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
-		let roots: Vec<Variable> = self.roots.iter().map(|x| composer.add_input(*x)).collect();
-		let target = composer.add_input(self.target);
+		let x_var = composer.add_input(self.x);
+		let x_inv_var = composer.add_input(self.x_inv);
+		let one = composer.add_input(E::Fr::one());
 
-		let mut diffs = Vec::new();
-		for x in roots {
-			let diff = composer.arithmetic_gate(|gate| {
-				gate.witness(target, x, None)
-					.add(-E::Fr::one(), E::Fr::one())
-			});
-			diffs.push(diff);
-		}
+		// x * x_inverse
+		// -- should be 1 if x != 0
+		// -- should be 0 if x == 0
+		let res =
+			composer.arithmetic_gate(|gate| gate.witness(x_var, x_inv_var, None).mul(E::Fr::one()));
 
-		let mut sum = composer.add_input(E::Fr::one());
+		// b = 1 - x * x_inverse
+		// will be 0 if x != 0
+		// will be 1 if x == 0
+		let b = composer.arithmetic_gate(|gate| {
+			gate.witness(one, res, None)
+				.add(E::Fr::one(), -E::Fr::one())
+		});
 
-		for diff in diffs {
-			sum = composer.arithmetic_gate(|gate| gate.witness(sum, diff, None).mul(E::Fr::one()));
-		}
+		// ensures that x_inv is actually the inverse of x
+		let b_check =
+			composer.arithmetic_gate(|gate| gate.witness(x_var, b, None).mul(E::Fr::one()));
+		composer.assert_equal(b_check, composer.zero_var());
 
-		composer.assert_equal(sum, composer.zero_var());
+		// If x is 0, b should be 1
+		// If x is 1, b should be zero
+		composer.assert_equal(b, one);
 
 		Ok(())
 	}
@@ -50,6 +53,7 @@ mod tests {
 	use super::*;
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
+	use ark_ff::Field;
 	use ark_plonk::proof_system::{Prover, Verifier};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{
@@ -145,23 +149,12 @@ mod tests {
 	}
 
 	#[test]
-	fn test_verify_set_membership() {
-		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
-		let target = Fq::from(2u32);
-		let mut circuit = SetMembershipCircuit::<Bn254> { roots, target };
+	fn test_verify_iz_zero() {
+		let x = Fq::from(2u32);
+		let x_inv = x.inverse().unwrap();
+		let mut circuit = IsZero::<Bn254> { x, x_inv };
 
 		let res = gadget_tester::<_, JubjubParameters, _>(&mut circuit, 2000);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
-	}
-
-	#[test]
-	fn test_fail_to_verify_invalid_set_membership() {
-		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
-		// Not in the set
-		let target = Fq::from(4u32);
-		let mut circuit = SetMembershipCircuit::<Bn254> { roots, target };
-
-		let res = gadget_tester::<_, JubjubParameters, _>(&mut circuit, 2000);
-		assert!(res.is_err());
 	}
 }
