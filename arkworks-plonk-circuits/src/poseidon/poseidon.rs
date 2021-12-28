@@ -100,7 +100,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 		let full_rounds = self.params.full_rounds as usize;
 
 		if inputs.len() > width - 1 {
-			return Err(Error::PointMalformed); 
+			return Err(Error::PointMalformed);
 		}
 		let mut state = vec![composer.zero_var()];
 		for f in inputs {
