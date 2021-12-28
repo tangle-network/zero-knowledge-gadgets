@@ -2,13 +2,13 @@
 use ark_std::fmt::Debug;
 
 // use ark_crypto_primitives::crh::poseidon::Poseidon;
-use arkworks_gadgets::poseidon::field_hasher::Poseidon;
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
 use ark_plonk::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
 use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
+use arkworks_gadgets::poseidon::field_hasher::Poseidon;
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
@@ -37,13 +37,24 @@ struct PoseidonGadget<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>
 
 trait FieldHasherGadget<F: PrimeField, E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
 	type Native: Clone; //should I derive Debug somewhere upstream?
-	// For easy conversion from native version
+					// For easy conversion from native version
 	fn from_native(composer: &mut StandardComposer<E, P>, native: Self::Native) -> Self;
-	fn hash(&self, composer: &mut StandardComposer<E, P>, inputs: &[Variable]) -> Result<Variable, Error>;
-	fn hash_two(&self, composer: &mut StandardComposer<E, P>, left: &Variable, right: &Variable) -> Result<Variable, Error>;
+	fn hash(
+		&self,
+		composer: &mut StandardComposer<E, P>,
+		inputs: &[Variable],
+	) -> Result<Variable, Error>;
+	fn hash_two(
+		&self,
+		composer: &mut StandardComposer<E, P>,
+		left: &Variable,
+		right: &Variable,
+	) -> Result<Variable, Error>;
 }
 
-impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadget<E::Fr, E, P> for PoseidonGadget<E, P> {
+impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadget<E::Fr, E, P>
+	for PoseidonGadget<E, P>
+{
 	type Native = Poseidon<E::Fr>;
 
 	fn from_native(composer: &mut StandardComposer<E, P>, native: Self::Native) -> Self {
@@ -63,7 +74,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 
 		let sbox_gadget = PoseidonSbox::Exponentiation(native.params.sbox.0 as usize);
 
-		let params_var = PoseidonParametersVar{
+		let params_var = PoseidonParametersVar {
 			round_keys: round_keys_var,
 			mds_matrix: mds_matrix_var,
 			full_rounds: native.params.full_rounds,
@@ -71,22 +82,25 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 			width: native.params.width,
 			sbox: sbox_gadget,
 		};
-		PoseidonGadget{
+		PoseidonGadget {
 			params: params_var,
 			_engine: PhantomData,
 			_marker: PhantomData,
 		}
 	}
 
-	fn hash(&self, composer: &mut StandardComposer<E, P>, inputs: &[Variable]) -> Result<Variable, Error> {
+	fn hash(
+		&self,
+		composer: &mut StandardComposer<E, P>,
+		inputs: &[Variable],
+	) -> Result<Variable, Error> {
 		// Casting params to usize
 		let width = self.params.width as usize;
 		let partial_rounds = self.params.partial_rounds as usize;
 		let full_rounds = self.params.full_rounds as usize;
-		
+
 		if inputs.len() > width - 1 {
-			return Err(Error::PointMalformed); //that's the wrong error, just a placeholder
-			//how can I allow myself to return a PoseidonError error here?
+			return Err(Error::PointMalformed); 
 		}
 		let mut state = vec![composer.zero_var()];
 		for f in inputs {
@@ -109,9 +123,12 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 
 			let half_rounds = full_rounds / 2;
 			if r < half_rounds || r >= half_rounds + partial_rounds {
-				state
-					.iter_mut()
-					.try_for_each(|a| self.params.sbox.synthesize_sbox(a, composer).map(|f| *a = f))?;
+				state.iter_mut().try_for_each(|a| {
+					self.params
+						.sbox
+						.synthesize_sbox(a, composer)
+						.map(|f| *a = f)
+				})?;
 			} else {
 				state[0] = self.params.sbox.synthesize_sbox(&state[0], composer)?;
 			}
@@ -126,8 +143,9 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 						.fold(composer.zero_var(), |acc, (j, a)| {
 							let m = &self.params.mds_matrix[i][j];
 
-							let mul_result = composer
-								.arithmetic_gate(|gate| gate.witness(*a, *m, None).mul(E::Fr::one()));
+							let mul_result = composer.arithmetic_gate(|gate| {
+								gate.witness(*a, *m, None).mul(E::Fr::one())
+							});
 
 							let add_result = composer.arithmetic_gate(|gate| {
 								gate.witness(acc, mul_result, None)
@@ -144,49 +162,59 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 		Ok(computed_hash)
 	}
 
-	fn hash_two(&self, composer: &mut StandardComposer<E, P>, left: &Variable, right: &Variable) -> Result<Variable, Error> {
+	fn hash_two(
+		&self,
+		composer: &mut StandardComposer<E, P>,
+		left: &Variable,
+		right: &Variable,
+	) -> Result<Variable, Error> {
 		self.hash(composer, &[*left, *right])
 	}
-	
 }
 
 // Practice using it in a circuit
-struct TestCircuit<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, HG: FieldHasherGadget<E::Fr, E, P>> {
+struct TestCircuit<
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
+	HG: FieldHasherGadget<E::Fr, E, P>,
+> {
 	left: E::Fr,
 	right: E::Fr,
 	expected: E::Fr,
 	hasher: HG::Native,
-  }
+}
 
-impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, HG: FieldHasherGadget<E::Fr, E, P>> Circuit<E, P>
-  for TestCircuit<E, P, HG>
+impl<
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E::Fr, E, P>,
+	> Circuit<E, P> for TestCircuit<E, P, HG>
 {
-  const CIRCUIT_ID: [u8; 32] = [0xff; 32];
+	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
-  fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
-	  let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+	fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
+		let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
-	  let left_var = composer.add_input(self.left);
-	  let right_var = composer.add_input(self.right);
-	  let expected_var = composer.add_input(self.expected);
+		let left_var = composer.add_input(self.left);
+		let right_var = composer.add_input(self.right);
+		let expected_var = composer.add_input(self.expected);
 
-	  let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
-	  composer.assert_equal(outcome, expected_var);
-	  Ok(())
-  }
+		let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
+		composer.assert_equal(outcome, expected_var);
+		Ok(())
+	}
 
-  fn padded_circuit_size(&self) -> usize {
-	  1 << 12
-  }
+	fn padded_circuit_size(&self) -> usize {
+		1 << 12
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_ff::{BigInteger, Field};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
+	use ark_ff::{BigInteger, Field};
 	use ark_plonk::{
 		circuit::{self, FeIntoPubInput},
 		prelude::*,
@@ -199,12 +227,15 @@ mod tests {
 		PolynomialCommitment,
 	};
 	use ark_std::{test_rng, One};
-	use arkworks_utils::{utils::common::setup_params_x5_3, poseidon::{PoseidonParameters, sbox::PoseidonSbox as UtilsPoseidonSbox}};
+	use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
+	use arkworks_utils::{
+		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
+		utils::common::setup_params_x5_3,
+	};
 
-	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>; 
+	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 	type PoseidonHasherGadget = PoseidonGadget<Bn254, JubjubParameters>;
 
-	
 	#[test]
 	fn should_verify_plonk_poseidon_x5_3() {
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
@@ -266,7 +297,9 @@ mod tests {
 				expected,
 				hasher: poseidon_hasher,
 			};
-			test_circuit.gen_proof(&u_params, pk, b"Poseidon Test").unwrap()
+			test_circuit
+				.gen_proof(&u_params, pk, b"Poseidon Test")
+				.unwrap()
 		};
 
 		// VERIFIER
@@ -284,7 +317,7 @@ mod tests {
 		)
 		.unwrap();
 	}
-	
+
 	#[test]
 	fn should_verify_plonk_poseidon_x5_3_gadget_tester() {
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
@@ -404,5 +437,4 @@ mod tests {
 		// Verify proof
 		Ok(verifier.verify(&proof, &vk, &public_inputs)?)
 	}
-
 }
