@@ -106,29 +106,44 @@ pub fn setup_leaf_with_privates_raw<F: PrimeField>(
 pub const LEN: usize = 30;
 type MixerProverSetupBn254_30<F> = MixerProverSetup<F, LEN>;
 
-pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(rng: &mut R) {
+pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+	curve: Curve,
+	secret_raw: Vec<u8>,
+	nullifier_raw: Vec<u8>,
+	leaves_raw: Vec<Vec<u8>>,
+	index: u64,
+	recipient_raw: Vec<u8>,
+	relayer_raw: Vec<u8>,
+	fee: u128,
+	refund: u128,
+	pk: Vec<u8>,
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params5 = setup_params_x5_5::<E::Fr>(curve);
 	let prover = MixerProverSetupBn254_30::new(params3, params5);
 
-	let (circuit, .., public_inputs_raw) = prover.setup_circuit_with_privates_raw(
-		secret_raw,
-		nullifier_raw,
-		&leaves_raw,
-		index,
-		recipient_raw,
-		relayer_raw,
-		fee,
-		refund,
-	);
+	let (circuit, leaf_raw, nullifier_hash_raw, root_raw, public_inputs_raw) = prover
+		.setup_circuit_with_privates_raw(
+			secret_raw,
+			nullifier_raw,
+			&leaves_raw,
+			index,
+			recipient_raw,
+			relayer_raw,
+			fee,
+			refund,
+		);
 
-	let public_inputs: Vec<E::Fr> = public_inputs_raw
-		.iter()
-		.map(|x| E::Fr::from_le_bytes_mod_order(x))
-		.collect();
+	let proof = MixerProverSetupBn254_30::<E::Fr>::prove::<E, _>(circuit, &pk, rng);
 
-	let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<E, _>(circuit.clone(), rng);
-	let proof = MixerProverSetupBn254_30::prove::<E, _>(circuit, &pk, rng);
+	(
+		proof,
+		leaf_raw,
+		nullifier_hash_raw,
+		root_raw,
+		public_inputs_raw,
+	)
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
