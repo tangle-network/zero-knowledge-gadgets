@@ -1,21 +1,23 @@
 use super::common::*;
 use crate::circuit::mixer::MixerCircuit;
+use ark_crypto_primitives::SNARK;
+use ark_ec::PairingEngine;
+use ark_ff::{BigInteger, PrimeField};
+use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::rc::Rc;
+use ark_std::{
+	rand::{CryptoRng, Rng, RngCore},
+	rc::Rc,
+	vec::Vec,
+};
 use arkworks_gadgets::{
 	arbitrary::mixer_data::Input as MixerDataInput,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
 	merkle_tree::Path,
 };
-use arkworks_utils::{poseidon::PoseidonParameters, utils::common::verify_groth16};
-
-use ark_crypto_primitives::SNARK;
-use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField};
-use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
-use ark_std::{
-	rand::{CryptoRng, Rng, RngCore},
-	vec::Vec,
+use arkworks_utils::{
+	poseidon::PoseidonParameters,
+	utils::common::{setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve},
 };
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
@@ -83,7 +85,7 @@ pub fn setup_leaf<F: PrimeField, R: RngCore>(
 	)
 }
 
-pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
+pub fn setup_leaf_with_privates_raw<F: PrimeField>(
 	params5: &PoseidonParameters<F>,
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
@@ -99,6 +101,49 @@ pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 	(leaf_bytes, nullifier_hash_bytes)
+}
+
+pub const LEN: usize = 30;
+type MixerProverSetupBn254_30<F> = MixerProverSetup<F, LEN>;
+
+pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+	curve: Curve,
+	secret_raw: Vec<u8>,
+	nullifier_raw: Vec<u8>,
+	leaves_raw: Vec<Vec<u8>>,
+	index: u64,
+	recipient_raw: Vec<u8>,
+	relayer_raw: Vec<u8>,
+	fee: u128,
+	refund: u128,
+	pk: Vec<u8>,
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
+	let params3 = setup_params_x5_3::<E::Fr>(curve);
+	let params5 = setup_params_x5_5::<E::Fr>(curve);
+	let prover = MixerProverSetupBn254_30::new(params3, params5);
+
+	let (circuit, leaf_raw, nullifier_hash_raw, root_raw, public_inputs_raw) = prover
+		.setup_circuit_with_privates_raw(
+			secret_raw,
+			nullifier_raw,
+			&leaves_raw,
+			index,
+			recipient_raw,
+			relayer_raw,
+			fee,
+			refund,
+		);
+
+	let proof = MixerProverSetupBn254_30::<E::Fr>::prove::<E, _>(circuit, &pk, rng);
+
+	(
+		proof,
+		leaf_raw,
+		nullifier_hash_raw,
+		root_raw,
+		public_inputs_raw,
+	)
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
