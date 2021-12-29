@@ -437,4 +437,62 @@ mod test {
 			recipient, relayer, fee, refund, public_inputs, proof
 		);
 	}
+
+	#[test]
+	fn setup_and_prove_mixer_raw_inputs_unchecked() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let leaves = vec![Bn254Fr::one()];
+		let index = 0;
+		let recipient = Bn254Fr::one();
+		let relayer = Bn254Fr::zero();
+		let secret = Bn254Fr::rand(rng);
+		let nullifier = Bn254Fr::rand(rng);
+
+		let leaves_raw: Vec<Vec<u8>> = leaves.iter().map(|x| x.into_repr().to_bytes_le()).collect();
+		let recipient_raw = recipient.into_repr().to_bytes_le();
+		let relayer_raw = relayer.into_repr().to_bytes_le();
+		let fee = 0;
+		let refund = 0;
+		let secret_raw = secret.into_repr().to_bytes_le();
+		let nullifier_raw = nullifier.into_repr().to_bytes_le();
+
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
+
+		let (circuit, .., public_inputs_raw) = prover.setup_circuit_with_privates_raw(
+			secret_raw,
+			nullifier_raw,
+			&leaves_raw,
+			index,
+			recipient_raw,
+			relayer_raw,
+			fee,
+			refund,
+		);
+
+		let public_inputs: Vec<Bn254Fr> = public_inputs_raw
+			.iter()
+			.map(|x| Bn254Fr::from_le_bytes_mod_order(x))
+			.collect();
+
+		let (pk, vk) =
+			MixerProverSetupBn254_30::setup_keys_unchecked::<Bn254, _>(circuit.clone(), rng);
+		let proof = MixerProverSetupBn254_30::prove_unchecked::<Bn254, _>(circuit, &pk, rng);
+		let res = MixerProverSetupBn254_30::verify_unchecked::<Bn254>(&public_inputs, &vk, &proof);
+		assert!(
+			res,
+			"Failed to verify Proof, here is the inputs:
+			recipient = {},
+			relayer = {},
+			fee = {},
+			refund = {},
+			public_inputs = {:?},
+			proof = {:?},
+			",
+			recipient, relayer, fee, refund, public_inputs, proof
+		);
+	}
 }
