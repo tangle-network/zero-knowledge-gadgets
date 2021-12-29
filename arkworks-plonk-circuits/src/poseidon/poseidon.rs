@@ -347,7 +347,7 @@ mod tests {
 			hasher: poseidon_hasher,
 		};
 
-		let res = gadget_tester(&mut test_circuit, 2000);
+		let res = gadget_tester(&mut test_circuit, 3000);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 
