@@ -1,21 +1,23 @@
 use super::common::*;
 use crate::circuit::mixer::MixerCircuit;
+use ark_crypto_primitives::SNARK;
+use ark_ec::PairingEngine;
+use ark_ff::{BigInteger, PrimeField};
+use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::rc::Rc;
+use ark_std::{
+	rand::{CryptoRng, Rng, RngCore},
+	rc::Rc,
+	vec::Vec,
+};
 use arkworks_gadgets::{
 	arbitrary::mixer_data::Input as MixerDataInput,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
 	merkle_tree::Path,
 };
-use arkworks_utils::{poseidon::PoseidonParameters, utils::common::verify_groth16};
-
-use ark_crypto_primitives::SNARK;
-use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField};
-use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
-use ark_std::{
-	rand::{CryptoRng, Rng, RngCore},
-	vec::Vec,
+use arkworks_utils::{
+	poseidon::PoseidonParameters,
+	utils::common::{setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve},
 };
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
@@ -83,7 +85,7 @@ pub fn setup_leaf<F: PrimeField, R: RngCore>(
 	)
 }
 
-pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
+pub fn setup_leaf_with_privates_raw<F: PrimeField>(
 	params5: &PoseidonParameters<F>,
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
@@ -99,6 +101,34 @@ pub fn setup_leaf_with_privates_raw<F: PrimeField, R: RngCore>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 	(leaf_bytes, nullifier_hash_bytes)
+}
+
+pub const LEN: usize = 30;
+type MixerProverSetupBn254_30<F> = MixerProverSetup<F, LEN>;
+
+pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(rng: &mut R) {
+	let params3 = setup_params_x5_3::<E::Fr>(curve);
+	let params5 = setup_params_x5_5::<E::Fr>(curve);
+	let prover = MixerProverSetupBn254_30::new(params3, params5);
+
+	let (circuit, .., public_inputs_raw) = prover.setup_circuit_with_privates_raw(
+		secret_raw,
+		nullifier_raw,
+		&leaves_raw,
+		index,
+		recipient_raw,
+		relayer_raw,
+		fee,
+		refund,
+	);
+
+	let public_inputs: Vec<E::Fr> = public_inputs_raw
+		.iter()
+		.map(|x| E::Fr::from_le_bytes_mod_order(x))
+		.collect();
+
+	let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<E, _>(circuit.clone(), rng);
+	let proof = MixerProverSetupBn254_30::prove::<E, _>(circuit, &pk, rng);
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
