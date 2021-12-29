@@ -135,7 +135,7 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 			refund,
 		);
 
-	let proof = MixerProverSetupBn254_30::<E::Fr>::prove::<E, _>(circuit, &pk, rng);
+	let proof = MixerProverSetupBn254_30::<E::Fr>::prove_unchecked::<E, _>(circuit, &pk, rng);
 
 	(
 		proof,
@@ -402,6 +402,19 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		(pk_bytes, vk_bytes)
 	}
 
+	pub fn setup_keys_unchecked<E: PairingEngine, R: RngCore + CryptoRng>(
+		circuit: Circuit_x5<E::Fr, N>,
+		rng: &mut R,
+	) -> (Vec<u8>, Vec<u8>) {
+		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
+
+		let mut pk_bytes = Vec::new();
+		let mut vk_bytes = Vec::new();
+		pk.serialize_unchecked(&mut pk_bytes).unwrap();
+		vk.serialize_unchecked(&mut vk_bytes).unwrap();
+		(pk_bytes, vk_bytes)
+	}
+
 	pub fn prove<E: PairingEngine, R: RngCore + CryptoRng>(
 		circuit: Circuit_x5<E::Fr, N>,
 		pk_bytes: &[u8],
@@ -415,8 +428,36 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		proof_bytes
 	}
 
-	pub fn verify<E: PairingEngine>(public_inputs: &[E::Fr], vk: &[u8], proof: &[u8]) -> bool {
-		let vk = VerifyingKey::<E>::deserialize(vk).unwrap();
+	pub fn prove_unchecked<E: PairingEngine, R: RngCore + CryptoRng>(
+		circuit: Circuit_x5<E::Fr, N>,
+		pk_unchecked_bytes: &[u8],
+		rng: &mut R,
+	) -> Vec<u8> {
+		let pk = ProvingKey::<E>::deserialize_unchecked(pk_unchecked_bytes).unwrap();
+
+		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
+		let mut proof_bytes = Vec::new();
+		proof.serialize(&mut proof_bytes).unwrap();
+		proof_bytes
+	}
+
+	pub fn verify<E: PairingEngine>(
+		public_inputs: &[E::Fr],
+		vk_bytes: &[u8],
+		proof: &[u8],
+	) -> bool {
+		let vk = VerifyingKey::<E>::deserialize(vk_bytes).unwrap();
+		let proof = Proof::<E>::deserialize(proof).unwrap();
+		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
+		ver_res
+	}
+
+	pub fn verify_unchecked<E: PairingEngine>(
+		public_inputs: &[E::Fr],
+		vk_unchecked_bytes: &[u8],
+		proof: &[u8],
+	) -> bool {
+		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
 		let proof = Proof::<E>::deserialize(proof).unwrap();
 		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
 		ver_res
