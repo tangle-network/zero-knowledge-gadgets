@@ -85,7 +85,7 @@ mod tests {
 			// Commit Key
 			let (ck, _) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
 				&universal_params,
-				prover.circuit_size().next_power_of_two(),
+				prover.circuit_size().next_power_of_two() + 6,
 				0,
 				None,
 			)

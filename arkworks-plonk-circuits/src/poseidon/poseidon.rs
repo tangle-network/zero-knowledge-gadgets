@@ -267,7 +267,7 @@ mod tests {
 
 		let rng = &mut test_rng();
 		let u_params: UniversalParams<Bn254> =
-			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 12, false, rng).unwrap();
+			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, false, rng).unwrap();
 
 		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
@@ -347,7 +347,7 @@ mod tests {
 			hasher: poseidon_hasher,
 		};
 
-		let res = gadget_tester(&mut test_circuit, 3000);
+		let res = gadget_tester(&mut test_circuit, 2000);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 
@@ -378,7 +378,7 @@ mod tests {
 			// Commit Key
 			let (ck, _) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
 				&universal_params,
-				prover.circuit_size().next_power_of_two(),
+				prover.circuit_size().next_power_of_two() + 6,
 				0,
 				None,
 			)
