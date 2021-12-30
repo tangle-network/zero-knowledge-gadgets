@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-utils"
-version = "0.4.9"
+version = "0.4.10"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's utils for zero-knowledge gadgets written using Arkworks"
