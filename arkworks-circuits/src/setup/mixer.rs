@@ -149,6 +149,21 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	)
 }
 
+pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+	curve: Curve,
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>) {
+	let params3 = setup_params_x5_3::<E::Fr>(curve);
+	let params5 = setup_params_x5_5::<E::Fr>(curve);
+	let prover = MixerProverSetupBn254_30::new(params3, params5);
+
+	let (circuit, ..) = prover.setup_random_circuit(rng);
+
+	let (pk, vk) = MixerProverSetupBn254_30::<E::Fr>::setup_keys_unchecked::<E, _>(circuit, rng);
+
+	(pk, vk)
+}
+
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
 	params3: PoseidonParameters<F>,
 	params5: PoseidonParameters<F>,
