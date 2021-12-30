@@ -62,10 +62,11 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	N,
 >;
 
-pub fn setup_leaf<F: PrimeField, R: RngCore>(
-	params5: &PoseidonParameters<F>,
+pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
+	curve: Curve,
 	rng: &mut R,
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
+	let params5 = setup_params_x5_5::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
 
@@ -85,11 +86,13 @@ pub fn setup_leaf<F: PrimeField, R: RngCore>(
 	)
 }
 
-pub fn setup_leaf_with_privates_raw<F: PrimeField>(
-	params5: &PoseidonParameters<F>,
+pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
+	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
 ) -> (Vec<u8>, Vec<u8>) {
+	let params5 = setup_params_x5_5::<F>(curve);
+
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
 	let nullifier = F::from_le_bytes_mod_order(&nullfier_bytes);
 	// Secret inputs for the leaf
