@@ -164,6 +164,21 @@ pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	(pk, vk)
 }
 
+pub fn verify_unchecked_raw<E: PairingEngine>(
+	public_inputs: &[Vec<u8>],
+	vk_unchecked_bytes: &[u8],
+	proof: &[u8],
+) -> bool {
+	let pub_ins: Vec<E::Fr> = public_inputs
+		.iter()
+		.map(|x| E::Fr::from_le_bytes_mod_order(&x))
+		.collect();
+	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
+	let proof = Proof::<E>::deserialize(proof).unwrap();
+	let ver_res = verify_groth16(&vk, &pub_ins, &proof);
+	ver_res
+}
+
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
 	params3: PoseidonParameters<F>,
 	params5: PoseidonParameters<F>,
@@ -478,6 +493,21 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
 		let proof = Proof::<E>::deserialize(proof).unwrap();
 		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
+		ver_res
+	}
+
+	pub fn verify_unchecked_raw<E: PairingEngine>(
+		public_inputs: &[Vec<u8>],
+		vk_unchecked_bytes: &[u8],
+		proof: &[u8],
+	) -> bool {
+		let pub_ins: Vec<E::Fr> = public_inputs
+			.iter()
+			.map(|x| E::Fr::from_le_bytes_mod_order(&x))
+			.collect();
+		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
+		let proof = Proof::<E>::deserialize(proof).unwrap();
+		let ver_res = verify_groth16(&vk, &pub_ins, &proof);
 		ver_res
 	}
 }
