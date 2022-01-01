@@ -62,10 +62,11 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	N,
 >;
 
-pub fn setup_leaf<F: PrimeField, R: RngCore>(
-	params5: &PoseidonParameters<F>,
+pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
+	curve: Curve,
 	rng: &mut R,
 ) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
+	let params5 = setup_params_x5_5::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
 
@@ -85,11 +86,13 @@ pub fn setup_leaf<F: PrimeField, R: RngCore>(
 	)
 }
 
-pub fn setup_leaf_with_privates_raw<F: PrimeField>(
-	params5: &PoseidonParameters<F>,
+pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
+	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
 ) -> (Vec<u8>, Vec<u8>) {
+	let params5 = setup_params_x5_5::<F>(curve);
+
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
 	let nullifier = F::from_le_bytes_mod_order(&nullfier_bytes);
 	// Secret inputs for the leaf
@@ -144,6 +147,36 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 		root_raw,
 		public_inputs_raw,
 	)
+}
+
+pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+	curve: Curve,
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>) {
+	let params3 = setup_params_x5_3::<E::Fr>(curve);
+	let params5 = setup_params_x5_5::<E::Fr>(curve);
+	let prover = MixerProverSetupBn254_30::new(params3, params5);
+
+	let (circuit, ..) = prover.setup_random_circuit(rng);
+
+	let (pk, vk) = MixerProverSetupBn254_30::<E::Fr>::setup_keys_unchecked::<E, _>(circuit, rng);
+
+	(pk, vk)
+}
+
+pub fn verify_unchecked_raw<E: PairingEngine>(
+	public_inputs: &[Vec<u8>],
+	vk_unchecked_bytes: &[u8],
+	proof: &[u8],
+) -> bool {
+	let pub_ins: Vec<E::Fr> = public_inputs
+		.iter()
+		.map(|x| E::Fr::from_le_bytes_mod_order(&x))
+		.collect();
+	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
+	let proof = Proof::<E>::deserialize(proof).unwrap();
+	let ver_res = verify_groth16(&vk, &pub_ins, &proof);
+	ver_res
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
@@ -460,6 +493,21 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
 		let proof = Proof::<E>::deserialize(proof).unwrap();
 		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
+		ver_res
+	}
+
+	pub fn verify_unchecked_raw<E: PairingEngine>(
+		public_inputs: &[Vec<u8>],
+		vk_unchecked_bytes: &[u8],
+		proof: &[u8],
+	) -> bool {
+		let pub_ins: Vec<E::Fr> = public_inputs
+			.iter()
+			.map(|x| E::Fr::from_le_bytes_mod_order(&x))
+			.collect();
+		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
+		let proof = Proof::<E>::deserialize(proof).unwrap();
+		let ver_res = verify_groth16(&vk, &pub_ins, &proof);
 		ver_res
 	}
 }
