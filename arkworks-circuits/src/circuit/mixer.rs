@@ -473,15 +473,14 @@ mod test {
 			refund,
 		);
 
-		let public_inputs: Vec<Bn254Fr> = public_inputs_raw
-			.iter()
-			.map(|x| Bn254Fr::from_le_bytes_mod_order(x))
-			.collect();
-
 		let (pk, vk) =
 			MixerProverSetupBn254_30::setup_keys_unchecked::<Bn254, _>(circuit.clone(), rng);
 		let proof = MixerProverSetupBn254_30::prove_unchecked::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify_unchecked::<Bn254>(&public_inputs, &vk, &proof);
+		let res = MixerProverSetupBn254_30::verify_unchecked_raw::<Bn254>(
+			&public_inputs_raw,
+			&vk,
+			&proof,
+		);
 		assert!(
 			res,
 			"Failed to verify Proof, here is the inputs:
@@ -492,7 +491,7 @@ mod test {
 			public_inputs = {:?},
 			proof = {:?},
 			",
-			recipient, relayer, fee, refund, public_inputs, proof
+			recipient, relayer, fee, refund, public_inputs_raw, proof
 		);
 	}
 }
