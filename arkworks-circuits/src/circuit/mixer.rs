@@ -152,7 +152,10 @@ where
 #[cfg(test)]
 mod test {
 	use super::LeafPrivate;
-	use crate::setup::mixer::*;
+	use crate::setup::{
+		common::{verify_unchecked_raw, *},
+		mixer::*,
+	};
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_ff::{BigInteger, PrimeField, UniformRand};
 	use ark_groth16::{Groth16, Proof, VerifyingKey};
@@ -175,9 +178,9 @@ mod test {
 		let prover = MixerProverSetupBn254_30::new(params3, params5);
 		let (circuit, .., public_inputs) = prover.setup_random_circuit(rng);
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
 		println!("{}", res);
 		assert!(res);
 	}
@@ -201,9 +204,9 @@ mod test {
 		let (circuit, .., public_inputs) =
 			prover.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng);
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
 		assert!(
 			res,
 			"Failed to verify  Proof, here is the inputs:
@@ -237,8 +240,8 @@ mod test {
 		let (circuit, .., public_inputs) =
 			prover.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng);
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
 
 		let vk = VerifyingKey::<Bn254>::deserialize(&vk[..]).unwrap();
 		let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();
@@ -284,9 +287,9 @@ mod test {
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
 
 		assert!(!res);
 	}
@@ -328,9 +331,9 @@ mod test {
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
 
 		assert!(!res);
 	}
@@ -374,9 +377,9 @@ mod test {
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
 
 		assert!(!res);
 	}
@@ -421,9 +424,9 @@ mod test {
 			.map(|x| Bn254Fr::from_le_bytes_mod_order(x))
 			.collect();
 
-		let (pk, vk) = MixerProverSetupBn254_30::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
 		assert!(
 			res,
 			"Failed to verify Proof, here is the inputs:
@@ -473,14 +476,9 @@ mod test {
 			refund,
 		);
 
-		let (pk, vk) =
-			MixerProverSetupBn254_30::setup_keys_unchecked::<Bn254, _>(circuit.clone(), rng);
-		let proof = MixerProverSetupBn254_30::prove_unchecked::<Bn254, _>(circuit, &pk, rng);
-		let res = MixerProverSetupBn254_30::verify_unchecked_raw::<Bn254>(
-			&public_inputs_raw,
-			&vk,
-			&proof,
-		);
+		let (pk, vk) = setup_keys_unchecked::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove_unchecked::<Bn254, _, _>(circuit, &pk, rng);
+		let res = verify_unchecked_raw::<Bn254>(&public_inputs_raw, &vk, &proof);
 		assert!(
 			res,
 			"Failed to verify Proof, here is the inputs:

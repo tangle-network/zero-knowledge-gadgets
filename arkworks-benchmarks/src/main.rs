@@ -1,17 +1,17 @@
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
 use ark_crypto_primitives::SNARK;
 use ark_ed_on_bls12_381::{EdwardsAffine, Fr as EdBlsFr};
-use ark_ff::{One, PrimeField, UniformRand};
+use ark_ff::{One, UniformRand};
 use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
-use arkworks_circuits::circuit::bridge::BridgeCircuit;
+use arkworks_circuits::circuit::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	arbitrary::bridge_data::Input as BridgeDataInput,
-	leaf::bridge::{
-		constraints::BridgeLeafGadget, BridgeLeaf, Private as LeafPrivate, Public as LeafPublic,
+	arbitrary::anchor_data::Input as AnchorDataInput,
+	leaf::anchor::{
+		constraints::AnchorLeafGadget, AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
@@ -29,28 +29,28 @@ macro_rules! setup_circuit {
 		type PoseidonCRH = CRH<$test_field>;
 		type PoseidonCRHGadget = CRHGadget<$test_field>;
 
-		type Leaf = BridgeLeaf<$test_field, PoseidonCRH>;
-		type LeafGadget = BridgeLeafGadget<$test_field, PoseidonCRH, PoseidonCRHGadget>;
+		type Leaf = AnchorLeaf<$test_field, PoseidonCRH>;
+		type LeafGadget = AnchorLeafGadget<$test_field, PoseidonCRH, PoseidonCRHGadget>;
 
 		#[derive(Clone, PartialEq)]
-		struct BridgeTreeConfig;
-		impl MerkleConfig for BridgeTreeConfig {
+		struct AnchorTreeConfig;
+		impl MerkleConfig for AnchorTreeConfig {
 			type H = PoseidonCRH;
 			type LeafH = PoseidonCRH;
 
 			const HEIGHT: u8 = N as _;
 		}
 
-		type BridgeTree = SparseMerkleTree<BridgeTreeConfig>;
+		type AnchorTree = SparseMerkleTree<AnchorTreeConfig>;
 
 		type TestSetMembership = SetMembership<$test_field, M>;
 		type TestSetMembershipGadget = SetMembershipGadget<$test_field, M>;
 
-		type Circuit = BridgeCircuit<
+		type Circuit = AnchorCircuit<
 			$test_field,
 			PoseidonCRH,
 			PoseidonCRHGadget,
-			BridgeTreeConfig,
+			AnchorTreeConfig,
 			PoseidonCRHGadget,
 			PoseidonCRHGadget,
 			N,
@@ -77,7 +77,7 @@ macro_rules! setup_circuit {
 		let relayer = <$test_field>::rand(rng);
 		let commitment = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = BridgeDataInput::new(recipient, relayer, fee, refund, commitment);
+		let arbitrary_input = AnchorDataInput::new(recipient, relayer, fee, refund, commitment);
 
 		// Making params for poseidon in merkle tree
 
@@ -91,7 +91,7 @@ macro_rules! setup_circuit {
 		let inner_params = Rc::new(params3.clone());
 		let leaf_params = inner_params.clone();
 		// Making the merkle tree
-		let mt = BridgeTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let mt = AnchorTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
 		// Getting the proof path
 		let path = mt.generate_membership_proof(2);
 		let root = mt.root();

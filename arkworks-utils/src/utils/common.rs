@@ -110,15 +110,3 @@ pub fn setup_mimc_220<F: PrimeField>(curve: Curve) -> crate::mimc::MiMCParameter
 		),
 	}
 }
-
-pub fn verify_groth16<E: PairingEngine>(
-	vk: &VerifyingKey<E>,
-	public_inputs: &[E::Fr],
-	proof: &Proof<E>,
-) -> bool {
-	let res = Groth16::<E>::verify(vk, public_inputs, proof);
-	match res {
-		Ok(is_valid) => is_valid,
-		Err(e) => panic!("{}", e),
-	}
-}

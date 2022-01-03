@@ -30,13 +30,13 @@ impl<F: PrimeField> PublicVar<F> {
 	}
 }
 
-pub struct BridgeLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
+pub struct AnchorLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> BridgeLeafGadget<F, H, HG> {
+impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> AnchorLeafGadget<F, H, HG> {
 	pub fn create_leaf(
 		private: &PrivateVar<F>,
 		public: &PublicVar<F>,
@@ -97,7 +97,7 @@ impl<F: PrimeField> AllocVar<Public<F>, F> for PublicVar<F> {
 mod test {
 	use super::*;
 	use crate::{
-		leaf::bridge::BridgeLeaf,
+		leaf::anchor::AnchorLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
 			CRH,
@@ -113,10 +113,10 @@ mod test {
 	type PoseidonCRH5 = CRH<Fq>;
 	type PoseidonCRH5Gadget = CRHGadget<Fq>;
 
-	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
-	type LeafGadget = BridgeLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget>;
+	type Leaf = AnchorLeaf<Fq, PoseidonCRH5>;
+	type LeafGadget = AnchorLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget>;
 	#[test]
-	fn should_create_bridge_leaf_constraints() {
+	fn should_create_anchor_leaf_constraints() {
 		let rng = &mut test_rng();
 		let curve = arkworks_utils::utils::common::Curve::Bls381;
 

@@ -8,7 +8,7 @@ use arkworks_gadgets::prelude::ark_groth16::ProvingKey;
 use arkworks_utils::prelude::ark_groth16::{Proof, VerifyingKey};
 
 use crate::utils::BinFile;
-use arkworks_utils::utils::common::verify_groth16;
+use arkworks_circuits::setup::common::verify_groth16;
 use num_bigint::BigUint;
 use serde_json::Value;
 use std::io::{Read, Result as IoResult, Seek};

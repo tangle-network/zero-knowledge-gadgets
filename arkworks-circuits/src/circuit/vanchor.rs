@@ -431,7 +431,7 @@ where
 mod test {
 	use crate::{
 		ark_std::{One, Zero},
-		setup::vanchor::VAnchorProverBn2542x2,
+		setup::{common::*, vanchor::VAnchorProverBn2542x2},
 	};
 	use ark_serialize::CanonicalDeserialize;
 	use arkworks_utils::{
@@ -483,10 +483,9 @@ mod test {
 			rng,
 		);
 
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(res);
 	}
@@ -542,10 +541,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(!res);
 	}
@@ -601,10 +599,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(!res);
 	}
@@ -661,10 +658,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(!res);
 	}
@@ -717,10 +713,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(!res);
 	}
@@ -779,10 +774,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
 
 		assert!(!res);
 	}
@@ -836,9 +830,8 @@ mod test {
 		);
 
 		let truncated_public_inputs = &pub_ins[2..];
-		let (proving_key, verifying_key) =
-			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
 
 		let vk = VerifyingKey::<Bn254>::deserialize(&verifying_key[..]).unwrap();
 		let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();
