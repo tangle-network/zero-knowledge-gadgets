@@ -15,7 +15,7 @@ arkworks-utils = {path = "../arkworks-utils",  version = "0.4.0"}
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
-ark-plonk = { version = "^0.8", git = "https://github.com/ZK-Garage/plonk", default-features = false }
+plonk = { version = "^0.8", git = "https://github.com/ZK-Garage/plonk", default-features = false }
 
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }

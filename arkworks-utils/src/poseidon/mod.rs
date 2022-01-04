@@ -32,7 +32,7 @@ impl core::fmt::Display for PoseidonError {
 impl ArkError for PoseidonError {}
 
 /// The Poseidon permutation.
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
 	/// The round key constants
 	pub round_keys: Vec<F>,

@@ -1,8 +1,8 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
-use ark_plonk::{
+use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
+use plonk::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
-use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
 
 #[derive(Debug, Default)]
 struct SetMembershipCircuit<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
@@ -51,7 +51,6 @@ mod tests {
 	use super::*;
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-	use ark_plonk::proof_system::{Prover, Verifier};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{
 		kzg10::{self, Powers, KZG10},
@@ -59,6 +58,7 @@ mod tests {
 		PolynomialCommitment,
 	};
 	use ark_std::test_rng;
+	use plonk::proof_system::{Prover, Verifier};
 
 	pub(crate) fn gadget_tester<
 		E: PairingEngine,
@@ -85,7 +85,7 @@ mod tests {
 			// Commit Key
 			let (ck, _) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
 				&universal_params,
-				prover.circuit_size().next_power_of_two(),
+				prover.circuit_size().next_power_of_two() + 6,
 				0,
 				None,
 			)

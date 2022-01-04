@@ -3,8 +3,9 @@ use ark_std::vec::Vec;
 
 use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
+#[derive(Clone, Debug)]
 pub struct Poseidon<F: PrimeField> {
-	params: PoseidonParameters<F>,
+	pub params: PoseidonParameters<F>,
 }
 
 impl<F: PrimeField> Poseidon<F> {
@@ -13,7 +14,7 @@ impl<F: PrimeField> Poseidon<F> {
 	}
 }
 
-trait FieldHasher<F: PrimeField> {
+pub trait FieldHasher<F: PrimeField> {
 	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError>;
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError>;
 }
