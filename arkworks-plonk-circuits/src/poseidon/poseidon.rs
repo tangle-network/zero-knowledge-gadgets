@@ -1,8 +1,8 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 use ark_std::{fmt::Debug, vec::Vec, One};
 use arkworks_gadgets::poseidon::field_hasher::Poseidon;
+use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
@@ -168,10 +168,6 @@ mod tests {
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
-	use ark_plonk::{
-		circuit::{self, FeIntoPubInput},
-		prelude::*,
-	};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::kzg10::{UniversalParams, KZG10};
 	use ark_std::{test_rng, One};
@@ -179,6 +175,10 @@ mod tests {
 	use arkworks_utils::{
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
 		utils::common::setup_params_x5_3,
+	};
+	use plonk::{
+		circuit::{self, FeIntoPubInput},
+		prelude::*,
 	};
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
