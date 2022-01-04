@@ -1,13 +1,7 @@
-// use std::arch::aarch64::ST; // What was this?
-use ark_std::fmt::Debug;
-
-// use ark_crypto_primitives::crh::poseidon::Poseidon;
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_plonk::{
-	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
-};
-use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
+use ark_plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use ark_std::{fmt::Debug, vec::Vec, One};
 use arkworks_gadgets::poseidon::field_hasher::Poseidon;
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
@@ -29,10 +23,8 @@ pub struct PoseidonParametersVar {
 }
 
 #[derive(Debug, Default)]
-struct PoseidonGadget<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
+struct PoseidonGadget {
 	pub params: PoseidonParametersVar,
-	pub _engine: PhantomData<E>,
-	pub _marker: PhantomData<P>,
 }
 
 trait FieldHasherGadget<F: PrimeField, E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
@@ -54,7 +46,7 @@ trait FieldHasherGadget<F: PrimeField, E: PairingEngine, P: TEModelParameters<Ba
 }
 
 impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadget<E::Fr, E, P>
-	for PoseidonGadget<E, P>
+	for PoseidonGadget
 {
 	type Native = Poseidon<E::Fr>;
 
@@ -83,11 +75,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 			width: native.params.width,
 			sbox: sbox_gadget,
 		};
-		PoseidonGadget {
-			params: params_var,
-			_engine: PhantomData,
-			_marker: PhantomData,
-		}
+		PoseidonGadget { params: params_var }
 	}
 
 	fn hash(
@@ -100,6 +88,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 		let partial_rounds = self.params.partial_rounds as usize;
 		let full_rounds = self.params.full_rounds as usize;
 
+		// TODO: This is not the appropriate error, should add new error
 		if inputs.len() > width - 1 {
 			return Err(Error::PointMalformed);
 		}
@@ -173,43 +162,6 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 	}
 }
 
-// Practice using it in a circuit
-struct TestCircuit<
-	E: PairingEngine,
-	P: TEModelParameters<BaseField = E::Fr>,
-	HG: FieldHasherGadget<E::Fr, E, P>,
-> {
-	left: E::Fr,
-	right: E::Fr,
-	expected: E::Fr,
-	hasher: HG::Native,
-}
-
-impl<
-		E: PairingEngine,
-		P: TEModelParameters<BaseField = E::Fr>,
-		HG: FieldHasherGadget<E::Fr, E, P>,
-	> Circuit<E, P> for TestCircuit<E, P, HG>
-{
-	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
-
-	fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
-		let hasher_gadget = HG::from_native(composer, self.hasher.clone());
-
-		let left_var = composer.add_input(self.left);
-		let right_var = composer.add_input(self.right);
-		let expected_var = composer.add_input(self.expected);
-
-		let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
-		composer.assert_equal(outcome, expected_var);
-		Ok(())
-	}
-
-	fn padded_circuit_size(&self) -> usize {
-		1 << 12
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -230,8 +182,43 @@ mod tests {
 	};
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
-	type PoseidonHasherGadget = PoseidonGadget<Bn254, JubjubParameters>;
 
+	// Use it in a circuit
+	struct TestCircuit<
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E::Fr, E, P>,
+	> {
+		left: E::Fr,
+		right: E::Fr,
+		expected: E::Fr,
+		hasher: HG::Native,
+	}
+
+	impl<
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E::Fr, E, P>,
+		> Circuit<E, P> for TestCircuit<E, P, HG>
+	{
+		const CIRCUIT_ID: [u8; 32] = [0xff; 32];
+
+		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
+			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+
+			let left_var = composer.add_input(self.left);
+			let right_var = composer.add_input(self.right);
+			let expected_var = composer.add_input(self.expected);
+
+			let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
+			composer.assert_equal(outcome, expected_var);
+			Ok(())
+		}
+
+		fn padded_circuit_size(&self) -> usize {
+			1 << 12
+		}
+	}
 	#[test]
 	fn should_verify_plonk_poseidon_x5_3() {
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
@@ -254,7 +241,7 @@ mod tests {
 		let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
 
 		// Create the circuit
-		let mut test_circuit = TestCircuit::<Bn254, JubjubParameters, PoseidonHasherGadget> {
+		let mut test_circuit = TestCircuit::<Bn254, JubjubParameters, PoseidonGadget> {
 			left,
 			right,
 			expected,
