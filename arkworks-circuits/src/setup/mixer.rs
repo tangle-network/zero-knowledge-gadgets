@@ -3,8 +3,6 @@ use crate::circuit::mixer::MixerCircuit;
 use ark_crypto_primitives::SNARK;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
-use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{
 	rand::{CryptoRng, Rng, RngCore},
 	rc::Rc,
@@ -17,7 +15,7 @@ use arkworks_gadgets::{
 };
 use arkworks_utils::{
 	poseidon::PoseidonParameters,
-	utils::common::{setup_params_x5_3, setup_params_x5_5, verify_groth16, Curve},
+	utils::common::{setup_params_x5_3, setup_params_x5_5, Curve},
 };
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
@@ -138,7 +136,7 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 			refund,
 		);
 
-	let proof = MixerProverSetupBn254_30::<E::Fr>::prove_unchecked::<E, _>(circuit, &pk, rng);
+	let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng);
 
 	(
 		proof,
@@ -159,24 +157,9 @@ pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let (circuit, ..) = prover.setup_random_circuit(rng);
 
-	let (pk, vk) = MixerProverSetupBn254_30::<E::Fr>::setup_keys_unchecked::<E, _>(circuit, rng);
+	let (pk, vk) = setup_keys_unchecked::<E, _, _>(circuit, rng);
 
 	(pk, vk)
-}
-
-pub fn verify_unchecked_raw<E: PairingEngine>(
-	public_inputs: &[Vec<u8>],
-	vk_unchecked_bytes: &[u8],
-	proof: &[u8],
-) -> bool {
-	let pub_ins: Vec<E::Fr> = public_inputs
-		.iter()
-		.map(|x| E::Fr::from_le_bytes_mod_order(&x))
-		.collect();
-	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
-	let proof = Proof::<E>::deserialize(proof).unwrap();
-	let ver_res = verify_groth16(&vk, &pub_ins, &proof);
-	ver_res
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
@@ -420,94 +403,5 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		// Getting the proof path
 		let path = mt.generate_membership_proof(index);
 		(mt, path)
-	}
-
-	pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng>(
-		circuit: Circuit_x5<E::Fr, N>,
-		rng: &mut R,
-	) -> (Vec<u8>, Vec<u8>) {
-		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-
-		let mut pk_bytes = Vec::new();
-		let mut vk_bytes = Vec::new();
-		pk.serialize(&mut pk_bytes).unwrap();
-		vk.serialize(&mut vk_bytes).unwrap();
-		(pk_bytes, vk_bytes)
-	}
-
-	pub fn setup_keys_unchecked<E: PairingEngine, R: RngCore + CryptoRng>(
-		circuit: Circuit_x5<E::Fr, N>,
-		rng: &mut R,
-	) -> (Vec<u8>, Vec<u8>) {
-		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-
-		let mut pk_bytes = Vec::new();
-		let mut vk_bytes = Vec::new();
-		pk.serialize_unchecked(&mut pk_bytes).unwrap();
-		vk.serialize_unchecked(&mut vk_bytes).unwrap();
-		(pk_bytes, vk_bytes)
-	}
-
-	pub fn prove<E: PairingEngine, R: RngCore + CryptoRng>(
-		circuit: Circuit_x5<E::Fr, N>,
-		pk_bytes: &[u8],
-		rng: &mut R,
-	) -> Vec<u8> {
-		let pk = ProvingKey::<E>::deserialize(pk_bytes).unwrap();
-
-		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
-		let mut proof_bytes = Vec::new();
-		proof.serialize(&mut proof_bytes).unwrap();
-		proof_bytes
-	}
-
-	pub fn prove_unchecked<E: PairingEngine, R: RngCore + CryptoRng>(
-		circuit: Circuit_x5<E::Fr, N>,
-		pk_unchecked_bytes: &[u8],
-		rng: &mut R,
-	) -> Vec<u8> {
-		let pk = ProvingKey::<E>::deserialize_unchecked(pk_unchecked_bytes).unwrap();
-
-		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
-		let mut proof_bytes = Vec::new();
-		proof.serialize(&mut proof_bytes).unwrap();
-		proof_bytes
-	}
-
-	pub fn verify<E: PairingEngine>(
-		public_inputs: &[E::Fr],
-		vk_bytes: &[u8],
-		proof: &[u8],
-	) -> bool {
-		let vk = VerifyingKey::<E>::deserialize(vk_bytes).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
-		ver_res
-	}
-
-	pub fn verify_unchecked<E: PairingEngine>(
-		public_inputs: &[E::Fr],
-		vk_unchecked_bytes: &[u8],
-		proof: &[u8],
-	) -> bool {
-		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
-		ver_res
-	}
-
-	pub fn verify_unchecked_raw<E: PairingEngine>(
-		public_inputs: &[Vec<u8>],
-		vk_unchecked_bytes: &[u8],
-		proof: &[u8],
-	) -> bool {
-		let pub_ins: Vec<E::Fr> = public_inputs
-			.iter()
-			.map(|x| E::Fr::from_le_bytes_mod_order(&x))
-			.collect();
-		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &pub_ins, &proof);
-		ver_res
 	}
 }

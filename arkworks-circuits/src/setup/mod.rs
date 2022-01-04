@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-pub mod bridge;
+pub mod anchor;
 
 pub mod common;
 

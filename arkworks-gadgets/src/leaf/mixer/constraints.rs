@@ -89,7 +89,7 @@ mod test {
 	type Leaf = MixerLeaf<Fq, PoseidonCRH5>;
 	type LeafGadget = MixerLeafGadget<Fq, PoseidonCRH5, PoseidonCRH5Gadget>;
 	#[test]
-	fn should_create_bridge_leaf_constraints() {
+	fn should_create_anchor_leaf_constraints() {
 		let rng = &mut test_rng();
 
 		let cs = ConstraintSystem::<Fq>::new_ref();

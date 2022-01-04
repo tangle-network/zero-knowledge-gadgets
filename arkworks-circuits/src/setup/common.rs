@@ -1,13 +1,21 @@
+use ark_crypto_primitives::SNARK;
+use ark_ec::PairingEngine;
+use ark_ff::fields::PrimeField;
+use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
+use ark_relations::r1cs::ConstraintSynthesizer;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::{
+	marker::PhantomData,
+	rand::{CryptoRng, Rng, RngCore},
+	rc::Rc,
+	vec::Vec,
+};
 use arkworks_gadgets::{
 	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
 	merkle_tree::{Config as MerkleConfig, Path, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
 };
 use arkworks_utils::{mimc::MiMCParameters, poseidon::PoseidonParameters};
-
-use ark_ff::fields::PrimeField;
-use ark_std::{marker::PhantomData, rc::Rc};
-use paste::paste;
 
 pub type PoseidonCRH_x3_3<F> = CRH<F>;
 pub type PoseidonCRH_x3_3Gadget<F> = CRHGadget<F>;
@@ -77,53 +85,107 @@ impl<F: PrimeField> MerkleConfig for TreeConfig_MiMC220<F> {
 	const HEIGHT: u8 = 30;
 }
 
-// Generate tree setup functions
-// 	1. `setup_<tree>`
-//	2. `setup_tree_and_create_path_<tree>`
+pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng, C: ConstraintSynthesizer<E::Fr>>(
+	circuit: C,
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>) {
+	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
 
-macro_rules! impl_setup_tree {
-	(
-		tree: $tree_ty:ident, // tree type
-		config: $tc_ty:ident, // tree configuration type
-		params: $param_ty:ident // parameters type
-	) => {
-		paste! {
-			pub fn [<setup_ $tree_ty:lower>]<F: PrimeField>(
-				leaves: &[F],
-				params: &$param_ty<F>,
-			) -> $tree_ty<F> {
-				let inner_params = Rc::new(params.clone());
-				let mt = $tree_ty::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-				mt
-			}
-
-			pub fn [<setup_tree_and_create_path_ $tree_ty:lower>]<F: PrimeField, const N: usize>(
-				leaves: &[F],
-				index: u64,
-				params: &$param_ty<F>,
-			) -> ($tree_ty<F>, Path<$tc_ty<F>, N>) {
-				// Making the merkle tree
-				let mt = [<setup_ $tree_ty:lower>](leaves, params);
-				// Getting the proof path
-				let path = mt.generate_membership_proof(index);
-				(mt, path)
-			}
-		}
-	};
+	let mut pk_bytes = Vec::new();
+	let mut vk_bytes = Vec::new();
+	pk.serialize(&mut pk_bytes).unwrap();
+	vk.serialize(&mut vk_bytes).unwrap();
+	(pk_bytes, vk_bytes)
 }
 
-impl_setup_tree!(
-	tree: Tree_x5,
-	config: TreeConfig_x5,
-	params: PoseidonParameters
-);
-impl_setup_tree!(
-	tree: Tree_x17,
-	config: TreeConfig_x17,
-	params: PoseidonParameters
-);
-impl_setup_tree!(
-	tree: Tree_MiMC220,
-	config: TreeConfig_MiMC220,
-	params: MiMCParameters
-);
+pub fn setup_keys_unchecked<
+	E: PairingEngine,
+	R: RngCore + CryptoRng,
+	C: ConstraintSynthesizer<E::Fr>,
+>(
+	circuit: C,
+	rng: &mut R,
+) -> (Vec<u8>, Vec<u8>) {
+	let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
+
+	let mut pk_bytes = Vec::new();
+	let mut vk_bytes = Vec::new();
+	pk.serialize_unchecked(&mut pk_bytes).unwrap();
+	vk.serialize_unchecked(&mut vk_bytes).unwrap();
+	(pk_bytes, vk_bytes)
+}
+
+pub fn prove<E: PairingEngine, R: RngCore + CryptoRng, C: ConstraintSynthesizer<E::Fr>>(
+	circuit: C,
+	pk_bytes: &[u8],
+	rng: &mut R,
+) -> Vec<u8> {
+	let pk = ProvingKey::<E>::deserialize(pk_bytes).unwrap();
+
+	let proof = Groth16::prove(&pk, circuit, rng).unwrap();
+	let mut proof_bytes = Vec::new();
+	proof.serialize(&mut proof_bytes).unwrap();
+	proof_bytes
+}
+
+pub fn prove_unchecked<
+	E: PairingEngine,
+	R: RngCore + CryptoRng,
+	C: ConstraintSynthesizer<E::Fr>,
+>(
+	circuit: C,
+	pk_unchecked_bytes: &[u8],
+	rng: &mut R,
+) -> Vec<u8> {
+	let pk = ProvingKey::<E>::deserialize_unchecked(pk_unchecked_bytes).unwrap();
+
+	let proof = Groth16::prove(&pk, circuit, rng).unwrap();
+	let mut proof_bytes = Vec::new();
+	proof.serialize(&mut proof_bytes).unwrap();
+	proof_bytes
+}
+
+pub fn verify<E: PairingEngine>(public_inputs: &[E::Fr], vk_bytes: &[u8], proof: &[u8]) -> bool {
+	let vk = VerifyingKey::<E>::deserialize(vk_bytes).unwrap();
+	let proof = Proof::<E>::deserialize(proof).unwrap();
+	let ver_res = verify_groth16(&vk, &public_inputs, &proof);
+	ver_res
+}
+
+pub fn verify_unchecked<E: PairingEngine>(
+	public_inputs: &[E::Fr],
+	vk_unchecked_bytes: &[u8],
+	proof: &[u8],
+) -> bool {
+	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
+	let proof = Proof::<E>::deserialize(proof).unwrap();
+	let ver_res = verify_groth16(&vk, &public_inputs, &proof);
+	ver_res
+}
+
+pub fn verify_unchecked_raw<E: PairingEngine>(
+	public_inputs: &[Vec<u8>],
+	vk_unchecked_bytes: &[u8],
+	proof: &[u8],
+) -> bool {
+	let pub_ins: Vec<E::Fr> = public_inputs
+		.iter()
+		.map(|x| E::Fr::from_le_bytes_mod_order(&x))
+		.collect();
+	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
+	let proof = Proof::<E>::deserialize(proof).unwrap();
+	let ver_res = verify_groth16(&vk, &pub_ins, &proof);
+	ver_res
+}
+
+pub fn verify_groth16<E: PairingEngine>(
+	vk: &VerifyingKey<E>,
+	public_inputs: &[E::Fr],
+	proof: &Proof<E>,
+) -> bool {
+	let res = Groth16::<E>::verify(vk, public_inputs, proof);
+	match res {
+		Ok(is_valid) => is_valid,
+		Err(e) => panic!("{}", e),
+	}
+}
