@@ -1,5 +1,5 @@
 use crate::{mimc::Rounds as MiMCRounds, poseidon::PoseidonParameters};
-use ark_crypto_primitives::SNARK;
+use ark_crypto_primitives::{Error, SNARK};
 use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
 use ark_groth16::{Groth16, Proof, VerifyingKey};
@@ -115,10 +115,7 @@ pub fn verify_groth16<E: PairingEngine>(
 	vk: &VerifyingKey<E>,
 	public_inputs: &[E::Fr],
 	proof: &Proof<E>,
-) -> bool {
-	let res = Groth16::<E>::verify(vk, public_inputs, proof);
-	match res {
-		Ok(is_valid) => is_valid,
-		Err(e) => panic!("{}", e),
-	}
+) -> Result<bool, Error> {
+	let res = Groth16::<E>::verify(vk, public_inputs, proof)?;
+	Ok(res)
 }

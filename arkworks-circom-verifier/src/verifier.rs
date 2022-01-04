@@ -2,6 +2,7 @@
 use ark_bn254::{Bn254, Fq, Fq2, Fr as BnFr, G1Affine, G1Projective, G2Affine, G2Projective};
 use ark_ff::BigInteger256;
 
+use ark_crypto_primitives::Error;
 use ark_serialize::CanonicalDeserialize;
 use ark_std::{str::FromStr, string::ToString};
 use arkworks_gadgets::prelude::ark_groth16::ProvingKey;
@@ -123,7 +124,7 @@ pub fn parse_public_inputs_bn254_json(json: &Value) -> Vec<BnFr> {
 	public_inputs
 }
 
-pub fn verify(public_inputs: Vec<BnFr>, vk: &[u8], proof: &[u8]) -> bool {
+pub fn verify(public_inputs: Vec<BnFr>, vk: &[u8], proof: &[u8]) -> Result<bool, Error> {
 	let vk = VerifyingKey::<Bn254>::deserialize(vk).unwrap();
 	let proof = Proof::<Bn254>::deserialize(proof).unwrap();
 	verify_groth16(&vk, &public_inputs, &proof)
@@ -163,10 +164,10 @@ mod test {
 		VerifyingKey::<Bn254>::serialize(&params.vk, &mut pvk_serialized).unwrap();
 		let inputs = parse_public_inputs_bn254_json(&json);
 		//let verified = verify_proof(&pvk, &proof, &inputs).unwrap();
-		let verified = verify(inputs, &pvk_serialized, &proof_serialized);
+		let verified = verify(inputs, &pvk_serialized, &proof_serialized).unwrap();
 		assert!(verified);
 	}
-	#[should_panic(expected = "malformed verifying key")]
+
 	#[test]
 	fn should_fail_with_invalid_public_input() {
 		//let path = "./arkworks-circom-verifier/src/vanchor_circuit_final_2_2.zkey";
@@ -191,7 +192,7 @@ mod test {
 		let inputs = inputs[1..].to_vec();
 		//let verified = verify_proof(&pvk, &proof, &inputs).unwrap();
 		let verified = verify(inputs, &pvk_serialized, &proof_serialized);
-		assert!(verified);
+		assert!(verified.is_err());
 	}
 
 	#[should_panic(expected = "assertion failed: verified")]
@@ -218,6 +219,6 @@ mod test {
 		let inputs = parse_public_inputs_bn254_json(&json);
 		//let verified = verify_proof(&pvk, &proof, &inputs).unwrap();
 		let verified = verify(inputs, &pvk_serialized, &proof_serialized);
-		assert!(verified);
+		assert!(verified.is_err());
 	}
 }

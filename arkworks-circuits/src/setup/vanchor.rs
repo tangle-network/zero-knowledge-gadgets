@@ -6,7 +6,7 @@ use crate::{
 	},
 };
 use ark_bn254::Fr as Bn254Fr;
-use ark_crypto_primitives::SNARK;
+use ark_crypto_primitives::{Error, SNARK};
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
@@ -446,11 +446,14 @@ impl<
 		proof_bytes
 	}
 
-	pub fn verify<E: PairingEngine>(public_inputs: &Vec<E::Fr>, vk: &[u8], proof: &[u8]) -> bool {
+	pub fn verify<E: PairingEngine>(
+		public_inputs: &Vec<E::Fr>,
+		vk: &[u8],
+		proof: &[u8],
+	) -> Result<bool, Error> {
 		let vk = VerifyingKey::<E>::deserialize(vk).unwrap();
 		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
-		ver_res
+		verify_groth16(&vk, &public_inputs, &proof)
 	}
 
 	pub fn setup_keypairs<R: RngCore, const N: usize>(

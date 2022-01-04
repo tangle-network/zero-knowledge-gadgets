@@ -364,7 +364,7 @@ mod test {
 		// let (pk, vk) = setup_groth16_random_circuit_x5::<_,Bls12_381, TEST_N,
 		// TEST_M>(&mut rng, curve);
 		let proof = prove_groth16_circuit_x5(&pk, circuit, &mut rng);
-		let res = verify_groth16(&vk, &public_inputs, &proof);
+		let res = verify_groth16(&vk, &public_inputs, &proof).unwrap();
 
 		verify_zk_mock(
 			root,
@@ -437,7 +437,7 @@ mod test {
 		let (pk, vk) =
 			setup_groth16_random_circuit_x5::<_, Bls12_381, TEST_N, TEST_M>(&mut rng, curve);
 		let proof = prove_groth16_circuit_x5(&pk, mc, &mut rng);
-		let res = verify_groth16(&vk, &public_inputs, &proof);
+		let res = verify_groth16(&vk, &public_inputs, &proof).unwrap();
 
 		verify_zk_mock(
 			root,
@@ -482,7 +482,7 @@ mod test {
 		let mut proof_bytes = vec![0u8; proof.serialized_size()];
 		proof.serialize(&mut proof_bytes[..]).unwrap();
 		let proof_anew = Proof::<Bls12_381>::deserialize(&proof_bytes[..]).unwrap();
-		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof_anew);
+		let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof_anew).unwrap();
 
 		verify_zk_mock(
 			root,

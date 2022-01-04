@@ -1,6 +1,6 @@
 use super::common::*;
 use crate::circuit::mixer::MixerCircuit;
-use ark_crypto_primitives::SNARK;
+use ark_crypto_primitives::{Error, SNARK};
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
 use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
@@ -65,32 +65,32 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
 	curve: Curve,
 	rng: &mut R,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
+) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error> {
 	let params5 = setup_params_x5_5::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
 
-	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5).unwrap();
-	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5).unwrap();
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5)?;
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5)?;
 
 	let secret_bytes = leaf_private.secret().into_repr().to_bytes_le();
 	let nullifier_bytes = leaf_private.nullifier().into_repr().to_bytes_le();
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	(
+	Ok((
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,
 		nullifier_hash_bytes,
-	)
+	))
 }
 
 pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
-) -> (Vec<u8>, Vec<u8>) {
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
 	let params5 = setup_params_x5_5::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
@@ -98,12 +98,12 @@ pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::new(secret, nullifier);
 
-	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5).unwrap();
-	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5).unwrap();
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5)?;
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5)?;
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	(leaf_bytes, nullifier_hash_bytes)
+	Ok((leaf_bytes, nullifier_hash_bytes))
 }
 
 pub const LEN: usize = 30;
@@ -121,7 +121,7 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	refund: u128,
 	pk: Vec<u8>,
 	rng: &mut R,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
+) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params5 = setup_params_x5_5::<E::Fr>(curve);
 	let prover = MixerProverSetupBn254_30::new(params3, params5);
@@ -136,47 +136,46 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 			relayer_raw,
 			fee,
 			refund,
-		);
+		)?;
 
-	let proof = MixerProverSetupBn254_30::<E::Fr>::prove_unchecked::<E, _>(circuit, &pk, rng);
+	let proof = MixerProverSetupBn254_30::<E::Fr>::prove_unchecked::<E, _>(circuit, &pk, rng)?;
 
-	(
+	Ok((
 		proof,
 		leaf_raw,
 		nullifier_hash_raw,
 		root_raw,
 		public_inputs_raw,
-	)
+	))
 }
 
 pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	rng: &mut R,
-) -> (Vec<u8>, Vec<u8>) {
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params5 = setup_params_x5_5::<E::Fr>(curve);
 	let prover = MixerProverSetupBn254_30::new(params3, params5);
 
-	let (circuit, ..) = prover.setup_random_circuit(rng);
+	let (circuit, ..) = prover.setup_random_circuit(rng)?;
 
-	let (pk, vk) = MixerProverSetupBn254_30::<E::Fr>::setup_keys_unchecked::<E, _>(circuit, rng);
+	let (pk, vk) = MixerProverSetupBn254_30::<E::Fr>::setup_keys_unchecked::<E, _>(circuit, rng)?;
 
-	(pk, vk)
+	Ok((pk, vk))
 }
 
 pub fn verify_unchecked_raw<E: PairingEngine>(
 	public_inputs: &[Vec<u8>],
 	vk_unchecked_bytes: &[u8],
 	proof: &[u8],
-) -> bool {
+) -> Result<bool, Error> {
 	let pub_ins: Vec<E::Fr> = public_inputs
 		.iter()
 		.map(|x| E::Fr::from_le_bytes_mod_order(&x))
 		.collect();
-	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
-	let proof = Proof::<E>::deserialize(proof).unwrap();
-	let ver_res = verify_groth16(&vk, &pub_ins, &proof);
-	ver_res
+	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes)?;
+	let proof = Proof::<E>::deserialize(proof)?;
+	verify_groth16(&vk, &pub_ins, &proof)
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
@@ -229,31 +228,35 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		)
 	}
 
-	pub fn setup_leaf<R: Rng>(&self, rng: &mut R) -> (LeafPrivate<F>, F, F) {
+	pub fn setup_leaf<R: Rng>(&self, rng: &mut R) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
 		let leaf_private = LeafPrivate::generate(rng);
 
 		// Creating the leaf
-		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5).unwrap();
-		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5).unwrap();
-		(leaf_private, leaf_hash, nullifier_hash)
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5)?;
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5)?;
+		Ok((leaf_private, leaf_hash, nullifier_hash))
 	}
 
-	pub fn setup_leaf_with_privates(&self, secret: F, nullfier: F) -> (LeafPrivate<F>, F, F) {
+	pub fn setup_leaf_with_privates(
+		&self,
+		secret: F,
+		nullfier: F,
+	) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
 		let leaf_private = LeafPrivate::new(secret, nullfier);
 
 		// Creating the leaf
-		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5).unwrap();
-		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5).unwrap();
-		(leaf_private, leaf_hash, nullifier_hash)
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5)?;
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5)?;
+		Ok((leaf_private, leaf_hash, nullifier_hash))
 	}
 
 	pub fn setup_leaf_with_privates_raw(
 		&self,
 		secret: Vec<u8>,
 		nullfier: Vec<u8>,
-	) -> (LeafPrivate<F>, F, F) {
+	) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
 		let secret_f = F::from_le_bytes_mod_order(&secret);
 		let nullifier_f = F::from_le_bytes_mod_order(&nullfier);
@@ -271,12 +274,12 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		fee: F,
 		refund: F,
 		rng: &mut R,
-	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
 		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng);
+		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng)?;
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index);
+		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index)?;
 		let root = tree.root().inner();
 
 		let mc = Circuit_x5::new(
@@ -289,7 +292,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		);
 		let public_inputs =
 			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
-		(mc, leaf, nullifier_hash, root, public_inputs)
+		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -303,12 +306,13 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		relayer: F,
 		fee: F,
 		refund: F,
-	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
 		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf_with_privates(secret, nullifier);
+		let (leaf_private, leaf, nullifier_hash) =
+			self.setup_leaf_with_privates(secret, nullifier)?;
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index);
+		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index)?;
 		let root = tree.root().inner();
 
 		let mc = Circuit_x5::new(
@@ -321,7 +325,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		);
 		let public_inputs =
 			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
-		(mc, leaf, nullifier_hash, root, public_inputs)
+		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -335,7 +339,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		relayer: Vec<u8>,
 		fee: u128,
 		refund: u128,
-	) -> (Circuit_x5<F, N>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
+	) -> Result<(Circuit_x5<F, N>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
 		let secret_f = F::from_le_bytes_mod_order(&secret);
 		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<F> = leaves
@@ -356,7 +360,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			relayer_f,
 			fee_f,
 			refund_f,
-		);
+		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();
 		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_le();
@@ -366,16 +370,19 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			.map(|x| x.into_repr().to_bytes_le())
 			.collect();
 
-		(
+		Ok((
 			mc,
 			leaf_raw,
 			nullifier_hash_raw,
 			root_raw,
 			public_inputs_raw,
-		)
+		))
 	}
 
-	pub fn setup_random_circuit<R: Rng>(self, rng: &mut R) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	pub fn setup_random_circuit<R: Rng>(
+		self,
+		rng: &mut R,
+	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
 		let leaves = Vec::new();
 		let index = 0;
 		let recipient = F::rand(rng);
@@ -404,110 +411,107 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		mc
 	}
 
-	pub fn setup_tree(&self, leaves: &[F]) -> Tree_x5<F> {
+	pub fn setup_tree(&self, leaves: &[F]) -> Result<Tree_x5<F>, Error> {
 		let inner_params = Rc::new(self.params3.clone());
-		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-		mt
+		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves)?;
+		Ok(mt)
 	}
 
 	pub fn setup_tree_and_create_path(
 		&self,
 		leaves: &[F],
 		index: u64,
-	) -> (Tree_x5<F>, Path<TreeConfig_x5<F>, N>) {
+	) -> Result<(Tree_x5<F>, Path<TreeConfig_x5<F>, N>), Error> {
 		// Making the merkle tree
-		let mt = self.setup_tree(leaves);
+		let mt = self.setup_tree(leaves)?;
 		// Getting the proof path
 		let path = mt.generate_membership_proof(index);
-		(mt, path)
+		Ok((mt, path))
 	}
 
 	pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng>(
 		circuit: Circuit_x5<E::Fr, N>,
 		rng: &mut R,
-	) -> (Vec<u8>, Vec<u8>) {
-		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
+	) -> Result<(Vec<u8>, Vec<u8>), Error> {
+		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng)?;
 
 		let mut pk_bytes = Vec::new();
 		let mut vk_bytes = Vec::new();
-		pk.serialize(&mut pk_bytes).unwrap();
-		vk.serialize(&mut vk_bytes).unwrap();
-		(pk_bytes, vk_bytes)
+		pk.serialize(&mut pk_bytes)?;
+		vk.serialize(&mut vk_bytes)?;
+		Ok((pk_bytes, vk_bytes))
 	}
 
 	pub fn setup_keys_unchecked<E: PairingEngine, R: RngCore + CryptoRng>(
 		circuit: Circuit_x5<E::Fr, N>,
 		rng: &mut R,
-	) -> (Vec<u8>, Vec<u8>) {
-		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
+	) -> Result<(Vec<u8>, Vec<u8>), Error> {
+		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng)?;
 
 		let mut pk_bytes = Vec::new();
 		let mut vk_bytes = Vec::new();
-		pk.serialize_unchecked(&mut pk_bytes).unwrap();
-		vk.serialize_unchecked(&mut vk_bytes).unwrap();
-		(pk_bytes, vk_bytes)
+		pk.serialize_unchecked(&mut pk_bytes)?;
+		vk.serialize_unchecked(&mut vk_bytes)?;
+		Ok((pk_bytes, vk_bytes))
 	}
 
 	pub fn prove<E: PairingEngine, R: RngCore + CryptoRng>(
 		circuit: Circuit_x5<E::Fr, N>,
 		pk_bytes: &[u8],
 		rng: &mut R,
-	) -> Vec<u8> {
-		let pk = ProvingKey::<E>::deserialize(pk_bytes).unwrap();
+	) -> Result<Vec<u8>, Error> {
+		let pk = ProvingKey::<E>::deserialize(pk_bytes)?;
 
-		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
+		let proof = Groth16::prove(&pk, circuit, rng)?;
 		let mut proof_bytes = Vec::new();
-		proof.serialize(&mut proof_bytes).unwrap();
-		proof_bytes
+		proof.serialize(&mut proof_bytes)?;
+		Ok(proof_bytes)
 	}
 
 	pub fn prove_unchecked<E: PairingEngine, R: RngCore + CryptoRng>(
 		circuit: Circuit_x5<E::Fr, N>,
 		pk_unchecked_bytes: &[u8],
 		rng: &mut R,
-	) -> Vec<u8> {
-		let pk = ProvingKey::<E>::deserialize_unchecked(pk_unchecked_bytes).unwrap();
+	) -> Result<Vec<u8>, Error> {
+		let pk = ProvingKey::<E>::deserialize_unchecked(pk_unchecked_bytes)?;
 
-		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
+		let proof = Groth16::prove(&pk, circuit, rng)?;
 		let mut proof_bytes = Vec::new();
-		proof.serialize(&mut proof_bytes).unwrap();
-		proof_bytes
+		proof.serialize(&mut proof_bytes)?;
+		Ok(proof_bytes)
 	}
 
 	pub fn verify<E: PairingEngine>(
 		public_inputs: &[E::Fr],
 		vk_bytes: &[u8],
 		proof: &[u8],
-	) -> bool {
-		let vk = VerifyingKey::<E>::deserialize(vk_bytes).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
-		ver_res
+	) -> Result<bool, Error> {
+		let vk = VerifyingKey::<E>::deserialize(vk_bytes)?;
+		let proof = Proof::<E>::deserialize(proof)?;
+		verify_groth16(&vk, &public_inputs, &proof)
 	}
 
 	pub fn verify_unchecked<E: PairingEngine>(
 		public_inputs: &[E::Fr],
 		vk_unchecked_bytes: &[u8],
 		proof: &[u8],
-	) -> bool {
-		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &public_inputs, &proof);
-		ver_res
+	) -> Result<bool, Error> {
+		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes)?;
+		let proof = Proof::<E>::deserialize(proof)?;
+		verify_groth16(&vk, &public_inputs, &proof)
 	}
 
 	pub fn verify_unchecked_raw<E: PairingEngine>(
 		public_inputs: &[Vec<u8>],
 		vk_unchecked_bytes: &[u8],
 		proof: &[u8],
-	) -> bool {
+	) -> Result<bool, Error> {
 		let pub_ins: Vec<E::Fr> = public_inputs
 			.iter()
 			.map(|x| E::Fr::from_le_bytes_mod_order(&x))
 			.collect();
-		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		let ver_res = verify_groth16(&vk, &pub_ins, &proof);
-		ver_res
+		let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes)?;
+		let proof = Proof::<E>::deserialize(proof)?;
+		verify_groth16(&vk, &pub_ins, &proof)
 	}
 }

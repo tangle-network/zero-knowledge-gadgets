@@ -486,7 +486,7 @@ mod test {
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(res);
 	}
@@ -545,7 +545,7 @@ mod test {
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -604,7 +604,7 @@ mod test {
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -664,7 +664,7 @@ mod test {
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -720,7 +720,7 @@ mod test {
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -782,7 +782,7 @@ mod test {
 		let (proving_key, verifying_key) =
 			VAnchorProverBn2542x2::setup_keys::<Bn254, _>(circuit.clone(), rng);
 		let proof = VAnchorProverBn2542x2::prove::<Bn254, _>(circuit, &proving_key, rng);
-		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let res = VAnchorProverBn2542x2::verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
