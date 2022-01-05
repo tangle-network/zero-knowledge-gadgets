@@ -483,9 +483,9 @@ mod test {
 			rng,
 		);
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(res);
 	}
@@ -541,9 +541,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -599,9 +599,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -658,9 +658,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -713,9 +713,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -774,9 +774,9 @@ mod test {
 			out_utxos,
 		);
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -830,8 +830,8 @@ mod test {
 		);
 
 		let truncated_public_inputs = &pub_ins[2..];
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
 
 		let vk = VerifyingKey::<Bn254>::deserialize(&verifying_key[..]).unwrap();
 		let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();

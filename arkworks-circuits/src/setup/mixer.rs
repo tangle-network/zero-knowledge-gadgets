@@ -1,6 +1,6 @@
 use super::common::*;
 use crate::circuit::mixer::MixerCircuit;
-use ark_crypto_primitives::SNARK;
+use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{
@@ -15,19 +15,19 @@ use arkworks_gadgets::{
 };
 use arkworks_utils::{
 	poseidon::PoseidonParameters,
-	utils::common::{setup_params_x5_3, setup_params_x5_5, Curve},
+	utils::common::{setup_params_x5_3, Curve},
 };
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 
-pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
+pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_3<F>>;
 
-pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>>;
+pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_3<F>, PoseidonCRH_x5_3Gadget<F>>;
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
-	PoseidonCRH_x5_5<F>,
-	PoseidonCRH_x5_5Gadget<F>,
+	PoseidonCRH_x5_3<F>,
+	PoseidonCRH_x5_3Gadget<F>,
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x5_3Gadget<F>,
@@ -60,54 +60,54 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	N,
 >;
 
-pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
+pub fn setup_leaf_x5_3<F: PrimeField, R: RngCore>(
 	curve: Curve,
 	rng: &mut R,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
-	let params5 = setup_params_x5_5::<F>(curve);
+) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error> {
+	let params3 = setup_params_x5_3::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
 
-	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5).unwrap();
-	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5).unwrap();
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params3)?;
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params3)?;
 
 	let secret_bytes = leaf_private.secret().into_repr().to_bytes_le();
 	let nullifier_bytes = leaf_private.nullifier().into_repr().to_bytes_le();
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	(
+	Ok((
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,
 		nullifier_hash_bytes,
-	)
+	))
 }
 
-pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
+pub fn setup_leaf_with_privates_raw_x5_3<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
-	nullfier_bytes: Vec<u8>,
-) -> (Vec<u8>, Vec<u8>) {
-	let params5 = setup_params_x5_5::<F>(curve);
+	nullifier_bytes: Vec<u8>,
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
+	let params5 = setup_params_x5_3::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
-	let nullifier = F::from_le_bytes_mod_order(&nullfier_bytes);
+	let nullifier = F::from_le_bytes_mod_order(&nullifier_bytes);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::new(secret, nullifier);
 
-	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5).unwrap();
-	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5).unwrap();
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5)?;
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5)?;
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	(leaf_bytes, nullifier_hash_bytes)
+	Ok((leaf_bytes, nullifier_hash_bytes))
 }
 
 pub const LEN: usize = 30;
 type MixerProverSetupBn254_30<F> = MixerProverSetup<F, LEN>;
 
-pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+pub fn setup_proof_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	secret_raw: Vec<u8>,
 	nullifier_raw: Vec<u8>,
@@ -119,10 +119,9 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	refund: u128,
 	pk: Vec<u8>,
 	rng: &mut R,
-) -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
+) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
-	let params5 = setup_params_x5_5::<E::Fr>(curve);
-	let prover = MixerProverSetupBn254_30::new(params3, params5);
+	let prover = MixerProverSetupBn254_30::new(params3);
 
 	let (circuit, leaf_raw, nullifier_hash_raw, root_raw, public_inputs_raw) = prover
 		.setup_circuit_with_privates_raw(
@@ -134,42 +133,40 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 			relayer_raw,
 			fee,
 			refund,
-		);
+		)?;
 
-	let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng);
+	let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;
 
-	(
+	Ok((
 		proof,
 		leaf_raw,
 		nullifier_hash_raw,
 		root_raw,
 		public_inputs_raw,
-	)
+	))
 }
 
-pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+pub fn setup_keys_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	rng: &mut R,
-) -> (Vec<u8>, Vec<u8>) {
+) -> Result<(Vec<u8>, Vec<u8>), Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
-	let params5 = setup_params_x5_5::<E::Fr>(curve);
-	let prover = MixerProverSetupBn254_30::new(params3, params5);
+	let prover = MixerProverSetupBn254_30::new(params3);
 
-	let (circuit, ..) = prover.setup_random_circuit(rng);
+	let (circuit, ..) = prover.setup_random_circuit(rng)?;
 
-	let (pk, vk) = setup_keys_unchecked::<E, _, _>(circuit, rng);
+	let (pk, vk) = setup_keys_unchecked::<E, _, _>(circuit, rng)?;
 
-	(pk, vk)
+	Ok((pk, vk))
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
 	params3: PoseidonParameters<F>,
-	params5: PoseidonParameters<F>,
 }
 
 impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
-	pub fn new(params3: PoseidonParameters<F>, params5: PoseidonParameters<F>) -> Self {
-		Self { params3, params5 }
+	pub fn new(params3: PoseidonParameters<F>) -> Self {
+		Self { params3 }
 	}
 
 	pub fn setup_arbitrary_data(
@@ -212,34 +209,38 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		)
 	}
 
-	pub fn setup_leaf<R: Rng>(&self, rng: &mut R) -> (LeafPrivate<F>, F, F) {
+	pub fn setup_leaf<R: Rng>(&self, rng: &mut R) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
 		let leaf_private = LeafPrivate::generate(rng);
 
 		// Creating the leaf
-		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5).unwrap();
-		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5).unwrap();
-		(leaf_private, leaf_hash, nullifier_hash)
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params3)?;
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params3)?;
+		Ok((leaf_private, leaf_hash, nullifier_hash))
 	}
 
-	pub fn setup_leaf_with_privates(&self, secret: F, nullfier: F) -> (LeafPrivate<F>, F, F) {
+	pub fn setup_leaf_with_privates(
+		&self,
+		secret: F,
+		nullifier: F,
+	) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
-		let leaf_private = LeafPrivate::new(secret, nullfier);
+		let leaf_private = LeafPrivate::new(secret, nullifier);
 
 		// Creating the leaf
-		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5).unwrap();
-		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5).unwrap();
-		(leaf_private, leaf_hash, nullifier_hash)
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params3)?;
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params3)?;
+		Ok((leaf_private, leaf_hash, nullifier_hash))
 	}
 
 	pub fn setup_leaf_with_privates_raw(
 		&self,
 		secret: Vec<u8>,
-		nullfier: Vec<u8>,
-	) -> (LeafPrivate<F>, F, F) {
+		nullifier: Vec<u8>,
+	) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
 		let secret_f = F::from_le_bytes_mod_order(&secret);
-		let nullifier_f = F::from_le_bytes_mod_order(&nullfier);
+		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
 
 		self.setup_leaf_with_privates(secret_f, nullifier_f)
 	}
@@ -254,25 +255,25 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		fee: F,
 		refund: F,
 		rng: &mut R,
-	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
 		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng);
+		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng)?;
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index);
+		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index)?;
 		let root = tree.root().inner();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input,
 			leaf_private,
-			self.params5,
+			self.params3,
 			path,
 			root,
 			nullifier_hash,
 		);
 		let public_inputs =
 			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
-		(mc, leaf, nullifier_hash, root, public_inputs)
+		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -286,25 +287,26 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		relayer: F,
 		fee: F,
 		refund: F,
-	) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
 		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf_with_privates(secret, nullifier);
+		let (leaf_private, leaf, nullifier_hash) =
+			self.setup_leaf_with_privates(secret, nullifier)?;
 		let mut leaves_new = leaves.to_vec();
 		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index);
+		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index)?;
 		let root = tree.root().inner();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input,
 			leaf_private,
-			self.params5,
+			self.params3,
 			path,
 			root,
 			nullifier_hash,
 		);
 		let public_inputs =
 			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
-		(mc, leaf, nullifier_hash, root, public_inputs)
+		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -318,7 +320,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		relayer: Vec<u8>,
 		fee: u128,
 		refund: u128,
-	) -> (Circuit_x5<F, N>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>) {
+	) -> Result<(Circuit_x5<F, N>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
 		let secret_f = F::from_le_bytes_mod_order(&secret);
 		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<F> = leaves
@@ -339,7 +341,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			relayer_f,
 			fee_f,
 			refund_f,
-		);
+		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();
 		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_le();
@@ -349,16 +351,19 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			.map(|x| x.into_repr().to_bytes_le())
 			.collect();
 
-		(
+		Ok((
 			mc,
 			leaf_raw,
 			nullifier_hash_raw,
 			root_raw,
 			public_inputs_raw,
-		)
+		))
 	}
 
-	pub fn setup_random_circuit<R: Rng>(self, rng: &mut R) -> (Circuit_x5<F, N>, F, F, F, Vec<F>) {
+	pub fn setup_random_circuit<R: Rng>(
+		self,
+		rng: &mut R,
+	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
 		let leaves = Vec::new();
 		let index = 0;
 		let recipient = F::rand(rng);
@@ -379,7 +384,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let mc = Circuit_x5::new(
 			arbitrary_input,
 			leaf_private,
-			self.params5,
+			self.params3,
 			path,
 			root,
 			nullifier_hash,
@@ -387,21 +392,21 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		mc
 	}
 
-	pub fn setup_tree(&self, leaves: &[F]) -> Tree_x5<F> {
+	pub fn setup_tree(&self, leaves: &[F]) -> Result<Tree_x5<F>, Error> {
 		let inner_params = Rc::new(self.params3.clone());
-		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves).unwrap();
-		mt
+		let mt = Tree_x5::new_sequential(inner_params, Rc::new(()), leaves)?;
+		Ok(mt)
 	}
 
 	pub fn setup_tree_and_create_path(
 		&self,
 		leaves: &[F],
 		index: u64,
-	) -> (Tree_x5<F>, Path<TreeConfig_x5<F>, N>) {
+	) -> Result<(Tree_x5<F>, Path<TreeConfig_x5<F>, N>), Error> {
 		// Making the merkle tree
-		let mt = self.setup_tree(leaves);
+		let mt = self.setup_tree(leaves)?;
 		// Getting the proof path
 		let path = mt.generate_membership_proof(index);
-		(mt, path)
+		Ok((mt, path))
 	}
 }

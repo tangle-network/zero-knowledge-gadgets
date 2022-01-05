@@ -162,7 +162,7 @@ mod test {
 	use ark_serialize::CanonicalDeserialize;
 	use ark_snark::SNARK;
 	use ark_std::{test_rng, vec::Vec, One, Zero};
-	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5, Curve};
+	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
@@ -174,13 +174,12 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
-		let (circuit, .., public_inputs) = prover.setup_random_circuit(rng);
+		let prover = MixerProverSetupBn254_30::new(params3);
+		let (circuit, .., public_inputs) = prover.setup_random_circuit(rng).unwrap();
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		println!("{}", res);
 		assert!(res);
 	}
@@ -198,15 +197,15 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let prover = MixerProverSetupBn254_30::new(params3);
 
-		let (circuit, .., public_inputs) =
-			prover.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng);
+		let (circuit, .., public_inputs) = prover
+			.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng)
+			.unwrap();
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(
 			res,
 			"Failed to verify  Proof, here is the inputs:
@@ -234,14 +233,14 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let prover = MixerProverSetupBn254_30::new(params3);
 
-		let (circuit, .., public_inputs) =
-			prover.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng);
+		let (circuit, .., public_inputs) = prover
+			.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng)
+			.unwrap();
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
 
 		let vk = VerifyingKey::<Bn254>::deserialize(&vk[..]).unwrap();
 		let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();
@@ -262,13 +261,12 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
-		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng);
+		let prover = MixerProverSetupBn254_30::new(params3);
+		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 
 		let arbitrary_input =
 			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (_, path) = prover.setup_tree_and_create_path(&[leaf], 0);
+		let (_, path) = prover.setup_tree_and_create_path(&[leaf], 0).unwrap();
 		let root = Bn254Fr::rand(rng);
 
 		let circuit = prover.create_circuit(
@@ -287,9 +285,9 @@ mod test {
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -305,14 +303,13 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
-		let (leaf_private, _, nullifier_hash) = prover.setup_leaf(rng);
+		let prover = MixerProverSetupBn254_30::new(params3);
+		let (leaf_private, _, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 		let leaf = Bn254Fr::rand(rng);
 
 		let arbitrary_input =
 			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0);
+		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0).unwrap();
 		let root = tree.root().inner();
 
 		let circuit = prover.create_circuit(
@@ -331,9 +328,9 @@ mod test {
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -349,16 +346,15 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
-		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng);
+		let prover = MixerProverSetupBn254_30::new(params3);
+		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 
 		// Invalid nullifier
 		let leaf_private = LeafPrivate::new(leaf_private.secret(), Bn254Fr::rand(rng));
 
 		let arbitrary_input =
 			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0);
+		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0).unwrap();
 		let root = tree.root().inner();
 
 		let circuit = prover.create_circuit(
@@ -377,9 +373,9 @@ mod test {
 		public_inputs.push(arbitrary_input.fee);
 		public_inputs.push(arbitrary_input.refund);
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -405,28 +401,29 @@ mod test {
 		let nullifier_raw = nullifier.into_repr().to_bytes_le();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let prover = MixerProverSetupBn254_30::new(params3);
 
-		let (circuit, .., public_inputs_raw) = prover.setup_circuit_with_privates_raw(
-			secret_raw,
-			nullifier_raw,
-			&leaves_raw,
-			index,
-			recipient_raw,
-			relayer_raw,
-			fee,
-			refund,
-		);
+		let (circuit, .., public_inputs_raw) = prover
+			.setup_circuit_with_privates_raw(
+				secret_raw,
+				nullifier_raw,
+				&leaves_raw,
+				index,
+				recipient_raw,
+				relayer_raw,
+				fee,
+				refund,
+			)
+			.unwrap();
 
 		let public_inputs: Vec<Bn254Fr> = public_inputs_raw
 			.iter()
 			.map(|x| Bn254Fr::from_le_bytes_mod_order(x))
 			.collect();
 
-		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(
 			res,
 			"Failed to verify Proof, here is the inputs:
@@ -462,23 +459,24 @@ mod test {
 		let nullifier_raw = nullifier.into_repr().to_bytes_le();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3, params5);
+		let prover = MixerProverSetupBn254_30::new(params3);
 
-		let (circuit, .., public_inputs_raw) = prover.setup_circuit_with_privates_raw(
-			secret_raw,
-			nullifier_raw,
-			&leaves_raw,
-			index,
-			recipient_raw,
-			relayer_raw,
-			fee,
-			refund,
-		);
+		let (circuit, .., public_inputs_raw) = prover
+			.setup_circuit_with_privates_raw(
+				secret_raw,
+				nullifier_raw,
+				&leaves_raw,
+				index,
+				recipient_raw,
+				relayer_raw,
+				fee,
+				refund,
+			)
+			.unwrap();
 
-		let (pk, vk) = setup_keys_unchecked::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove_unchecked::<Bn254, _, _>(circuit, &pk, rng);
-		let res = verify_unchecked_raw::<Bn254>(&public_inputs_raw, &vk, &proof);
+		let (pk, vk) = setup_keys_unchecked::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove_unchecked::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify_unchecked_raw::<Bn254>(&public_inputs_raw, &vk, &proof).unwrap();
 		assert!(
 			res,
 			"Failed to verify Proof, here is the inputs:
