@@ -30,10 +30,9 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 			if &prev != left_hash && &prev != right_hash {
 				panic!("Path nodes are not consistent");
 			}
-			let prev = hasher.hash_two(left_hash, right_hash)?;
+			prev = hasher.hash_two(left_hash, right_hash)?;
 		}
-        //Does a new variable called `prev` get created inside the for loop?
-		Ok(prev)
-		// Ok(F::from(1u64))
+
+        Ok(prev)
 	}
 }
