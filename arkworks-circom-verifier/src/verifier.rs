@@ -125,8 +125,8 @@ pub fn parse_public_inputs_bn254_json(json: &Value) -> Vec<BnFr> {
 }
 
 pub fn verify(public_inputs: Vec<BnFr>, vk: &[u8], proof: &[u8]) -> Result<bool, Error> {
-	let vk = VerifyingKey::<Bn254>::deserialize(vk).unwrap();
-	let proof = Proof::<Bn254>::deserialize(proof).unwrap();
+	let vk = VerifyingKey::<Bn254>::deserialize(vk)?;
+	let proof = Proof::<Bn254>::deserialize(proof)?;
 	verify_groth16(&vk, &public_inputs, &proof)
 }
 
@@ -142,6 +142,7 @@ mod test {
 	use super::*;
 	use ark_serialize::CanonicalSerialize;
 	use ark_std::fs::File;
+
 	#[test]
 	fn should_verify_proof() {
 		//let path = "./arkworks-circom-verifier/src/vanchor_circuit_final_2_2.zkey";
@@ -195,7 +196,6 @@ mod test {
 		assert!(verified.is_err());
 	}
 
-	#[should_panic(expected = "assertion failed: verified")]
 	#[test]
 	fn should_fail_with_invalid_proof() {
 		//let path = "./arkworks-circom-verifier/src/vanchor_circuit_final_2_2.zkey";
@@ -218,7 +218,7 @@ mod test {
 		VerifyingKey::<Bn254>::serialize(&params.vk, &mut pvk_serialized).unwrap();
 		let inputs = parse_public_inputs_bn254_json(&json);
 		//let verified = verify_proof(&pvk, &proof, &inputs).unwrap();
-		let verified = verify(inputs, &pvk_serialized, &proof_serialized);
-		assert!(verified.is_err());
+		let verified = verify(inputs, &pvk_serialized, &proof_serialized).unwrap();
+		assert!(!verified);
 	}
 }
