@@ -6,17 +6,8 @@ use crate::{
 	},
 };
 use ark_bn254::Fr as Bn254Fr;
-use ark_crypto_primitives::{Error, SNARK};
-use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
-use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{
-	convert::TryInto,
-	rand::{CryptoRng, RngCore},
-	rc::Rc,
-	vec::Vec,
-};
+use ark_std::{convert::TryInto, rand::RngCore, rc::Rc, vec::Vec};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
@@ -28,8 +19,7 @@ use arkworks_utils::{
 	poseidon::PoseidonParameters,
 	utils::{
 		common::{
-			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5,
-			verify_groth16, Curve,
+			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
 		},
 		keccak_256, ExtData,
 	},
@@ -396,64 +386,6 @@ impl<
 		);
 
 		circuit
-	}
-
-	pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng>(
-		circuit: VACircuit<
-			E::Fr,
-			PoseidonCRH_x5_2<E::Fr>,
-			PoseidonCRH_x5_2Gadget<E::Fr>,
-			TreeConfig_x5<E::Fr>,
-			LeafCRHGadget<E::Fr>,
-			PoseidonCRH_x5_3Gadget<E::Fr>,
-			TREE_DEPTH,
-			INS,
-			OUTS,
-			M,
-		>,
-		rng: &mut R,
-	) -> (Vec<u8>, Vec<u8>) {
-		let (pk, vk) = Groth16::<E>::circuit_specific_setup(circuit, rng).unwrap();
-
-		let mut pk_bytes = Vec::new();
-		let mut vk_bytes = Vec::new();
-		pk.serialize(&mut pk_bytes).unwrap();
-		vk.serialize(&mut vk_bytes).unwrap();
-		(pk_bytes, vk_bytes)
-	}
-
-	pub fn prove<E: PairingEngine, R: RngCore + CryptoRng>(
-		circuit: VACircuit<
-			E::Fr,
-			PoseidonCRH_x5_2<E::Fr>,
-			PoseidonCRH_x5_2Gadget<E::Fr>,
-			TreeConfig_x5<E::Fr>,
-			LeafCRHGadget<E::Fr>,
-			PoseidonCRH_x5_3Gadget<E::Fr>,
-			TREE_DEPTH,
-			INS,
-			OUTS,
-			M,
-		>,
-		pk_bytes: &[u8],
-		rng: &mut R,
-	) -> Vec<u8> {
-		let pk = ProvingKey::<E>::deserialize(pk_bytes).unwrap();
-
-		let proof = Groth16::prove(&pk, circuit, rng).unwrap();
-		let mut proof_bytes = Vec::new();
-		proof.serialize(&mut proof_bytes).unwrap();
-		proof_bytes
-	}
-
-	pub fn verify<E: PairingEngine>(
-		public_inputs: &Vec<E::Fr>,
-		vk: &[u8],
-		proof: &[u8],
-	) -> Result<bool, Error> {
-		let vk = VerifyingKey::<E>::deserialize(vk).unwrap();
-		let proof = Proof::<E>::deserialize(proof).unwrap();
-		verify_groth16(&vk, &public_inputs, &proof)
 	}
 
 	pub fn setup_keypairs<R: RngCore, const N: usize>(

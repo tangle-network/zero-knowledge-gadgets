@@ -3,20 +3,25 @@
 Gadgets and constraints written using the [arkworks](https://github.com/arkworks-rs) libraries for Webb and more.
 
 ## Gratitude
+
 We are grateful to the arkworks community for their open-source first approach to zero-knowledge infrastructure. Many of the gadgets here leverage tools that are found in other repos and that are open source. Specifically, we leverage the sparse merkle tree data structures from the [ivls](https://github.com/arkworks-rs/ivls/tree/master/src/building_blocks/mt/merkle_sparse_tree) project on incrementally verifiable computation. This work would not have been possible without that.
 
 Many thanks to the following people for help and insights in both learning and implementing these gadgets & circuits:
+
 - [@weikengchen](https://github.com/weikengchen)
 - [@Pratyush](https://github.com/Pratyush)
 
 # Overview
-This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a bridge that can be integrated into compatible blockchain and smart contract protocols. The repo is split into two main parts: the intermediate modular gadgets and the circuits that consume these gadgets.
+
+This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a anchor that can be integrated into compatible blockchain and smart contract protocols. The repo is split into two main parts: the intermediate modular gadgets and the circuits that consume these gadgets.
 
 ## Gadgets
+
 In this repo you will find gadgets for:
+
 - [x] [Poseidon hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/poseidon)
 - [x] [MiMC hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/mimc)
-- [x] [Leaf commitment construction for various leaf schemas (for mixers and bridges)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/leaf)
+- [x] [Leaf commitment construction for various leaf schemas (for mixers and anchors)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/leaf)
 - [x] [Merkle tree membership and construction](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/merkle_tree)
 - [x] [Set membership](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/set)
 - [x] [Arbitrary computation (no constraints applied)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/arbitrary)
@@ -24,39 +29,50 @@ In this repo you will find gadgets for:
 You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/basic.rs).
 
 ## Circuits
+
 In this repo you will find circuits for:
+
 - [x] [Poseidon preimage proofs](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/poseidon.rs) - using a Poseidon hash gadget
 - [x] [Mixer](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/mixer.rs) - using a hash gadget, mixer leaf commitment gadget, merkle tree membership gadget, and arbitrary computations.
-- [x] [Bridge](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/bridge.rs) - using a hash gadget, bridge leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
+- [x] [Anchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/anchor.rs) - using a hash gadget, anchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
 
 ## Setup
+
 In order to deploy zero-knowledge circuits in end applications, you have to set them up. Often times you may hear the term "trusted setup" thrown about. For the circuits implemented in this repo, we have Groth16 style setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/setup) directory. This folder contains circuit-specific setup helpers for creating your provers and verifiers for your circuits from the previous section.
 
 The circuit-specific files of the setup section contain tests and circuit definitions that instantiate circuits w/ different configurations of hash gadgets and merkle tree gadgets. This is the primary place where one fixes the exact instantiations of a specific circuit.
 
 Each application-specific file in `src/setup` encapsulates the full-setup of a zero-knowledge gadget's prover and verifier. There are currently application-specific gadgets for:
+
 - zero-knowledge mixers
-- zero-knowledge bridges
+- zero-knowledge anchors
 
 For tests and instantiations of the gadgets used to compose each of these larger scale application gadgets, refer to the individual directories and their tests. Most all of the tests and implementations in this repo use Groth16 proofs and setups for the zero-knowledge gadgets. Occasionally Marlin zkSNARKs are used for intermediate gadget tests. There are no application-specific instantiations of gadgets that use Marlin however, but pull requests are welcome to create them.
 
 ### Provers
+
 Provers for these zero-knowledge gadgets are meant to be used by client or server applications. These are compute intensive and require access to random number generators.
 
 ### Verifiers
+
 Verifiers for these zero-knowledge gadgets are meant to be used by client, server, or blockchain applications. These verifiers are WASM compatible and can be embedded in WASM friendly environments like blockchains that allow smart contracts which are written in Rust. The APIs are consistent across a particular proving system such as Groth16 and are straightforward to integrate into blockchain runtimes such as [Substrate](https://github.com/paritytech/substrate).
 
 # Circuits
+
 ## Mixer
+
 The mixer gadget is built to be deployed on Rust based blockchain protocols. The motivation is that there will be an on-chain merkle tree & escrow system where users must deposit assets into in order to insert a leaf into the merkle tree. This is considered a **deposit** into the mixer. Next, the user can generate a zero-knowledge proof of membership of a leaf in the merkle tree by instantiating a Mixer circuit, populating it with the leaves on-chain, providing private and public inputs locally to the helper utilities generated from our API, and subsequently generating a zero-knowledge proof. They can then submit this proof on-chain to an on-chain verifier. This is considered a **withdrawal** from the mixer. We provide an example instantiation of the mixer circuit setup, proof process, and proof verification process below. But first, we remark on the structure of the mixer in order to illuminate some of our design decisions.
 
 Any instantiation of a zero-knowledge mixer circuit requires that all data provided is formatted as expected. What this means is that there is a specific structure of data that must be provided to the prover. This extends as far down to the preimage of the leaves such that if data does not adhere to the expected format or protocol then it will be impossible to generate compatible zero-knowledge proofs for on-chain verification for such proofs.
 
 ### Leaf structure
+
 The structure of our leaves must be the hash of 3 random field elements from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/leaf/mixer/constraints.rs).
 
 ### Public input structure
+
 The structure of public inputs must be the ordered array of the following data taken from Tornado Cash's design & architecture.
+
 1. Recipient
 2. Relayer
 3. Fee
@@ -65,6 +81,7 @@ The structure of public inputs must be the ordered array of the following data t
 You can find more details about the arbitrary data structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
 
 These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
+
 - For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipient.
 - For an on-chain cryptocurrency mixer, we must provide a private transaction relaying service that the user decides a priori. This is the purpose of the relayer.
 - For a given relayer, a fee may be asked to be paid on behalf of relaying the private transaction. This is the purpose of the fee.
@@ -73,9 +90,13 @@ These parameters are provided to zero-knowledge proofs as public inputs and are 
 It's worth mentioning that all inputs provided to the zero-knowledge proof generation bind the proof to those inputs. This helps prevent tampering if for example a user wants to change the recipient after proof generation. If the public inputs change for a proof submitted on-chain, the proof will fail with the underlying security of the zkSNARK. We leverage this design to provide the right incentives for users and relayers of the end application, an on-chain cryptocurrency mixer.
 
 # Usage
+
 ## Creating a Mixer w/ Poseidon using exponentiation 5
+
 For example, we might be interested in creating a mixer circuit and generating zero-knowledge proofs of membership for leaves we've inserted into the mixer's underlying merkle tree. In order to do so we will have to instantiate the individual gadgets, supply them to a Mixer circuit, and generate the trusted setup parameters for a Groth16 style proof.
+
 ### Defining our interfaces and structs
+
 ```rust
 /// import all dependencies...
 
@@ -154,7 +175,9 @@ pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	N,
 >;
 ```
+
 ### Instantiating helpers and prover/verifiers
+
 ```rust
 /// This macro generates setup functions for creating leaf commitments
 /// compatible with the Poseidon w/ exponentiation 5 and width 5 hasher.
@@ -195,7 +218,9 @@ impl_setup_mixer_circuit!(
 /// to generate proofs and verify proofs from our zero-knowledge circuit.
 impl_groth16_api_wrappers!(circuit: Circuit_x5);
 ```
+
 ### Putting it all together
+
 ```rust
 /// With the generated functionality we can now create example circuits and
 /// generate zero-knowledge proofs against them. We show an example below.
@@ -234,4 +259,5 @@ let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
 ```
 
 ## Parameter generation
+
 Parameter for the sage [script](https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon).

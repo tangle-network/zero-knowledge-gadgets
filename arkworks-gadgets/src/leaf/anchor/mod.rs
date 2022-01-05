@@ -22,6 +22,14 @@ impl<F: PrimeField> Private<F> {
 	pub fn new(secret: F, nullifier: F) -> Self {
 		Self { secret, nullifier }
 	}
+
+	pub fn secret(&self) -> F {
+		self.secret
+	}
+
+	pub fn nullifier(&self) -> F {
+		self.nullifier
+	}
 }
 
 #[derive(Default, Clone)]
@@ -36,12 +44,12 @@ impl<F: PrimeField> Public<F> {
 }
 
 #[derive(Clone)]
-pub struct BridgeLeaf<F: PrimeField, H: CRH> {
+pub struct AnchorLeaf<F: PrimeField, H: CRH> {
 	field: PhantomData<F>,
 	hasher: PhantomData<H>,
 }
 
-impl<F: PrimeField, H: CRH> BridgeLeaf<F, H> {
+impl<F: PrimeField, H: CRH> AnchorLeaf<F, H> {
 	pub fn create_leaf(
 		private: &Private<F>,
 		public: &Public<F>,
@@ -69,9 +77,9 @@ mod test {
 
 	type PoseidonCRH5 = CRH<Fq>;
 
-	type Leaf = BridgeLeaf<Fq, PoseidonCRH5>;
+	type Leaf = AnchorLeaf<Fq, PoseidonCRH5>;
 	#[test]
-	fn should_crate_bridge_leaf() {
+	fn should_crate_anchor_leaf() {
 		let rng = &mut test_rng();
 		let curve = arkworks_utils::utils::common::Curve::Bls381;
 
