@@ -22,14 +22,14 @@ use arkworks_utils::{
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 
-pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_4<F>>;
+pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_3<F>>;
 
-pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_4<F>, PoseidonCRH_x5_4Gadget<F>>;
+pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_3<F>, PoseidonCRH_x5_3Gadget<F>>;
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
-	PoseidonCRH_x5_4<F>,
-	PoseidonCRH_x5_4Gadget<F>,
+	PoseidonCRH_x5_3<F>,
+	PoseidonCRH_x5_3Gadget<F>,
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x5_3Gadget<F>,
@@ -89,12 +89,12 @@ pub fn setup_leaf_x5_3<F: PrimeField, R: RngCore>(
 pub fn setup_leaf_with_privates_raw_x5_3<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
-	nullfier_bytes: Vec<u8>,
+	nullifier_bytes: Vec<u8>,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
 	let params5 = setup_params_x5_3::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
-	let nullifier = F::from_le_bytes_mod_order(&nullfier_bytes);
+	let nullifier = F::from_le_bytes_mod_order(&nullifier_bytes);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::new(secret, nullifier);
 
@@ -109,7 +109,7 @@ pub fn setup_leaf_with_privates_raw_x5_3<F: PrimeField>(
 pub const LEN: usize = 30;
 type MixerProverSetupBn254_30<F> = MixerProverSetup<F, LEN>;
 
-pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
+pub fn setup_proof_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	secret_raw: Vec<u8>,
 	nullifier_raw: Vec<u8>,
@@ -148,7 +148,7 @@ pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	))
 }
 
-pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
+pub fn setup_keys_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	rng: &mut R,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
@@ -238,10 +238,10 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 	pub fn setup_leaf_with_privates(
 		&self,
 		secret: F,
-		nullfier: F,
+		nullifier: F,
 	) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
-		let leaf_private = LeafPrivate::new(secret, nullfier);
+		let leaf_private = LeafPrivate::new(secret, nullifier);
 
 		// Creating the leaf
 		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params3)?;
@@ -252,11 +252,11 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 	pub fn setup_leaf_with_privates_raw(
 		&self,
 		secret: Vec<u8>,
-		nullfier: Vec<u8>,
+		nullifier: Vec<u8>,
 	) -> Result<(LeafPrivate<F>, F, F), Error> {
 		// Secret inputs for the leaf
 		let secret_f = F::from_le_bytes_mod_order(&secret);
-		let nullifier_f = F::from_le_bytes_mod_order(&nullfier);
+		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
 
 		self.setup_leaf_with_privates(secret_f, nullifier_f)
 	}
