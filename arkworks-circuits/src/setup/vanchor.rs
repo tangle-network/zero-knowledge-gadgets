@@ -502,7 +502,7 @@ impl<
 
 			let signature = keypairs[i].signature(&leaf, &index, &self.params4).unwrap();
 
-			let nullfier = Leaf::<F, PoseidonCRH_x5_4<F>>::create_nullifier(
+			let nullifier = Leaf::<F, PoseidonCRH_x5_4<F>>::create_nullifier(
 				&signature,
 				&leaf,
 				&self.params4,
@@ -511,7 +511,7 @@ impl<
 			.unwrap();
 
 			leaves.push(leaf);
-			nullifiers.push(nullfier);
+			nullifiers.push(nullifier);
 			private_inputs.push(private_input);
 			public_inputs.push(public_input);
 		}
