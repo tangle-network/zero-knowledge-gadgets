@@ -3,8 +3,7 @@ use ark_std::collections::BTreeMap;
 use crate::poseidon::field_hasher::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use super::{parent, left_child, right_child, tree_height};
-use ark_std::Zero;
+use super::{parent, left_child, right_child, tree_height, sibling, is_root, is_left_child};
 
 // Path
 #[derive(Clone)]
@@ -97,7 +96,6 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
     pub fn new(
         leaves: &BTreeMap<u32, F>,
         hasher: &H,
-        height: u64,
         empty_leaf: [u8; 32], 
     ) -> Result<Self, Error> {
         let last_level_size = leaves.len().next_power_of_two();
@@ -114,20 +112,68 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
             empty_hashes,
             _marker: PhantomData
         };
+        smt.insert_batch(leaves, hasher)?;
 
         Ok(smt)
     }
     
-    // pub fn new_sequential(
-    //     leaves: &[F],
-    //     hasher: &H,
-    // ) -> Result<Self, Error>;
+    pub fn new_sequential(
+        leaves: &[F],
+        hasher: &H,
+        empty_leaf: [u8; 32],
+    ) -> Result<Self, Error>{
+        let pairs: BTreeMap<u32, F> = leaves
+            .iter()
+            .enumerate()
+            .map(|(i, l)| (i as u32, l.clone()))
+            .collect();
+        let smt = Self::new(&pairs, hasher, empty_leaf)?;
+
+        Ok(smt)
+    }
     
     pub fn root(&self) -> F {
         F::from(1u64)
     }
     
-    // pub fn generate_membership_proof(&self, index: u64) -> Path<F, H, N>;
+    pub fn generate_membership_proof(&self, index: u64) -> Path<F, H, N> {
+        let mut path = [ (F::zero(), F::zero()) ; N];
+
+        let tree_index = convert_index_to_last_level(index, N);
+
+        // Iterate from the leaf up to the root, storing all intermediate hash values.
+		let mut current_node = tree_index;
+		let mut level = 0;
+		while !is_root(current_node) {
+			let sibling_node = sibling(current_node).unwrap();
+
+			let empty_hash = &self.empty_hashes[level];
+
+			let current = self
+				.tree
+				.get(&current_node)
+				.cloned()
+				.unwrap_or_else(|| empty_hash.clone());
+			let sibling = self
+				.tree
+				.get(&sibling_node)
+				.cloned()
+				.unwrap_or_else(|| empty_hash.clone());
+
+			if is_left_child(current_node) {
+				path[level] = (current, sibling);
+			} else {
+				path[level] = (sibling, current);
+			}
+			current_node = parent(current_node).unwrap();
+			level += 1;
+		}
+
+        Path {
+            path: path,
+            _marker: PhantomData,
+        }
+    }
 }
 
 pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
@@ -145,4 +191,8 @@ pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
     }
 
     Ok(empty_hashes)
+}
+
+fn convert_index_to_last_level(index: u64, height: usize) -> u64 {
+    index + (1u64 << height) - 1
 }
