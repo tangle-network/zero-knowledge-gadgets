@@ -246,37 +246,6 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 	}
 
 	#[allow(clippy::too_many_arguments)]
-	pub fn setup_circuit<R: Rng>(
-		self,
-		leaves: &[F],
-		index: u64,
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
-		rng: &mut R,
-	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
-		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
-		let (leaf_private, leaf, nullifier_hash) = self.setup_leaf(rng)?;
-		let mut leaves_new = leaves.to_vec();
-		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index)?;
-		let root = tree.root().inner();
-
-		let mc = Circuit_x5::new(
-			arbitrary_input,
-			leaf_private,
-			self.params3,
-			path,
-			root,
-			nullifier_hash,
-		);
-		let public_inputs =
-			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
-		Ok((mc, leaf, nullifier_hash, root, public_inputs))
-	}
-
-	#[allow(clippy::too_many_arguments)]
 	pub fn setup_circuit_with_privates(
 		self,
 		secret: F,
@@ -291,9 +260,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
 		let (leaf_private, leaf, nullifier_hash) =
 			self.setup_leaf_with_privates(secret, nullifier)?;
-		let mut leaves_new = leaves.to_vec();
-		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_new, index)?;
+		let (tree, path) = self.setup_tree_and_create_path(&leaves, index)?;
 		let root = tree.root().inner();
 
 		let mc = Circuit_x5::new(
@@ -364,13 +331,20 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		self,
 		rng: &mut R,
 	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
-		let leaves = Vec::new();
-		let index = 0;
 		let recipient = F::rand(rng);
 		let relayer = F::rand(rng);
 		let fee = F::rand(rng);
 		let refund = F::rand(rng);
-		self.setup_circuit(&leaves, index, recipient, relayer, fee, refund, rng)
+
+		let (leaf_privates, leaf_hash, ..) = self.setup_leaf(rng).unwrap();
+		let secret = leaf_privates.secret();
+		let nullifier = leaf_privates.nullifier();
+		let leaves = vec![leaf_hash];
+		let index = 0;
+
+		self.setup_circuit_with_privates(
+			secret, nullifier, &leaves, index, recipient, relayer, fee, refund,
+		)
 	}
 
 	pub fn create_circuit(
