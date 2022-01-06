@@ -15,19 +15,19 @@ use arkworks_gadgets::{
 };
 use arkworks_utils::{
 	poseidon::PoseidonParameters,
-	utils::common::{setup_params_x5_3, Curve},
+	utils::common::{setup_params_x5_3, setup_params_x5_5, Curve},
 };
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 
-pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_3<F>>;
+pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
 
-pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_3<F>, PoseidonCRH_x5_3Gadget<F>>;
+pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>>;
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
-	PoseidonCRH_x5_3<F>,
-	PoseidonCRH_x5_3Gadget<F>,
+	PoseidonCRH_x5_5<F>,
+	PoseidonCRH_x5_5Gadget<F>,
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x5_3Gadget<F>,
@@ -60,16 +60,16 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 	N,
 >;
 
-pub fn setup_leaf_x5_3<F: PrimeField, R: RngCore>(
+pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
 	curve: Curve,
 	rng: &mut R,
 ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error> {
-	let params3 = setup_params_x5_3::<F>(curve);
+	let params5 = setup_params_x5_5::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
 
-	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params3)?;
-	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params3)?;
+	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &params5)?;
+	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5)?;
 
 	let secret_bytes = leaf_private.secret().into_repr().to_bytes_le();
 	let nullifier_bytes = leaf_private.nullifier().into_repr().to_bytes_le();
@@ -84,12 +84,12 @@ pub fn setup_leaf_x5_3<F: PrimeField, R: RngCore>(
 	))
 }
 
-pub fn setup_leaf_with_privates_raw_x5_3<F: PrimeField>(
+pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullifier_bytes: Vec<u8>,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
-	let params5 = setup_params_x5_3::<F>(curve);
+	let params5 = setup_params_x5_5::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
 	let nullifier = F::from_le_bytes_mod_order(&nullifier_bytes);
@@ -107,7 +107,7 @@ pub fn setup_leaf_with_privates_raw_x5_3<F: PrimeField>(
 pub const LEN: usize = 30;
 type MixerProverSetupBn254_30<F> = MixerProverSetup<F, LEN>;
 
-pub fn setup_proof_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
+pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	secret_raw: Vec<u8>,
 	nullifier_raw: Vec<u8>,
@@ -121,7 +121,8 @@ pub fn setup_proof_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 	rng: &mut R,
 ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
-	let prover = MixerProverSetupBn254_30::new(params3);
+	let params5 = setup_params_x5_5::<E::Fr>(curve);
+	let prover = MixerProverSetupBn254_30::new(params3, params5);
 
 	let (circuit, leaf_raw, nullifier_hash_raw, root_raw, public_inputs_raw) = prover
 		.setup_circuit_with_privates_raw(
@@ -146,12 +147,13 @@ pub fn setup_proof_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 	))
 }
 
-pub fn setup_keys_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
+pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	rng: &mut R,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
-	let prover = MixerProverSetupBn254_30::new(params3);
+	let params5 = setup_params_x5_5::<E::Fr>(curve);
+	let prover = MixerProverSetupBn254_30::new(params3, params5);
 
 	let (circuit, ..) = prover.setup_random_circuit(rng)?;
 
@@ -162,11 +164,12 @@ pub fn setup_keys_x5_3<E: PairingEngine, R: RngCore + CryptoRng>(
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
 	params3: PoseidonParameters<F>,
+	params5: PoseidonParameters<F>,
 }
 
 impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
-	pub fn new(params3: PoseidonParameters<F>) -> Self {
-		Self { params3 }
+	pub fn new(params3: PoseidonParameters<F>, params5: PoseidonParameters<F>) -> Self {
+		Self { params3, params5 }
 	}
 
 	pub fn setup_arbitrary_data(
@@ -214,8 +217,8 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let leaf_private = LeafPrivate::generate(rng);
 
 		// Creating the leaf
-		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params3)?;
-		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params3)?;
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5)?;
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5)?;
 		Ok((leaf_private, leaf_hash, nullifier_hash))
 	}
 
@@ -228,8 +231,8 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let leaf_private = LeafPrivate::new(secret, nullifier);
 
 		// Creating the leaf
-		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params3)?;
-		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params3)?;
+		let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &self.params5)?;
+		let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &self.params5)?;
 		Ok((leaf_private, leaf_hash, nullifier_hash))
 	}
 
@@ -266,7 +269,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let mc = Circuit_x5::new(
 			arbitrary_input,
 			leaf_private,
-			self.params3,
+			self.params5,
 			path,
 			root,
 			nullifier_hash,
@@ -358,7 +361,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let mc = Circuit_x5::new(
 			arbitrary_input,
 			leaf_private,
-			self.params3,
+			self.params5,
 			path,
 			root,
 			nullifier_hash,

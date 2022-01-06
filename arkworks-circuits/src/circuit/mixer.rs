@@ -162,7 +162,7 @@ mod test {
 	use ark_serialize::CanonicalDeserialize;
 	use ark_snark::SNARK;
 	use ark_std::{test_rng, vec::Vec, One, Zero};
-	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5, Curve};
 
 	// merkle proof path legth
 	// TreeConfig_x5, x7 HEIGHT is hardcoded to 30
@@ -174,7 +174,8 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 		let (circuit, .., public_inputs) = prover.setup_random_circuit(rng).unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
@@ -194,7 +195,8 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
 		let (leaf_privates, leaf_hash, ..) = prover.setup_leaf(rng).unwrap();
 		let secret = leaf_privates.secret();
@@ -235,7 +237,8 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
 		let (leaf_privates, leaf_hash, ..) = prover.setup_leaf(rng).unwrap();
 		let secret = leaf_privates.secret();
@@ -270,7 +273,8 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 
 		let arbitrary_input =
@@ -312,7 +316,8 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 		let (leaf_private, _, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 		let leaf = Bn254Fr::rand(rng);
 
@@ -355,7 +360,8 @@ mod test {
 		let refund = Bn254Fr::zero();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 
 		// Invalid nullifier
@@ -403,7 +409,8 @@ mod test {
 		let relayer_raw = relayer.into_repr().to_bytes_le();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
 		let (leaf_privates, leaf_hash, ..) = prover.setup_leaf(rng).unwrap();
 		let secret = leaf_privates.secret();
@@ -463,7 +470,8 @@ mod test {
 		let relayer_raw = relayer.into_repr().to_bytes_le();
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-		let prover = MixerProverSetupBn254_30::new(params3);
+		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+		let prover = MixerProverSetupBn254_30::new(params3, params5);
 
 		let (leaf_privates, leaf_hash, ..) = prover.setup_leaf(rng).unwrap();
 		let secret = leaf_privates.secret();
