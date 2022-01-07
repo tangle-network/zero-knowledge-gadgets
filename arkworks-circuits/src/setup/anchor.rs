@@ -437,16 +437,7 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 		let index = 0;
 
 		self.setup_circuit_with_privates(
-			chain_id,
-			secret,
-			nullifier,
-			&leaves,
-			index,
-			&roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
+			chain_id, secret, nullifier, &leaves, index, &roots, recipient, relayer, fee, refund,
 			commitment,
 		)
 	}
