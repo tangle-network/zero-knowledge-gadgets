@@ -422,16 +422,23 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 		rng: &mut R,
 	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>), Error> {
 		let chain_id = F::rand(rng);
-		let leaves = Vec::new();
-		let index = 0;
+
 		let roots = Vec::new();
 		let recipient = F::rand(rng);
 		let relayer = F::rand(rng);
 		let fee = F::rand(rng);
 		let refund = F::rand(rng);
 		let commitment = F::rand(rng);
-		self.setup_circuit(
-			chain_id, &leaves, index, &roots, recipient, relayer, fee, refund, commitment, rng,
+
+		let (leaf_privates, leaf_public, leaf_hash, ..) = self.setup_leaf(chain_id, rng).unwrap();
+		let secret = leaf_privates.secret();
+		let nullifier = leaf_privates.nullifier();
+		let leaves = vec![leaf_hash];
+		let index = 0;
+
+		self.setup_circuit_with_privates(
+			chain_id, secret, nullifier, &leaves, index, &roots, recipient, relayer, fee, refund,
+			commitment,
 		)
 	}
 
