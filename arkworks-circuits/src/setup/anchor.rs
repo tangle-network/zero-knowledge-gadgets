@@ -375,7 +375,6 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
 			self.setup_leaf_with_privates(chain_id, secret, nullifier)?;
 		let mut leaves_new = leaves.to_vec();
-		leaves_new.push(leaf);
 		let (tree, path) = self.setup_tree_and_path(&leaves_new, index)?;
 		let root = tree.root().inner();
 		let mut roots_new: [F; M] = [F::default(); M];
