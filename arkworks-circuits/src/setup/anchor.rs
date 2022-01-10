@@ -113,7 +113,7 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 
 pub const N: usize = 30;
 pub const M: usize = 2;
-type AnchorProverSetupBn254_30<F> = AnchorProverSetup<F, N, M>;
+pub type AnchorProverSetupBn254_30<F> = AnchorProverSetup<F, M, N>;
 
 pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
@@ -181,7 +181,7 @@ pub struct AnchorProverSetup<F: PrimeField, const M: usize, const N: usize> {
 	params4: PoseidonParameters<F>,
 }
 
-impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
+impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 	pub fn new(params3: PoseidonParameters<F>, params4: PoseidonParameters<F>) -> Self {
 		Self { params3, params4 }
 	}
@@ -374,9 +374,7 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
 			self.setup_leaf_with_privates(chain_id, secret, nullifier)?;
-		let mut leaves_new = leaves.to_vec();
-		leaves_new.push(leaf);
-		let (tree, path) = self.setup_tree_and_path(&leaves_new, index)?;
+		let (tree, path) = self.setup_tree_and_path(&leaves, index)?;
 		let root = tree.root().inner();
 		let mut roots_new: [F; M] = [F::default(); M];
 		roots_new[0] = root;
@@ -430,7 +428,7 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 		let refund = F::rand(rng);
 		let commitment = F::rand(rng);
 
-		let (leaf_privates, leaf_public, leaf_hash, ..) = self.setup_leaf(chain_id, rng).unwrap();
+		let (leaf_privates, _leaf_public, leaf_hash, ..) = self.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_privates.secret();
 		let nullifier = leaf_privates.nullifier();
 		let leaves = vec![leaf_hash];
