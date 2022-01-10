@@ -206,7 +206,7 @@ mod test {
     use arkworks_utils::utils::common::{Curve, setup_params_x5_3};
     use crate::poseidon::field_hasher::{Poseidon, FieldHasher};
 
-    type BLSHash = FieldHasher<Fq>;
+    type BLSHash = Poseidon<Fq>;
 
     //helper to change leaves array to BTreeMap and then create SMT (?)
     fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
@@ -223,19 +223,19 @@ mod test {
 		smt
 	}
 
-fn should_create_tree_poseidon() {
-    let rng = &mut test_rng();
-    let curve = Curve::Bls381;
+    fn should_create_tree_poseidon() {
+        let rng = &mut test_rng();
+        let curve = Curve::Bls381;
 
-    let params = setup_params_x5_3(curve);
-    let poseidon = Poseidon{params};
+        let params = setup_params_x5_3(curve);
+        // Or
+        // let poseidon = Poseidon::new(params);
+        let poseidon = BLSHash::new(params);
 
-    let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
-    const HEIGHT: usize = 3;
-    let smt = create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon, &leaves);
+        let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+        const HEIGHT: usize = 3;
+        let smt = create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon, &leaves);
 
-    // let root = smt.root();
-    
-
-}
+        // let root = smt.root();
+    }
 }
