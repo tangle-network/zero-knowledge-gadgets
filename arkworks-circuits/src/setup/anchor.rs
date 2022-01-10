@@ -374,8 +374,7 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
 			self.setup_leaf_with_privates(chain_id, secret, nullifier)?;
-		let mut leaves_new = leaves.to_vec();
-		let (tree, path) = self.setup_tree_and_path(&leaves_new, index)?;
+		let (tree, path) = self.setup_tree_and_path(&leaves, index)?;
 		let root = tree.root().inner();
 		let mut roots_new: [F; M] = [F::default(); M];
 		roots_new[0] = root;
@@ -429,7 +428,7 @@ impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
 		let refund = F::rand(rng);
 		let commitment = F::rand(rng);
 
-		let (leaf_privates, leaf_public, leaf_hash, ..) = self.setup_leaf(chain_id, rng).unwrap();
+		let (leaf_privates, _leaf_public, leaf_hash, ..) = self.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_privates.secret();
 		let nullifier = leaf_privates.nullifier();
 		let leaves = vec![leaf_hash];
