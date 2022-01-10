@@ -181,7 +181,7 @@ pub struct AnchorProverSetup<F: PrimeField, const M: usize, const N: usize> {
 	params4: PoseidonParameters<F>,
 }
 
-impl<F: PrimeField, const N: usize, const M: usize> AnchorProverSetup<F, M, N> {
+impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 	pub fn new(params3: PoseidonParameters<F>, params4: PoseidonParameters<F>) -> Self {
 		Self { params3, params4 }
 	}
