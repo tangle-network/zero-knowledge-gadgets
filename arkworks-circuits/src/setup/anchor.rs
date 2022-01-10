@@ -113,7 +113,7 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 
 pub const N: usize = 30;
 pub const M: usize = 2;
-type AnchorProverSetupBn254_30<F> = AnchorProverSetup<F, N, M>;
+pub type AnchorProverSetupBn254_30<F> = AnchorProverSetup<F, M, N>;
 
 pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
