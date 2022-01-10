@@ -133,7 +133,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
     }
     
     pub fn root(&self) -> F {
-        F::from(1u64)
+        self.tree.get(&0).cloned().unwrap()
     }
     
     pub fn generate_membership_proof(&self, index: u64) -> Path<F, H, N> {
@@ -195,4 +195,47 @@ pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 
 fn convert_index_to_last_level(index: u64, height: usize) -> u64 {
     index + (1u64 << height) - 1
+}
+
+mod test {
+    use super::{gen_empty_hashes, SparseMerkleTree};
+    use ark_bls12_381::Fq;
+    use ark_std::test_rng;
+    use ark_std::collections::BTreeMap;
+    use ark_ff::{UniformRand, PrimeField};
+    use arkworks_utils::utils::common::{Curve, setup_params_x5_3};
+    use crate::poseidon::field_hasher::{Poseidon, FieldHasher};
+
+    type BLSHash = FieldHasher<Fq>;
+
+    //helper to change leaves array to BTreeMap and then create SMT (?)
+    fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
+        hasher : H,
+		leaves: &[F],
+	) -> SparseMerkleTree<F, H, N> {
+		let pairs: BTreeMap<u32, F> = leaves
+			.iter()
+			.enumerate()
+			.map(|(i, l)| (i as u32, *l))
+			.collect();
+		let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, [0u8; 32]).unwrap();
+
+		smt
+	}
+
+fn should_create_tree_poseidon() {
+    let rng = &mut test_rng();
+    let curve = Curve::Bls381;
+
+    let params = setup_params_x5_3(curve);
+    let poseidon = Poseidon{params};
+
+    let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+    const HEIGHT: usize = 3;
+    let smt = create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon, &leaves);
+
+    // let root = smt.root();
+    
+
+}
 }
