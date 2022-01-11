@@ -67,9 +67,9 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 }
 
 // Merkle sparse tree
-// The D parameter was intended to be a [u8; 32] array, but these are not
-// allowable as constant generics.  So now D represents the length of that array
-// and I will assume all entries would have be
+// We wanted the "default" or "empty" leaf to be specified as a constant in
+// the struct's trait bounds but arrays are not allowed as constants.  Instead
+// all constructor functions take in a default/empty leaf argument.  
 pub struct SparseMerkleTree<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	/// data of the tree
 	pub tree: BTreeMap<u64, F>,
