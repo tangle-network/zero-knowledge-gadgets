@@ -1,22 +1,23 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_ff::PrimeField;
 use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
 use plonk::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
 
 #[derive(Debug, Default)]
-struct SetMembershipCircuit<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
-	pub roots: Vec<E::Fr>,
-	pub target: E::Fr,
+struct SetMembershipCircuit<F: PrimeField, P: TEModelParameters<BaseField = F>> {
+	pub roots: Vec<F>,
+	pub target: F,
 	pub _te: PhantomData<P>,
 }
 
-impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
-	for SetMembershipCircuit<E, P>
+impl<F: PrimeField, P: TEModelParameters<BaseField = F>> Circuit<F, P>
+	for SetMembershipCircuit<F, P>
 {
 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
-	fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
+	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
 		let roots: Vec<Variable> = self.roots.iter().map(|x| composer.add_input(*x)).collect();
 		let target = composer.add_input(self.target);
 
@@ -24,15 +25,15 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> Circuit<E, P>
 		for x in roots {
 			let diff = composer.arithmetic_gate(|gate| {
 				gate.witness(target, x, None)
-					.add(-E::Fr::one(), E::Fr::one())
+					.add(-F::one(), F::one())
 			});
 			diffs.push(diff);
 		}
 
-		let mut sum = composer.add_input(E::Fr::one());
+		let mut sum = composer.add_input(F::one());
 
 		for diff in diffs {
-			sum = composer.arithmetic_gate(|gate| gate.witness(sum, diff, None).mul(E::Fr::one()));
+			sum = composer.arithmetic_gate(|gate| gate.witness(sum, diff, None).mul(F::one()));
 		}
 
 		composer.assert_equal(sum, composer.zero_var());
@@ -53,8 +54,8 @@ mod tests {
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{
-		kzg10::{self, Powers, KZG10},
-		sonic_pc::SonicKZG10,
+		kzg10::{Powers, KZG10, VerifierKey},
+		sonic_pc::{SonicKZG10},
 		PolynomialCommitment,
 	};
 	use ark_std::test_rng;
@@ -63,7 +64,7 @@ mod tests {
 	pub(crate) fn gadget_tester<
 		E: PairingEngine,
 		P: TEModelParameters<BaseField = E::Fr>,
-		C: Circuit<E, P>,
+		C: Circuit<E::Fr, P>,
 	>(
 		circuit: &mut C,
 		n: usize,
@@ -74,7 +75,7 @@ mod tests {
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
-			let mut prover = Prover::new(b"demo");
+			let mut prover  = Prover::new(b"demo");
 
 			// Additionally key the transcript
 			prover.key_transcript(b"key", b"additional seed information");
@@ -95,7 +96,7 @@ mod tests {
 				powers_of_gamma_g: ck.powers_of_gamma_g.into(),
 			};
 			// Preprocess circuit
-			prover.preprocess(&powers)?;
+			prover.preprocess(&ck)?;
 
 			// Once the prove method is called, the public inputs are cleared
 			// So pre-fetch these before calling Prove
@@ -103,7 +104,7 @@ mod tests {
 			//? let lookup_table = prover.mut_cs().lookup_table.clone();
 
 			// Compute Proof
-			(prover.prove(&powers)?, public_inputs)
+			(prover.prove(&ck)?, public_inputs)
 		};
 		// Verifiers view
 		//
@@ -129,7 +130,7 @@ mod tests {
 			powers_of_gamma_g: sonic_ck.powers_of_gamma_g.into(),
 		};
 
-		let vk = kzg10::VerifierKey {
+		let vk = VerifierKey::<E> {
 			g: sonic_vk.g,
 			gamma_g: sonic_vk.gamma_g,
 			h: sonic_vk.h,
@@ -150,7 +151,7 @@ mod tests {
 	fn test_verify_set_membership() {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		let target = Fq::from(2u32);
-		let mut circuit = SetMembershipCircuit::<Bn254, JubjubParameters> {
+		let mut circuit = SetMembershipCircuit::<Fq, JubjubParameters> {
 			roots,
 			target,
 			_te: PhantomData,
@@ -166,7 +167,7 @@ mod tests {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		// Not in the set
 		let target = Fq::from(4u32);
-		let mut circuit = SetMembershipCircuit::<Bn254, JubjubParameters> {
+		let mut circuit = SetMembershipCircuit::<Fq, JubjubParameters> {
 			roots,
 			target,
 			_te: PhantomData,

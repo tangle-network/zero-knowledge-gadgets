@@ -27,30 +27,30 @@ struct PoseidonGadget {
 	pub params: PoseidonParametersVar,
 }
 
-trait FieldHasherGadget<F: PrimeField, E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> {
+trait FieldHasherGadget<F: PrimeField, P: TEModelParameters<BaseField = F>> {
 	type Native: Debug + Clone;
 
 	// For easy conversion from native version
-	fn from_native(composer: &mut StandardComposer<E, P>, native: Self::Native) -> Self;
+	fn from_native(composer: &mut StandardComposer<F, P>, native: Self::Native) -> Self;
 	fn hash(
 		&self,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 		inputs: &[Variable],
 	) -> Result<Variable, Error>;
 	fn hash_two(
 		&self,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 		left: &Variable,
 		right: &Variable,
 	) -> Result<Variable, Error>;
 }
 
-impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadget<E::Fr, E, P>
+impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 	for PoseidonGadget
 {
-	type Native = Poseidon<E::Fr>;
+	type Native = Poseidon<F>;
 
-	fn from_native(composer: &mut StandardComposer<E, P>, native: Self::Native) -> Self {
+	fn from_native(composer: &mut StandardComposer<F, P>, native: Self::Native) -> Self {
 		// Add native parameters to composer and store variables:
 		let mut round_keys_var = vec![];
 		for key in native.params.round_keys {
@@ -80,7 +80,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 
 	fn hash(
 		&self,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 		inputs: &[Variable],
 	) -> Result<Variable, Error> {
 		// Casting params to usize
@@ -107,7 +107,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 				let c_temp = self.params.round_keys[(r * width + i)];
 				*a = composer.arithmetic_gate(|gate| {
 					gate.witness(*a, c_temp, None)
-						.add(E::Fr::one(), E::Fr::one())
+						.add(F::one(), F::one())
 				});
 			});
 
@@ -134,12 +134,12 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 							let m = &self.params.mds_matrix[i][j];
 
 							let mul_result = composer.arithmetic_gate(|gate| {
-								gate.witness(*a, *m, None).mul(E::Fr::one())
+								gate.witness(*a, *m, None).mul(F::one())
 							});
 
 							let add_result = composer.arithmetic_gate(|gate| {
 								gate.witness(acc, mul_result, None)
-									.add(E::Fr::one(), E::Fr::one())
+									.add(F::one(), F::one())
 							});
 
 							add_result
@@ -154,7 +154,7 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 
 	fn hash_two(
 		&self,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 		left: &Variable,
 		right: &Variable,
 	) -> Result<Variable, Error> {
@@ -169,15 +169,16 @@ mod tests {
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::kzg10::{UniversalParams, KZG10};
+	use ark_poly_commit::kzg10::{UniversalParams};
+	use ark_poly_commit::sonic_pc::{SonicKZG10};
 	use ark_std::{test_rng, One};
 	use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 	use arkworks_utils::{
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
 		utils::common::setup_params_x5_3,
 	};
+	use ark_poly_commit::PolynomialCommitment;
 	use plonk::{
-		circuit::{self, FeIntoPubInput},
 		prelude::*,
 	};
 
@@ -185,25 +186,25 @@ mod tests {
 
 	// Use it in a circuit
 	struct TestCircuit<
-		E: PairingEngine,
-		P: TEModelParameters<BaseField = E::Fr>,
-		HG: FieldHasherGadget<E::Fr, E, P>,
+		F: PrimeField,
+		P: TEModelParameters<BaseField = F>,
+		HG: FieldHasherGadget<F, P>,
 	> {
-		left: E::Fr,
-		right: E::Fr,
-		expected: E::Fr,
+		left: F,
+		right: F,
+		expected: F,
 		hasher: HG::Native,
 	}
 
 	impl<
-			E: PairingEngine,
-			P: TEModelParameters<BaseField = E::Fr>,
-			HG: FieldHasherGadget<E::Fr, E, P>,
-		> Circuit<E, P> for TestCircuit<E, P, HG>
+			F: PrimeField,
+			P: TEModelParameters<BaseField = F>,
+			HG: FieldHasherGadget<F, P>,
+		> Circuit<F, P> for TestCircuit<F, P, HG>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
-		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
+		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
 			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
 			let left_var = composer.add_input(self.left);
@@ -241,7 +242,7 @@ mod tests {
 		let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
 
 		// Create the circuit
-		let mut test_circuit = TestCircuit::<Bn254, JubjubParameters, PoseidonGadget> {
+		let mut test_circuit = TestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget> {
 			left,
 			right,
 			expected,
@@ -250,9 +251,9 @@ mod tests {
 
 		let rng = &mut test_rng();
 		let u_params: UniversalParams<Bn254> =
-			KZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, false, rng).unwrap();
+		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
+		let (pk, vd) = test_circuit.compile::<SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>>(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit
@@ -260,11 +261,11 @@ mod tests {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<JubjubParameters>> = vec![expected.into_pi()];
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![PublicInputValue::<Bn254Fr>::from(expected)];
 
 		let VerifierData { key, pi_pos } = vd;
 
-		circuit::verify_proof(
+		circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
 			key,
 			&proof,
