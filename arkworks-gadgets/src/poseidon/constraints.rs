@@ -128,10 +128,8 @@ impl<F: PrimeField> CRHGadgetTrait<CRH<F>, F> for CRHGadget<F> {
 			);
 		}
 
-		let mut buffer = vec![FpVar::zero()];
-		for f in f_var_inputs {
-			buffer.push(f);
-		}
+		let mut buffer = vec![FpVar::zero(); parameters.width as usize];
+		buffer.iter_mut().skip(1).zip(f_var_inputs).for_each(|(a, b)| *a = b);
 		let result = Self::permute(parameters, buffer);
 
 		result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
