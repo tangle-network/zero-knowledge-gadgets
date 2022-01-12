@@ -114,7 +114,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(())
 	}
 
-	pub fn new(leaves: &BTreeMap<u32, F>, hasher: &H, empty_leaf: [u8; 32]) -> Result<Self, Error> {
+	pub fn new(leaves: &BTreeMap<u32, F>, hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		// Ensure the tree can hold this many leaves
 		let last_level_size = leaves.len().next_power_of_two();
 		let tree_size = 2 * last_level_size - 1;
@@ -135,7 +135,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(smt)
 	}
 
-	pub fn new_sequential(leaves: &[F], hasher: &H, empty_leaf: [u8; 32]) -> Result<Self, Error> {
+	pub fn new_sequential(leaves: &[F], hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		let pairs: BTreeMap<u32, F> = leaves
 			.iter()
 			.enumerate()
@@ -198,11 +198,11 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 
 pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 	hasher: &H,
-	default_leaf: [u8; 32],
+	default_leaf: &[u8],
 ) -> Result<[F; N], Error> {
 	let mut empty_hashes = [F::zero(); N];
 
-	let mut empty_hash = hasher.hash(&[F::from_le_bytes_mod_order(&default_leaf)])?;
+	let mut empty_hash = hasher.hash(&[F::from_le_bytes_mod_order(default_leaf)])?;
 	empty_hashes[0] = empty_hash;
 
 	for i in 1..N {
@@ -232,14 +232,14 @@ mod test {
 	fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 		hasher: H,
 		leaves: &[F],
-		default_leaf: &[u8; 32],
+		default_leaf: &[u8],
 	) -> SparseMerkleTree<F, H, N> {
 		let pairs: BTreeMap<u32, F> = leaves
 			.iter()
 			.enumerate()
 			.map(|(i, l)| (i as u32, *l))
 			.collect();
-		let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, *default_leaf).unwrap();
+		let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, default_leaf).unwrap();
 
 		smt
 	}
@@ -260,7 +260,7 @@ mod test {
 		let root = smt.root();
 
 		let empty_hashes =
-			gen_empty_hashes::<Fq, BLSHash, HEIGHT>(&poseidon, default_leaf).unwrap();
+			gen_empty_hashes::<Fq, BLSHash, HEIGHT>(&poseidon, &default_leaf).unwrap();
 		let hash1 = leaves[0];
 		let hash2 = leaves[1];
 		let hash3 = leaves[2];
@@ -319,4 +319,81 @@ mod test {
 
 		assert_eq!(res, desired_res);
 	}
+
+	// Backwards-compatibility tests:
+	use crate::poseidon::CRH as PoseidonCRH;
+	use ark_crypto_primitives::crh::CRH;
+	use ark_ff::{ToBytes};
+	use ark_std::rc::Rc;
+	use crate::merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree};
+
+	type SMTCRH = PoseidonCRH<Fq>;
+
+	#[derive(Clone, Debug, Eq, PartialEq)]
+	struct SMTConfig;
+	impl Config for SMTConfig {
+		type H = SMTCRH;
+		type LeafH = SMTCRH;
+
+		const HEIGHT: u8 = 3;
+	}
+
+	// Helper function to create a Merkle tree in the old way:
+	fn create_old_merkle_tree<L: Default + ToBytes + Copy, C: Config>(
+		inner_params: Rc<<C::H as CRH>::Parameters>,
+		leaf_params: Rc<<C::LeafH as CRH>::Parameters>,
+		leaves: &[L],
+	) -> OldSparseMerkleTree<C> {
+		let pairs: BTreeMap<u32, L> = leaves
+			.iter()
+			.enumerate()
+			.map(|(i, l)| (i as u32, *l))
+			.collect();
+		let smt = OldSparseMerkleTree::<C>::new(inner_params, leaf_params, &pairs).unwrap();
+
+		smt
+	}
+
+	#[test]
+	fn should_create_trees_with_same_root_poseidon() {
+		// Common to both
+		let rng = &mut test_rng();
+		let curve = Curve::Bls381;
+
+		let params = setup_params_x5_3(curve);
+
+		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+
+		// Specific to old method
+		let inner_params = Rc::new(params.clone());
+		let leaf_params = inner_params.clone();
+
+		let old_smt= create_old_merkle_tree::<Fq, SMTConfig>(inner_params.clone(), leaf_params.clone(), &leaves.to_vec());
+
+		let old_root = old_smt.root().inner();
+
+		// Specific to new method
+		let poseidon = Poseidon::new(params);
+		let default_leaf = [0u8; 32]; // what's used as old empty leaf? Looks empty: INPUT_SIZE_BITS / 8 = 0 ?
+		const HEIGHT: usize = 3;
+		// hash leaves before constructing tree b/c old implementation does too:
+		// can this be done with map() or something instead of for loop?
+		let mut hashed_leaves = [Fq::from(0u64); 3];
+		for i in 0..3 {
+			hashed_leaves[i] = poseidon.hash(&[leaves[i]]).unwrap();
+		}
+		let smt =
+			create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon.clone(), &hashed_leaves, &default_leaf);
+
+		let root = smt.root();
+
+		assert_eq!(root, old_root);
+
+		//fails: potential reasons are
+		// - old way hashes leaves before adding to tree
+		// - default leaf values may not match
+
+	}
+
+
 }
