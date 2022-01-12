@@ -91,10 +91,9 @@ fn synthesize_exp3_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 	input_var: &Variable,
 	composer: &mut StandardComposer<F, P>,
 ) -> Result<Variable, Error> {
-	let sqr = composer
-		.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
-	let cube =
-		composer.arithmetic_gate(|gate| gate.witness(sqr, *input_var, None).mul(F::one()));
+	let sqr =
+		composer.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
+	let cube = composer.arithmetic_gate(|gate| gate.witness(sqr, *input_var, None).mul(F::one()));
 	Ok(cube)
 }
 
@@ -103,8 +102,8 @@ fn synthesize_exp5_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 	input_var: &Variable,
 	composer: &mut StandardComposer<F, P>,
 ) -> Result<Variable, Error> {
-	let sqr = composer
-		.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
+	let sqr =
+		composer.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
 	let fourth = composer.arithmetic_gate(|gate| gate.witness(sqr, sqr, None).mul(F::one()));
 	let fifth =
 		composer.arithmetic_gate(|gate| gate.witness(fourth, *input_var, None).mul(F::one()));
@@ -116,14 +115,12 @@ fn synthesize_exp17_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 	input_var: &Variable,
 	composer: &mut StandardComposer<F, P>,
 ) -> Result<Variable, Error> {
-	let sqr = composer
-		.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
+	let sqr =
+		composer.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
 	let fourth = composer.arithmetic_gate(|gate| gate.witness(sqr, sqr, None).mul(F::one()));
-	let eigth =
-		composer.arithmetic_gate(|gate| gate.witness(fourth, fourth, None).mul(F::one()));
-	let sixteenth =
-		composer.arithmetic_gate(|gate| gate.witness(eigth, eigth, None).mul(F::one()));
-	let seventeenth = composer
-		.arithmetic_gate(|gate| gate.witness(sixteenth, *input_var, None).mul(F::one()));
+	let eigth = composer.arithmetic_gate(|gate| gate.witness(fourth, fourth, None).mul(F::one()));
+	let sixteenth = composer.arithmetic_gate(|gate| gate.witness(eigth, eigth, None).mul(F::one()));
+	let seventeenth =
+		composer.arithmetic_gate(|gate| gate.witness(sixteenth, *input_var, None).mul(F::one()));
 	Ok(seventeenth)
 }

@@ -23,10 +23,8 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> Circuit<F, P>
 
 		let mut diffs = Vec::new();
 		for x in roots {
-			let diff = composer.arithmetic_gate(|gate| {
-				gate.witness(target, x, None)
-					.add(-F::one(), F::one())
-			});
+			let diff = composer
+				.arithmetic_gate(|gate| gate.witness(target, x, None).add(-F::one(), F::one()));
 			diffs.push(diff);
 		}
 
@@ -51,14 +49,10 @@ mod tests {
 	//copied from ark-plonk
 	use super::*;
 	use ark_bn254::Bn254;
+	use ark_ec::{models::TEModelParameters, PairingEngine};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{
-		kzg10::{KZG10},
-		sonic_pc::{SonicKZG10},
-		PolynomialCommitment,
-	};
-	use ark_ec::{models::TEModelParameters, PairingEngine};
+	use ark_poly_commit::{kzg10::KZG10, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::test_rng;
 	use plonk::proof_system::{Prover, Verifier};
 
@@ -76,7 +70,11 @@ mod tests {
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
-			let mut prover: Prover<E::Fr, P, SonicKZG10<E, DensePolynomial<<E as PairingEngine>::Fr>>>  = Prover::new(b"demo");
+			let mut prover: Prover<
+				E::Fr,
+				P,
+				SonicKZG10<E, DensePolynomial<<E as PairingEngine>::Fr>>,
+			> = Prover::new(b"demo");
 
 			// Additionally key the transcript
 			prover.key_transcript(b"key", b"additional seed information");

@@ -105,10 +105,8 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c_temp = self.params.round_keys[(r * width + i)];
-				*a = composer.arithmetic_gate(|gate| {
-					gate.witness(*a, c_temp, None)
-						.add(F::one(), F::one())
-				});
+				*a = composer
+					.arithmetic_gate(|gate| gate.witness(*a, c_temp, None).add(F::one(), F::one()));
 			});
 
 			let half_rounds = full_rounds / 2;
@@ -133,13 +131,11 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 						.fold(composer.zero_var(), |acc, (j, a)| {
 							let m = &self.params.mds_matrix[i][j];
 
-							let mul_result = composer.arithmetic_gate(|gate| {
-								gate.witness(*a, *m, None).mul(F::one())
-							});
+							let mul_result = composer
+								.arithmetic_gate(|gate| gate.witness(*a, *m, None).mul(F::one()));
 
 							let add_result = composer.arithmetic_gate(|gate| {
-								gate.witness(acc, mul_result, None)
-									.add(F::one(), F::one())
+								gate.witness(acc, mul_result, None).add(F::one(), F::one())
 							});
 
 							add_result
@@ -169,18 +165,14 @@ mod tests {
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::kzg10::{UniversalParams};
-	use ark_poly_commit::sonic_pc::{SonicKZG10};
+	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::{test_rng, One};
 	use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 	use arkworks_utils::{
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
 		utils::common::setup_params_x5_3,
 	};
-	use ark_poly_commit::PolynomialCommitment;
-	use plonk::{
-		prelude::*,
-	};
+	use plonk::prelude::*;
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 
@@ -196,11 +188,8 @@ mod tests {
 		hasher: HG::Native,
 	}
 
-	impl<
-			F: PrimeField,
-			P: TEModelParameters<BaseField = F>,
-			HG: FieldHasherGadget<F, P>,
-		> Circuit<F, P> for TestCircuit<F, P, HG>
+	impl<F: PrimeField, P: TEModelParameters<BaseField = F>, HG: FieldHasherGadget<F, P>>
+		Circuit<F, P> for TestCircuit<F, P, HG>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
@@ -251,9 +240,11 @@ mod tests {
 
 		let rng = &mut test_rng();
 		let u_params: UniversalParams<Bn254> =
-		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, None, rng).unwrap();
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit.compile::<SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>>(&u_params).unwrap();
+		let (pk, vd) = test_circuit
+			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.unwrap();
 
 		// PROVER
 		let proof = test_circuit
@@ -261,7 +252,8 @@ mod tests {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![PublicInputValue::<Bn254Fr>::from(expected)];
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> =
+			vec![PublicInputValue::<Bn254Fr>::from(expected)];
 
 		let VerifierData { key, pi_pos } = vd;
 
