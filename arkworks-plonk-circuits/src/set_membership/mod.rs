@@ -1,6 +1,6 @@
-use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
-use ark_std::{marker::PhantomData, vec::Vec, One, Zero};
+use ark_std::{marker::PhantomData, vec::Vec};
 use plonk::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
@@ -54,10 +54,11 @@ mod tests {
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{
-		kzg10::{Powers, KZG10, VerifierKey},
+		kzg10::{KZG10},
 		sonic_pc::{SonicKZG10},
 		PolynomialCommitment,
 	};
+	use ark_ec::{models::TEModelParameters, PairingEngine};
 	use ark_std::test_rng;
 	use plonk::proof_system::{Prover, Verifier};
 
@@ -75,7 +76,7 @@ mod tests {
 		// Provers View
 		let (proof, public_inputs) = {
 			// Create a prover struct
-			let mut prover  = Prover::new(b"demo");
+			let mut prover: Prover<E::Fr, P, SonicKZG10<E, DensePolynomial<<E as PairingEngine>::Fr>>>  = Prover::new(b"demo");
 
 			// Additionally key the transcript
 			prover.key_transcript(b"key", b"additional seed information");
@@ -91,10 +92,6 @@ mod tests {
 				None,
 			)
 			.unwrap();
-			let powers = Powers {
-				powers_of_g: ck.powers_of_g.into(),
-				powers_of_gamma_g: ck.powers_of_gamma_g.into(),
-			};
 			// Preprocess circuit
 			prover.preprocess(&ck)?;
 
@@ -125,29 +122,15 @@ mod tests {
 			None,
 		)
 		.unwrap();
-		let powers = Powers {
-			powers_of_g: sonic_ck.powers_of_g.into(),
-			powers_of_gamma_g: sonic_ck.powers_of_gamma_g.into(),
-		};
-
-		let vk = VerifierKey::<E> {
-			g: sonic_vk.g,
-			gamma_g: sonic_vk.gamma_g,
-			h: sonic_vk.h,
-			beta_h: sonic_vk.beta_h,
-			prepared_h: sonic_vk.prepared_h,
-			prepared_beta_h: sonic_vk.prepared_beta_h,
-		};
 
 		// Preprocess circuit
-		verifier.preprocess(&powers)?;
+		verifier.preprocess(&sonic_ck)?;
 
 		// Verify proof
-		Ok(verifier.verify(&proof, &vk, &public_inputs)?)
+		Ok(verifier.verify(&proof, &sonic_vk, &public_inputs)?)
 	}
 
 	#[test]
-	#[ignore]
 	fn test_verify_set_membership() {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		let target = Fq::from(2u32);
@@ -157,12 +140,11 @@ mod tests {
 			_te: PhantomData,
 		};
 
-		let res = gadget_tester(&mut circuit, 2000);
+		let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut circuit, 2000);
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 
 	#[test]
-	#[ignore]
 	fn test_fail_to_verify_invalid_set_membership() {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		// Not in the set
@@ -173,7 +155,7 @@ mod tests {
 			_te: PhantomData,
 		};
 
-		let res = gadget_tester(&mut circuit, 2000);
+		let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut circuit, 2000);
 		assert!(res.is_err());
 	}
 }
