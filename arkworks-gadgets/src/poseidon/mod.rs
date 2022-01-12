@@ -50,7 +50,9 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 	type Output = F;
 	type Parameters = PoseidonParameters<F>;
 
-	const INPUT_SIZE_BITS: usize = 0; // F::BigInt::NUM_LIMBS * 8 * params.widh * 8;
+	const INPUT_SIZE_BITS: usize = 0;
+
+	// F::BigInt::NUM_LIMBS * 8 * params.widh * 8;
 
 	fn setup<R: Rng>(_rng: &mut R) -> Result<Self::Parameters, Error> {
 		unreachable!("PoseidonParameters are already precomuted.");
@@ -69,7 +71,11 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 		}
 
 		let mut buffer = vec![F::zero(); parameters.width as usize];
-		buffer.iter_mut().skip(1).zip(f_inputs).for_each(|(a, b)| *a = b);
+		buffer
+			.iter_mut()
+			.skip(1)
+			.zip(f_inputs)
+			.for_each(|(a, b)| *a = b);
 		let result = Self::permute(parameters, buffer)?;
 
 		end_timer!(eval_time);

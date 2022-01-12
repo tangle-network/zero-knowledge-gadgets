@@ -321,11 +321,13 @@ mod test {
 	}
 
 	// Backwards-compatibility tests:
-	use crate::poseidon::CRH as PoseidonCRH;
+	use crate::{
+		merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree},
+		poseidon::CRH as PoseidonCRH,
+	};
 	use ark_crypto_primitives::crh::CRH;
-	use ark_ff::{ToBytes};
+	use ark_ff::ToBytes;
 	use ark_std::rc::Rc;
-	use crate::merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree};
 
 	type SMTCRH = PoseidonCRH<Fq>;
 
@@ -368,7 +370,11 @@ mod test {
 		let inner_params = Rc::new(params.clone());
 		let leaf_params = inner_params.clone();
 
-		let old_smt= create_old_merkle_tree::<Fq, SMTConfig>(inner_params.clone(), leaf_params.clone(), &leaves.to_vec());
+		let old_smt = create_old_merkle_tree::<Fq, SMTConfig>(
+			inner_params.clone(),
+			leaf_params.clone(),
+			&leaves.to_vec(),
+		);
 
 		let old_root = old_smt.root().inner();
 
@@ -382,8 +388,11 @@ mod test {
 		for i in 0..3 {
 			hashed_leaves[i] = poseidon.hash(&[leaves[i]]).unwrap();
 		}
-		let smt =
-			create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon.clone(), &hashed_leaves, &default_leaf);
+		let smt = create_merkle_tree::<Fq, BLSHash, HEIGHT>(
+			poseidon.clone(),
+			&hashed_leaves,
+			&default_leaf,
+		);
 
 		let root = smt.root();
 
@@ -392,8 +401,5 @@ mod test {
 		//fails: potential reasons are
 		// - old way hashes leaves before adding to tree
 		// - default leaf values may not match
-
 	}
-
-
 }
