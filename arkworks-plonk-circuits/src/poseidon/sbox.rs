@@ -1,6 +1,5 @@
-use ark_ec::{AffineCurve, PairingEngine, TEModelParameters};
-use ark_ff::Field;
-use ark_std::{One, Zero};
+use ark_ec::{PairingEngine, TEModelParameters};
+use ark_ff::{Field, PrimeField};
 use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 #[derive(Debug)]
@@ -62,69 +61,66 @@ impl PoseidonSbox {
 }
 
 pub trait SboxConstraints {
-	fn synthesize_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+	fn synthesize_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 		&self,
 		input: &Variable,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 	) -> Result<Variable, Error>;
 }
 
 impl SboxConstraints for PoseidonSbox {
-	fn synthesize_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+	fn synthesize_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 		&self,
 		input_var: &Variable,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 	) -> Result<Variable, Error> {
 		match self {
 			PoseidonSbox::Exponentiation(val) => match val {
-				3 => synthesize_exp3_sbox::<E, P>(input_var, composer),
-				5 => synthesize_exp5_sbox::<E, P>(input_var, composer),
-				17 => synthesize_exp17_sbox::<E, P>(input_var, composer),
-				_ => synthesize_exp3_sbox::<E, P>(input_var, composer),
+				3 => synthesize_exp3_sbox::<F, P>(input_var, composer),
+				5 => synthesize_exp5_sbox::<F, P>(input_var, composer),
+				17 => synthesize_exp17_sbox::<F, P>(input_var, composer),
+				_ => synthesize_exp3_sbox::<F, P>(input_var, composer),
 			},
-			_ => synthesize_exp3_sbox::<E, P>(input_var, composer),
+			_ => synthesize_exp3_sbox::<F, P>(input_var, composer),
 		}
 	}
 }
 
 // Allocate variables in circuit and enforce constraints when Sbox as cube
-fn synthesize_exp3_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+fn synthesize_exp3_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 	input_var: &Variable,
-	composer: &mut StandardComposer<E, P>,
+	composer: &mut StandardComposer<F, P>,
 ) -> Result<Variable, Error> {
-	let sqr = composer
-		.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(E::Fr::one()));
-	let cube =
-		composer.arithmetic_gate(|gate| gate.witness(sqr, *input_var, None).mul(E::Fr::one()));
+	let sqr =
+		composer.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
+	let cube = composer.arithmetic_gate(|gate| gate.witness(sqr, *input_var, None).mul(F::one()));
 	Ok(cube)
 }
 
 // Allocate variables in circuit and enforce constraints when Sbox as cube
-fn synthesize_exp5_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+fn synthesize_exp5_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 	input_var: &Variable,
-	composer: &mut StandardComposer<E, P>,
+	composer: &mut StandardComposer<F, P>,
 ) -> Result<Variable, Error> {
-	let sqr = composer
-		.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(E::Fr::one()));
-	let fourth = composer.arithmetic_gate(|gate| gate.witness(sqr, sqr, None).mul(E::Fr::one()));
+	let sqr =
+		composer.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
+	let fourth = composer.arithmetic_gate(|gate| gate.witness(sqr, sqr, None).mul(F::one()));
 	let fifth =
-		composer.arithmetic_gate(|gate| gate.witness(fourth, *input_var, None).mul(E::Fr::one()));
+		composer.arithmetic_gate(|gate| gate.witness(fourth, *input_var, None).mul(F::one()));
 	Ok(fifth)
 }
 
 // Allocate variables in circuit and enforce constraints when Sbox as cube
-fn synthesize_exp17_sbox<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+fn synthesize_exp17_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(
 	input_var: &Variable,
-	composer: &mut StandardComposer<E, P>,
+	composer: &mut StandardComposer<F, P>,
 ) -> Result<Variable, Error> {
-	let sqr = composer
-		.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(E::Fr::one()));
-	let fourth = composer.arithmetic_gate(|gate| gate.witness(sqr, sqr, None).mul(E::Fr::one()));
-	let eigth =
-		composer.arithmetic_gate(|gate| gate.witness(fourth, fourth, None).mul(E::Fr::one()));
-	let sixteenth =
-		composer.arithmetic_gate(|gate| gate.witness(eigth, eigth, None).mul(E::Fr::one()));
-	let seventeenth = composer
-		.arithmetic_gate(|gate| gate.witness(sixteenth, *input_var, None).mul(E::Fr::one()));
+	let sqr =
+		composer.arithmetic_gate(|gate| gate.witness(*input_var, *input_var, None).mul(F::one()));
+	let fourth = composer.arithmetic_gate(|gate| gate.witness(sqr, sqr, None).mul(F::one()));
+	let eigth = composer.arithmetic_gate(|gate| gate.witness(fourth, fourth, None).mul(F::one()));
+	let sixteenth = composer.arithmetic_gate(|gate| gate.witness(eigth, eigth, None).mul(F::one()));
+	let seventeenth =
+		composer.arithmetic_gate(|gate| gate.witness(sixteenth, *input_var, None).mul(F::one()));
 	Ok(seventeenth)
 }
