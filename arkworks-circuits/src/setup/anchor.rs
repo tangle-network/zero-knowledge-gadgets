@@ -59,15 +59,15 @@ pub type Circuit_x17<F, const N: usize, const M: usize> = AnchorCircuit<
 
 pub fn setup_leaf_x5_4<F: PrimeField, R: RngCore>(
 	curve: Curve,
-	chain_id_bytes: Vec<u8>,
+	chain_id: u128,
 	rng: &mut R,
 ) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error> {
 	let params5 = setup_params_x5_4::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
 
-	let chain_id = F::from_le_bytes_mod_order(&chain_id_bytes);
-	let leaf_public = LeafPublic::new(chain_id);
+	let chain_id_f = F::from(chain_id);
+	let leaf_public = LeafPublic::new(chain_id_f);
 
 	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &leaf_public, &params5)?;
 	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5)?;
@@ -90,7 +90,7 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
-	chain_id_bytes: Vec<u8>,
+	chain_id: u128,
 ) -> Result<(Vec<u8>, Vec<u8>), Error> {
 	let params5 = setup_params_x5_4::<F>(curve);
 
@@ -99,8 +99,8 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::new(secret, nullifier);
 
-	let chain_id = F::from_le_bytes_mod_order(&chain_id_bytes);
-	let leaf_public = LeafPublic::new(chain_id);
+	let chain_id_f = F::from(chain_id);
+	let leaf_public = LeafPublic::new(chain_id_f);
 
 	let leaf_hash = Leaf_x5::create_leaf(&leaf_private, &leaf_public, &params5)?;
 	let nullifier_hash = Leaf_x5::create_nullifier(&leaf_private, &params5)?;
@@ -117,7 +117,7 @@ pub type AnchorProverSetupBn254_30<F> = AnchorProverSetup<F, M, N>;
 
 pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
-	chain_id: Vec<u8>,
+	chain_id: u128,
 	secret_raw: Vec<u8>,
 	nullifier_raw: Vec<u8>,
 	leaves_raw: Vec<Vec<u8>>,
@@ -130,12 +130,22 @@ pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	refund: u128,
 	pk: Vec<u8>,
 	rng: &mut R,
-) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
+) -> Result<
+	(
+		Vec<u8>,
+		Vec<u8>,
+		Vec<u8>,
+		Vec<u8>,
+		Vec<Vec<u8>>,
+		Vec<Vec<u8>>,
+	),
+	Error,
+> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params4 = setup_params_x5_4::<E::Fr>(curve);
 	let prover = AnchorProverSetupBn254_30::new(params3, params4);
 
-	let (circuit, leaf_raw, nullifier_hash_raw, root_raw, public_inputs_raw) = prover
+	let (circuit, leaf_raw, nullifier_hash_raw, root_raw, roots_raw, public_inputs_raw) = prover
 		.setup_circuit_with_privates_raw(
 			chain_id,
 			secret_raw,
@@ -157,6 +167,7 @@ pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 		leaf_raw,
 		nullifier_hash_raw,
 		root_raw,
+		roots_raw,
 		public_inputs_raw,
 	))
 }
@@ -308,7 +319,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		refund: F,
 		commitment: F,
 		rng: &mut R,
-	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>), Error> {
+	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>, Vec<F>), Error> {
 		let arbitrary_input =
 			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) = self.setup_leaf(chain_id, rng)?;
@@ -352,7 +363,14 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			commitment,
 		);
 
-		Ok((mc, leaf, nullifier_hash, root, public_inputs))
+		Ok((
+			mc,
+			leaf,
+			nullifier_hash,
+			root,
+			roots_new.to_vec(),
+			public_inputs,
+		))
 	}
 
 	#[allow(clippy::too_many_arguments)]
@@ -369,7 +387,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		fee: F,
 		refund: F,
 		commitment: F,
-	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>), Error> {
+	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>, Vec<F>), Error> {
 		let arbitrary_input =
 			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
@@ -412,13 +430,20 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			commitment,
 		);
 
-		Ok((mc, leaf, nullifier_hash, root, public_inputs))
+		Ok((
+			mc,
+			leaf,
+			nullifier_hash,
+			root,
+			roots_new.to_vec(),
+			public_inputs,
+		))
 	}
 
 	pub fn setup_random_circuit<R: Rng>(
 		self,
 		rng: &mut R,
-	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>), Error> {
+	) -> Result<(Circuit_x5<F, N, M>, F, F, F, Vec<F>, Vec<F>), Error> {
 		let chain_id = F::rand(rng);
 
 		let roots = Vec::new();
@@ -442,7 +467,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 
 	pub fn setup_circuit_with_privates_raw(
 		self,
-		chain_id: Vec<u8>,
+		chain_id: u128,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
 		leaves: Vec<Vec<u8>>,
@@ -453,8 +478,18 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		commitment: Vec<u8>,
 		fee: u128,
 		refund: u128,
-	) -> Result<(Circuit_x5<F, N, M>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
-		let chain_id_f = F::from_le_bytes_mod_order(&chain_id);
+	) -> Result<
+		(
+			Circuit_x5<F, N, M>,
+			Vec<u8>,
+			Vec<u8>,
+			Vec<u8>,
+			Vec<Vec<u8>>,
+			Vec<Vec<u8>>,
+		),
+		Error,
+	> {
+		let chain_id_f = F::from(chain_id);
 		let secret_f = F::from_le_bytes_mod_order(&secret);
 		let nullifier_f = F::from_le_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<F> = leaves
@@ -471,23 +506,25 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		let fee_f = F::from(fee);
 		let refund_f = F::from(refund);
 
-		let (mc, leaf, nullifier_hash, root, public_inputs) = self.setup_circuit_with_privates(
-			chain_id_f,
-			secret_f,
-			nullifier_f,
-			&leaves_f,
-			index,
-			&roots_f,
-			recipient_f,
-			relayer_f,
-			fee_f,
-			refund_f,
-			commitment_f,
-		)?;
+		let (mc, leaf, nullifier_hash, root, roots, public_inputs) = self
+			.setup_circuit_with_privates(
+				chain_id_f,
+				secret_f,
+				nullifier_f,
+				&leaves_f,
+				index,
+				&roots_f,
+				recipient_f,
+				relayer_f,
+				fee_f,
+				refund_f,
+				commitment_f,
+			)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();
 		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_le();
 		let root_raw = root.into_repr().to_bytes_le();
+		let roots_raw = roots.iter().map(|x| x.into_repr().to_bytes_le()).collect();
 		let public_inputs_raw: Vec<Vec<u8>> = public_inputs
 			.iter()
 			.map(|x| x.into_repr().to_bytes_le())
@@ -498,6 +535,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			leaf_raw,
 			nullifier_hash_raw,
 			root_raw,
+			roots_raw,
 			public_inputs_raw,
 		))
 	}
