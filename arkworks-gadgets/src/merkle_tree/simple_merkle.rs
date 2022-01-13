@@ -403,6 +403,9 @@ mod test {
 		assert_eq!(root, old_root);
 	}
 
+	use ark_bn254::Fq as Bn254Fq;
+	type SMTCRHBn254 = PoseidonCRH<Bn254Fq>;
+
 	#[test]
 	fn compare_with_solidity_empty_hashes() {
 		// These are taken from protocol-solidity/contracts/trees/MerkleTreePoseidon.sol
@@ -440,31 +443,35 @@ mod test {
 			"0x1f15585f8947e378bcf8bd918716799da909acdb944c57150b1eb4565fda8aa0",
 			"0x1eb064b21055ac6a350cf41eb30e4ce2cb19680217df3a243617c2838185ad06",
 		];
-		let res: Vec<Fq> = parse_vec(solidity_empty_hashes_hex);
+		let res: Vec<Bn254Fq> = parse_vec(solidity_empty_hashes_hex);
 
 		// Empty hashes generated here:
-		let curve = Curve::Bls381;
-		let params = setup_params_x5_3::<Fq>(curve);
-		let poseidon = Poseidon::new(params.clone());
+		let curve = Curve::Bn254;
+		let params = setup_params_x5_3::<Bn254Fq>(curve);
+		let poseidon = Poseidon::<Bn254Fq>::new(params.clone());
 
 		let default_leaf_hex = vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
-		let default_leaf_scalar: Vec<Fq> = parse_vec(default_leaf_hex);
+		let default_leaf_scalar: Vec<Bn254Fq> = parse_vec(default_leaf_hex);
 		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_le();
 		println!("The length of the default leaf byte le representation is {:?}", default_leaf_vec.len());
 		let mut default_leaf = [0u8; 64];
 		for i in 0..default_leaf_vec.len() {
 			default_leaf[i] = default_leaf_vec[i];
 		}
-		let empty_hashes = gen_empty_hashes::<_, _, 32usize>(&poseidon, &default_leaf).unwrap();
+		let empty_hashes = gen_empty_hashes::<Bn254Fq, _, 32usize>(&poseidon, &default_leaf).unwrap();
 
 		println!("The solidity empty hashes: {:?}", res);
 		println!("The current empty hashes: {:?}", empty_hashes);
 
-		println!("Check to see if 1st level hashing is done same:");
-		// Old hash implementation
-		// Specific to old method
+		// println!("Check to see if 1st level hashing is done same:");
+		// // Old hash implementation
+		// // Specific to old method
 
-		let level_one_old_way = <SMTCRH as TwoToOneCRH>::evaluate(&params, &default_leaf.to_vec(), &default_leaf.to_vec()).unwrap();
+		println!("The default leaf I'm feeding in is {:?}", default_leaf);
+		println!("and the to_vec version of it is {:?}", default_leaf.to_vec());
+		println!("and it's the same as above: {:?}", default_leaf_vec);
+
+		let level_one_old_way = <SMTCRHBn254 as TwoToOneCRH>::evaluate(&params, &default_leaf_vec, &default_leaf_vec).unwrap();
 		let level_one_new_way = poseidon.hash_two(&default_leaf_scalar[0], &default_leaf_scalar[0]).unwrap();
 		println!("The old way came up with {:?} at level 1", level_one_old_way);
 		println!("The new way came up with {:?} at level 1", level_one_new_way);
