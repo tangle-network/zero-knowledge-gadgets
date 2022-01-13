@@ -42,10 +42,24 @@ pub fn get_hash_params<F: PrimeField>(
 	)
 }
 
+fn setup_utxos_with_privates_x5<F: PrimeField>(
+	curve: Curve,
+	chain_ids: [u128; 2],
+	amounts: [u128; 2],
+	private_keys: [Vec<u8>; 2],
+	blindings: [Vec<u8>; 2],
+) -> Result<Vec<Utxo<F>>, Error> {
+	let (params2, params3, params4, params5) = get_hash_params::<F>(curve);
+	let vanchor = VAnchorProver2x2::new(params2, params3, params4, params5);
+	vanchor.new_utxos_with_privates_raw(chain_ids, amounts, private_keys, blindings)
+}
+
+fn setup_proof_x5<F: PrimeField>(curve: Curve) -> Vec<u8> {
+	Vec::new()
+}
+
 #[derive(Clone)]
 pub struct Utxo<F: PrimeField> {
-	pub chain_id: F,
-	pub amount: F,
 	pub keypair: Keypair<F, PoseidonCRH_x5_2<F>>,
 	pub leaf_private: LeafPrivateInput<F>,
 	pub leaf_public: LeafPublicInput<F>,
@@ -99,15 +113,42 @@ impl<
 
 		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng)?;
+			self.setup_leaves(chain_ids_f, amounts_f, keypairs.clone(), rng)?;
 
 		let utxos: Vec<Utxo<F>> = (0..N)
 			.map(|i| Utxo {
-				chain_id: chain_ids_f[i],
-				amount: amounts_f[i],
 				keypair: keypairs[i].clone(),
 				leaf_private: leaf_privates[i].clone(),
 				leaf_public: leaf_publics[i].clone(),
+				nullifier: nullifiers[i],
+				commitment: commitments[i],
+			})
+			.collect();
+
+		Ok(utxos)
+	}
+
+	pub fn new_utxos_with_privates_raw<const N: usize>(
+		&self,
+		chain_ids: [u128; N],
+		amounts: [u128; N],
+		private_keys: [Vec<u8>; N],
+		blindings: [Vec<u8>; N],
+	) -> Result<Vec<Utxo<F>>, Error> {
+		let chain_ids_f = chain_ids.map(|x| F::from(x));
+		let amounts_f = amounts.map(|x| F::from(x));
+		let private_keys_f = private_keys.map(|x| F::from_le_bytes_mod_order(&x));
+		let blindings_f = blindings.map(|x| F::from_le_bytes_mod_order(&x));
+
+		let keypairs = Self::setup_keypairs_with_private_keys::<N>(private_keys_f);
+		let (commitments, nullifiers, leaf_privates, leaf_publics) =
+			self.setup_leaves_with_privates(chain_ids_f, amounts_f, keypairs.clone(), blindings_f)?;
+
+		let utxos: Vec<Utxo<F>> = (0..N)
+			.map(|i| Utxo {
+				keypair: keypairs[i].clone(),
+				leaf_private: leaf_privates[i],
+				leaf_public: leaf_publics[i],
 				nullifier: nullifiers[i],
 				commitment: commitments[i],
 			})
@@ -124,15 +165,13 @@ impl<
 	) -> Result<Vec<Utxo<F>>, Error> {
 		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng)?;
+			self.setup_leaves(chain_ids_f, amounts_f, keypairs.clone(), rng)?;
 
 		let utxos: Vec<Utxo<F>> = (0..N)
 			.map(|i| Utxo {
-				chain_id: chain_ids_f[i],
-				amount: amounts_f[i],
 				keypair: keypairs[i].clone(),
-				leaf_private: leaf_privates[i].clone(),
-				leaf_public: leaf_publics[i].clone(),
+				leaf_private: leaf_privates[i],
+				leaf_public: leaf_publics[i],
 				nullifier: nullifiers[i],
 				commitment: commitments[i],
 			})
@@ -417,11 +456,17 @@ impl<
 		[(); N].map(|_| Keypair::<_, PoseidonCRH_x5_2<F>>::new(F::rand(rng)))
 	}
 
+	pub fn setup_keypairs_with_private_keys<const N: usize>(
+		private_keys: [F; N],
+	) -> [Keypair<F, PoseidonCRH_x5_2<F>>; N] {
+		private_keys.map(|pk| Keypair::<_, PoseidonCRH_x5_2<F>>::new(pk))
+	}
+
 	pub fn setup_leaves<R: RngCore, const N: usize>(
 		&self,
-		chain_ids: &[F; N],
-		amounts: &[F; N],
-		keypairs: &[Keypair<F, PoseidonCRH_x5_2<F>>; N],
+		chain_ids: [F; N],
+		amounts: [F; N],
+		keypairs: [Keypair<F, PoseidonCRH_x5_2<F>>; N],
 		rng: &mut R,
 	) -> Result<
 		(
@@ -440,9 +485,67 @@ impl<
 		let mut public_inputs = [LeafPublicInput::<F>::default(); N];
 
 		for i in 0..num_inputs {
-			let chain_id = F::from(chain_ids[i]);
-			let amount = F::from(amounts[i]);
+			let chain_id = chain_ids[i];
+			let amount = amounts[i];
 			let blinding = F::rand(rng);
+			let index = F::from(i as u64);
+
+			let private_input = LeafPrivateInput::<F>::new(amount, blinding);
+			let public_input = LeafPublicInput::<F>::new(chain_id);
+
+			let pub_key = keypairs[i].public_key(&self.params2)?;
+
+			let leaf = Leaf::<F, PoseidonCRH_x5_4<F>>::create_leaf(
+				&private_input,
+				&public_input,
+				&pub_key,
+				&self.params5,
+			)?;
+
+			let signature = keypairs[i].signature(&leaf, &index, &self.params4)?;
+
+			let nullifier = Leaf::<F, PoseidonCRH_x5_4<F>>::create_nullifier(
+				&signature,
+				&leaf,
+				&self.params4,
+				&index,
+			)?;
+
+			leaves[i] = leaf;
+			nullifiers[i] = nullifier;
+			private_inputs[i] = private_input;
+			public_inputs[i] = public_input;
+		}
+
+		Ok((leaves, nullifiers, private_inputs, public_inputs))
+	}
+
+	pub fn setup_leaves_with_privates<const N: usize>(
+		&self,
+		chain_ids: [F; N],
+		amounts: [F; N],
+		keypairs: [Keypair<F, PoseidonCRH_x5_2<F>>; N],
+		blindings: [F; N],
+	) -> Result<
+		(
+			[F; N],
+			[F; N],
+			[LeafPrivateInput<F>; N],
+			[LeafPublicInput<F>; N],
+		),
+		Error,
+	> {
+		let num_inputs = amounts.len();
+
+		let mut leaves = [F::default(); N];
+		let mut nullifiers = [F::default(); N];
+		let mut private_inputs = [LeafPrivateInput::<F>::default(); N];
+		let mut public_inputs = [LeafPublicInput::<F>::default(); N];
+
+		for i in 0..num_inputs {
+			let chain_id = chain_ids[i];
+			let amount = amounts[i];
+			let blinding = blindings[i];
 			let index = F::from(i as u64);
 
 			let private_input = LeafPrivateInput::<F>::new(amount, blinding);
@@ -601,6 +704,7 @@ impl<
 // const INS: usize = 2;
 // const OUTS: usize = 2;
 pub type VAnchorProverBn2542x2 = VAnchorProverSetup<Bn254Fr, 30, 2, 2, 2>;
+pub type VAnchorProver2x2<F: PrimeField> = VAnchorProverSetup<F, 30, 2, 2, 2>;
 
 // For backwards compatability
 // TODO: remove later
