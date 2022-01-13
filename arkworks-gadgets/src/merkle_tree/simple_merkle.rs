@@ -202,7 +202,8 @@ pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 ) -> Result<[F; N], Error> {
 	let mut empty_hashes = [F::zero(); N];
 
-	// let mut empty_hash = hasher.hash(&[F::from_le_bytes_mod_order(default_leaf)])?;
+	// let mut empty_hash =
+	// hasher.hash(&[F::from_le_bytes_mod_order(default_leaf)])?;
 	let mut empty_hash = F::from_le_bytes_mod_order(default_leaf);
 	empty_hashes[0] = empty_hash;
 
@@ -223,7 +224,7 @@ mod test {
 	use super::{gen_empty_hashes, SparseMerkleTree};
 	use crate::poseidon::field_hasher::{FieldHasher, Poseidon};
 	use ark_bls12_381::Fq;
-	use ark_ff::{PrimeField, UniformRand, BigInteger};
+	use ark_ff::{BigInteger, PrimeField, UniformRand};
 	use ark_std::{collections::BTreeMap, test_rng};
 	use arkworks_utils::utils::{
 		common::{setup_params_x5_3, Curve},
@@ -329,7 +330,7 @@ mod test {
 		merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree},
 		poseidon::CRH as PoseidonCRH,
 	};
-	use ark_crypto_primitives::crh::{CRH, TwoToOneCRH};
+	use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
 	use ark_ff::ToBytes;
 	use ark_std::rc::Rc;
 
@@ -403,8 +404,7 @@ mod test {
 		assert_eq!(root, old_root);
 	}
 
-	use ark_bn254::Fq as Bn254Fq;
-	type SMTCRHBn254 = PoseidonCRH<Bn254Fq>;
+	use ark_bn254::Fr as Bn254Fr;
 
 	#[test]
 	fn compare_with_solidity_empty_hashes() {
@@ -443,56 +443,24 @@ mod test {
 			"0x1f15585f8947e378bcf8bd918716799da909acdb944c57150b1eb4565fda8aa0",
 			"0x1eb064b21055ac6a350cf41eb30e4ce2cb19680217df3a243617c2838185ad06",
 		];
-		let res: Vec<Bn254Fq> = parse_vec(solidity_empty_hashes_hex);
+		let solidity_empty_hashes: Vec<Bn254Fr> = parse_vec(solidity_empty_hashes_hex);
 
-		// Empty hashes generated here:
+		// Generate again with this module's functions
 		let curve = Curve::Bn254;
-		let params = setup_params_x5_3::<Bn254Fq>(curve);
-		let poseidon = Poseidon::<Bn254Fq>::new(params.clone());
+		let params = setup_params_x5_3::<Bn254Fr>(curve);
+		let poseidon = Poseidon::<Bn254Fr>::new(params.clone());
 
-		let default_leaf_hex = vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
-		let default_leaf_scalar: Vec<Bn254Fq> = parse_vec(default_leaf_hex);
+		let default_leaf_hex =
+			vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
+		let default_leaf_scalar: Vec<Bn254Fr> = parse_vec(default_leaf_hex);
 		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_le();
-		println!("The length of the default leaf byte le representation is {:?}", default_leaf_vec.len());
 		let mut default_leaf = [0u8; 64];
 		for i in 0..default_leaf_vec.len() {
 			default_leaf[i] = default_leaf_vec[i];
 		}
-		let empty_hashes = gen_empty_hashes::<Bn254Fq, _, 32usize>(&poseidon, &default_leaf).unwrap();
+		let empty_hashes =
+			gen_empty_hashes::<Bn254Fr, _, 32usize>(&poseidon, &default_leaf).unwrap();
 
-		// These are not equal; the test looks like it passes but it doesn't
-		println!("The solidity empty hashes: {:?}", res);
-		println!("The current empty hashes: {:?}", empty_hashes);
-
-		// Old hash implementation
-
-		let level_one_old_way = <SMTCRHBn254 as TwoToOneCRH>::evaluate(&params, &default_leaf_vec, &default_leaf_vec).unwrap();
-		let level_one_new_way = poseidon.hash_two(&default_leaf_scalar[0], &default_leaf_scalar[0]).unwrap();
-		println!("The old way came up with {:?} at level 1", level_one_old_way);
-		println!("The new way came up with {:?} at level 1", level_one_new_way);
-		println!("The solidity level 1 hash is {:?}", res[1]);
-
-		println!("The byte representation of the empty leaf is {:?}", default_leaf_vec);
-
-	}
-
-	type PoseidonBn254 = PoseidonCRH<Bn254Fq>;
-
-	#[test]
-	fn compare_first_hash_with_solidity() {
-		let zero_hex = vec![
-			"0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c",];
-		let zero: Vec<Bn254Fq> = parse_vec(zero_hex);
-		let zero_bytes = zero[0].into_repr().to_bytes_le();
-
-		// Hash according to previous arkworks_gadgets implementation
-		let curve = Curve::Bn254;
-		let params = setup_params_x5_3::<Bn254Fq>(curve);
-		let level_one = <PoseidonBn254 as TwoToOneCRH>::evaluate(&params, &zero_bytes, &zero_bytes).unwrap();
-
-		let solidity_level_one: Vec<Bn254Fq> = parse_vec(vec![
-			"0x13e37f2d6cb86c78ccc1788607c2b199788c6bb0a615a21f2e7a8e88384222f8",
-		]);
-		assert_eq!(level_one, solidity_level_one[0]);
+		assert_eq!(empty_hashes.to_vec(), solidity_empty_hashes);
 	}
 }
