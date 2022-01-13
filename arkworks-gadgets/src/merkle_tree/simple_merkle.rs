@@ -460,21 +460,39 @@ mod test {
 		}
 		let empty_hashes = gen_empty_hashes::<Bn254Fq, _, 32usize>(&poseidon, &default_leaf).unwrap();
 
+		// These are not equal; the test looks like it passes but it doesn't
 		println!("The solidity empty hashes: {:?}", res);
 		println!("The current empty hashes: {:?}", empty_hashes);
 
-		// println!("Check to see if 1st level hashing is done same:");
-		// // Old hash implementation
-		// // Specific to old method
-
-		println!("The default leaf I'm feeding in is {:?}", default_leaf);
-		println!("and the to_vec version of it is {:?}", default_leaf.to_vec());
-		println!("and it's the same as above: {:?}", default_leaf_vec);
+		// Old hash implementation
 
 		let level_one_old_way = <SMTCRHBn254 as TwoToOneCRH>::evaluate(&params, &default_leaf_vec, &default_leaf_vec).unwrap();
 		let level_one_new_way = poseidon.hash_two(&default_leaf_scalar[0], &default_leaf_scalar[0]).unwrap();
 		println!("The old way came up with {:?} at level 1", level_one_old_way);
 		println!("The new way came up with {:?} at level 1", level_one_new_way);
+		println!("The solidity level 1 hash is {:?}", res[1]);
 
+		println!("The byte representation of the empty leaf is {:?}", default_leaf_vec);
+
+	}
+
+	type PoseidonBn254 = PoseidonCRH<Bn254Fq>;
+
+	#[test]
+	fn compare_first_hash_with_solidity() {
+		let zero_hex = vec![
+			"0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c",];
+		let zero: Vec<Bn254Fq> = parse_vec(zero_hex);
+		let zero_bytes = zero[0].into_repr().to_bytes_le();
+
+		// Hash according to previous arkworks_gadgets implementation
+		let curve = Curve::Bn254;
+		let params = setup_params_x5_3::<Bn254Fq>(curve);
+		let level_one = <PoseidonBn254 as TwoToOneCRH>::evaluate(&params, &zero_bytes, &zero_bytes).unwrap();
+
+		let solidity_level_one: Vec<Bn254Fq> = parse_vec(vec![
+			"0x13e37f2d6cb86c78ccc1788607c2b199788c6bb0a615a21f2e7a8e88384222f8",
+		]);
+		assert_eq!(level_one, solidity_level_one[0]);
 	}
 }
