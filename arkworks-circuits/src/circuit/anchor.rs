@@ -190,7 +190,7 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::setup::anchor::*;
+	use crate::setup::{anchor::*, common::*};
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_ff::UniformRand;
 	use ark_groth16::Groth16;
@@ -212,11 +212,11 @@ mod test {
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
-		let (circuit, .., public_inputs) = anchor_setup.setup_random_circuit(rng);
+		let (circuit, .., public_inputs) = anchor_setup.setup_random_circuit(rng).unwrap();
 
-		let (pk, vk) = AnchorSetup30_2::setup_keys::<Bn254, _>(circuit.clone(), rng);
-		let proof = AnchorSetup30_2::prove::<Bn254, _>(circuit, &pk, rng);
-		let res = AnchorSetup30_2::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(res);
 	}
 
@@ -227,7 +227,7 @@ mod test {
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
-		let (circuit, .., public_inputs) = anchor_setup.setup_random_circuit(rng);
+		let (circuit, .., public_inputs) = anchor_setup.setup_random_circuit(rng).unwrap();
 
 		type GrothSetup = Groth16<Bn254>;
 
@@ -257,14 +257,15 @@ mod test {
 		let prover = AnchorSetup30_2::new(params3, params4.clone());
 		let arbitrary_input =
 			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) = prover.setup_leaf(chain_id, rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) =
+			prover.setup_leaf(chain_id, rng).unwrap();
 		let leaves = vec![leaf];
 		let index = 0;
-		let (_, path) = prover.setup_tree_and_path(&leaves, index);
+		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		// Invalid root, but set is valid since it contains root
 		let root = Bn254Fr::rand(rng);
 		let roots_new = [root; TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new);
+		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
@@ -289,9 +290,9 @@ mod test {
 			commitment,
 		);
 
-		let (pk, vk) = AnchorSetup30_2::setup_keys::<Bn254, _>(mc.clone(), rng);
-		let proof = AnchorSetup30_2::prove::<Bn254, _>(mc, &pk, rng);
-		let res = AnchorSetup30_2::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(!res);
 	}
 
@@ -312,14 +313,15 @@ mod test {
 		let prover = AnchorSetup30_2::new(params3, params4.clone());
 		let arbitrary_input =
 			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) = prover.setup_leaf(chain_id, rng);
+		let (leaf_private, leaf_public, leaf, nullifier_hash) =
+			prover.setup_leaf(chain_id, rng).unwrap();
 		let leaves = vec![leaf];
 		let index = 0;
-		let (tree, path) = prover.setup_tree_and_path(&leaves, index);
+		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		let root = tree.root().inner();
 		// Invalid set
 		let roots_new = [Bn254Fr::rand(rng); TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new);
+		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
@@ -344,9 +346,9 @@ mod test {
 			commitment,
 		);
 
-		let (pk, vk) = AnchorSetup30_2::setup_keys::<Bn254, _>(mc.clone(), rng);
-		let proof = AnchorSetup30_2::prove::<Bn254, _>(mc, &pk, rng);
-		let res = AnchorSetup30_2::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(!res);
 	}
 
@@ -367,15 +369,16 @@ mod test {
 		let prover = AnchorSetup30_2::new(params3, params4.clone());
 		let arbitrary_input =
 			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, _, nullifier_hash) = prover.setup_leaf(chain_id, rng);
+		let (leaf_private, leaf_public, _, nullifier_hash) =
+			prover.setup_leaf(chain_id, rng).unwrap();
 		let leaf = Bn254Fr::rand(rng);
 		let leaves = vec![leaf];
 		let index = 0;
-		let (tree, path) = prover.setup_tree_and_path(&leaves, index);
+		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		let root = tree.root().inner();
 		// Invalid set
 		let roots_new = [Bn254Fr::rand(rng); TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new);
+		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
@@ -400,9 +403,9 @@ mod test {
 			commitment,
 		);
 
-		let (pk, vk) = AnchorSetup30_2::setup_keys::<Bn254, _>(mc.clone(), rng);
-		let proof = AnchorSetup30_2::prove::<Bn254, _>(mc, &pk, rng);
-		let res = AnchorSetup30_2::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(!res);
 	}
 
@@ -423,15 +426,15 @@ mod test {
 		let prover = AnchorSetup30_2::new(params3, params4.clone());
 		let arbitrary_input =
 			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, leaf, _) = prover.setup_leaf(chain_id, rng);
+		let (leaf_private, leaf_public, leaf, _) = prover.setup_leaf(chain_id, rng).unwrap();
 		let nullifier_hash = Bn254Fr::rand(rng);
 		let leaves = vec![leaf];
 		let index = 0;
-		let (tree, path) = prover.setup_tree_and_path(&leaves, index);
+		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		let root = tree.root().inner();
 		// Invalid set
 		let roots_new = [Bn254Fr::rand(rng); TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new);
+		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
@@ -456,9 +459,9 @@ mod test {
 			commitment,
 		);
 
-		let (pk, vk) = AnchorSetup30_2::setup_keys::<Bn254, _>(mc.clone(), rng);
-		let proof = AnchorSetup30_2::prove::<Bn254, _>(mc, &pk, rng);
-		let res = AnchorSetup30_2::verify::<Bn254>(&public_inputs, &vk, &proof);
+		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(!res);
 	}
 }

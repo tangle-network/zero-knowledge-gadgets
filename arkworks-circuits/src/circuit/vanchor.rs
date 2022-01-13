@@ -470,22 +470,24 @@ mod test {
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
 
-		let (circuit, pub_ins, ..) = prover.setup_circuit_with_data(
-			public_amount,
-			recipient,
-			relayer,
-			ext_amount,
-			fee,
-			in_chain_id,
-			in_amounts,
-			out_chain_ids,
-			out_amounts,
-			rng,
-		);
+		let (circuit, pub_ins, ..) = prover
+			.setup_circuit_with_data(
+				public_amount,
+				recipient,
+				relayer,
+				ext_amount,
+				fee,
+				in_chain_id,
+				in_amounts,
+				out_chain_ids,
+				out_amounts,
+				rng,
+			)
+			.unwrap();
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(res);
 	}
@@ -506,14 +508,15 @@ mod test {
 
 		let in_chain_ids = [0; 2];
 		let in_amounts = [5; 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (in_indices, in_paths, in_set_private_inputs, _) = prover
-			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
+		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
+		let (in_indices, in_paths, in_set_private_inputs, _) =
+			prover.setup_tree_and_set(&commitments).unwrap();
 
 		// Invalid root set
 		let in_root_set = [BnFr::rand(rng); 2];
@@ -530,20 +533,22 @@ mod test {
 			ext_data_hash,
 		);
 
-		let circuit = prover.setup_circuit(
-			public_amount,
-			arbitrary_data,
-			in_utxos,
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
-			out_utxos,
-		);
+		let circuit = prover
+			.setup_circuit(
+				public_amount,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_set_private_inputs,
+				in_root_set,
+				out_utxos,
+			)
+			.unwrap();
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -564,17 +569,18 @@ mod test {
 
 		let in_chain_ids = [0; 2];
 		let in_amounts = [5; 2];
-		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
+		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
 
 		// Adding invalid nullifier
 		in_utxos[0].nullifier = BnFr::rand(rng);
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
-			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
+		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
+			prover.setup_tree_and_set(&commitments).unwrap();
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -588,20 +594,22 @@ mod test {
 			ext_data_hash,
 		);
 
-		let circuit = prover.setup_circuit(
-			public_amount,
-			arbitrary_data,
-			in_utxos,
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
-			out_utxos,
-		);
+		let circuit = prover
+			.setup_circuit(
+				public_amount,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_set_private_inputs,
+				in_root_set,
+				out_utxos,
+			)
+			.unwrap();
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -623,17 +631,18 @@ mod test {
 
 		let in_chain_ids = [0; 2];
 		let in_amounts = [5; 2];
-		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
+		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
 
 		// Enure both nullifiers are the same
 		in_utxos[0] = in_utxos[1].clone();
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
-			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
+		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
+			prover.setup_tree_and_set(&commitments).unwrap();
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -647,20 +656,22 @@ mod test {
 			ext_data_hash,
 		);
 
-		let circuit = prover.setup_circuit(
-			public_amount,
-			arbitrary_data,
-			in_utxos,
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
-			out_utxos,
-		);
+		let circuit = prover
+			.setup_circuit(
+				public_amount,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_set_private_inputs,
+				in_root_set,
+				out_utxos,
+			)
+			.unwrap();
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -681,14 +692,15 @@ mod test {
 
 		let in_chain_ids = [0; 2];
 		let in_amounts = [10; 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
-			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
+		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
+			prover.setup_tree_and_set(&commitments).unwrap();
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -702,20 +714,22 @@ mod test {
 			ext_data_hash,
 		);
 
-		let circuit = prover.setup_circuit(
-			public_amount,
-			arbitrary_data,
-			in_utxos,
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
-			out_utxos,
-		);
+		let circuit = prover
+			.setup_circuit(
+				public_amount,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_set_private_inputs,
+				in_root_set,
+				out_utxos,
+			)
+			.unwrap();
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -742,14 +756,15 @@ mod test {
 
 		let in_chain_ids = [BnFr::from(0u32); 2];
 		let in_amounts = [limit + BnFr::one(); 2];
-		let in_utxos = prover.new_utxos_f(in_chain_ids, in_amounts, rng);
+		let in_utxos = prover.new_utxos_f(in_chain_ids, in_amounts, rng).unwrap();
 
 		let out_chain_ids = [BnFr::from(0u32); 2];
 		let out_amounts = [limit + BnFr::one(); 2];
-		let out_utxos = prover.new_utxos_f(out_chain_ids, out_amounts, rng);
+		let out_utxos = prover.new_utxos_f(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
-			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
+		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
+			prover.setup_tree_and_set(&commitments).unwrap();
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -763,20 +778,22 @@ mod test {
 			ext_data_hash,
 		);
 
-		let circuit = prover.setup_circuit(
-			public_amount,
-			arbitrary_data,
-			in_utxos,
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
-			out_utxos,
-		);
+		let circuit = prover
+			.setup_circuit(
+				public_amount,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_set_private_inputs,
+				in_root_set,
+				out_utxos,
+			)
+			.unwrap();
 
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
-		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
 		assert!(!res);
 	}
@@ -797,14 +814,15 @@ mod test {
 
 		let in_chain_ids = [0; 2];
 		let in_amounts = [5; 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng);
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
 
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng);
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) = prover
-			.setup_tree_and_set(&in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>());
+		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
+		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
+			prover.setup_tree_and_set(&commitments).unwrap();
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -818,20 +836,22 @@ mod test {
 			ext_data_hash,
 		);
 
-		let circuit = prover.setup_circuit(
-			public_amount,
-			arbitrary_data,
-			in_utxos,
-			in_indices,
-			in_paths,
-			in_set_private_inputs,
-			in_root_set,
-			out_utxos,
-		);
+		let circuit = prover
+			.setup_circuit(
+				public_amount,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_set_private_inputs,
+				in_root_set,
+				out_utxos,
+			)
+			.unwrap();
 
 		let truncated_public_inputs = &pub_ins[2..];
-		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng);
-		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng);
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
 
 		let vk = VerifyingKey::<Bn254>::deserialize(&verifying_key[..]).unwrap();
 		let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();
