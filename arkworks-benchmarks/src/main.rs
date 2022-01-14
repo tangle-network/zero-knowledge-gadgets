@@ -11,11 +11,10 @@ use arkworks_circuits::circuit::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	arbitrary::anchor_data::Input as AnchorDataInput,
 	leaf::anchor::{
-		constraints::AnchorLeafGadget, AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
+		AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
-	set::membership::{constraints::SetMembershipGadget, SetMembership},
 };
 
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5};
@@ -30,7 +29,6 @@ macro_rules! setup_circuit {
 		type PoseidonCRHGadget = CRHGadget<$test_field>;
 
 		type Leaf = AnchorLeaf<$test_field, PoseidonCRH>;
-		type LeafGadget = AnchorLeafGadget<$test_field, PoseidonCRH, PoseidonCRHGadget>;
 
 		#[derive(Clone, PartialEq)]
 		struct AnchorTreeConfig;
@@ -42,9 +40,6 @@ macro_rules! setup_circuit {
 		}
 
 		type AnchorTree = SparseMerkleTree<AnchorTreeConfig>;
-
-		type TestSetMembership = SetMembership<$test_field, M>;
-		type TestSetMembershipGadget = SetMembershipGadget<$test_field, M>;
 
 		type Circuit = AnchorCircuit<
 			$test_field,
@@ -101,17 +96,13 @@ macro_rules! setup_circuit {
 			<$test_field>::rand(rng),
 			root.clone().inner(),
 		];
-		let set_private_inputs =
-			TestSetMembership::generate_secrets(&root.clone().inner(), &roots).unwrap();
 		let mc = Circuit::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
-			set_private_inputs,
 			roots.clone(),
 			params5,
 			path,
-			root.clone().inner(),
 			nullifier_hash,
 		);
 		let mut public_inputs = Vec::new();

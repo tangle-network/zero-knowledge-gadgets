@@ -1,7 +1,6 @@
-use crate::Vec;
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
+use ark_r1cs_std::{eq::EqGadget, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 use arkworks_gadgets::{
@@ -13,13 +12,10 @@ use arkworks_gadgets::{
 		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
 	merkle_tree::{
-		constraints::{NodeVar, PathVar},
+		constraints::{PathVar},
 		Config as MerkleConfig, Path,
 	},
-	set::membership::{
-		constraints::{PrivateVar as SetPrivateInputsVar, SetMembershipGadget},
-		Private as SetPrivateInputs,
-	},
+	set::simple_set_gadget::SetGadget,
 };
 
 pub struct AnchorCircuit<
@@ -37,11 +33,9 @@ pub struct AnchorCircuit<
 	arbitrary_input: ArbitraryInput<F>,
 	leaf_private_inputs: LeafPrivateInputs<F>,
 	leaf_public_inputs: LeafPublicInputs<F>,
-	set_private_inputs: SetPrivateInputs<F, M>,
 	root_set: [F; M],
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
-	root: <C::H as CRH>::Output,
 	nullifier_hash: H::Output,
 	_hasher: PhantomData<H>,
 	_hasher_gadget: PhantomData<HG>,
@@ -65,22 +59,18 @@ where
 		arbitrary_input: ArbitraryInput<F>,
 		leaf_private_inputs: LeafPrivateInputs<F>,
 		leaf_public_inputs: LeafPublicInputs<F>,
-		set_private_inputs: SetPrivateInputs<F, M>,
 		root_set: [F; M],
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
-		root: <C::H as CRH>::Output,
 		nullifier_hash: H::Output,
 	) -> Self {
 		Self {
 			arbitrary_input,
 			leaf_private_inputs,
 			leaf_public_inputs,
-			set_private_inputs,
 			root_set,
 			hasher_params,
 			path,
-			root,
 			nullifier_hash,
 			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
@@ -105,21 +95,17 @@ where
 		let arbitrary_input = self.arbitrary_input.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_inputs = self.leaf_public_inputs.clone();
-		let set_private_inputs = self.set_private_inputs.clone();
 		let root_set = self.root_set;
 		let hasher_params = self.hasher_params.clone();
 		let path = self.path.clone();
-		let root = self.root.clone();
 		let nullifier_hash = self.nullifier_hash.clone();
 		Self::new(
 			arbitrary_input,
 			leaf_private_inputs,
 			leaf_public_inputs,
-			set_private_inputs,
 			root_set,
 			hasher_params,
 			path,
-			root,
 			nullifier_hash,
 		)
 	}
@@ -139,19 +125,16 @@ where
 		let arbitrary_input = self.arbitrary_input;
 		let leaf_private = self.leaf_private_inputs;
 		let leaf_public = self.leaf_public_inputs;
-		let set_private = self.set_private_inputs;
 		let root_set = self.root_set;
 		let hasher_params = self.hasher_params;
 		let path = self.path;
-		let root = self.root;
 		let nullifier_hash = self.nullifier_hash;
 
 		// Generating vars
 		// Public inputs
 		let leaf_public_var = LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
-		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
+		let root_set_var = SetGadget::new_input(cs.clone(), || Ok(root_set))?;
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
@@ -159,8 +142,6 @@ where
 
 		// Private inputs
 		let leaf_private_var = LeafPrivateInputsVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let set_input_private_var =
-			SetPrivateInputsVar::new_witness(cs.clone(), || Ok(set_private))?;
 		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs, || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
@@ -171,16 +152,13 @@ where
 		)?;
 		let anchor_nullifier =
 			AnchorLeafGadget::<F, H, HG>::create_nullifier(&leaf_private_var, &hasher_params_var)?;
-		let is_member =
-			path_var.check_membership(&NodeVar::Inner(root_var.clone()), &anchor_leaf)?;
+		let root_var = path_var.root_hash(&anchor_leaf)?;
 		// Check if target root is in set
-		let is_set_member =
-			SetMembershipGadget::check(&root_var, &root_set_var, &set_input_private_var)?;
+		let is_set_member = root_set_var.check_membership(&root_var)?;
 		// Constraining arbitrary inputs
 		arbitrary_input_var.constrain()?;
 
 		// Enforcing constraints
-		is_member.enforce_equal(&Boolean::TRUE)?;
 		is_set_member.enforce_equal(&Boolean::TRUE)?;
 		anchor_nullifier.enforce_equal(&nullifier_hash_var)?;
 
@@ -265,24 +243,20 @@ mod test {
 		// Invalid root, but set is valid since it contains root
 		let root = Bn254Fr::rand(rng);
 		let roots_new = [root; TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
-			set_private_inputs,
 			roots_new,
 			params4,
 			path,
-			root.clone(),
 			nullifier_hash,
 		);
 		let public_inputs = AnchorSetup30_2::construct_public_inputs(
 			chain_id,
 			nullifier_hash,
 			roots_new,
-			root,
 			recipient,
 			relayer,
 			fee,
@@ -317,28 +291,23 @@ mod test {
 			prover.setup_leaf(chain_id, rng).unwrap();
 		let leaves = vec![leaf];
 		let index = 0;
-		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		let root = tree.root().inner();
+		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		// Invalid set
 		let roots_new = [Bn254Fr::rand(rng); TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
-			set_private_inputs,
 			roots_new,
 			params4,
 			path,
-			root.clone(),
 			nullifier_hash,
 		);
 		let public_inputs = AnchorSetup30_2::construct_public_inputs(
 			chain_id,
 			nullifier_hash,
 			roots_new,
-			root,
 			recipient,
 			relayer,
 			fee,
@@ -374,28 +343,23 @@ mod test {
 		let leaf = Bn254Fr::rand(rng);
 		let leaves = vec![leaf];
 		let index = 0;
-		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		let root = tree.root().inner();
+		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		// Invalid set
 		let roots_new = [Bn254Fr::rand(rng); TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
-			set_private_inputs,
 			roots_new,
 			params4,
 			path,
-			root.clone(),
 			nullifier_hash,
 		);
 		let public_inputs = AnchorSetup30_2::construct_public_inputs(
 			chain_id,
 			nullifier_hash,
 			roots_new,
-			root,
 			recipient,
 			relayer,
 			fee,
@@ -430,28 +394,23 @@ mod test {
 		let nullifier_hash = Bn254Fr::rand(rng);
 		let leaves = vec![leaf];
 		let index = 0;
-		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		let root = tree.root().inner();
+		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
 		// Invalid set
 		let roots_new = [Bn254Fr::rand(rng); TEST_M];
-		let set_private_inputs = AnchorSetup30_2::setup_set(&root, &roots_new).unwrap();
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
-			set_private_inputs,
 			roots_new,
 			params4,
 			path,
-			root.clone(),
 			nullifier_hash,
 		);
 		let public_inputs = AnchorSetup30_2::construct_public_inputs(
 			chain_id,
 			nullifier_hash,
 			roots_new,
-			root,
 			recipient,
 			relayer,
 			fee,
