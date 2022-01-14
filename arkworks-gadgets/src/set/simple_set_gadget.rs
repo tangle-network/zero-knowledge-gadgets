@@ -5,7 +5,7 @@ use ark_r1cs_std::{
 	fields::{fp::FpVar, FieldVar},
 	prelude::*,
 };
-use ark_relations::r1cs::{SynthesisError};
+use ark_relations::r1cs::SynthesisError;
 
 pub struct SetGadget<F: PrimeField> {
 	set: Vec<FpVar<F>>,
