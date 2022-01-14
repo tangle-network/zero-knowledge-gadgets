@@ -329,18 +329,20 @@ mod test {
 	use crate::{
 		merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree},
 		poseidon::CRH as PoseidonCRH,
+		identity::CRH as IdentityCRH
 	};
 	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::ToBytes;
 	use ark_std::rc::Rc;
 
 	type SMTCRH = PoseidonCRH<Fq>;
+	type IdCRH = IdentityCRH<Fq>;
 
 	#[derive(Clone, Debug, Eq, PartialEq)]
 	struct SMTConfig;
 	impl Config for SMTConfig {
 		type H = SMTCRH;
-		type LeafH = SMTCRH;
+		type LeafH = IdCRH;
 
 		const HEIGHT: u8 = 3;
 	}
@@ -374,7 +376,7 @@ mod test {
 
 		// Specific to old method
 		let inner_params = Rc::new(params.clone());
-		let leaf_params = inner_params.clone();
+		let leaf_params = Rc::new(());
 
 		let old_smt = create_old_merkle_tree::<Fq, SMTConfig>(
 			inner_params.clone(),
@@ -384,34 +386,15 @@ mod test {
 
 		let old_root = old_smt.root().inner();
 
-		// The old method generates its empty hash by hashing passing an empty vector
-		// into CRH::evaluate().  The new method accepts an empty hash as an argument
-		// (in its le byte form) So for the sake of comparison the `default_leaf`
-		// parameter ought to be taken as the empty hash generated according to the old
-		// method.
+		// Now generate tree in new method
 
 		let poseidon = Poseidon::new(params.clone());
-		let default_leaf_vec = hash_empty::<SMTConfig>(&params.clone())
-			.unwrap()
-			.leaf()
-			.into_repr()
-			.to_bytes_le();
-		let mut default_leaf = [0u8; 64];
-		for i in 0..default_leaf_vec.len() {
-			default_leaf[i] = default_leaf_vec[i];
-		}
+		let mut default_leaf = [0u8; 0];
 		const HEIGHT: usize = 3;
 
-		// The old method also hashes the contents of entry of `leaves` before adding it
-		// at leaf level, whereas the new method does not.  So for the sake of
-		// comparison
-		let mut hashed_leaves = [Fq::from(0u64); 3];
-		for i in 0..3 {
-			hashed_leaves[i] = poseidon.hash(&[leaves[i]]).unwrap();
-		}
 		let smt = create_merkle_tree::<Fq, BLSHash, HEIGHT>(
 			poseidon.clone(),
-			&hashed_leaves,
+			&leaves,
 			&default_leaf,
 		);
 
