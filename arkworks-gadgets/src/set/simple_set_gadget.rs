@@ -5,15 +5,14 @@ use ark_r1cs_std::{
 	fields::{fp::FpVar, FieldVar},
 	prelude::*,
 };
-use ark_relations::r1cs::{Namespace, SynthesisError};
-use core::{borrow::Borrow, convert::TryInto};
+use ark_relations::r1cs::{SynthesisError};
 
-pub struct SetGadget<F: PrimeField, const M: usize> {
-	set: [FpVar<F>; M],
+pub struct SetGadget<F: PrimeField> {
+	set: Vec<FpVar<F>>,
 }
 
-impl<F: PrimeField, const M: usize> SetGadget<F, M> {
-	pub fn new(set: [FpVar<F>; M]) -> Self {
+impl<F: PrimeField> SetGadget<F> {
+	pub fn new(set: Vec<FpVar<F>>) -> Self {
 		Self { set }
 	}
 
@@ -36,20 +35,5 @@ impl<F: PrimeField, const M: usize> SetGadget<F, M> {
 		}
 
 		product.is_eq(&FpVar::<F>::zero())
-	}
-}
-
-impl<F: PrimeField, const M: usize> AllocVar<[F; M], F> for SetGadget<F, M> {
-	fn new_variable<T: Borrow<[F; M]>>(
-		into_ns: impl Into<Namespace<F>>,
-		f: impl FnOnce() -> Result<T, SynthesisError>,
-		mode: AllocationMode,
-	) -> Result<Self, SynthesisError> {
-		let inp = f()?.borrow().clone();
-		let set_var = Vec::<FpVar<F>>::new_variable(into_ns, || Ok(inp), mode)?;
-		let set_array_var: [FpVar<F>; M] = set_var
-			.try_into()
-			.map_err(|_| SynthesisError::UnconstrainedVariable)?;
-		Ok(SetGadget::new(set_array_var))
 	}
 }

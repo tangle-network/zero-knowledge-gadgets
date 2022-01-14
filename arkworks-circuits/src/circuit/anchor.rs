@@ -1,6 +1,6 @@
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, prelude::*};
+use ark_r1cs_std::{eq::EqGadget, prelude::*, fields::fp::FpVar};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 use arkworks_gadgets::{
@@ -131,7 +131,7 @@ where
 		// Public inputs
 		let leaf_public_var = LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
-		let root_set_var = SetGadget::new_input(cs.clone(), || Ok(root_set))?;
+		let roots_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
@@ -151,7 +151,8 @@ where
 			AnchorLeafGadget::<F, H, HG>::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let root_var = path_var.root_hash(&anchor_leaf)?;
 		// Check if target root is in set
-		let is_set_member = root_set_var.check_membership(&root_var)?;
+		let set_gadget = SetGadget::new(roots_var);
+		let is_set_member = set_gadget.check_membership(&root_var)?;
 		// Constraining arbitrary inputs
 		arbitrary_input_var.constrain()?;
 
