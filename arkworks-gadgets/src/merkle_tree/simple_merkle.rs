@@ -330,7 +330,7 @@ mod test {
 		merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree},
 		poseidon::CRH as PoseidonCRH,
 	};
-	use ark_crypto_primitives::crh::{TwoToOneCRH, CRH};
+	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::ToBytes;
 	use ark_std::rc::Rc;
 
@@ -361,6 +361,7 @@ mod test {
 		smt
 	}
 
+	use crate::merkle_tree::hash_empty;
 	#[test]
 	fn should_create_trees_with_same_root_poseidon() {
 		// Common to both
@@ -383,12 +384,27 @@ mod test {
 
 		let old_root = old_smt.root().inner();
 
-		// Specific to new method
-		let poseidon = Poseidon::new(params);
-		let default_leaf = [0u8; 32]; // what's used as old empty leaf? Looks empty: INPUT_SIZE_BITS / 8 = 0 ?
+		// The old method generates its empty hash by hashing passing an empty vector
+		// into CRH::evaluate().  The new method accepts an empty hash as an argument
+		// (in its le byte form) So for the sake of comparison the `default_leaf`
+		// parameter ought to be taken as the empty hash generated according to the old
+		// method.
+
+		let poseidon = Poseidon::new(params.clone());
+		let default_leaf_vec = hash_empty::<SMTConfig>(&params.clone())
+			.unwrap()
+			.leaf()
+			.into_repr()
+			.to_bytes_le();
+		let mut default_leaf = [0u8; 64];
+		for i in 0..default_leaf_vec.len() {
+			default_leaf[i] = default_leaf_vec[i];
+		}
 		const HEIGHT: usize = 3;
-		// hash leaves before constructing tree b/c old implementation does too:
-		// can this be done with map() or something instead of for loop?
+
+		// The old method also hashes the contents of entry of `leaves` before adding it
+		// at leaf level, whereas the new method does not.  So for the sake of
+		// comparison
 		let mut hashed_leaves = [Fq::from(0u64); 3];
 		for i in 0..3 {
 			hashed_leaves[i] = poseidon.hash(&[leaves[i]]).unwrap();
