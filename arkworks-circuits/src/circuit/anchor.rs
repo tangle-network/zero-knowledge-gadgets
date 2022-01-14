@@ -190,7 +190,23 @@ mod test {
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
-		let (circuit, .., public_inputs) = anchor_setup.setup_random_circuit(rng).unwrap();
+
+		let chain_id = Bn254Fr::rand(rng);
+		let recipient = Bn254Fr::rand(rng);
+		let relayer = Bn254Fr::rand(rng);
+		let fee = Bn254Fr::rand(rng);
+		let refund = Bn254Fr::rand(rng);
+		let commitment = Bn254Fr::rand(rng);
+
+		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
+		let secret = leaf_private.secret();
+		let nullfier = leaf_private.nullifier();
+		let leaves = vec![leaf_hash];
+		let index = 0;
+		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
+		let roots = [tree.root().inner(); M];
+
+		let (circuit, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -202,10 +218,27 @@ mod test {
 	fn should_fail_with_invalid_public_inputs() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
+
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
-		let (circuit, .., public_inputs) = anchor_setup.setup_random_circuit(rng).unwrap();
+
+		let chain_id = Bn254Fr::rand(rng);
+		let recipient = Bn254Fr::rand(rng);
+		let relayer = Bn254Fr::rand(rng);
+		let fee = Bn254Fr::rand(rng);
+		let refund = Bn254Fr::rand(rng);
+		let commitment = Bn254Fr::rand(rng);
+
+		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
+		let secret = leaf_private.secret();
+		let nullfier = leaf_private.nullifier();
+		let leaves = vec![leaf_hash];
+		let index = 0;
+		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
+		let roots = [tree.root().inner(); M];
+
+		let (circuit, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
 
 		type GrothSetup = Groth16<Bn254>;
 
@@ -219,101 +252,29 @@ mod test {
 	}
 
 	#[test]
-	fn should_fail_with_invalid_root() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-		let params3 = setup_params_x5_3(curve);
-		let params4 = setup_params_x5_4(curve);
-
-		let chain_id = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
-
-		let prover = AnchorSetup30_2::new(params3, params4.clone());
-		let arbitrary_input =
-			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) =
-			prover.setup_leaf(chain_id, rng).unwrap();
-		let leaves = vec![leaf];
-		let index = 0;
-		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		// Invalid root, but set is valid since it contains root
-		let root = Bn254Fr::rand(rng);
-		let roots_new = [root; TEST_M];
-
-		let mc = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			roots_new,
-			params4,
-			path,
-			nullifier_hash,
-		);
-		let public_inputs = AnchorSetup30_2::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots_new,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
-		);
-
-		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
-		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
-		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
-		assert!(!res);
-	}
-
-	#[test]
 	fn should_fail_with_invalid_set() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let params3 = setup_params_x5_3(curve);
-		let params4 = setup_params_x5_4(curve);
+
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
+		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
 		let recipient = Bn254Fr::rand(rng);
+		let relayer = Bn254Fr::rand(rng);
 		let fee = Bn254Fr::rand(rng);
 		let refund = Bn254Fr::rand(rng);
 		let commitment = Bn254Fr::rand(rng);
 
-		let prover = AnchorSetup30_2::new(params3, params4.clone());
-		let arbitrary_input =
-			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, leaf, nullifier_hash) =
-			prover.setup_leaf(chain_id, rng).unwrap();
-		let leaves = vec![leaf];
+		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
+		let secret = leaf_private.secret();
+		let nullfier = leaf_private.nullifier();
+		let leaves = vec![leaf_hash];
 		let index = 0;
-		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		// Invalid set
-		let roots_new = [Bn254Fr::rand(rng); TEST_M];
+		let roots = [Bn254Fr::rand(rng); M];
 
-		let mc = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			roots_new,
-			params4,
-			path,
-			nullifier_hash,
-		);
-		let public_inputs = AnchorSetup30_2::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots_new,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
-		);
+		let (mc, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
@@ -325,47 +286,27 @@ mod test {
 	fn should_fail_with_invalid_leaf() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
-		let params3 = setup_params_x5_3(curve);
-		let params4 = setup_params_x5_4(curve);
+
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
+		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
 		let recipient = Bn254Fr::rand(rng);
+		let relayer = Bn254Fr::rand(rng);
 		let fee = Bn254Fr::rand(rng);
 		let refund = Bn254Fr::rand(rng);
 		let commitment = Bn254Fr::rand(rng);
 
-		let prover = AnchorSetup30_2::new(params3, params4.clone());
-		let arbitrary_input =
-			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let (leaf_private, leaf_public, _, nullifier_hash) =
-			prover.setup_leaf(chain_id, rng).unwrap();
-		let leaf = Bn254Fr::rand(rng);
-		let leaves = vec![leaf];
+		let (leaf_private, _, _, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
+		let secret = leaf_private.secret();
+		let nullfier = leaf_private.nullifier();
+		let leaves = vec![Bn254Fr::rand(rng)];
 		let index = 0;
-		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		// Invalid set
-		let roots_new = [Bn254Fr::rand(rng); TEST_M];
+		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
+		let roots = [tree.root().inner(); M];
 
-		let mc = Circuit_x5::new(
-			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
-			roots_new,
-			params4,
-			path,
-			nullifier_hash,
-		);
-		let public_inputs = AnchorSetup30_2::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots_new,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
-		);
+		let (mc, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
@@ -394,9 +335,10 @@ mod test {
 		let nullifier_hash = Bn254Fr::rand(rng);
 		let leaves = vec![leaf];
 		let index = 0;
-		let (_, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		// Invalid set
-		let roots_new = [Bn254Fr::rand(rng); TEST_M];
+		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
+		
+		let root = tree.root().inner();
+		let roots_new = [root; TEST_M];
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),

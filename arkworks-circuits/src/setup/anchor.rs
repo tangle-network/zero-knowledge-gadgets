@@ -307,9 +307,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		let arbitrary_input =
 			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) = self.setup_leaf(chain_id, rng)?;
-		let mut leaves_new = leaves.to_vec();
-		leaves_new.push(leaf);
-		let (_, path) = self.setup_tree_and_path(&leaves_new, index)?;
+		let (_, path) = self.setup_tree_and_path(&leaves, index)?;
 
 		let mc = Circuit_x5::new(
 			arbitrary_input.clone(),
