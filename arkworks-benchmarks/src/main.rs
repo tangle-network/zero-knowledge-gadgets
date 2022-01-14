@@ -10,9 +10,7 @@ use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
 use arkworks_circuits::circuit::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	arbitrary::anchor_data::Input as AnchorDataInput,
-	leaf::anchor::{
-		AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
-	},
+	leaf::anchor::{AnchorLeaf, Private as LeafPrivate, Public as LeafPublic},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
 };

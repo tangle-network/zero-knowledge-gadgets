@@ -11,10 +11,7 @@ use arkworks_gadgets::{
 		},
 		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
-	merkle_tree::{
-		constraints::{PathVar},
-		Config as MerkleConfig, Path,
-	},
+	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
 	set::simple_set_gadget::SetGadget,
 };
 
@@ -206,7 +203,12 @@ mod test {
 		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
 		let roots = [tree.root().inner(); M];
 
-		let (circuit, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
+		let (circuit, .., public_inputs) = anchor_setup
+			.setup_circuit_with_privates(
+				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
+				commitment,
+			)
+			.unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -238,7 +240,12 @@ mod test {
 		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
 		let roots = [tree.root().inner(); M];
 
-		let (circuit, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
+		let (circuit, .., public_inputs) = anchor_setup
+			.setup_circuit_with_privates(
+				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
+				commitment,
+			)
+			.unwrap();
 
 		type GrothSetup = Groth16<Bn254>;
 
@@ -274,7 +281,12 @@ mod test {
 		let index = 0;
 		let roots = [Bn254Fr::rand(rng); M];
 
-		let (mc, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
+		let (mc, .., public_inputs) = anchor_setup
+			.setup_circuit_with_privates(
+				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
+				commitment,
+			)
+			.unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
@@ -306,7 +318,12 @@ mod test {
 		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
 		let roots = [tree.root().inner(); M];
 
-		let (mc, .., public_inputs) = anchor_setup.setup_circuit_with_privates(chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund, commitment).unwrap();
+		let (mc, .., public_inputs) = anchor_setup
+			.setup_circuit_with_privates(
+				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
+				commitment,
+			)
+			.unwrap();
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(mc, &pk, rng).unwrap();
@@ -336,7 +353,7 @@ mod test {
 		let leaves = vec![leaf];
 		let index = 0;
 		let (tree, path) = prover.setup_tree_and_path(&leaves, index).unwrap();
-		
+
 		let root = tree.root().inner();
 		let roots_new = [root; TEST_M];
 
