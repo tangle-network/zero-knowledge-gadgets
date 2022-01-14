@@ -327,9 +327,9 @@ mod test {
 
 	// Backwards-compatibility tests:
 	use crate::{
+		identity::CRH as IdentityCRH,
 		merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree},
 		poseidon::CRH as PoseidonCRH,
-		identity::CRH as IdentityCRH
 	};
 	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::ToBytes;
@@ -392,11 +392,8 @@ mod test {
 		let mut default_leaf = [0u8; 0];
 		const HEIGHT: usize = 3;
 
-		let smt = create_merkle_tree::<Fq, BLSHash, HEIGHT>(
-			poseidon.clone(),
-			&leaves,
-			&default_leaf,
-		);
+		let smt =
+			create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon.clone(), &leaves, &default_leaf);
 
 		let root = smt.root();
 
