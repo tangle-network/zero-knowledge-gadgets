@@ -450,12 +450,8 @@ mod test {
 			vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
 		let default_leaf_scalar: Vec<Bn254Fr> = parse_vec(default_leaf_hex);
 		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_le();
-		let mut default_leaf = [0u8; 64];
-		for i in 0..default_leaf_vec.len() {
-			default_leaf[i] = default_leaf_vec[i];
-		}
 		let empty_hashes =
-			gen_empty_hashes::<Bn254Fr, _, 32usize>(&poseidon, &default_leaf).unwrap();
+			gen_empty_hashes::<Bn254Fr, _, 32usize>(&poseidon, &default_leaf_vec[..]).unwrap();
 
 		assert_eq!(empty_hashes.to_vec(), solidity_empty_hashes);
 	}
