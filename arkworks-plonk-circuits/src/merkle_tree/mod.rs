@@ -1,7 +1,7 @@
-use std::{marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::poseidon::poseidon::{FieldHasherGadget, PoseidonParametersVar};
-use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use arkworks_gadgets::{
 	merkle_tree::simple_merkle::{Path, SparseMerkleTree},
@@ -11,25 +11,25 @@ use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable
 
 #[derive(Clone)]
 pub struct PathVar<
-	E: PairingEngine,
-	P: TEModelParameters<BaseField = E::Fr>,
-	HG: FieldHasherGadget<E, P>,
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+	HG: FieldHasherGadget<F, P>,
 	const N: usize,
 > {
 	path: [(Variable, Variable); N], // Or should we use Vec< ...> ?
-	_engine: PhantomData<E>,
+	_field: PhantomData<F>,
 	_te: PhantomData<P>,
 	_hg: PhantomData<HG>,
 }
 
 impl<
-		E: PairingEngine,
-		P: TEModelParameters<BaseField = E::Fr>,
-		HG: FieldHasherGadget<E, P>,
+		F: PrimeField,
+		P: TEModelParameters<BaseField = F>,
+		HG: FieldHasherGadget<F, P>,
 		const N: usize,
-	> PathVar<E, P, HG, N>
+	> PathVar<F, P, HG, N>
 {
-	fn from_native(composer: &mut StandardComposer<E, P>, native: Path<F, HG::Native, N>) -> Self {
+	fn from_native(composer: &mut StandardComposer<F, P>, native: Path<F, HG::Native, N>) -> Self {
 		// Initialize the array
 		let mut path_vars = [(composer.zero_var(), composer.zero_var()); N];
 
@@ -42,7 +42,7 @@ impl<
 
 		PathVar {
 			path: path_vars,
-			_engine: PhantomData,
+			_field: PhantomData,
 			_te: PhantomData,
 			_hg: PhantomData,
 		}
@@ -50,7 +50,7 @@ impl<
 
 	pub fn check_membership(
 		&self,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 		root_hash: &Variable,
 		leaf: &Variable,
 		hasher: &HG,
@@ -60,15 +60,15 @@ impl<
 
 	pub fn calculate_root(
 		&self,
-		composer: &mut StandardComposer<E, P>,
+		composer: &mut StandardComposer<F, P>,
 		leaf: &Variable,
-        hash_gadget: &HG, 
+		hash_gadget: &HG,
 	) -> Result<Variable, Error> {
-        // The `leaf` variable is carrying raw (unhashed) data, so hash first
-        let leaf_hash = hash_gadget.hash(composer, &[*leaf])?;
+		// The `leaf` variable is carrying raw (unhashed) data, so hash first
+		let leaf_hash = hash_gadget.hash(composer, &[*leaf])?;
 
-        // Check if leaf is one of the bottom-most siblings
-        let leaf_is_left = composer.is_eq_with_output(leaf_hash, self.path[0].0);
+		// Check if leaf is one of the bottom-most siblings
+		let leaf_is_left = composer.is_eq_with_output(leaf_hash, self.path[0].0);
 
 		Ok(composer.zero_var())
 	}
