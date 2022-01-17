@@ -5,6 +5,5 @@ members = [
     "arkworks-circuits",
     "arkworks-utils",
     "arkworks-plonk-circuits",
-    "arkworks-circom-verifier",
     "arkworks-benchmarks"
 ]

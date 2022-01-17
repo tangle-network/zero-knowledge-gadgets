@@ -60,7 +60,7 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 
 	fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
 		let eval_time = start_timer!(|| "PoseidonCRH::Eval");
-		let f_inputs = arkworks_utils::utils::to_field_elements(input)?;
+		let f_inputs: Vec<F> = arkworks_utils::utils::to_field_elements(input)?;
 		if f_inputs.len() >= parameters.width.into() {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
@@ -70,10 +70,12 @@ impl<F: PrimeField> CRHTrait for CRH<F> {
 			);
 		}
 
-		let mut buffer = vec![F::zero()];
-		for f in f_inputs {
-			buffer.push(f);
-		}
+		let mut buffer = vec![F::zero(); parameters.width as usize];
+		buffer
+			.iter_mut()
+			.skip(1)
+			.zip(f_inputs)
+			.for_each(|(a, b)| *a = b);
 		let result = Self::permute(parameters, buffer)?;
 
 		end_timer!(eval_time);
