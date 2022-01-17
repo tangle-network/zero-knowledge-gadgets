@@ -48,6 +48,7 @@ impl<
 		}
 	}
 
+	// Should this really have output?
 	pub fn check_membership(
 		&self,
 		composer: &mut StandardComposer<F, P>,
@@ -55,7 +56,11 @@ impl<
 		leaf: &Variable,
 		hasher: &HG,
 	) -> Result<Variable, Error> {
-		Ok(composer.zero_var())
+		let computed_root = self.calculate_root(composer, leaf, hash_gadget)?;
+
+		composer.assert_equal(computed_root, *root_hash);
+
+		Ok(composer.is_eq_with_output(computed_root, *root_hash))
 	}
 
 	pub fn calculate_root(
@@ -64,12 +69,27 @@ impl<
 		leaf: &Variable,
 		hash_gadget: &HG,
 	) -> Result<Variable, Error> {
-		// The `leaf` variable is carrying raw (unhashed) data, so hash first
-		let leaf_hash = hash_gadget.hash(composer, &[*leaf])?;
-
 		// Check if leaf is one of the bottom-most siblings
 		let leaf_is_left = composer.is_eq_with_output(leaf_hash, self.path[0].0);
+		composer.assert_equal(
+			*leaf,
+			composer.conditional_select(leaf_is_left, self.path[0].0, self.path[0].0),
+		);
 
-		Ok(composer.zero_var())
+		// Check levels between leaf level and root
+		let mut previous_hash = *leaf;
+		for (left_hash, right_hash) in self.path.iter() {
+			// Check if previous_hash matches the correct current hash
+			let previous_is_left = composer.is_eq_with_output(previous_hash, *left_hash);
+			composer.assert_equal(
+				previoush_hash,
+				composer.conditional_select(previous_is_left, *left_hash, *right_hash),
+			);
+
+			// Update previous_hash
+			previous_hash = hash_gadget.hash_two(composer, left_hash, right_hash)?;
+		}
+
+		Ok(previous_hash)
 	}
 }

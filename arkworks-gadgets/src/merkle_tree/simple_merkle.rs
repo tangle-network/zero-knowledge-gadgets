@@ -2,8 +2,10 @@ use super::{is_left_child, is_root, left_child, parent, right_child, sibling, tr
 use crate::poseidon::field_hasher::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::collections::BTreeMap;
-use ark_std::{collections::BTreeSet, marker::PhantomData};
+use ark_std::{
+	collections::{BTreeMap, BTreeSet},
+	marker::PhantomData,
+};
 
 // Path
 #[derive(Clone)]
