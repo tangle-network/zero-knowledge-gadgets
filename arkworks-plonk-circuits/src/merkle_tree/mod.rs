@@ -69,12 +69,17 @@ impl<
 		leaf: &Variable,
 		hash_gadget: &HG,
 	) -> Result<Variable, Error> {
-		// Check if leaf is one of the bottom-most siblings
-		let leaf_is_left = composer.is_eq_with_output(leaf_hash, self.path[0].0);
-		composer.assert_equal(
-			*leaf,
-			composer.conditional_select(leaf_is_left, self.path[0].0, self.path[0].0),
-		);
+		// The old version of this in merkle_tree::constraints.rs contains the following check
+		// at the beginning: but it seems redundant because this will be checked in the for loop below
+		// Am I missing something? Investigate in tests...
+
+		// // Check if leaf is one of the bottom-most siblings
+		// let leaf_is_left = composer.is_eq_with_output(leaf_hash, self.path[0].0);
+		// composer.assert_equal(
+		// 	*leaf,
+		// 	composer.conditional_select(leaf_is_left, self.path[0].0, self.path[0].1),
+		// );
+
 
 		// Check levels between leaf level and root
 		let mut previous_hash = *leaf;
