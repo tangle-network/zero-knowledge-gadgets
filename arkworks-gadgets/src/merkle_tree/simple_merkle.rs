@@ -3,7 +3,7 @@ use crate::poseidon::field_hasher::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
 use ark_std::collections::BTreeMap;
-use std::{collections::BTreeSet, marker::PhantomData};
+use ark_std::{collections::BTreeSet, marker::PhantomData};
 
 // Path
 #[derive(Clone)]
