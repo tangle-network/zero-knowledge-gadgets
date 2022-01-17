@@ -27,7 +27,7 @@ struct PoseidonGadget {
 	pub params: PoseidonParametersVar,
 }
 
-trait FieldHasherGadget<F: PrimeField, P: TEModelParameters<BaseField = F>> {
+pub trait FieldHasherGadget<F: PrimeField, P: TEModelParameters<BaseField = F>> {
 	type Native: Debug + Clone;
 
 	// For easy conversion from native version
