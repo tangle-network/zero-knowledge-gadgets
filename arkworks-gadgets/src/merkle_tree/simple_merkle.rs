@@ -10,7 +10,7 @@ use ark_std::{
 // Path
 #[derive(Clone)]
 pub struct Path<F: PrimeField, H: FieldHasher<F>, const N: usize> {
-	pub(crate) path: [(F, F); N],
+	pub path: [(F, F); N],
 	_marker: PhantomData<H>,
 }
 
