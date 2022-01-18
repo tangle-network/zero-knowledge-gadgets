@@ -2,8 +2,29 @@ use super::{is_left_child, is_root, left_child, parent, right_child, sibling, tr
 use crate::poseidon::field_hasher::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::collections::BTreeMap;
-use std::{collections::BTreeSet, marker::PhantomData};
+use ark_std::{
+	borrow::ToOwned,
+	collections::{BTreeMap, BTreeSet},
+	marker::PhantomData,
+};
+
+#[derive(Debug)]
+pub enum MerkleError {
+	InvalidLeaf,
+	InvalidPathNodes,
+}
+
+impl core::fmt::Display for MerkleError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let msg = match self {
+			MerkleError::InvalidLeaf => "Invalid leaf".to_owned(),
+			MerkleError::InvalidPathNodes => "Path nodes are not consistent".to_owned(),
+		};
+		write!(f, "{}", msg)
+	}
+}
+
+impl ark_std::error::Error for MerkleError {}
 
 // Path
 #[derive(Clone)]
@@ -25,14 +46,14 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 	/// stored on leaf-level.
 	pub fn calculate_root(&self, leaf: &F, hasher: &H) -> Result<F, Error> {
 		if *leaf != self.path[0].0 && *leaf != self.path[0].1 {
-			return Err(Error::from("Leaf is not on path"));
+			return Err(MerkleError::InvalidLeaf.into());
 		}
 
 		let mut prev = *leaf;
 		// Check levels between leaf level and root
 		for &(ref left_hash, ref right_hash) in &self.path {
 			if &prev != left_hash && &prev != right_hash {
-				return Err(Error::from("Path nodes are not consistent"));
+				return Err(MerkleError::InvalidPathNodes.into());
 			}
 			prev = hasher.hash_two(left_hash, right_hash)?;
 		}
@@ -45,7 +66,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 	/// does indeed belong to a tree with the given `root_hash`
 	pub fn get_index(&self, root_hash: &F, leaf: &F, hasher: &H) -> Result<F, Error> {
 		if !self.check_membership(root_hash, leaf, hasher)? {
-			return Err(Error::from("Leaf is not on path"));
+			return Err(MerkleError::InvalidLeaf.into());
 		}
 
 		let mut prev = *leaf;
@@ -363,7 +384,6 @@ mod test {
 		smt
 	}
 
-	use crate::merkle_tree::hash_empty;
 	#[test]
 	fn should_create_trees_with_same_root_poseidon() {
 		// Common to both
@@ -389,7 +409,7 @@ mod test {
 		// Now generate tree in new method
 
 		let poseidon = Poseidon::new(params.clone());
-		let mut default_leaf = [0u8; 0];
+		let default_leaf = [0u8; 0];
 		const HEIGHT: usize = 3;
 
 		let smt =

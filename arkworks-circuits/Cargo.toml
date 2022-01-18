@@ -11,8 +11,8 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = { path = "../arkworks-utils", version = "0.4.17", default-features = false }
-arkworks-gadgets = { path = "../arkworks-gadgets", version = "0.4.17", default-features = false }
+arkworks-utils = { path = "../arkworks-utils", version = "0.4.17", features = ["r1cs", "default_poseidon"], default-features = false }
+arkworks-gadgets = { path = "../arkworks-gadgets", version = "0.4.17", features = ["r1cs"], default-features = false }
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
@@ -36,25 +36,12 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
-paste = { version = "1.0.5" }
 ethabi = { version = "15.0.0", default-features = false }
 hex-literal = { version = "0.3.4" }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
-default = ["std", "r1cs", "default_mimc", "default_poseidon"]
-default_poseidon = [
-  "arkworks-gadgets/default_poseidon",
-  "arkworks-utils/default_poseidon"
-]
-default_mimc = [
-  "arkworks-gadgets/default_mimc",
-  "arkworks-utils/default_mimc"
-]
-r1cs = [
-  "arkworks-utils/r1cs",
-  "arkworks-gadgets/r1cs",
-]
+default = ["std"]
 std = [
   "ark-std/std",
   "arkworks-utils/std",
