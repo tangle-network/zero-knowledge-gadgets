@@ -1,6 +1,6 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_std::{fmt::Debug, vec::Vec, One};
+use ark_std::{fmt::Debug, vec, vec::Vec, One};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
