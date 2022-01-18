@@ -544,6 +544,7 @@ impl<
 	}
 
 	// TODO: Fix to match INS and OUTS
+	// NOTE: To be used for testing
 	pub fn deconstruct_public_inputs(
 		public_inputs: Vec<F>,
 	) -> Result<
@@ -559,27 +560,25 @@ impl<
 	> {
 		let mut pub_ins = public_inputs;
 
-		let err = "Invalid public inputs";
-
 		let mut root_set = Vec::new();
 		for _ in 0..INS {
-			root_set.push(pub_ins.pop().ok_or(err)?);
+			root_set.push(pub_ins.pop().unwrap());
 		}
 
-		let chain_id = pub_ins.pop().ok_or(err)?;
+		let chain_id = pub_ins.pop().unwrap();
 
 		let mut out_commitments = Vec::new();
 		for _ in 0..OUTS {
-			out_commitments.push(pub_ins.pop().ok_or(err)?);
+			out_commitments.push(pub_ins.pop().unwrap());
 		}
 
 		let mut in_nullifiers = Vec::new();
 		for _ in 0..INS {
-			in_nullifiers.push(pub_ins.pop().ok_or(err)?);
+			in_nullifiers.push(pub_ins.pop().unwrap());
 		}
 
-		let ext_data_hash = pub_ins.pop().ok_or(err)?;
-		let public_amount = pub_ins.pop().ok_or(err)?;
+		let ext_data_hash = pub_ins.pop().unwrap();
+		let public_amount = pub_ins.pop().unwrap();
 
 		Ok((
 			chain_id,

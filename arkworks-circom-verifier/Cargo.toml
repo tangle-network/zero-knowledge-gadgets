@@ -37,7 +37,6 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
-paste = { version = "1.0.5" }
 byteorder = "1.4.3"
 
 [features]
