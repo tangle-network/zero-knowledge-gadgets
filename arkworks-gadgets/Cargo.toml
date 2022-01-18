@@ -29,18 +29,16 @@ ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
+[dev-dependencies]
+arkworks-utils = { path = "../arkworks-utils",  version = "0.4.17", default-features = false, features = ["default_poseidon"] }
 # curves
 ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
-paste = { version = "1.0.5" }
-
 [features]
-default = ["std", "r1cs", "default_mimc", "default_poseidon"]
-default_poseidon = ["arkworks-utils/default_poseidon"]
-default_mimc = ["arkworks-utils/default_mimc"]
+default = ["std", "r1cs"]
 r1cs = ["arkworks-utils/r1cs"]
 std = [
   "ark-std/std",

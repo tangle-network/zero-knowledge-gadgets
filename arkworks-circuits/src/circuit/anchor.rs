@@ -14,6 +14,7 @@ use arkworks_gadgets::{
 	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
 	set::simple_set_gadget::SetGadget,
 };
+use ark_std::vec::Vec;
 
 pub struct AnchorCircuit<
 	F: PrimeField,
