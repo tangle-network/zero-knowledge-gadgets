@@ -2,9 +2,11 @@ use super::{is_left_child, is_root, left_child, parent, right_child, sibling, tr
 use crate::poseidon::field_hasher::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::collections::{BTreeMap, BTreeSet};
-use ark_std::marker::PhantomData;
-use ark_std::borrow::ToOwned;
+use ark_std::{
+	borrow::ToOwned,
+	collections::{BTreeMap, BTreeSet},
+	marker::PhantomData,
+};
 
 #[derive(Debug)]
 pub enum MerkleError {
@@ -13,13 +15,13 @@ pub enum MerkleError {
 }
 
 impl core::fmt::Display for MerkleError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let msg = match self {
-            MerkleError::InvalidLeaf => "Invalid leaf".to_owned(),
-            MerkleError::InvalidPathNodes => "Path nodes are not consistent".to_owned(),
-        };
-        write!(f, "{}", msg)
-    }
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let msg = match self {
+			MerkleError::InvalidLeaf => "Invalid leaf".to_owned(),
+			MerkleError::InvalidPathNodes => "Path nodes are not consistent".to_owned(),
+		};
+		write!(f, "{}", msg)
+	}
 }
 
 impl ark_std::error::Error for MerkleError {}
