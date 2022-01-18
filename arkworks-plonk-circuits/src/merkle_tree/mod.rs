@@ -80,6 +80,46 @@ impl<
 
 		Ok(previous_hash)
 	}
+
+	pub fn get_index(
+		&self,
+		composer: &mut StandardComposer<F, P>,
+		root_hash: &Variable,
+		leaf: &Variable,
+		hasher: &HG,
+	) -> Result<Variable, Error> {
+		// First check that leaf is on path
+		let is_on_path = self.check_membership(composer, root_hash, leaf, hasher)?;
+		let one = composer.add_input(F::one());
+		composer.assert_equal(is_on_path, one);
+
+		let mut index = composer.add_input(F::zero());
+		let mut two_power = composer.add_input(F::one());
+		let mut right_value: Variable;
+
+		// Check the levels between leaf level and root
+		let mut previous_hash = *leaf;
+
+		for (left_hash, right_hash) in self.path.iter() {
+			// Check if previous hash is a left node
+			let previous_is_left = composer.is_eq_with_output(previous_hash, *left_hash);
+			right_value = composer.arithmetic_gate(|gate| {
+				gate.witness(index, two_power, None).add(F::one(), F::one())
+			});
+
+			// Assign index based on whether prev hash is left or right
+			index = composer.conditional_select(previous_is_left, index, right_value);
+			two_power = composer
+				.arithmetic_gate(|gate| gate.witness(two_power, one, None).mul(F::one().double()));
+
+			// Why would I add a proof of correct hashing at each step when I've
+			// already proven the leaf is on path?  (This is how it was done in
+			// merkle_tree::constraints)
+			previous_hash = hasher.hash_two(composer, left_hash, right_hash)?;
+		}
+
+		Ok(index)
+	}
 }
 
 #[cfg(test)]
@@ -192,6 +232,105 @@ mod test {
 			&public_inputs,
 			&pi_pos,
 			b"SMT Test",
+		)
+		.unwrap();
+	}
+
+	struct IndexTestCircuit<
+		'a,
+		F: PrimeField,
+		P: TEModelParameters<BaseField = F>,
+		HG: FieldHasherGadget<F, P>,
+		const N: usize,
+	> {
+		index: u64,
+		leaves: &'a [F],
+		empty_leaf: &'a [u8],
+		hasher: &'a HG::Native,
+	}
+
+	impl<
+			F: PrimeField,
+			P: TEModelParameters<BaseField = F>,
+			HG: FieldHasherGadget<F, P>,
+			const N: usize,
+		> Circuit<F, P> for IndexTestCircuit<'_, F, P, HG, N>
+	{
+		const CIRCUIT_ID: [u8; 32] = [0xfd; 32];
+
+		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+
+			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+				self.leaves,
+				&self.hasher,
+				self.empty_leaf,
+			)
+			.unwrap();
+			let root = smt.root();
+			let path = smt.generate_membership_proof(self.index);
+
+			let path_var = PathVar::<F, P, HG, N>::from_native(composer, path);
+			let root_var = composer.add_input(root);
+			let leaf_var = composer.add_input(self.leaves[self.index as usize]);
+
+			let res = path_var.get_index(composer, &root_var, &leaf_var, &hasher_gadget)?;
+			let index_var = composer.add_input(F::from(self.index));
+			composer.assert_equal(res, index_var);
+
+			Ok(())
+		}
+
+		fn padded_circuit_size(&self) -> usize {
+			1 << 14
+		}
+	}
+
+	#[test]
+	fn should_verify_index() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon = PoseidonBn254 { params };
+
+		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let empty_leaf = [0u8; 32];
+		let index = 2u64;
+
+		let mut test_circuit =
+			IndexTestCircuit::<'_, Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+				index,
+				leaves: &leaves,
+				empty_leaf: &empty_leaf,
+				hasher: &poseidon,
+			};
+
+		// Usual prover/verifier flow:
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 15, None, rng).unwrap();
+
+		let (pk, vd) = test_circuit
+			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.unwrap();
+
+		// PROVER
+		let proof = test_circuit
+			.gen_proof(&u_params, pk, b"SMTIndex Test")
+			.unwrap();
+
+		// VERIFIER
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+
+		let VerifierData { key, pi_pos } = vd;
+
+		circuit::verify_proof::<_, JubjubParameters, _>(
+			&u_params,
+			key,
+			&proof,
+			&public_inputs,
+			&pi_pos,
+			b"SMTIndex Test",
 		)
 		.unwrap();
 	}
