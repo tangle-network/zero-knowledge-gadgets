@@ -1,7 +1,7 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec::Vec, One};
-use arkworks_gadgets::poseidon::field_hasher::Poseidon;
+use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
@@ -23,12 +23,12 @@ pub struct PoseidonParametersVar {
 }
 
 #[derive(Debug, Default)]
-struct PoseidonGadget {
+pub struct PoseidonGadget {
 	pub params: PoseidonParametersVar,
 }
 
 pub trait FieldHasherGadget<F: PrimeField, P: TEModelParameters<BaseField = F>> {
-	type Native: Debug + Clone;
+	type Native: Debug + Clone + FieldHasher<F>;
 
 	// For easy conversion from native version
 	fn from_native(composer: &mut StandardComposer<F, P>, native: Self::Native) -> Self;
@@ -252,8 +252,7 @@ mod tests {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> =
-			vec![PublicInputValue::<Bn254Fr>::from(expected)];
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
