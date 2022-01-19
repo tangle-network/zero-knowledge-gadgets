@@ -160,13 +160,14 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+
+use super::*;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
-	use ark_std::{test_rng, One};
+	use ark_std::{test_rng, One, marker::PhantomData};
 	use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 	use arkworks_utils::{
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
@@ -268,76 +269,53 @@ mod tests {
 		.unwrap();
 	}
 
-	// Test failure for invalid inputs 
-	struct BadTestCircuit<
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
-	> {
-		left: F,
-		right: F,
-		expected: F,
-		hasher: HG::Native,
+	
+	
+
+	struct SmallTestCircuit<F: PrimeField, P: TEModelParameters<BaseField = F>> {
+		a: F,
+		b: F,
+		a_plus_b: F,
+		_marker: PhantomData<P>,
 	}
 
-	impl<F: PrimeField, P: TEModelParameters<BaseField = F>, HG: FieldHasherGadget<F, P>>
-		Circuit<F, P> for BadTestCircuit<F, P, HG>
+	impl<F: PrimeField, P: TEModelParameters<BaseField = F>>
+		Circuit<F, P> for SmallTestCircuit<F, P>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
 		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
-			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
-
-			let left_var = composer.add_input(self.left);
-			let right_var = composer.add_input(self.right);
-			// This circuit is instantiated with the correct
-			// hash value in expected, here we change it to an
-			// incorrect value.
-			let bad_expected_var = composer.add_input(self.expected.double());
-
-			let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
-			composer.assert_equal(outcome, bad_expected_var);
+			let a = composer.add_input(self.a);
+			let b = composer.add_input(self.b);
+			let a_plus_b = composer.add_input(self.a_plus_b);
+			let result = composer.arithmetic_gate(|gate| gate.witness(a, b, Some(a_plus_b)).add(F::one(), F::one()));
 			Ok(())
 		}
 
 		fn padded_circuit_size(&self) -> usize {
-			1 << 14
+			1 << 2
 		}
 	}
 
-	#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError")]
+	// This one passes, so 1<<2 is an appropriate padded circuit size for 
+	// valid inputs.
 	#[test]
-	fn should_fail_with_improper_expected_result() {
-		let curve = arkworks_utils::utils::common::Curve::Bn254;
-
-		// Get poseidon parameters for this curve:
-		let util_params = setup_params_x5_3(curve);
-		let params = PoseidonParameters {
-			round_keys: util_params.clone().round_keys,
-			mds_matrix: util_params.clone().mds_matrix,
-			full_rounds: util_params.clone().full_rounds,
-			partial_rounds: util_params.clone().partial_rounds,
-			sbox: UtilsPoseidonSbox(5),
-			width: util_params.clone().width,
-		};
-		let poseidon_hasher = PoseidonHasher::new(params);
-
-		// Choose hash fn inputs and compute hash:
-		let left = Fq::one();
-		let right = Fq::one().double();
-		let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
+	fn should_verify_proof() {
+		let a = Fq::from(2u64);
+		let b = Fq::from(3u64);
+		let a_plus_b = Fq::from(5u64);
 
 		// Create the circuit
-		let mut test_circuit = BadTestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget> {
-			left,
-			right,
-			expected,
-			hasher: poseidon_hasher,
+		let mut test_circuit = SmallTestCircuit::<Bn254Fr, JubjubParameters> {
+			a,
+			b,
+			a_plus_b,
+			_marker: PhantomData,
 		};
 
 		let rng = &mut test_rng();
 		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 15, None, rng).unwrap();
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 4, None, rng).unwrap();
 
 		let (pk, vd) = test_circuit
 			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
@@ -349,8 +327,53 @@ mod tests {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> =
-			vec![PublicInputValue::<Bn254Fr>::from(expected)];
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> =vec![];
+
+		let VerifierData { key, pi_pos } = vd;
+
+		circuit::verify_proof::<_, JubjubParameters, _>(
+			&u_params,
+			key,
+			&proof,
+			&public_inputs,
+			&pi_pos,
+			b"Poseidon Test",
+		)
+		.unwrap();
+	}
+
+	// Now this one will fail because it creates a 
+	// circuit that's too large when given invalid 
+	// inputs.
+	#[test]
+	fn should_fail_proof() {
+		let a = Fq::from(2u64);
+		let b = Fq::from(3u64);
+		let a_plus_b = Fq::from(4u64);
+
+		// Create the circuit
+		let mut test_circuit = SmallTestCircuit::<Bn254Fr, JubjubParameters> {
+			a,
+			b,
+			a_plus_b,
+			_marker: PhantomData,
+		};
+
+		let rng = &mut test_rng();
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 4, None, rng).unwrap();
+
+		let (pk, vd) = test_circuit
+			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.unwrap();
+
+		// PROVER
+		let proof = test_circuit
+			.gen_proof(&u_params, pk, b"Poseidon Test")
+			.unwrap();
+
+		// VERIFIER
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> =vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
