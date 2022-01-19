@@ -219,8 +219,8 @@ where
 		}
 
 		// Now check that path has the correct Merkle root
-		let isonpath = previous_hash.is_eq(root);
-		isonpath.unwrap().enforce_equal(&Boolean::TRUE)?;
+		let is_on_path = previous_hash.is_eq(root);
+		is_on_path.unwrap().enforce_equal(&Boolean::TRUE)?;
 
 		Ok(index)
 	}
