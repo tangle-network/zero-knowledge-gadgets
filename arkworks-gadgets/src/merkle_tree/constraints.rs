@@ -194,10 +194,6 @@ where
 		root: &NodeVar<F, P, HG, LHG>,
 		leaf: L,
 	) -> Result<FpVar<F>, SynthesisError> {
-		// First, check if the provided leaf is on the path
-		let isonpath = self.check_membership(root, &leaf);
-		isonpath.unwrap().enforce_equal(&Boolean::TRUE)?;
-
 		let mut index = FpVar::<F>::zero();
 		let mut twopower = FpVar::<F>::one();
 		let mut rightvalue: FpVar<F>;
@@ -221,6 +217,10 @@ where
 				right_hash,
 			)?;
 		}
+
+		// Now check that path has the correct Merkle root
+		let is_on_path = previous_hash.is_eq(root);
+		is_on_path.unwrap().enforce_equal(&Boolean::TRUE)?;
 
 		Ok(index)
 	}
@@ -393,6 +393,45 @@ mod test {
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[index as usize])).unwrap();
 
 		let res = path_var.get_index(&root_var, &leaf_var).unwrap();
+		let desired_res = Fq::from(index);
+
+		assert!(res.cs().is_satisfied().unwrap());
+		assert_eq!(res.value().unwrap(), desired_res);
+	}
+
+	// This test demonstrates that the get_index method verifies
+	// that the path is consistent with the given Merkle root
+	#[should_panic(expected = "assertion failed: res.cs().is_satisfied().unwrap()")]
+	#[test]
+	fn get_index_should_fail() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bls381;
+
+		let params3 = setup_params_x5_3(curve);
+
+		let inner_params = Rc::new(params3);
+		let leaf_params = inner_params.clone();
+		let index = 2;
+		let cs = ConstraintSystem::<Fq>::new_ref();
+
+		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let smt = SMT::new_sequential(inner_params.clone(), leaf_params.clone(), &leaves).unwrap();
+		let path = smt.generate_membership_proof(index);
+
+		// Now generate a bad root to make this fail:
+		let bad_leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let bad_smt = SMT::new_sequential(inner_params, leaf_params, &bad_leaves).unwrap();
+		let bad_root = bad_smt.root();
+
+		let path_var =
+			PathVar::<_, _, _, _, { SMTConfig::HEIGHT as usize }>::new_witness(cs.clone(), || {
+				Ok(path)
+			})
+			.unwrap();
+		let bad_root_var = SMTNode::new_witness(cs.clone(), || Ok(bad_root)).unwrap();
+		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[index as usize])).unwrap();
+
+		let res = path_var.get_index(&bad_root_var, &leaf_var).unwrap();
 		let desired_res = Fq::from(index);
 
 		assert!(res.cs().is_satisfied().unwrap());
