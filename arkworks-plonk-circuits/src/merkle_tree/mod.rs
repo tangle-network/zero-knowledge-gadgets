@@ -177,7 +177,8 @@ mod test {
 			let root_var = composer.add_input(root);
 			let leaf_var = composer.add_input(self.leaves[0]);
 
-			let res = path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
+			let res =
+				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
 			let one = composer.add_input(F::one());
 			composer.assert_equal(res, one);
 
