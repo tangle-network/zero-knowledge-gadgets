@@ -6,7 +6,7 @@ use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 #[derive(Clone)]
-pub struct PathVar<
+pub struct PathGadget<
 	F: PrimeField,
 	P: TEModelParameters<BaseField = F>,
 	HG: FieldHasherGadget<F, P>,
@@ -23,7 +23,7 @@ impl<
 		P: TEModelParameters<BaseField = F>,
 		HG: FieldHasherGadget<F, P>,
 		const N: usize,
-	> PathVar<F, P, HG, N>
+	> PathGadget<F, P, HG, N>
 {
 	fn from_native(composer: &mut StandardComposer<F, P>, native: Path<F, HG::Native, N>) -> Self {
 		// Initialize the array
@@ -36,7 +36,7 @@ impl<
 			);
 		}
 
-		PathVar {
+		PathGadget {
 			path: path_vars,
 			_field: PhantomData,
 			_te: PhantomData,
@@ -122,7 +122,7 @@ impl<
 
 #[cfg(test)]
 mod test {
-	use super::PathVar;
+	use super::PathGadget;
 	use crate::poseidon::poseidon::{FieldHasherGadget, PoseidonGadget};
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_ec::TEModelParameters;
@@ -173,11 +173,11 @@ mod test {
 			let path = smt.generate_membership_proof(0);
 			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
 
-			let path_var = PathVar::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
 			let root_var = composer.add_input(root);
 			let leaf_var = composer.add_input(self.leaves[0]);
 
-			let res = path_var.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
+			let res = path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
 			let one = composer.add_input(F::one());
 			composer.assert_equal(res, one);
 
@@ -268,11 +268,11 @@ mod test {
 			let root = smt.root();
 			let path = smt.generate_membership_proof(self.index);
 
-			let path_var = PathVar::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
 			let root_var = composer.add_input(root);
 			let leaf_var = composer.add_input(self.leaves[self.index as usize]);
 
-			let res = path_var.get_index(composer, &root_var, &leaf_var, &hasher_gadget)?;
+			let res = path_gadget.get_index(composer, &root_var, &leaf_var, &hasher_gadget)?;
 			let index_var = composer.add_input(F::from(self.index));
 			composer.assert_equal(res, index_var);
 
@@ -369,7 +369,7 @@ mod test {
 			.unwrap();
 			let path = smt.generate_membership_proof(self.index);
 
-			let path_var = PathVar::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
 
 			// Now create an invalid root to show that get_index detects this:
 			let bad_leaves = &self.leaves[0..1];
@@ -383,7 +383,7 @@ mod test {
 			let bad_root_var = composer.add_input(bad_root);
 			let leaf_var = composer.add_input(self.leaves[self.index as usize]);
 
-			let res = path_var.get_index(composer, &bad_root_var, &leaf_var, &hasher_gadget)?;
+			let res = path_gadget.get_index(composer, &bad_root_var, &leaf_var, &hasher_gadget)?;
 			let index_var = composer.add_input(F::from(self.index));
 			composer.assert_equal(res, index_var);
 
