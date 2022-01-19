@@ -447,4 +447,204 @@ mod test {
 		)
 		.unwrap();
 	}
+
+	// Membership proof should fail due to invalid leaf input
+	struct BadLeafTestCircuit<
+		'a,
+		F: PrimeField,
+		P: TEModelParameters<BaseField = F>,
+		HG: FieldHasherGadget<F, P>,
+		const N: usize,
+	> {
+		leaves: &'a [F],
+		empty_leaf: &'a [u8],
+		hasher: &'a HG::Native,
+	}
+
+	impl<
+			F: PrimeField,
+			P: TEModelParameters<BaseField = F>,
+			HG: FieldHasherGadget<F, P>,
+			const N: usize,
+		> Circuit<F, P> for BadLeafTestCircuit<'_, F, P, HG, N>
+	{
+		const CIRCUIT_ID: [u8; 32] = [0xfe; 32];
+
+		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+
+			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+				self.leaves,
+				&self.hasher,
+				self.empty_leaf,
+			)
+			.unwrap();
+			let path = smt.generate_membership_proof(0);
+			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
+
+			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let root_var = composer.add_input(root);
+			let leaf_var = composer.zero_var();
+
+			let res =
+				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
+			let one = composer.add_input(F::one());
+			composer.assert_equal(res, one);
+
+			Ok(())
+		}
+
+		fn padded_circuit_size(&self) -> usize {
+			1 << 16
+		}
+	}
+
+	#[should_panic(
+		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
+	)]
+	#[test]
+	fn bad_leaf_membership() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon = PoseidonBn254 { params };
+
+		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let empty_leaf = [0u8; 32];
+
+		// Create the test circuit
+		let mut test_circuit =
+			BadLeafTestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+				leaves: &leaves,
+				empty_leaf: &empty_leaf,
+				hasher: &poseidon,
+			};
+
+		// Usual prover/verifier flow:
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
+
+		let (pk, vd) = test_circuit
+			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.unwrap();
+
+		// PROVER
+		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
+
+		// VERIFIER
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+
+		let VerifierData { key, pi_pos } = vd;
+
+		circuit::verify_proof::<_, JubjubParameters, _>(
+			&u_params,
+			key,
+			&proof,
+			&public_inputs,
+			&pi_pos,
+			b"SMT Test",
+		)
+		.unwrap();
+	}
+
+	// Membership proof should fail due to invalid leaf input
+	struct BadRootTestCircuit<
+		'a,
+		F: PrimeField,
+		P: TEModelParameters<BaseField = F>,
+		HG: FieldHasherGadget<F, P>,
+		const N: usize,
+	> {
+		leaves: &'a [F],
+		empty_leaf: &'a [u8],
+		hasher: &'a HG::Native,
+	}
+
+	impl<
+			F: PrimeField,
+			P: TEModelParameters<BaseField = F>,
+			HG: FieldHasherGadget<F, P>,
+			const N: usize,
+		> Circuit<F, P> for BadRootTestCircuit<'_, F, P, HG, N>
+	{
+		const CIRCUIT_ID: [u8; 32] = [0xfe; 32];
+
+		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+
+			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+				self.leaves,
+				&self.hasher,
+				self.empty_leaf,
+			)
+			.unwrap();
+			let path = smt.generate_membership_proof(0);
+			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
+
+			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let root_var = composer.zero_var();
+			let leaf_var = composer.add_input(self.leaves[0]);
+
+			let res =
+				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
+			let one = composer.add_input(F::one());
+			composer.assert_equal(res, one);
+
+			Ok(())
+		}
+
+		fn padded_circuit_size(&self) -> usize {
+			1 << 16
+		}
+	}
+
+	#[should_panic(
+		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
+	)]
+	#[test]
+	fn bad_root_membership() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon = PoseidonBn254 { params };
+
+		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+		let empty_leaf = [0u8; 32];
+
+		// Create the test circuit
+		let mut test_circuit =
+			BadRootTestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+				leaves: &leaves,
+				empty_leaf: &empty_leaf,
+				hasher: &poseidon,
+			};
+
+		// Usual prover/verifier flow:
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
+
+		let (pk, vd) = test_circuit
+			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.unwrap();
+
+		// PROVER
+		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
+
+		// VERIFIER
+		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+
+		let VerifierData { key, pi_pos } = vd;
+
+		circuit::verify_proof::<_, JubjubParameters, _>(
+			&u_params,
+			key,
+			&proof,
+			&public_inputs,
+			&pi_pos,
+			b"SMT Test",
+		)
+		.unwrap();
+	}
 }
