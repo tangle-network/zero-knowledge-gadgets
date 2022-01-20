@@ -212,9 +212,11 @@ mod test {
 			)
 			.unwrap();
 
-		// Using random circuit
+		// Using random circuit to generate pk/vk
 		let (random_circuit, ..) = anchor_setup.setup_random_circuit(rng).unwrap();
 		let (pk, vk) = setup_keys::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+		// Using generated pk/vk to prove and verify the working version of the circuit
 		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
 		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 		assert!(res);
