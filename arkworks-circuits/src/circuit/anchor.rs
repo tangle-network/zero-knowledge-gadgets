@@ -204,7 +204,8 @@ mod test {
 		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
 		let roots = [tree.root().inner(); M];
 
-		let (circuit, .., public_inputs) = anchor_setup.clone()
+		let (circuit, .., public_inputs) = anchor_setup
+			.clone()
 			.setup_circuit_with_privates(
 				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
 				commitment,
