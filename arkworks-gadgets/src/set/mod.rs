@@ -68,8 +68,8 @@ mod test {
 	fn should_verify_set_membership() {
 		let cs = ConstraintSystem::<Fr>::new_ref();
 
-		let set = vec![Fr::from(0u32), Fr::from(1u32), Fr::from(2u32)];
-		let target = Fr::from(0u32);
+		let set = vec![Fr::from(1u32), Fr::from(2u32), Fr::from(3u32)];
+		let target = Fr::from(1u32);
 		let target_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(target)).unwrap();
 		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
 
@@ -82,18 +82,83 @@ mod test {
 	}
 
 	#[test]
-	fn should_verify_set_non_membership() {
+	fn should_not_verify_set_non_membership() {
 		let cs = ConstraintSystem::<Fr>::new_ref();
 
-		let set = vec![Fr::from(0u32), Fr::from(1u32), Fr::from(2u32)];
-		let target = Fr::from(3u32);
+		let set = vec![Fr::from(1u32), Fr::from(2u32), Fr::from(3u32)];
+		let target = Fr::from(4u32);
 		let target_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(target)).unwrap();
 		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
 
 		let set_gadget = SetGadget::new(set_var);
 		let is_member = set_gadget.check_membership(&target_var).unwrap();
 
-		is_member.enforce_equal(&Boolean::FALSE).unwrap();
+		is_member.enforce_equal(&Boolean::TRUE).unwrap();
+
+		assert!(!cs.is_satisfied().unwrap());
+	}
+
+	#[test]
+	fn should_verify_set_membership_if_enabled() {
+		let cs = ConstraintSystem::<Fr>::new_ref();
+
+		// enable == 1 == true
+		let enabled = Fr::from(1u32);
+		let set = vec![Fr::from(1u32), Fr::from(2u32), Fr::from(3u32)];
+		let target = Fr::from(1u32);
+
+		let enabled_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(enabled)).unwrap();
+		let target_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(target)).unwrap();
+		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
+
+		let set_gadget = SetGadget::new(set_var);
+		let is_member = set_gadget.check_membership_enabled(&target_var, &enabled_var).unwrap();
+
+		is_member.enforce_equal(&Boolean::TRUE).unwrap();
+
+		assert!(cs.is_satisfied().unwrap());
+	}
+
+	#[test]
+	fn should_not_verify_non_set_membership_if_enabled() {
+		let cs = ConstraintSystem::<Fr>::new_ref();
+
+		// enable == 1 == true
+		// Set gadget now functions normally, meaning it values that are not in the set will yeald to false
+		let enabled = Fr::from(1u32);
+		let set = vec![Fr::from(1u32), Fr::from(2u32), Fr::from(3u32)];
+		let target = Fr::from(4u32);
+
+		let enabled_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(enabled)).unwrap();
+		let target_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(target)).unwrap();
+		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
+
+		let set_gadget = SetGadget::new(set_var);
+		let is_member = set_gadget.check_membership_enabled(&target_var, &enabled_var).unwrap();
+
+		is_member.enforce_equal(&Boolean::TRUE).unwrap();
+
+		assert!(!cs.is_satisfied().unwrap());
+	}
+
+	#[test]
+	fn should_verify_set_membership_if_not_enabled() {
+		let cs = ConstraintSystem::<Fr>::new_ref();
+
+		// enable == 0 == false
+		// Which means everything will evaluate to true, meaning it is in the set
+		let enabled = Fr::from(0u32);
+		let set = vec![Fr::from(1u32), Fr::from(2u32), Fr::from(3u32)];
+		let target = Fr::from(4u32);
+
+		let enabled_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(enabled)).unwrap();
+		let target_var = FpVar::<Fr>::new_input(cs.clone(), || Ok(target)).unwrap();
+		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
+
+		let set_gadget = SetGadget::new(set_var);
+		let is_member = set_gadget.check_membership_enabled(&target_var, &enabled_var).unwrap();
+
+		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 
 		assert!(cs.is_satisfied().unwrap());
 	}
