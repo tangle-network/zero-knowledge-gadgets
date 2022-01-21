@@ -181,6 +181,48 @@ mod test {
 	type AnchorSetup30_2 = AnchorProverSetup<Bn254Fr, TEST_M, TEST_N>;
 
 	#[test]
+	fn setup_random_anchor() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+		let params4 = setup_params_x5_4::<Bn254Fr>(curve);
+		let anchor_setup = AnchorSetup30_2::new(params3, params4);
+
+		let chain_id = Bn254Fr::rand(rng);
+		let recipient = Bn254Fr::rand(rng);
+		let relayer = Bn254Fr::rand(rng);
+		let fee = Bn254Fr::rand(rng);
+		let refund = Bn254Fr::rand(rng);
+		let commitment = Bn254Fr::rand(rng);
+
+		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
+		let secret = leaf_private.secret();
+		let nullfier = leaf_private.nullifier();
+		let leaves = vec![leaf_hash];
+		let index = 0;
+		let (tree, _) = anchor_setup.setup_tree_and_path(&leaves, index).unwrap();
+		let roots = [tree.root().inner(); M];
+
+		let (circuit, .., public_inputs) = anchor_setup
+			.clone()
+			.setup_circuit_with_privates(
+				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
+				commitment,
+			)
+			.unwrap();
+
+		// Using random circuit to generate pk/vk
+		let (random_circuit, ..) = anchor_setup.setup_random_circuit(rng).unwrap();
+		let (pk, vk) = setup_keys::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+		// Using generated pk/vk to prove and verify the working version of the circuit
+		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+		let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
+		assert!(res);
+	}
+
+	#[test]
 	fn setup_and_prove_anchor_groth16() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;

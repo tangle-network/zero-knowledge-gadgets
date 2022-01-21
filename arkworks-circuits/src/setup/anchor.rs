@@ -170,6 +170,7 @@ pub fn setup_keys_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	Ok((pk, vk))
 }
 
+#[derive(Clone)]
 pub struct AnchorProverSetup<F: PrimeField, const M: usize, const N: usize> {
 	params3: PoseidonParameters<F>,
 	params4: PoseidonParameters<F>,
