@@ -18,7 +18,7 @@ use arkworks_gadgets::{
 		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
 	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
-	set::simple_set_gadget::SetGadget
+	set::simple_set_gadget::SetGadget,
 };
 
 pub struct VAnchorCircuit<
@@ -40,7 +40,7 @@ pub struct VAnchorCircuit<
 
 	leaf_private_inputs: Vec<LeafPrivateInputs<F>>, // amount, blinding
 	keypair_inputs: Vec<Keypair<F, H>>,
-	leaf_public_input: LeafPublicInputs<F>,          // chain_id
+	leaf_public_input: LeafPublicInputs<F>, // chain_id
 	root_set: [F; M],
 	hasher_params_w2: H::Parameters,
 	hasher_params_w4: H::Parameters,
@@ -500,8 +500,7 @@ mod test {
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, _) =
-			prover.setup_tree(&commitments).unwrap();
+		let (in_paths, in_indices, _) = prover.setup_tree(&commitments).unwrap();
 
 		// Invalid root set
 		let in_root_set = [BnFr::rand(rng); 2];
