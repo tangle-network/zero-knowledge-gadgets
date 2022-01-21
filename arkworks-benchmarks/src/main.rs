@@ -107,7 +107,6 @@ macro_rules! setup_circuit {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots.to_vec());
-		public_inputs.push(root.inner());
 		public_inputs.push(arbitrary_input.recipient);
 		public_inputs.push(arbitrary_input.relayer);
 		public_inputs.push(arbitrary_input.fee);

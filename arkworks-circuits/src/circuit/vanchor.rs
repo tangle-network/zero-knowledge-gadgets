@@ -18,10 +18,7 @@ use arkworks_gadgets::{
 		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
 	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
-	set::membership::{
-		constraints::{PrivateVar as SetPrivateInputsVar, SetMembershipGadget},
-		Private as SetPrivateInputs,
-	},
+	set::SetGadget,
 };
 
 pub struct VAnchorCircuit<
@@ -43,8 +40,7 @@ pub struct VAnchorCircuit<
 
 	leaf_private_inputs: Vec<LeafPrivateInputs<F>>, // amount, blinding
 	keypair_inputs: Vec<Keypair<F, H>>,
-	leaf_public_input: LeafPublicInputs<F>,          // chain_id
-	set_private_inputs: Vec<SetPrivateInputs<F, M>>, // diffs
+	leaf_public_input: LeafPublicInputs<F>, // chain_id
 	root_set: [F; M],
 	hasher_params_w2: H::Parameters,
 	hasher_params_w4: H::Parameters,
@@ -92,7 +88,6 @@ where
 		leaf_private_inputs: Vec<LeafPrivateInputs<F>>,
 		keypair_inputs: Vec<Keypair<F, H>>,
 		leaf_public_input: LeafPublicInputs<F>,
-		set_private_inputs: Vec<SetPrivateInputs<F, M>>,
 		root_set: [F; M],
 		hasher_params_w2: H::Parameters,
 		hasher_params_w4: H::Parameters,
@@ -111,7 +106,6 @@ where
 			leaf_private_inputs,
 			keypair_inputs,
 			leaf_public_input,
-			set_private_inputs,
 			root_set,
 			hasher_params_w2,
 			hasher_params_w4,
@@ -142,8 +136,7 @@ where
 		in_path_indices_var: &[FpVar<F>],
 		in_path_elements_var: &[PathVar<F, C, HGT, LHGT, K>],
 		in_nullifier_var: &[HG::OutputVar],
-		root_set_var: &[FpVar<F>],
-		set_input_private_var: &[SetPrivateInputsVar<F, M>],
+		set_gadget: &SetGadget<F>,
 	) -> Result<FpVar<F>, SynthesisError> {
 		let mut sums_ins_var = FpVar::<F>::zero();
 
@@ -177,12 +170,9 @@ where
 			// Add the roots and diffs signals to the vanchor circuit
 			let roothash = &in_path_elements_var[tx].root_hash(&in_utxo_hasher_var)?;
 			let in_amount_tx = &leaf_private_var[tx].amount;
-			let check = SetMembershipGadget::check_is_enabled(
-				&roothash,
-				&root_set_var.to_vec(),
-				&set_input_private_var[tx],
-				in_amount_tx,
-			)?;
+
+			// Check membership if in_amount is non zero
+			let check = set_gadget.check_membership_enabled(&roothash, in_amount_tx)?;
 			check.enforce_equal(&Boolean::TRUE)?;
 
 			sums_ins_var += in_amount_tx;
@@ -269,7 +259,6 @@ where
 		let ext_data_hash = self.ext_data_hash.clone();
 		let leaf_private_inputs = self.leaf_private_inputs.clone();
 		let leaf_public_input = self.leaf_public_input.clone();
-		let set_private_inputs = self.set_private_inputs.clone();
 		let root_set = self.root_set;
 		let hasher_params_w2 = self.hasher_params_w2.clone();
 		let hasher_params_w4 = self.hasher_params_w4.clone();
@@ -289,7 +278,6 @@ where
 			leaf_private_inputs,
 			keypair_inputs,
 			leaf_public_input,
-			set_private_inputs,
 			root_set,
 			hasher_params_w2,
 			hasher_params_w4,
@@ -331,7 +319,6 @@ where
 		let leaf_private = self.leaf_private_inputs; // amount, blinding
 		let keypair_inputs = self.keypair_inputs;
 		let leaf_public_input = self.leaf_public_input; // chain id
-		let set_private = self.set_private_inputs;
 		let root_set = self.root_set;
 		let hasher_params_w2 = self.hasher_params_w2;
 		let hasher_params_w4 = self.hasher_params_w4;
@@ -376,8 +363,6 @@ where
 			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(leaf_private))?;
 		let inkeypair_var =
 			Vec::<KeypairVar<F, H, HG>>::new_witness(cs.clone(), || Ok(keypair_inputs))?;
-		let set_input_private_var =
-			Vec::<SetPrivateInputsVar<F, M>>::new_witness(cs.clone(), || Ok(set_private))?;
 		let in_path_elements_var =
 			Vec::<PathVar<F, C, HGT, LHGT, K>>::new_witness(cs.clone(), || Ok(paths))?;
 		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices))?;
@@ -389,6 +374,7 @@ where
 			Vec::<LeafPublicInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_public))?;
 		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs, || Ok(out_pubkey))?;
 
+		let set_gadget = SetGadget::new(root_set_var);
 		// verify correctness of transaction inputs
 		let sum_ins_var = Self::verify_input_var(
 			&hasher_params_w2_var,
@@ -400,8 +386,7 @@ where
 			&in_path_indices_var,
 			&in_path_elements_var,
 			&in_nullifier_var,
-			&root_set_var,
-			&set_input_private_var,
+			&set_gadget,
 		)?;
 
 		// verify correctness of transaction outputs
@@ -515,8 +500,7 @@ mod test {
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_indices, in_paths, in_set_private_inputs, _) =
-			prover.setup_tree_and_set(&commitments).unwrap();
+		let (in_paths, in_indices, _) = prover.setup_tree(&commitments).unwrap();
 
 		// Invalid root set
 		let in_root_set = [BnFr::rand(rng); 2];
@@ -540,7 +524,6 @@ mod test {
 				in_utxos,
 				in_indices,
 				in_paths,
-				in_set_private_inputs,
 				in_root_set,
 				out_utxos,
 			)
@@ -579,8 +562,8 @@ mod test {
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&commitments).unwrap();
+		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
+		let in_root_set = [root; 2];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -601,7 +584,6 @@ mod test {
 				in_utxos,
 				in_indices,
 				in_paths,
-				in_set_private_inputs,
 				in_root_set,
 				out_utxos,
 			)
@@ -641,8 +623,8 @@ mod test {
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&commitments).unwrap();
+		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
+		let in_root_set = [root; 2];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -663,7 +645,6 @@ mod test {
 				in_utxos,
 				in_indices,
 				in_paths,
-				in_set_private_inputs,
 				in_root_set,
 				out_utxos,
 			)
@@ -699,8 +680,8 @@ mod test {
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&commitments).unwrap();
+		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
+		let in_root_set = [root; 2];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -721,7 +702,6 @@ mod test {
 				in_utxos,
 				in_indices,
 				in_paths,
-				in_set_private_inputs,
 				in_root_set,
 				out_utxos,
 			)
@@ -763,8 +743,8 @@ mod test {
 		let out_utxos = prover.new_utxos_f(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&commitments).unwrap();
+		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
+		let in_root_set = [root; 2];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -785,7 +765,6 @@ mod test {
 				in_utxos,
 				in_indices,
 				in_paths,
-				in_set_private_inputs,
 				in_root_set,
 				out_utxos,
 			)
@@ -821,8 +800,8 @@ mod test {
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
 		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			prover.setup_tree_and_set(&commitments).unwrap();
+		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
+		let in_root_set = [root; 2];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -843,7 +822,6 @@ mod test {
 				in_utxos,
 				in_indices,
 				in_paths,
-				in_set_private_inputs,
 				in_root_set,
 				out_utxos,
 			)
