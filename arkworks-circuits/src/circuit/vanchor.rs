@@ -18,7 +18,7 @@ use arkworks_gadgets::{
 		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
 	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
-	set::simple_set_gadget::SetGadget,
+	set::SetGadget,
 };
 
 pub struct VAnchorCircuit<
