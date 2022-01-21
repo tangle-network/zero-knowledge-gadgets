@@ -112,7 +112,9 @@ mod test {
 		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
 
 		let set_gadget = SetGadget::new(set_var);
-		let is_member = set_gadget.check_membership_enabled(&target_var, &enabled_var).unwrap();
+		let is_member = set_gadget
+			.check_membership_enabled(&target_var, &enabled_var)
+			.unwrap();
 
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 
@@ -124,7 +126,8 @@ mod test {
 		let cs = ConstraintSystem::<Fr>::new_ref();
 
 		// enable == 1 == true
-		// Set gadget now functions normally, meaning it values that are not in the set will yeald to false
+		// Set gadget now functions normally, meaning it values that are not in the set
+		// will yeald to false
 		let enabled = Fr::from(1u32);
 		let set = vec![Fr::from(1u32), Fr::from(2u32), Fr::from(3u32)];
 		let target = Fr::from(4u32);
@@ -134,7 +137,9 @@ mod test {
 		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
 
 		let set_gadget = SetGadget::new(set_var);
-		let is_member = set_gadget.check_membership_enabled(&target_var, &enabled_var).unwrap();
+		let is_member = set_gadget
+			.check_membership_enabled(&target_var, &enabled_var)
+			.unwrap();
 
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 
@@ -156,7 +161,9 @@ mod test {
 		let set_var = Vec::<FpVar<Fr>>::new_input(cs.clone(), || Ok(set)).unwrap();
 
 		let set_gadget = SetGadget::new(set_var);
-		let is_member = set_gadget.check_membership_enabled(&target_var, &enabled_var).unwrap();
+		let is_member = set_gadget
+			.check_membership_enabled(&target_var, &enabled_var)
+			.unwrap();
 
 		is_member.enforce_equal(&Boolean::TRUE).unwrap();
 
