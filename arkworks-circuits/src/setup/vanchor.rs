@@ -14,7 +14,6 @@ use arkworks_gadgets::{
 	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private as LeafPrivateInput, Public as LeafPublicInput, VAnchorLeaf as Leaf},
 	merkle_tree::Path,
-	set::membership::{Private as SetPrivateInputs, SetMembership},
 };
 use arkworks_utils::{
 	poseidon::PoseidonParameters,
@@ -225,8 +224,8 @@ impl<
 		assert_eq!(out_utxos.len(), OUTS);
 		// Tree + set for proving input txos
 		let in_commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<F>>();
-		let (in_indices, in_paths, in_set_private_inputs, in_root_set) =
-			self.setup_tree_and_set(&in_commitments[..])?;
+		let (in_paths, in_indices, root) = self.setup_tree(&in_commitments[..])?;
+		let in_root_set = [root; M];
 
 		let ext_data = ExtData::new(
 			recipient,
@@ -252,7 +251,6 @@ impl<
 			in_utxos.clone(),
 			in_indices,
 			in_paths,
-			in_set_private_inputs,
 			in_root_set,
 			out_utxos.clone(),
 		)?;
@@ -335,7 +333,6 @@ impl<
 		// Data related to tree
 		in_indicies: Vec<F>,
 		in_paths: Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
-		in_set_private_inputs: Vec<SetPrivateInputs<F, M>>,
 		in_root_set: [F; M],
 		// Output transactions
 		out_utxos: Vec<Utxo<F>>,
@@ -394,7 +391,6 @@ impl<
 			in_leaf_private_inputs,
 			in_keypair_inputs,
 			in_utxos[0].leaf_public.clone(),
-			in_set_private_inputs,
 			in_root_set,
 			self.params2,
 			self.params4,
@@ -495,35 +491,6 @@ impl<
 		}
 
 		Ok((paths, indices, root.inner()))
-	}
-
-	pub fn setup_root_set(root: F) -> Result<([F; M], Vec<SetPrivateInputs<F, M>>), Error> {
-		let root_set = [root.clone(); M];
-
-		let mut set_private_inputs = Vec::new();
-		for _ in 0..M {
-			let set_private_input = SetMembership::generate_secrets(&root, &root_set)?;
-			set_private_inputs.push(set_private_input);
-		}
-
-		Ok((root_set, set_private_inputs))
-	}
-
-	pub fn setup_tree_and_set(
-		&self,
-		leaves: &[F],
-	) -> Result<
-		(
-			Vec<F>,
-			Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
-			Vec<SetPrivateInputs<F, M>>,
-			[F; M],
-		),
-		Error,
-	> {
-		let (paths, indices, root) = self.setup_tree(&leaves)?;
-		let (root_set, set_private_inputs) = Self::setup_root_set(root)?;
-		Ok((indices, paths, set_private_inputs, root_set))
 	}
 
 	pub fn construct_public_inputs(

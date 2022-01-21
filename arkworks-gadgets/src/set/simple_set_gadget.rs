@@ -16,10 +16,10 @@ impl<F: PrimeField> SetGadget<F> {
 		Self { set }
 	}
 
-	pub fn check_membership<T: ToBytesGadget<F>>(
+	pub fn calculate_product<T: ToBytesGadget<F>>(
 		&self,
 		target: &T,
-	) -> Result<Boolean<F>, SynthesisError> {
+	) -> Result<FpVar<F>, SynthesisError> {
 		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
 		// Calculating the diffs inside the circuit
 		let mut diffs = Vec::new();
@@ -34,6 +34,26 @@ impl<F: PrimeField> SetGadget<F> {
 			product *= diff;
 		}
 
+		Ok(product)
+	}
+
+	pub fn check_membership<T: ToBytesGadget<F>>(
+		&self,
+		target: &T,
+	) -> Result<Boolean<F>, SynthesisError> {
+		let product = self.calculate_product(target)?;
+
+		product.is_eq(&FpVar::<F>::zero())
+	}
+
+	pub fn check_membership_enabled<T: ToBytesGadget<F>>(
+		&self,
+		target: &T,
+		is_enabled: &FpVar<F>,
+	) -> Result<Boolean<F>, SynthesisError> {
+		let mut product = self.calculate_product(target)?;
+
+		product *= is_enabled;
 		product.is_eq(&FpVar::<F>::zero())
 	}
 }
