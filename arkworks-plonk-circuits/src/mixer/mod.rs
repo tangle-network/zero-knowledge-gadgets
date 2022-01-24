@@ -22,7 +22,7 @@ pub struct MixerCircuit<
 	path: Path<F, HG::Native, N>,
 	root: F,
 	arbitrary_data: F,
-	hasher: HG,
+	hasher: HG::Native,
 }
 
 impl<F, P, HG, const N: usize> MixerCircuit<F, P, HG, N>
@@ -38,7 +38,7 @@ where
 		path: Path<F, HG::Native, N>,
 		root: F,
 		arbitrary_data: F,
-		hasher: HG,
+		hasher: HG::Native,
 	) -> Self {
 		Self {
 			secret,
@@ -64,21 +64,57 @@ where
 		// Inputs
 		let secret = composer.add_input(self.secret);
 		let nullifier = composer.add_input(self.nullifier);
-		let nullifier_hash = composer.add_input(self.nullifier_hash);
 		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
+		// Add root as variable in publicly visible way
 		let root = composer.add_input(self.root);
-		// let arbitrary_data = composer.add_input(self.arbitrary_data);
+		composer.poly_gate(
+			root,
+			root,
+			root,
+			F::zero(),
+			-F::one(),
+			F::zero(),
+			F::zero(),
+			F::zero(),
+			Some(self.root),
+		);
+		// Add root as variable in publicly visible way
+		let arbitrary_data = composer.add_input(self.arbitrary_data);
+		composer.poly_gate(
+			arbitrary_data,
+			arbitrary_data,
+			arbitrary_data,
+			F::zero(),
+			-F::one(),
+			F::zero(),
+			F::zero(),
+			F::zero(),
+			Some(self.arbitrary_data),
+		);
+		// Create the hasher_gadget from native
+		let hasher_gadget:HG = FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
 
 		// Preimage proof of nullifier
-		let res_nullifier = self.hasher.hash_two(composer, &nullifier, &nullifier)?;
-		composer.assert_equal(res_nullifier, nullifier_hash);
+		let res_nullifier = hasher_gadget.hash_two(composer, &nullifier, &nullifier)?;
+		// Assert equality to the nullifier hash in publicly visible way
+		composer.poly_gate(
+			res_nullifier,
+			res_nullifier,
+			res_nullifier,
+			F::zero(),
+			-F::one(),
+			F::zero(),
+			F::zero(),
+			F::zero(),
+			Some(self.nullifier_hash),
+		);
 
 		// Preimage proof of leaf hash
-		let res_leaf = self.hasher.hash_two(composer, &secret, &nullifier)?;
+		let res_leaf = hasher_gadget.hash_two(composer, &secret, &nullifier)?;
 
 		// Proof of Merkle tree membership
-		let is_member = path_gadget.check_membership(composer, &root, &res_leaf, &self.hasher)?;
-		let one = composer.add_input(F::one());
+		let is_member = path_gadget.check_membership(composer, &root, &res_leaf, &hasher_gadget)?;
+		let one = composer.add_witness_to_circuit_description(F::one());
 		composer.assert_equal(is_member, one);
 
 		// ? What should be done with arbitrary data ?
