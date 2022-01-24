@@ -176,6 +176,45 @@ mod tests {
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 
+	// Use StandardComposer::check_circuit_satisfied for tests:
+	#[test]
+	fn should_verify_plonk_poseidon_x5_3_without_circuit() {
+		let curve = arkworks_utils::utils::common::Curve::Bn254;
+
+		// Get poseidon parameters for this curve:
+		let util_params = setup_params_x5_3(curve);
+		let params = PoseidonParameters {
+			round_keys: util_params.clone().round_keys,
+			mds_matrix: util_params.clone().mds_matrix,
+			full_rounds: util_params.clone().full_rounds,
+			partial_rounds: util_params.clone().partial_rounds,
+			sbox: UtilsPoseidonSbox(5),
+			width: util_params.clone().width,
+		};
+		let poseidon_hasher = PoseidonHasher::new(params);
+
+		// Choose hash fn inputs and compute hash:
+		let left = Fq::one();
+		let right = Fq::one().double();
+		let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
+
+		// Create and fill a composer
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let hasher_gadget = PoseidonGadget::from_native(&mut composer, poseidon_hasher.clone());
+
+		let left_var = composer.add_input(left);
+		let right_var = composer.add_input(right);
+		let expected_var = composer.add_input(expected);
+		// let expected_var = composer.add_input(expected.double());
+
+
+		let outcome = hasher_gadget.hash_two(&mut composer, &left_var, &right_var).unwrap();
+		composer.assert_equal(outcome, expected_var);
+
+		// Check the circuit is satisfied
+		composer.check_circuit_satisfied();
+	}
+
 	// Use it in a circuit
 	struct TestCircuit<
 		F: PrimeField,
