@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use crate::{
 	merkle_tree::PathGadget,
 	poseidon::poseidon::{FieldHasherGadget, PoseidonGadget},
