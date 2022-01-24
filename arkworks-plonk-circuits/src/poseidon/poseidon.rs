@@ -1,6 +1,6 @@
-use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_ec::{models::TEModelParameters};
 use ark_ff::PrimeField;
-use ark_std::{fmt::Debug, vec, vec::Vec, One};
+use ark_std::{fmt::Debug, vec, vec::Vec};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
@@ -54,13 +54,13 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 		// Add native parameters to composer and store variables:
 		let mut round_keys_var = vec![];
 		for key in native.params.round_keys {
-			round_keys_var.push(composer.add_input(key));
+			round_keys_var.push(composer.add_witness_to_circuit_description(key));
 		}
 		let mut mds_matrix_var = vec![];
 		for row in native.params.mds_matrix {
 			let mut temp = vec![];
 			for element in row {
-				temp.push(composer.add_input(element));
+				temp.push(composer.add_witness_to_circuit_description(element));
 			}
 			mds_matrix_var.push(temp);
 		}
