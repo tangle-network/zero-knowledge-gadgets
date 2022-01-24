@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use crate::{
 	merkle_tree::PathGadget,
 	poseidon::poseidon::{FieldHasherGadget, PoseidonGadget},
@@ -61,30 +63,24 @@ where
 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
 	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
-		// Inputs
+		// Private Inputs
 		let secret = composer.add_input(self.secret);
 		let nullifier = composer.add_input(self.nullifier);
 		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
+
+		// Public Inputs
 		let root = add_public_input_variable(composer, self.root);
 		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
 		// Create the hasher_gadget from native
 		let hasher_gadget: HG =
 			FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
+		let nullifier_hash = add_public_input_variable(composer, self.nullifier_hash);
 
 		// Preimage proof of nullifier
 		let res_nullifier = hasher_gadget.hash_two(composer, &nullifier, &nullifier)?;
-		// Assert equality to the nullifier hash in publicly visible way
-		composer.poly_gate(
-			res_nullifier,
-			res_nullifier,
-			res_nullifier,
-			F::zero(),
-			-F::one(),
-			F::zero(),
-			F::zero(),
-			F::zero(),
-			Some(self.nullifier_hash),
-		);
+		// TODO: (This has 1 more gate than skipping the nullifier_hash variable and
+		// putting this straight in to a poly_gate)
+		composer.assert_equal(res_nullifier, nullifier_hash);
 
 		// Preimage proof of leaf hash
 		let res_leaf = hasher_gadget.hash_two(composer, &secret, &nullifier)?;
@@ -94,7 +90,11 @@ where
 		let one = composer.add_witness_to_circuit_description(F::one());
 		composer.assert_equal(is_member, one);
 
-		// ? What should be done with arbitrary data ?
+		// Safety constraint to prevent tampering with arbitrary_data
+		let _arbitrary_data_squared = composer.arithmetic_gate(|gate| {
+			gate.witness(arbitrary_data, arbitrary_data, None)
+				.mul(F::one())
+		});
 		Ok(())
 	}
 

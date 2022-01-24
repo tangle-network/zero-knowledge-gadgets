@@ -1,4 +1,4 @@
-use ark_ec::{models::TEModelParameters};
+use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec, vec::Vec};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
