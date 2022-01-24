@@ -41,7 +41,7 @@ pub fn get_hash_params<F: PrimeField>(
 	)
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Utxo<F: PrimeField> {
 	pub chain_id: F,
 	pub amount: F,
@@ -92,27 +92,11 @@ impl<
 		chain_ids: [u128; N],
 		amounts: [u128; N],
 		rng: &mut R,
-	) -> Result<Vec<Utxo<F>>, Error> {
+	) -> Result<[Utxo<F>; N], Error> {
 		let chain_ids_f = chain_ids.map(|x| F::from(x));
 		let amounts_f = amounts.map(|x| F::from(x));
 
-		let keypairs = Self::setup_keypairs::<_, N>(rng);
-		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng)?;
-
-		let utxos: Vec<Utxo<F>> = (0..N)
-			.map(|i| Utxo {
-				chain_id: chain_ids_f[i],
-				amount: amounts_f[i],
-				keypair: keypairs[i].clone(),
-				leaf_private: leaf_privates[i].clone(),
-				leaf_public: leaf_publics[i].clone(),
-				nullifier: nullifiers[i],
-				commitment: commitments[i],
-			})
-			.collect();
-
-		Ok(utxos)
+		self.new_utxos_f(chain_ids_f, amounts_f, rng)
 	}
 
 	pub fn new_utxos_f<R: RngCore, const N: usize>(
@@ -120,22 +104,26 @@ impl<
 		chain_ids_f: [F; N],
 		amounts_f: [F; N],
 		rng: &mut R,
-	) -> Result<Vec<Utxo<F>>, Error> {
+	) -> Result<[Utxo<F>; N], Error> {
 		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves(&chain_ids_f, &amounts_f, &keypairs, rng)?;
+			self.setup_leaves::<_, N>(&chain_ids_f, &amounts_f, &keypairs, rng)?;
 
-		let utxos: Vec<Utxo<F>> = (0..N)
-			.map(|i| Utxo {
-				chain_id: chain_ids_f[i],
-				amount: amounts_f[i],
-				keypair: keypairs[i].clone(),
-				leaf_private: leaf_privates[i].clone(),
-				leaf_public: leaf_publics[i].clone(),
-				nullifier: nullifiers[i],
-				commitment: commitments[i],
-			})
-			.collect();
+		let mut i = 0;
+		let utxos: [Utxo<F>; N] = [None; N]
+			.map(|_: Option<Utxo<F>>| {
+				let utxo = Utxo {
+					chain_id: chain_ids_f[i],
+					amount: amounts_f[i],
+					keypair: keypairs[i].clone(),
+					leaf_private: leaf_privates[i].clone(),
+					leaf_public: leaf_publics[i].clone(),
+					nullifier: nullifiers[i],
+					commitment: commitments[i],
+				};
+				i += 1;
+				utxo
+			});
 
 		Ok(utxos)
 	}
@@ -198,10 +186,11 @@ impl<
 		relayer: Vec<u8>,
 		ext_amount: i128,
 		fee: u128,
+		in_leaves: [Vec<F>; INS],
 		// Input transactions
-		in_utxos: Vec<Utxo<F>>,
+		in_utxos: [Utxo<F>; INS],
 		// Output transactions
-		out_utxos: Vec<Utxo<F>>,
+		out_utxos: [Utxo<F>; OUTS],
 	) -> Result<
 		(
 			VACircuit<
@@ -220,8 +209,6 @@ impl<
 		),
 		Error,
 	> {
-		assert_eq!(in_utxos.len(), INS);
-		assert_eq!(out_utxos.len(), OUTS);
 		// Tree + set for proving input txos
 		let in_commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<F>>();
 		let (in_paths, in_indices, root) = self.setup_tree(&in_commitments[..])?;
@@ -297,8 +284,8 @@ impl<
 				M,
 			>,
 			Vec<F>,
-			Vec<Utxo<F>>,
-			Vec<Utxo<F>>,
+			[Utxo<F>; INS],
+			[Utxo<F>; OUTS],
 		),
 		Error,
 	> {
@@ -329,13 +316,13 @@ impl<
 		public_amount: F,
 		arbitrary_data: VAnchorArbitraryData<F>,
 		// Input transactions
-		in_utxos: Vec<Utxo<F>>,
+		in_utxos: [Utxo<F>; INS],
 		// Data related to tree
 		in_indicies: Vec<F>,
 		in_paths: Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		in_root_set: [F; M],
 		// Output transactions
-		out_utxos: Vec<Utxo<F>>,
+		out_utxos: [Utxo<F>; OUTS],
 	) -> Result<
 		VACircuit<
 			F,
@@ -474,7 +461,8 @@ impl<
 	pub fn setup_tree(
 		&self,
 		leaves: &[F],
-	) -> Result<(Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>, Vec<F>, F), Error> {
+		index: u64,
+	) -> Result<(Path<TreeConfig_x5<F>, TREE_DEPTH>, Vec<F>, F), Error> {
 		let inner_params = Rc::new(self.params3.clone());
 		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves.to_vec())?;
 		let root = tree.root();
@@ -483,14 +471,10 @@ impl<
 
 		let mut paths = Vec::new();
 		let mut indices = Vec::new();
-		for i in 0..num_leaves {
-			let path = tree.generate_membership_proof::<TREE_DEPTH>(i as u64);
-			let index = path.get_index(&root, &leaves[i])?;
-			paths.push(path);
-			indices.push(index);
-		}
+		let path = tree.generate_membership_proof::<TREE_DEPTH>(index);
+		let index = path.get_index(&root, &leaves)?;
 
-		Ok((paths, indices, root.inner()))
+		Ok((path, indices, root.inner()))
 	}
 
 	pub fn construct_public_inputs(

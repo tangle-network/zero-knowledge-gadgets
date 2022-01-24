@@ -5,7 +5,7 @@ use ark_std::marker::PhantomData;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Copy)]
 pub struct Keypair<B: Clone + ToBytes, H: CRH> {
 	pub private_key: B,
 	_h: PhantomData<H>,
