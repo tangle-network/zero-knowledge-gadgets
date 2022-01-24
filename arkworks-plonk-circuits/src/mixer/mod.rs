@@ -65,34 +65,11 @@ where
 		let secret = composer.add_input(self.secret);
 		let nullifier = composer.add_input(self.nullifier);
 		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
-		// Add root as variable in publicly visible way
-		let root = composer.add_input(self.root);
-		composer.poly_gate(
-			root,
-			root,
-			root,
-			F::zero(),
-			-F::one(),
-			F::zero(),
-			F::zero(),
-			F::zero(),
-			Some(self.root),
-		);
-		// Add root as variable in publicly visible way
-		let arbitrary_data = composer.add_input(self.arbitrary_data);
-		composer.poly_gate(
-			arbitrary_data,
-			arbitrary_data,
-			arbitrary_data,
-			F::zero(),
-			-F::one(),
-			F::zero(),
-			F::zero(),
-			F::zero(),
-			Some(self.arbitrary_data),
-		);
+		let root = add_public_input_variable(composer, self.root);
+		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
 		// Create the hasher_gadget from native
-		let hasher_gadget:HG = FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
+		let hasher_gadget: HG =
+			FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
 
 		// Preimage proof of nullifier
 		let res_nullifier = hasher_gadget.hash_two(composer, &nullifier, &nullifier)?;
@@ -124,4 +101,26 @@ where
 	fn padded_circuit_size(&self) -> usize {
 		1 << 17
 	}
+}
+
+/// Add a variable to a circuit and constrain it to a public input value that
+/// is expected to be different in each instance of the circuit.
+pub fn add_public_input_variable<F, P>(composer: &mut StandardComposer<F, P>, value: F) -> Variable
+where
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+{
+	let variable = composer.add_input(value);
+	composer.poly_gate(
+		variable,
+		variable,
+		variable,
+		F::zero(),
+		-F::one(),
+		F::zero(),
+		F::zero(),
+		F::zero(),
+		Some(value),
+	);
+	variable
 }
