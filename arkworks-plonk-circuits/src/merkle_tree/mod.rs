@@ -3,7 +3,7 @@ use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
-use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 #[derive(Clone)]
 pub struct PathGadget<
@@ -136,7 +136,7 @@ mod test {
 		poseidon::field_hasher::Poseidon,
 	};
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
-	use plonk::prelude::*;
+	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
 

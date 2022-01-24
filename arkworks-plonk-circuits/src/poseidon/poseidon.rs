@@ -2,7 +2,7 @@ use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec, vec::Vec, One};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
-use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
@@ -172,7 +172,7 @@ mod tests {
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
 		utils::common::setup_params_x5_3,
 	};
-	use plonk::prelude::*;
+	use plonk_core::prelude::*;
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 
@@ -205,10 +205,10 @@ mod tests {
 		let left_var = composer.add_input(left);
 		let right_var = composer.add_input(right);
 		let expected_var = composer.add_input(expected);
-		// let expected_var = composer.add_input(expected.double());
 
-
-		let outcome = hasher_gadget.hash_two(&mut composer, &left_var, &right_var).unwrap();
+		let outcome = hasher_gadget
+			.hash_two(&mut composer, &left_var, &right_var)
+			.unwrap();
 		composer.assert_equal(outcome, expected_var);
 
 		// Check the circuit is satisfied
