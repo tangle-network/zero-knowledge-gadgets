@@ -67,12 +67,13 @@ where
 		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
 
 		// Public Inputs
+		let nullifier_hash = add_public_input_variable(composer, self.nullifier_hash);
 		let root = add_public_input_variable(composer, self.root);
 		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
+
 		// Create the hasher_gadget from native
 		let hasher_gadget: HG =
 			FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
-		let nullifier_hash = add_public_input_variable(composer, self.nullifier_hash);
 
 		// Preimage proof of nullifier
 		let res_nullifier = hasher_gadget.hash_two(composer, &nullifier, &nullifier)?;
