@@ -25,7 +25,10 @@ impl<
 		const N: usize,
 	> PathGadget<F, P, HG, N>
 {
-	fn from_native(composer: &mut StandardComposer<F, P>, native: Path<F, HG::Native, N>) -> Self {
+	pub fn from_native(
+		composer: &mut StandardComposer<F, P>,
+		native: Path<F, HG::Native, N>,
+	) -> Self {
 		// Initialize the array
 		let mut path_vars = [(composer.zero_var(), composer.zero_var()); N];
 
