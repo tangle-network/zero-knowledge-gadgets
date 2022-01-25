@@ -157,7 +157,11 @@ impl<
 		let ext_amount = rng.next_u64() as i128;
 		let fee = rng.next_u64() as u128;
 
-		let in_chain_id = rng.next_u64() as u128;
+		let in_root_set = [F::rand(rng); M].map(|x| x.into_repr().to_bytes_le());
+		let in_leaves = [vec![F::rand(rng)]; INS].map(|x| x.iter().map(|x| x.into_repr().to_bytes_le()).collect());
+		let in_indices = [rng.next_u64(); INS];
+
+		let in_chain_id = [rng.next_u64() as u128; INS];
 		let in_amounts = [rng.next_u64() as u128; INS];
 		let out_chain_ids = [rng.next_u64() as u128; OUTS];
 		let out_amounts = [rng.next_u64() as u128; OUTS];
@@ -168,6 +172,9 @@ impl<
 			relayer.to_vec(),
 			ext_amount,
 			fee,
+			in_root_set,
+			in_leaves,
+			in_indices,
 			in_chain_id,
 			in_amounts,
 			out_chain_ids,
@@ -186,6 +193,8 @@ impl<
 		relayer: Vec<u8>,
 		ext_amount: i128,
 		fee: u128,
+		in_root_set: [F; M],
+		in_indices: [u64; INS],
 		in_leaves: [Vec<F>; INS],
 		// Input transactions
 		in_utxos: [Utxo<F>; INS],
@@ -210,9 +219,12 @@ impl<
 		Error,
 	> {
 		// Tree + set for proving input txos
-		let in_commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<F>>();
-		let (in_paths, in_indices, root) = self.setup_tree(&in_commitments[..])?;
-		let in_root_set = [root; M];
+		let in_indices_f = in_indices.map(|x| F::from(x));
+		let mut in_paths = Vec::new();
+		for i in 0..INS {
+			let (in_path, _) = self.setup_tree(&in_leaves[i], in_indices[i])?;
+			in_paths.push(in_path)
+		}
 
 		let ext_data = ExtData::new(
 			recipient,
@@ -236,7 +248,7 @@ impl<
 			public_amount_f,
 			arbitrary_data,
 			in_utxos.clone(),
-			in_indices,
+			in_indices_f,
 			in_paths,
 			in_root_set,
 			out_utxos.clone(),
@@ -264,7 +276,10 @@ impl<
 		relayer: Vec<u8>,
 		ext_amount: i128,
 		fee: u128,
-		in_chain_id: u128,
+		in_root_set: [Vec<u8>; M],
+		in_leaves: [Vec<Vec<u8>>; INS],
+		in_indices: [u64; INS],
+		in_chain_ids: [u128; INS],
 		in_amounts: [u128; INS],
 		out_chain_ids: [u128; OUTS],
 		out_amounts: [u128; OUTS],
@@ -289,14 +304,15 @@ impl<
 		),
 		Error,
 	> {
-		// Making a vec of same chain ids to be passed into setup_leaves
-		let in_chain_ids = [in_chain_id; INS];
-
 		// Input leaves (txos)
 		let in_utxos = self.new_utxos(in_chain_ids, in_amounts, rng)?;
 
 		// Output leaves (txos)
 		let out_utxos = self.new_utxos(out_chain_ids, out_amounts, rng)?;
+
+		let in_root_set_f = in_root_set.map(|x| F::from_le_bytes_mod_order(&x));
+
+		let in_leaves_f = in_leaves.map(|leaves| leaves.iter().map(|x| F::from_le_bytes_mod_order(&x)).collect());
 
 		let (circuit, public_inputs) = self.setup_circuit_with_utxos(
 			public_amount,
@@ -304,6 +320,9 @@ impl<
 			relayer,
 			ext_amount,
 			fee,
+			in_root_set_f,
+			in_indices,
+			in_leaves_f,
 			in_utxos.clone(),
 			out_utxos.clone(),
 		)?;
@@ -318,7 +337,7 @@ impl<
 		// Input transactions
 		in_utxos: [Utxo<F>; INS],
 		// Data related to tree
-		in_indicies: Vec<F>,
+		in_indicies: [F; INS],
 		in_paths: Vec<Path<TreeConfig_x5<F>, TREE_DEPTH>>,
 		in_root_set: [F; M],
 		// Output transactions
@@ -383,7 +402,7 @@ impl<
 			self.params4,
 			self.params5,
 			in_paths,
-			in_indicies,
+			in_indicies.to_vec(),
 			in_nullifiers,
 			out_commitments,
 			out_leaf_private,
@@ -462,19 +481,13 @@ impl<
 		&self,
 		leaves: &[F],
 		index: u64,
-	) -> Result<(Path<TreeConfig_x5<F>, TREE_DEPTH>, Vec<F>, F), Error> {
+	) -> Result<(Path<TreeConfig_x5<F>, TREE_DEPTH>, F), Error> {
 		let inner_params = Rc::new(self.params3.clone());
 		let tree = Tree_x5::new_sequential(inner_params, Rc::new(()), &leaves.to_vec())?;
 		let root = tree.root();
-
-		let num_leaves = leaves.len();
-
-		let mut paths = Vec::new();
-		let mut indices = Vec::new();
 		let path = tree.generate_membership_proof::<TREE_DEPTH>(index);
-		let index = path.get_index(&root, &leaves)?;
 
-		Ok((path, indices, root.inner()))
+		Ok((path, root.inner()))
 	}
 
 	pub fn construct_public_inputs(
@@ -494,7 +507,6 @@ impl<
 		public_inputs
 	}
 
-	// TODO: Fix to match INS and OUTS
 	// NOTE: To be used for testing
 	pub fn deconstruct_public_inputs(
 		public_inputs: Vec<F>,
