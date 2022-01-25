@@ -1,10 +1,6 @@
-use crate::{
-	merkle_tree::PathGadget,
-	poseidon::poseidon::{FieldHasherGadget, PoseidonGadget},
-};
+use crate::{merkle_tree::PathGadget, poseidon::poseidon::FieldHasherGadget};
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
-use ark_std::marker::PhantomData;
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
@@ -127,16 +123,13 @@ where
 #[cfg(test)]
 mod test {
 	use super::MixerCircuit;
-	use crate::poseidon::poseidon::{FieldHasherGadget, PoseidonGadget};
+	use crate::poseidon::poseidon::PoseidonGadget;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_ec::TEModelParameters;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-	use ark_ff::PrimeField;
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::test_rng;
 	use arkworks_gadgets::{
-		arbitrary,
 		ark_std::UniformRand,
 		merkle_tree::simple_merkle::SparseMerkleTree,
 		poseidon::field_hasher::{FieldHasher, Poseidon},
@@ -217,7 +210,7 @@ mod test {
 					.unwrap();
 
 			// Preprocess circuit
-			prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck);
 
 			// Compute Proof
 			prover.prove(&ck).unwrap()
@@ -244,12 +237,29 @@ mod test {
 		// Construct public input vector from composer above
 		let public_inputs = composer.construct_dense_pi_vec();
 
-		println!(
-			"The length of the public input vector is {:?}",
-			public_inputs.len()
-		);
-
 		// Verify proof
 		let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
+
+		// The commented section below was to convince me that the safety
+		// constraint at the very end of the gadget does indeed
+		// prevent tampering with the public input value `arbitrary_data`.  I'm
+		// more convinced than I was before but I'm not sure that this really is
+		// the attack vector we are worried about.
+
+		// Want to figure out how the public inputs are stored in the dense PI
+		// vector: println!("The public input positions are {:?}",
+		// public_input_positions); println!("The nullifier hash is {:?}, the
+		// root is {:?}, and the arb data is {:?}", nullifier_hash, root,
+		// arbitrary_data); println!("The index 3 entry of pi is {:?}, index 4
+		// is {:?}, and index 5 is {:?}", public_inputs[3], public_inputs[4],
+		// public_inputs[5]); The upshot is that their stored in the above
+		// order: nullifier_hash, root, arbitrary_data at indices 3, 4, 5
+
+		// Let's see what happens if the verify disagrees on what the
+		// arbitrary_data should be: public_inputs[5] = Fq::from(0i32);
+		// indeed that will fail
+
+		// // Verify proof
+		// let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
 	}
 }
