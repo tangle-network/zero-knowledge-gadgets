@@ -126,6 +126,7 @@ mod test {
 	use crate::poseidon::poseidon::PoseidonGadget;
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
+	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::test_rng;
@@ -261,5 +262,152 @@ mod test {
 
 		// // Verify proof
 		// let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
+	}
+
+	#[test]
+	fn should_fail_with_invalid_root_no_proof() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon_native = PoseidonBn254 { params };
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
+		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		// This tree has only 1 non-trivial leaf -- maybe more should be randomly
+		// generated?
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, 3usize>::new_sequential(
+			&[leaf_hash],
+			&poseidon_native,
+			&[0u8; 32],
+		)
+		.unwrap();
+		let root = tree.root();
+		let bad_root = root.double();
+
+		// Path
+		let path = tree.generate_membership_proof(0);
+
+		// Create MixerCircuit
+		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, 3usize>::new(
+			secret,
+			nullifier,
+			nullifier_hash,
+			path,
+			bad_root,
+			arbitrary_data,
+			poseidon_native,
+		);
+
+		// Fill a composer and check circuit is satisfied
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = mixer.gadget(&mut composer);
+		composer.check_circuit_satisfied();
+	}
+
+	#[test]
+	fn should_fail_with_invalid_root() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon_native = PoseidonBn254 { params };
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
+		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		// This tree has only 1 non-trivial leaf -- maybe more should be randomly
+		// generated?
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, 3usize>::new_sequential(
+			&[leaf_hash],
+			&poseidon_native,
+			&[0u8; 32],
+		)
+		.unwrap();
+		let root = tree.root();
+		let bad_root = root.double();
+
+		// Path
+		let path = tree.generate_membership_proof(0);
+
+		// Create MixerCircuit
+		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, 3usize>::new(
+			secret,
+			nullifier,
+			nullifier_hash,
+			path,
+			bad_root,
+			arbitrary_data,
+			poseidon_native,
+		);
+
+		// Fill a composer and check circuit is satisfied
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = mixer.gadget(&mut composer);
+		// composer.check_circuit_satisfied();
+
+		// Go through proof generation/verification
+
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
+
+		let proof = {
+			// Create a prover struct
+			let mut prover =
+				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+					b"mixer",
+				);
+
+			prover.key_transcript(b"key", b"additional seed information");
+
+			// Add gadgets
+			let _ = mixer.gadget(prover.mut_cs());
+
+			// Commit Key (being lazy with error)
+			let (ck, _) =
+				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+					.unwrap();
+
+			// Preprocess circuit
+			let _ = prover.preprocess(&ck);
+
+			// Compute Proof
+			prover.prove(&ck).unwrap()
+		};
+
+		// Verifier's view
+
+		// Create a Verifier object
+		let mut verifier = Verifier::new(b"mixer");
+
+		verifier.key_transcript(b"key", b"additional seed information");
+
+		// Add gadgets
+		let _ = mixer.gadget(verifier.mut_cs());
+
+		// Compute Commit and Verifier key
+		let (ck, vk) =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+				.unwrap();
+
+		// Preprocess circuit
+		verifier.preprocess(&ck).unwrap();
+
+		// Construct public input vector from composer above
+		let public_inputs = composer.construct_dense_pi_vec();
+
+		// Verify proof
+		let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
 	}
 }
