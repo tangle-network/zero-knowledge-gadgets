@@ -2,7 +2,7 @@ use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec, vec::Vec};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
-use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
@@ -172,7 +172,7 @@ mod tests {
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
 		utils::common::setup_params_x5_3,
 	};
-	use plonk::prelude::*;
+	use plonk_core::prelude::*;
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 

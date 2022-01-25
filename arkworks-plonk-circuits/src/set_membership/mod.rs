@@ -1,7 +1,7 @@
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{marker::PhantomData, vec::Vec};
-use plonk::{
+use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
 
@@ -54,7 +54,7 @@ mod tests {
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::KZG10, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::test_rng;
-	use plonk::proof_system::{Prover, Verifier};
+	use plonk_core::proof_system::{Prover, Verifier};
 
 	pub(crate) fn gadget_tester<
 		E: PairingEngine,
