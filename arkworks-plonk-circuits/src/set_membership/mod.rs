@@ -45,7 +45,7 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> Circuit<F, P>
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
 	//copied from ark-plonk
 	use super::*;
 	use ark_bn254::Bn254;
