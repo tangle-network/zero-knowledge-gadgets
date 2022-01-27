@@ -252,7 +252,7 @@ mod tests {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
