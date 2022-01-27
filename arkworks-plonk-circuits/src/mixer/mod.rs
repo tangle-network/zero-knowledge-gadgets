@@ -497,4 +497,306 @@ mod test {
 			_ => panic!("Unexpected error"),
 		};
 	}
+
+	#[test]
+	fn should_fail_with_wrong_path_plonk() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon_native = PoseidonBn254 { params };
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
+		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+
+		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
+		// scalars, then add leaf_hash as the final leaf
+		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
+		// ? There must be a better way to fill an array with random scalars
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
+			leaves[i] = Fq::rand(rng);
+		}
+		leaves[last_index] = leaf_hash;
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
+			&leaves,
+			&poseidon_native,
+			&[0u8; 32],
+		)
+		.unwrap();
+		let root = tree.root();
+
+		// An incorrect path to use below
+		let bad_path = tree.generate_membership_proof((last_index as u64)-1);
+
+		// Create MixerCircuit
+		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+			secret,
+			nullifier,
+			nullifier_hash,
+			bad_path,
+			root,
+			arbitrary_data,
+			poseidon_native,
+		);
+
+		// Fill a composer to extract the public_inputs
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = mixer.gadget(&mut composer);
+		let public_inputs = composer.construct_dense_pi_vec();
+
+		// Go through proof generation/verification
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
+		let proof = {
+			// Create a prover struct
+			let mut prover =
+				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+					b"mixer",
+				);
+			prover.key_transcript(b"key", b"additional seed information");
+			// Add gadgets
+			let _ = mixer.gadget(prover.mut_cs());
+			// Commit Key (being lazy with error)
+			let (ck, _) =
+				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+					.unwrap();
+			// Preprocess circuit
+			let _ = prover.preprocess(&ck);
+			// Compute Proof
+			prover.prove(&ck).unwrap()
+		};
+
+		// Verifier's view
+
+		// Create a Verifier object
+		let mut verifier = Verifier::new(b"mixer");
+		verifier.key_transcript(b"key", b"additional seed information");
+		// Add gadgets
+		let _ = mixer.gadget(verifier.mut_cs());
+		// Compute Commit and Verifier key
+		let (ck, vk) =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+				.unwrap();
+		// Preprocess circuit
+		verifier.preprocess(&ck).unwrap();
+
+		// Verify proof
+		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		match res {
+			Error::ProofVerificationError => (),
+			_ => panic!("Unexpected error"),
+		};
+	}
+
+	#[test]
+	fn should_fail_with_wrong_nullifier_hash_plonk() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon_native = PoseidonBn254 { params };
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
+		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+
+		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
+		// scalars, then add leaf_hash as the final leaf
+		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
+		// ? There must be a better way to fill an array with random scalars
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
+			leaves[i] = Fq::rand(rng);
+		}
+		leaves[last_index] = leaf_hash;
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
+			&leaves,
+			&poseidon_native,
+			&[0u8; 32],
+		)
+		.unwrap();
+		let root = tree.root();
+
+		// Path
+		let path = tree.generate_membership_proof(last_index as u64);
+
+		// Incorrect nullifier hash to use below
+		let bad_nullifier_hash = nullifier_hash.double();
+
+		// Create MixerCircuit
+		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+			secret,
+			nullifier,
+			bad_nullifier_hash,
+			path,
+			root,
+			arbitrary_data,
+			poseidon_native,
+		);
+
+		// Fill a composer to extract the public_inputs
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = mixer.gadget(&mut composer);
+		let public_inputs = composer.construct_dense_pi_vec();
+
+		// Go through proof generation/verification
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
+		let proof = {
+			// Create a prover struct
+			let mut prover =
+				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+					b"mixer",
+				);
+			prover.key_transcript(b"key", b"additional seed information");
+			// Add gadgets
+			let _ = mixer.gadget(prover.mut_cs());
+			// Commit Key (being lazy with error)
+			let (ck, _) =
+				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+					.unwrap();
+			// Preprocess circuit
+			let _ = prover.preprocess(&ck);
+			// Compute Proof
+			prover.prove(&ck).unwrap()
+		};
+
+		// Verifier's view
+
+		// Create a Verifier object
+		let mut verifier = Verifier::new(b"mixer");
+		verifier.key_transcript(b"key", b"additional seed information");
+		// Add gadgets
+		let _ = mixer.gadget(verifier.mut_cs());
+		// Compute Commit and Verifier key
+		let (ck, vk) =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+				.unwrap();
+		// Preprocess circuit
+		verifier.preprocess(&ck).unwrap();
+
+		// Verify proof
+		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		match res {
+			Error::ProofVerificationError => (),
+			_ => panic!("Unexpected error"),
+		};
+	}
+
+	#[test]
+	fn should_fail_with_wrong_arbitrary_data_plonk() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		let params = setup_params_x5_3(curve);
+		let poseidon_native = PoseidonBn254 { params };
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
+		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+
+		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
+		// scalars, then add leaf_hash as the final leaf
+		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
+		// ? There must be a better way to fill an array with random scalars
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
+			leaves[i] = Fq::rand(rng);
+		}
+		leaves[last_index] = leaf_hash;
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
+			&leaves,
+			&poseidon_native,
+			&[0u8; 32],
+		)
+		.unwrap();
+		let root = tree.root();
+
+		// Path
+		let path = tree.generate_membership_proof(last_index as u64);
+
+		// Create MixerCircuit
+		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+			secret,
+			nullifier,
+			nullifier_hash,
+			path,
+			root,
+			arbitrary_data,
+			poseidon_native,
+		);
+
+		// Fill a composer to extract the public_inputs
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = mixer.gadget(&mut composer);
+		let mut public_inputs = composer.construct_dense_pi_vec();
+
+		// Go through proof generation/verification
+		let u_params: UniversalParams<Bn254> =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
+		let proof = {
+			// Create a prover struct
+			let mut prover =
+				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+					b"mixer",
+				);
+			prover.key_transcript(b"key", b"additional seed information");
+			// Add gadgets
+			let _ = mixer.gadget(prover.mut_cs());
+			// Commit Key (being lazy with error)
+			let (ck, _) =
+				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+					.unwrap();
+			// Preprocess circuit
+			let _ = prover.preprocess(&ck);
+			// Compute Proof
+			prover.prove(&ck).unwrap()
+		};
+
+		// Verifier's view
+
+		// Create a Verifier object
+		let mut verifier = Verifier::new(b"mixer");
+		verifier.key_transcript(b"key", b"additional seed information");
+		// Add gadgets
+		let _ = mixer.gadget(verifier.mut_cs());
+		// Compute Commit and Verifier key
+		let (ck, vk) =
+			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
+				.unwrap();
+		// Preprocess circuit
+		verifier.preprocess(&ck).unwrap();
+
+		// The arbitrary data is stored at index 5 of the public input vector:
+		assert_eq!(arbitrary_data, public_inputs[5]);
+		// Modify the arbitrary data so that prover/verifier disagree
+		public_inputs[5].double_in_place();
+
+		// Verify proof
+		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		match res {
+			Error::ProofVerificationError => (),
+			_ => panic!("Unexpected error"),
+		};
+	}
 }
