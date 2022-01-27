@@ -138,7 +138,7 @@ mod test {
 		poseidon::field_hasher::Poseidon,
 	};
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
-	use plonk_core::prelude::*;
+	use plonk_core::{circuit::PublicInputValue, prelude::*};
 
 	type PoseidonBn254 = Poseidon<Fq>;
 
