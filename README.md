@@ -13,39 +13,44 @@ Many thanks to the following people for help and insights in both learning and i
 
 # Overview
 
-This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a anchor that can be integrated into compatible blockchain and smart contract protocols. The repo is split into two main parts: the intermediate modular gadgets and the circuits that consume these gadgets.
+This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a anchor that can be integrated into compatible blockchain and smart contract protocols. The repo is split into three main parts: 
+- Intermediate modular gadgets
+- The circuits that consume these gadgets
+- Basic utilities used by the gadgets and the circuits (like parameters for poseidon hash function)
 
 ## Gadgets
 
 In this repo you will find gadgets for:
 
-- [x] [Poseidon hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/poseidon)
-- [x] [MiMC hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/mimc)
-- [x] [Leaf commitment construction for various leaf schemas (for mixers and anchors)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/leaf)
-- [x] [Merkle tree membership and construction](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/merkle_tree)
-- [x] [Set membership](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/set)
-- [x] [Arbitrary computation (no constraints applied)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/arbitrary)
+- [x] [Poseidon hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/poseidon)
+- [x] [MiMC hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/mimc)
+- [x] [Leaf commitment construction for various leaf schemas (for mixers and anchors)](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/leaf)
+- [x] [Merkle tree membership and construction](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/merkle_tree)
+- [x] [Set membership](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/set)
+- [x] [Arbitrary computation (no constraints applied)](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/arbitrary)
 
-You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/basic.rs).
+You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/basic.rs).
 
 ## Circuits
 
 In this repo you will find circuits for:
 
-- [x] [Poseidon preimage proofs](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/poseidon.rs) - using a Poseidon hash gadget
-- [x] [Mixer](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/mixer.rs) - using a hash gadget, mixer leaf commitment gadget, merkle tree membership gadget, and arbitrary computations.
-- [x] [Anchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/anchor.rs) - using a hash gadget, anchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
+- [x] [Poseidon preimage proofs](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/poseidon.rs) - using a Poseidon hash gadget
+- [x] [Mixer](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/mixer.rs) - using a hash gadget, mixer leaf commitment gadget, merkle tree membership gadget, and arbitrary computations.
+- [x] [Anchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/anchor.rs) - using a hash gadget, anchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
+- [x] [VAnchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/vanchor.rs) - using a hash gadget, vanchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
 
 ## Setup
 
-In order to deploy zero-knowledge circuits in end applications, you have to set them up. Often times you may hear the term "trusted setup" thrown about. For the circuits implemented in this repo, we have Groth16 style setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/setup) directory. This folder contains circuit-specific setup helpers for creating your provers and verifiers for your circuits from the previous section.
+In order to deploy zero-knowledge circuits in end applications, you have to set them up. Often times you may hear the term "trusted setup" thrown about. For the circuits implemented in this repo, we have Groth16 style setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-circuits/src/setup) directory. This folder contains circuit-specific setup helpers for creating your provers and verifiers for your circuits from the previous section.
 
-The circuit-specific files of the setup section contain tests and circuit definitions that instantiate circuits w/ different configurations of hash gadgets and merkle tree gadgets. This is the primary place where one fixes the exact instantiations of a specific circuit.
+The circuit-specific files of the setup section contain tests and circuit definitions that instantiate circuits w/ different configurations of hash gadgets and merkle tree gadgets and elliptic curves. This is the primary place where one fixes the exact instantiations of a specific circuit.
 
 Each application-specific file in `src/setup` encapsulates the full-setup of a zero-knowledge gadget's prover and verifier. There are currently application-specific gadgets for:
 
 - zero-knowledge mixers
 - zero-knowledge anchors
+- zero-knowladge variable anchors
 
 For tests and instantiations of the gadgets used to compose each of these larger scale application gadgets, refer to the individual directories and their tests. Most all of the tests and implementations in this repo use Groth16 proofs and setups for the zero-knowledge gadgets. Occasionally Marlin zkSNARKs are used for intermediate gadget tests. There are no application-specific instantiations of gadgets that use Marlin however, but pull requests are welcome to create them.
 
@@ -67,18 +72,20 @@ Any instantiation of a zero-knowledge mixer circuit requires that all data provi
 
 ### Leaf structure
 
-The structure of our leaves must be the hash of 3 random field elements from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/leaf/mixer/constraints.rs).
+The structure of our leaves must be the hash of 2 random field elements (the secret and the nullifier)) from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-gadgets/src/leaf/mixer/constraints.rs).
 
 ### Public input structure
 
 The structure of public inputs must be the ordered array of the following data taken from Tornado Cash's design & architecture.
 
-1. Recipient
-2. Relayer
-3. Fee
-4. Refund
+1. Nullifier hash
+2. Merkle Tree root hash
+3. Recipient
+4. Relayer
+5. Fee
+6. Refund
 
-You can find more details about the arbitrary data structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
+You can find more details about the arbitrary data structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-gadgets/src/arbitrary/mixer_data/constraints.rs).
 
 These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
 
