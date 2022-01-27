@@ -118,9 +118,6 @@ impl<
 		//This line confirms that the path is consistent with the given merkle root
 		composer.assert_equal(previous_hash, *root_hash);
 
-		// Check the validity of the path
-		composer.assert_equal(previous_hash, *root_hash);
-
 		Ok(index)
 	}
 }

@@ -144,9 +144,8 @@ mod test {
 
 	type PoseidonBn254 = Poseidon<Fq>;
 
-	// took 33s before increasing size from 1<<17 to 1<<21.  That was unchanged
 	#[test]
-	fn should_verify_correct_mixer() {
+	fn should_verify_correct_mixer_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
@@ -165,12 +164,13 @@ mod test {
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
 		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-		for i in 0..(1 << (HEIGHT - 1) - 1) {
+		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
 		}
-		leaves[1 << (HEIGHT - 1) - 1] = leaf_hash;
+		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
 			&poseidon_native,
@@ -180,7 +180,7 @@ mod test {
 		let root = tree.root();
 
 		// Path
-		let path = tree.generate_membership_proof(1 << (HEIGHT - 1) - 1);
+		let path = tree.generate_membership_proof(last_index as u64);
 
 		// Create MixerCircuit
 		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
@@ -197,11 +197,8 @@ mod test {
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 
-	#[should_panic(
-		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
-	)]
 	#[test]
-	fn should_fail_with_invalid_root() {
+	fn should_fail_with_invalid_root_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
@@ -220,12 +217,13 @@ mod test {
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
 		// ? There must be a better way to fill an array with random scalars
-		let mut leaves = [Fq::from(0); 1 << (HEIGHT - 1)];
-		for i in 0..(1 << (HEIGHT - 1) - 1) {
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
 		}
-		leaves[1 << (HEIGHT - 1) - 1] = leaf_hash;
+		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
 			&poseidon_native,
@@ -236,7 +234,7 @@ mod test {
 		let bad_root = root.double();
 
 		// Path
-		let path = tree.generate_membership_proof(1 << (HEIGHT - 1) - 1);
+		let path = tree.generate_membership_proof(last_index as u64);
 
 		// Create MixerCircuit
 		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
@@ -249,19 +247,12 @@ mod test {
 			poseidon_native,
 		);
 
-		// // The test will fail due to a TooManyCoefficients error if we use
-		// gadget_tester let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut
-		// mixer, 1 << 20); assert!(res.is_ok(), "{:?}", res.err().unwrap());
-
-		// The test will pass if we go through proving/verifying "manually" like this:
-
 		// Fill a composer to extract the public_inputs
 		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let public_inputs = composer.construct_dense_pi_vec();
 
 		// Go through proof generation/verification
-
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 
@@ -308,14 +299,12 @@ mod test {
 		verifier.preprocess(&ck).unwrap();
 
 		// Verify proof
-		let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
+		let res = verifier.verify(&proof, &vk, &public_inputs);
+		assert!(res.is_err());
 	}
 
-	#[should_panic(
-		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
-	)]
 	#[test]
-	fn should_fail_with_wrong_secret() {
+	fn should_fail_with_wrong_secret_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
@@ -334,12 +323,13 @@ mod test {
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
 		// ? There must be a better way to fill an array with random scalars
-		let mut leaves = [Fq::from(0); 1 << (HEIGHT - 1)];
-		for i in 0..(1 << (HEIGHT - 1) - 1) {
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
 		}
-		leaves[1 << (HEIGHT - 1) - 1] = leaf_hash;
+		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
 			&poseidon_native,
@@ -347,10 +337,9 @@ mod test {
 		)
 		.unwrap();
 		let root = tree.root();
-		let bad_root = root.double();
 
 		// Path
-		let path = tree.generate_membership_proof(1 << (HEIGHT - 1) - 1);
+		let path = tree.generate_membership_proof(last_index as u64);
 
 		// An incorrect secret value to use below
 		let bad_secret = secret.double();
@@ -361,7 +350,7 @@ mod test {
 			nullifier,
 			nullifier_hash,
 			path,
-			bad_root,
+			root,
 			arbitrary_data,
 			poseidon_native,
 		);
@@ -372,7 +361,6 @@ mod test {
 		let public_inputs = composer.construct_dense_pi_vec();
 
 		// Go through proof generation/verification
-
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 
@@ -419,14 +407,12 @@ mod test {
 		verifier.preprocess(&ck).unwrap();
 
 		// Verify proof
-		let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
+		let res = verifier.verify(&proof, &vk, &public_inputs);
+		assert!(res.is_err());
 	}
 
-	#[should_panic(
-		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
-	)]
 	#[test]
-	fn should_fail_with_wrong_nullifier() {
+	fn should_fail_with_wrong_nullifier_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
@@ -445,12 +431,13 @@ mod test {
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
 		// ? There must be a better way to fill an array with random scalars
-		let mut leaves = [Fq::from(0); 1 << (HEIGHT - 1)];
-		for i in 0..(1 << (HEIGHT - 1) - 1) {
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
 		}
-		leaves[1 << (HEIGHT - 1) - 1] = leaf_hash;
+		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
 			&poseidon_native,
@@ -458,10 +445,9 @@ mod test {
 		)
 		.unwrap();
 		let root = tree.root();
-		let bad_root = root.double();
 
 		// Path
-		let path = tree.generate_membership_proof(1 << (HEIGHT - 1) - 1);
+		let path = tree.generate_membership_proof(last_index as u64);
 
 		// An incorrect secret value to use below
 		let bad_nullifier = nullifier.double();
@@ -472,7 +458,7 @@ mod test {
 			bad_nullifier,
 			nullifier_hash,
 			path,
-			bad_root,
+			root,
 			arbitrary_data,
 			poseidon_native,
 		);
@@ -483,7 +469,6 @@ mod test {
 		let public_inputs = composer.construct_dense_pi_vec();
 
 		// Go through proof generation/verification
-
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 
@@ -503,11 +488,6 @@ mod test {
 			let (ck, _) =
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
-
-			println!(
-				"The supported degree is {:?}",
-				prover.circuit_size().next_power_of_two() + 6
-			);
 
 			// Preprocess circuit
 			let _ = prover.preprocess(&ck);
@@ -535,67 +515,7 @@ mod test {
 		verifier.preprocess(&ck).unwrap();
 
 		// Verify proof
-		let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
+		let res = verifier.verify(&proof, &vk, &public_inputs);
+		assert!(res.is_err());
 	}
-
-	// fn prove_then_verify_KZG<F, P, C, PC>(circuit: C, max_degree: usize)
-	// where
-	// 	F: PrimeField,
-	// 	P: TEModelParameters<BaseField = F>,
-	// 	C: Circuit<F, P>,
-	// 	PC: PolynomialCommitment<F, P>,
-	// {
-	// 	let u_params: UniversalParams<Bn254> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(max_degree, None,
-	// rng).unwrap();
-
-	// 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover =
-	// 			Prover::<Fq, JubjubParameters, SonicKZG10<Bn254,
-	// DensePolynomial<Bn254Fr>>>::new( 				b"mixer",
-	// 			);
-
-	// 		prover.key_transcript(b"key", b"additional seed information");
-
-	// 		// Add gadgets
-	// 		let _ = circuit.gadget(prover.mut_cs());
-
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck);
-
-	// 		// Once the prove method is called, the public inputs are cleared
-	// 		// So pre-fetch these before calling Prove
-	// 		let public_inputs = prover.mut_cs().construct_dense_pi_vec();
-
-	// 		// Compute Proof
-	// 		prover.prove(&ck).unwrap()
-	// 	};
-
-	// 	// Verifier's view
-
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"mixer");
-
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-
-	// 	// Add gadgets
-	// 	let _ = circuit.gadget(verifier.mut_cs());
-
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck).unwrap();
-
-	// 	// Verify proof
-	// 	let _ = verifier.verify(&proof, &vk, &public_inputs).unwrap();
-	// }
 }
