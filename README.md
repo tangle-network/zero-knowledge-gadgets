@@ -20,16 +20,20 @@ This repo contains zero-knowledge gadgets & circuits for different end applicati
 
 ## Gadgets
 
+You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/basic.rs).
+
 In this repo you will find gadgets for:
 
 - [x] [Poseidon hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/poseidon)
 - [x] [MiMC hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/mimc)
 - [x] [Leaf commitment construction for various leaf schemas (for mixers and anchors)](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/leaf)
 - [x] [Merkle tree membership and construction](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/merkle_tree)
-- [x] [Set membership](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/set)
-- [x] [Arbitrary computation (no constraints applied)](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/arbitrary)
+- [x] [Set](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/set)
+- [x] [Arbitrary computation](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/arbitrary)
 
-You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/basic.rs).
+- Poseidon hashing function matches the [circom implementation](https://github.com/iden3/circomlib/blob/master/circuits/poseidon.circom). Implemented based on this paper: https://eprint.iacr.org/2019/458.pdf.
+- MiMC hashing function matches the [circom implementation](https://github.com/iden3/circomlib/blob/master/circuits/mimc.circom)
+- Set membership - Used for proving that some value is inside the set in a zero-knowladge manner. That is done by first calculating the differences (denoted as `diffs`) from the `target` (value that we are checking the membership of) and each value from the set. We then calculate the sum of products of a target and each element in the set. If one value from the `diffs` is 0 (meaning that its equal to `target`) the product will be zero, thus meaning that the `target` is in the set.
 
 ## Circuits
 
@@ -46,7 +50,7 @@ For the circuits implemented in this repo, we have setups in the [setup](https:/
 
 The circuit-specific files of the setup section contain tests and circuit definitions that instantiate circuits w/ different configurations of hash gadgets, merkle tree gadgets and elliptic curves. This is the primary place where one fixes the exact instantiations of a specific circuit.
 
-Each application-specific file in `src/setup` encapsulates the full-setup of a zero-knowledge gadget's prover and verifier. There are currently application-specific gadgets for:
+Each application-specific file in `arkworks-circuits/src/setup` encapsulates the full-setup of a zero-knowledge gadget's prover and verifier. There are currently application-specific gadgets for:
 
 - zero-knowledge mixers
 - zero-knowledge anchors
@@ -97,6 +101,10 @@ These parameters are provided to zero-knowledge proofs as public inputs and are 
 - For now, the refund is not used in any context and is merely an artifact to maintain stability with Tornado Cash's public inputs structure.
 
 It's worth mentioning that all inputs provided to the zero-knowledge proof generation bind the proof to those inputs. This helps prevent tampering if for example a user wants to change the recipient after proof generation. If the public inputs change for a proof submitted on-chain, the proof will fail with the underlying security of the zkSNARK. We leverage this design to provide the right incentives for users and relayers of the end application, an on-chain cryptocurrency mixer.
+
+## Anchor
+
+## VAnchor
 
 # Usage
 
