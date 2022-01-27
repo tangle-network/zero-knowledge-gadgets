@@ -534,7 +534,7 @@ mod test {
 		let root = tree.root();
 
 		// An incorrect path to use below
-		let bad_path = tree.generate_membership_proof((last_index as u64)-1);
+		let bad_path = tree.generate_membership_proof((last_index as u64) - 1);
 
 		// Create MixerCircuit
 		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
