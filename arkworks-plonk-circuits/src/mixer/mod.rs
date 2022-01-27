@@ -299,8 +299,9 @@ mod test {
 		verifier.preprocess(&ck).unwrap();
 
 		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs);
-		assert!(res.is_err());
+		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// assert!(res.is_err());
+		assert_eq!(res, Error::ProofVerificationError);
 	}
 
 	#[test]
