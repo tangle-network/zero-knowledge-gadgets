@@ -796,7 +796,7 @@ mod test {
 		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
-			_ => panic!("Unexpected error"),
+			err => panic!("Unexpected error: {:?}", err),
 		};
 	}
 }
