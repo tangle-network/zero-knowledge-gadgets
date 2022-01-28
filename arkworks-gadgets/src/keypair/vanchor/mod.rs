@@ -6,12 +6,12 @@ use ark_std::marker::PhantomData;
 pub mod constraints;
 
 #[derive(Default, Debug, Copy)]
-pub struct Keypair<B: Clone + ToBytes, H: CRH> {
+pub struct Keypair<B: Clone + Copy + ToBytes, H: CRH> {
 	pub private_key: B,
 	_h: PhantomData<H>,
 }
 
-impl<B: Clone + ToBytes, H: CRH> Keypair<B, H> {
+impl<B: Clone + Copy + ToBytes, H: CRH> Keypair<B, H> {
 	pub fn new(private_key: B) -> Self {
 		Self {
 			private_key,
@@ -36,7 +36,7 @@ impl<B: Clone + ToBytes, H: CRH> Keypair<B, H> {
 	}
 }
 
-impl<B: Clone + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
+impl<B: Clone + Copy + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 	fn clone(&self) -> Self {
 		let private_key = self.private_key.clone();
 		Self::new(private_key)

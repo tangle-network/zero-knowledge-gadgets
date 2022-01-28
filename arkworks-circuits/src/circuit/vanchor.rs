@@ -414,7 +414,9 @@ where
 
 #[cfg(test)]
 mod test {
-	use crate::{
+	use std::vec;
+
+use crate::{
 		ark_std::{One, Zero},
 		setup::{common::*, vanchor::VAnchorProverBn2542x2},
 	};
@@ -499,8 +501,12 @@ mod test {
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, _) = prover.setup_tree(&commitments).unwrap();
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
 
 		// Invalid root set
 		let in_root_set = [BnFr::rand(rng); 2];

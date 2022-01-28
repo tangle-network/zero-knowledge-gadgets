@@ -158,7 +158,7 @@ impl<
 		let fee = rng.next_u64() as u128;
 
 		let in_root_set = [F::rand(rng); M].map(|x| x.into_repr().to_bytes_le());
-		let in_leaves = [vec![F::rand(rng)]; INS].map(|x| x.iter().map(|x| x.into_repr().to_bytes_le()).collect());
+		let in_leaves = [F::rand(rng); INS].map(|x| vec![x.into_repr().to_bytes_le()]);
 		let in_indices = [rng.next_u64(); INS];
 
 		let in_chain_id = [rng.next_u64() as u128; INS];
