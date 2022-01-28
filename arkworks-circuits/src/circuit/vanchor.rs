@@ -414,7 +414,7 @@ where
 
 #[cfg(test)]
 mod test {
-	use std::vec;
+	use ark_std::vec;
 
 	use crate::{
 		ark_std::{One, Zero},
@@ -499,7 +499,6 @@ mod test {
 
 		let public_amount = BnFr::from(10u32);
 		let ext_data_hash = BnFr::rand(rng);
-
 
 		let in_chain_ids = [BnFr::from(0u32); 2];
 		let in_amounts = [BnFr::from(5u32); 2];
@@ -766,7 +765,7 @@ mod test {
 
 		let public_amount = BnFr::from(0u32);
 		let ext_data_hash = BnFr::rand(rng);
-		
+
 		let in_chain_ids = [BnFr::from(0u32); 2];
 		let in_amounts = [BnFr::from(5u32); 2];
 		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
