@@ -110,20 +110,19 @@ impl<
 			self.setup_leaves::<_, N>(&chain_ids_f, &amounts_f, &keypairs, rng)?;
 
 		let mut i = 0;
-		let utxos: [Utxo<F>; N] = [None; N]
-			.map(|_: Option<Utxo<F>>| {
-				let utxo = Utxo {
-					chain_id: chain_ids_f[i],
-					amount: amounts_f[i],
-					keypair: keypairs[i].clone(),
-					leaf_private: leaf_privates[i].clone(),
-					leaf_public: leaf_publics[i].clone(),
-					nullifier: nullifiers[i],
-					commitment: commitments[i],
-				};
-				i += 1;
-				utxo
-			});
+		let utxos: [Utxo<F>; N] = [None; N].map(|_: Option<Utxo<F>>| {
+			let utxo = Utxo {
+				chain_id: chain_ids_f[i],
+				amount: amounts_f[i],
+				keypair: keypairs[i].clone(),
+				leaf_private: leaf_privates[i].clone(),
+				leaf_public: leaf_publics[i].clone(),
+				nullifier: nullifiers[i],
+				commitment: commitments[i],
+			};
+			i += 1;
+			utxo
+		});
 
 		Ok(utxos)
 	}
@@ -312,7 +311,12 @@ impl<
 
 		let in_root_set_f = in_root_set.map(|x| F::from_le_bytes_mod_order(&x));
 
-		let in_leaves_f = in_leaves.map(|leaves| leaves.iter().map(|x| F::from_le_bytes_mod_order(&x)).collect());
+		let in_leaves_f = in_leaves.map(|leaves| {
+			leaves
+				.iter()
+				.map(|x| F::from_le_bytes_mod_order(&x))
+				.collect()
+		});
 
 		let (circuit, public_inputs) = self.setup_circuit_with_utxos(
 			public_amount,

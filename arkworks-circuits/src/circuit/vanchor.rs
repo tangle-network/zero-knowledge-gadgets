@@ -416,7 +416,7 @@ where
 mod test {
 	use std::vec;
 
-use crate::{
+	use crate::{
 		ark_std::{One, Zero},
 		setup::{common::*, vanchor::VAnchorProverBn2542x2},
 	};
@@ -446,29 +446,49 @@ use crate::{
 		let params5: PoseidonParameters<BnFr> = setup_params_x5_5(curve);
 		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
 
-		let public_amount = 6;
-		let recipient = vec![1u8; 20];
-		let relayer = vec![2u8; 20];
-		let ext_amount = 10;
-		let fee = 0;
+		let public_amount = BnFr::from(10u32);
+		let ext_data_hash = BnFr::rand(rng);
+		let arbitrary_data = VAnchorProverBn2542x2::setup_arbitrary_data(ext_data_hash);
 
-		let in_chain_id = 0;
-		let in_amounts = [2; 2];
+		let in_chain_ids = [0; 2];
+		let in_amounts = [5; 2];
+		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+
 		let out_chain_ids = [0; 2];
 		let out_amounts = [5; 2];
+		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let (circuit, pub_ins, ..) = prover
-			.setup_circuit_with_data(
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
+		let in_root_set = [root0, root1];
+
+		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_utxos.iter().map(|x| x.nullifier).collect::<Vec<BnFr>>(),
+			out_utxos
+				.iter()
+				.map(|x| x.commitment)
+				.collect::<Vec<BnFr>>(),
+			ext_data_hash,
+		);
+
+		let circuit = prover
+			.setup_circuit(
 				public_amount,
-				recipient,
-				relayer,
-				ext_amount,
-				fee,
-				in_chain_id,
-				in_amounts,
-				out_chain_ids,
-				out_amounts,
-				rng,
+				arbitrary_data,
+				in_utxos,
+				in_indices,
+				in_paths,
+				in_root_set,
+				out_utxos,
 			)
 			.unwrap();
 
@@ -567,9 +587,15 @@ use crate::{
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
-		let in_root_set = [root; 2];
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
+		let in_root_set = [root0, root1];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -628,9 +654,15 @@ use crate::{
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
-		let in_root_set = [root; 2];
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
+		let in_root_set = [root0, root1];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -685,9 +717,15 @@ use crate::{
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
-		let in_root_set = [root; 2];
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
+		let in_root_set = [root0, root1];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -748,9 +786,15 @@ use crate::{
 		let out_amounts = [limit + BnFr::one(); 2];
 		let out_utxos = prover.new_utxos_f(out_chain_ids, out_amounts, rng).unwrap();
 
-		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
-		let in_root_set = [root; 2];
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
+		let in_root_set = [root0, root1];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
@@ -805,9 +849,15 @@ use crate::{
 		let out_amounts = [5; 2];
 		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
 
-		let commitments = in_utxos.iter().map(|x| x.commitment).collect::<Vec<BnFr>>();
-		let (in_paths, in_indices, root) = prover.setup_tree(&commitments).unwrap();
-		let in_root_set = [root; 2];
+		let leaf0 = in_utxos[0].commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxos[1].commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+		let in_paths = vec![in_path0, in_path1];
+		let in_indices = [BnFr::from(0u32); 2];
+		let in_root_set = [root0, root1];
 
 		let pub_ins = VAnchorProverBn2542x2::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
