@@ -1,8 +1,8 @@
-use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
-use ark_std::{fmt::Debug, vec, vec::Vec, One};
+use ark_std::{fmt::Debug, vec, vec::Vec};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
-use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 use crate::poseidon::sbox::{PoseidonSbox, SboxConstraints};
 
@@ -54,13 +54,13 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 		// Add native parameters to composer and store variables:
 		let mut round_keys_var = vec![];
 		for key in native.params.round_keys {
-			round_keys_var.push(composer.add_input(key));
+			round_keys_var.push(composer.add_witness_to_circuit_description(key));
 		}
 		let mut mds_matrix_var = vec![];
 		for row in native.params.mds_matrix {
 			let mut temp = vec![];
 			for element in row {
-				temp.push(composer.add_input(element));
+				temp.push(composer.add_witness_to_circuit_description(element));
 			}
 			mds_matrix_var.push(temp);
 		}
@@ -172,7 +172,7 @@ mod tests {
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
 		utils::common::setup_params_x5_3,
 	};
-	use plonk::prelude::*;
+	use plonk_core::prelude::*;
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 
@@ -252,7 +252,7 @@ mod tests {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 

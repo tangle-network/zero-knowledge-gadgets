@@ -3,7 +3,7 @@ use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
-use plonk::{constraint_system::StandardComposer, error::Error, prelude::Variable};
+use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 #[derive(Clone)]
 pub struct PathGadget<
@@ -25,7 +25,10 @@ impl<
 		const N: usize,
 	> PathGadget<F, P, HG, N>
 {
-	fn from_native(composer: &mut StandardComposer<F, P>, native: Path<F, HG::Native, N>) -> Self {
+	pub fn from_native(
+		composer: &mut StandardComposer<F, P>,
+		native: Path<F, HG::Native, N>,
+	) -> Self {
 		// Initialize the array
 		let mut path_vars = [(composer.zero_var(), composer.zero_var()); N];
 
@@ -112,8 +115,7 @@ impl<
 
 			previous_hash = hasher.hash_two(composer, left_hash, right_hash)?;
 		}
-
-		// Check the validity of the path
+		//This line confirms that the path is consistent with the given merkle root
 		composer.assert_equal(previous_hash, *root_hash);
 
 		Ok(index)
@@ -136,7 +138,7 @@ mod test {
 		poseidon::field_hasher::Poseidon,
 	};
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
-	use plonk::prelude::*;
+	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
 
@@ -220,7 +222,7 @@ mod test {
 		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
@@ -319,7 +321,7 @@ mod test {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
@@ -396,9 +398,6 @@ mod test {
 		}
 	}
 
-	#[should_panic(
-		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
-	)]
 	#[test]
 	fn get_index_should_fail() {
 		let rng = &mut test_rng();
@@ -433,11 +432,11 @@ mod test {
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
-		circuit::verify_proof::<_, JubjubParameters, _>(
+		let res = circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
 			key,
 			&proof,
@@ -445,7 +444,11 @@ mod test {
 			&pi_pos,
 			b"SMTIndex Test",
 		)
-		.unwrap();
+		.unwrap_err();
+		match res {
+			Error::ProofVerificationError => (),
+			err => panic!("Unexpected error: {:?}", err),
+		};
 	}
 
 	// Membership proof should fail due to invalid leaf input
@@ -499,9 +502,6 @@ mod test {
 		}
 	}
 
-	#[should_panic(
-		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
-	)]
 	#[test]
 	fn bad_leaf_membership() {
 		let rng = &mut test_rng();
@@ -533,19 +533,23 @@ mod test {
 		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
-		circuit::verify_proof::<_, JubjubParameters, _>(
+		let res = circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
 			key,
 			&proof,
 			&public_inputs,
 			&pi_pos,
-			b"SMT Test",
+			b"SMTIndex Test",
 		)
-		.unwrap();
+		.unwrap_err();
+		match res {
+			Error::ProofVerificationError => (),
+			err => panic!("Unexpected error: {:?}", err),
+		};
 	}
 
 	// Membership proof should fail due to invalid leaf input
@@ -599,9 +603,6 @@ mod test {
 		}
 	}
 
-	#[should_panic(
-		expected = "called `Result::unwrap()` on an `Err` value: ProofVerificationError"
-	)]
 	#[test]
 	fn bad_root_membership() {
 		let rng = &mut test_rng();
@@ -633,18 +634,22 @@ mod test {
 		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<PublicInputValue<Bn254Fr>> = vec![];
+		let public_inputs: Vec<Bn254Fr> = vec![];
 
 		let VerifierData { key, pi_pos } = vd;
 
-		circuit::verify_proof::<_, JubjubParameters, _>(
+		let res = circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
 			key,
 			&proof,
 			&public_inputs,
 			&pi_pos,
-			b"SMT Test",
+			b"SMTIndex Test",
 		)
-		.unwrap();
+		.unwrap_err();
+		match res {
+			Error::ProofVerificationError => (),
+			err => panic!("Unexpected error: {:?}", err),
+		};
 	}
 }
