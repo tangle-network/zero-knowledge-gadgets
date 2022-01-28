@@ -7,7 +7,7 @@ use crate::{
 };
 use ark_bn254::Fr as Bn254Fr;
 use ark_crypto_primitives::Error;
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{PrimeField};
 use ark_std::{rand::RngCore, rc::Rc, vec::Vec};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
@@ -21,7 +21,6 @@ use arkworks_utils::{
 		common::{
 			setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
 		},
-		keccak_256, ExtData,
 	},
 };
 
@@ -89,31 +88,19 @@ impl<
 
 	pub fn new_utxos<R: RngCore, const N: usize>(
 		&self,
-		chain_ids: [u128; N],
-		amounts: [u128; N],
-		rng: &mut R,
-	) -> Result<[Utxo<F>; N], Error> {
-		let chain_ids_f = chain_ids.map(|x| F::from(x));
-		let amounts_f = amounts.map(|x| F::from(x));
-
-		self.new_utxos_f(chain_ids_f, amounts_f, rng)
-	}
-
-	pub fn new_utxos_f<R: RngCore, const N: usize>(
-		&self,
-		chain_ids_f: [F; N],
-		amounts_f: [F; N],
+		chain_ids: [F; N],
+		amounts: [F; N],
 		rng: &mut R,
 	) -> Result<[Utxo<F>; N], Error> {
 		let keypairs = Self::setup_keypairs::<_, N>(rng);
 		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves::<_, N>(&chain_ids_f, &amounts_f, &keypairs, rng)?;
+			self.setup_leaves::<_, N>(&chain_ids, &amounts, &keypairs, rng)?;
 
 		let mut i = 0;
 		let utxos: [Utxo<F>; N] = [None; N].map(|_: Option<Utxo<F>>| {
 			let utxo = Utxo {
-				chain_id: chain_ids_f[i],
-				amount: amounts_f[i],
+				chain_id: chain_ids[i],
+				amount: amounts[i],
 				keypair: keypairs[i].clone(),
 				leaf_private: leaf_privates[i].clone(),
 				leaf_public: leaf_publics[i].clone(),
@@ -145,40 +132,28 @@ impl<
 		>,
 		Error,
 	> {
-		let public_amount = rng.next_u64() as i128;
-
-		let mut recipient = [0u8; 20];
-		rng.fill_bytes(&mut recipient);
-
-		let mut relayer = [0u8; 20];
-		rng.fill_bytes(&mut relayer);
-
-		let ext_amount = rng.next_u64() as i128;
-		let fee = rng.next_u64() as u128;
-
-		let in_root_set = [F::rand(rng); M].map(|x| x.into_repr().to_bytes_le());
-		let in_leaves = [F::rand(rng); INS].map(|x| vec![x.into_repr().to_bytes_le()]);
+		let public_amount = F::rand(rng);
+		let ext_data_hash = F::rand(rng);
+		let in_root_set = [F::rand(rng); M];
+		let in_leaves = [F::rand(rng); INS].map(|x| vec![x]);
 		let in_indices = [rng.next_u64(); INS];
 
-		let in_chain_id = [rng.next_u64() as u128; INS];
-		let in_amounts = [rng.next_u64() as u128; INS];
-		let out_chain_ids = [rng.next_u64() as u128; OUTS];
-		let out_amounts = [rng.next_u64() as u128; OUTS];
+		let in_chain_id = [F::rand(rng); INS];
+		let in_amounts = [F::rand(rng); INS];
+		let out_chain_ids = [F::rand(rng); OUTS];
+		let out_amounts = [F::rand(rng); OUTS];
 
-		let (circuit, ..) = self.setup_circuit_with_data(
+		let in_utxos = self.new_utxos(in_chain_id, in_amounts, rng)?;
+		let out_utxos = self.new_utxos(out_chain_ids, out_amounts, rng)?;
+
+		let (circuit, ..) = self.setup_circuit_with_utxos(
 			public_amount,
-			recipient.to_vec(),
-			relayer.to_vec(),
-			ext_amount,
-			fee,
+			ext_data_hash,
 			in_root_set,
-			in_leaves,
 			in_indices,
-			in_chain_id,
-			in_amounts,
-			out_chain_ids,
-			out_amounts,
-			rng,
+			in_leaves,
+			in_utxos,
+			out_utxos,
 		)?;
 
 		Ok(circuit)
@@ -187,11 +162,8 @@ impl<
 	pub fn setup_circuit_with_utxos(
 		self,
 		// External data
-		public_amount: i128,
-		recipient: Vec<u8>,
-		relayer: Vec<u8>,
-		ext_amount: i128,
-		fee: u128,
+		public_amount: F,
+		ext_data_hash: F,
 		in_root_set: [F; M],
 		in_indices: [u64; INS],
 		in_leaves: [Vec<F>; INS],
@@ -224,27 +196,11 @@ impl<
 			let (in_path, _) = self.setup_tree(&in_leaves[i], in_indices[i])?;
 			in_paths.push(in_path)
 		}
-
-		let ext_data = ExtData::new(
-			recipient,
-			relayer,
-			ext_amount.to_le_bytes().to_vec(),
-			fee.to_le_bytes().to_vec(),
-			out_utxos[0].commitment.into_repr().to_bytes_le(),
-			out_utxos[1].commitment.into_repr().to_bytes_le(),
-		);
-		let ext_data_hash = keccak_256(&ext_data.encode_abi());
-		let ext_data_hash_f = F::from_le_bytes_mod_order(&ext_data_hash);
 		// Arbitrary data
-		let arbitrary_data = Self::setup_arbitrary_data(ext_data_hash_f);
-
-		let mut public_amount_f = F::from(public_amount.unsigned_abs());
-		if public_amount.is_negative() {
-			public_amount_f = -public_amount_f;
-		}
+		let arbitrary_data = Self::setup_arbitrary_data(ext_data_hash);
 
 		let circuit = self.setup_circuit(
-			public_amount_f,
+			public_amount,
 			arbitrary_data,
 			in_utxos.clone(),
 			in_indices_f,
@@ -257,81 +213,14 @@ impl<
 		let out_nullifiers = out_utxos.iter().map(|x| x.commitment).collect::<Vec<F>>();
 		let public_inputs = Self::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
-			public_amount_f,
+			public_amount,
 			in_root_set.to_vec(),
 			in_nullifiers,
 			out_nullifiers,
-			ext_data_hash_f,
+			ext_data_hash,
 		);
 
 		Ok((circuit, public_inputs))
-	}
-
-	// This function is used only for first transaction, when the tree is empty
-	pub fn setup_circuit_with_data<R: RngCore>(
-		self,
-		public_amount: i128,
-		recipient: Vec<u8>,
-		relayer: Vec<u8>,
-		ext_amount: i128,
-		fee: u128,
-		in_root_set: [Vec<u8>; M],
-		in_leaves: [Vec<Vec<u8>>; INS],
-		in_indices: [u64; INS],
-		in_chain_ids: [u128; INS],
-		in_amounts: [u128; INS],
-		out_chain_ids: [u128; OUTS],
-		out_amounts: [u128; OUTS],
-		rng: &mut R,
-	) -> Result<
-		(
-			VACircuit<
-				F,
-				PoseidonCRH_x5_2<F>,
-				PoseidonCRH_x5_2Gadget<F>,
-				TreeConfig_x5<F>,
-				LeafCRHGadget<F>,
-				PoseidonCRH_x5_3Gadget<F>,
-				TREE_DEPTH,
-				INS,
-				OUTS,
-				M,
-			>,
-			Vec<F>,
-			[Utxo<F>; INS],
-			[Utxo<F>; OUTS],
-		),
-		Error,
-	> {
-		// Input leaves (txos)
-		let in_utxos = self.new_utxos(in_chain_ids, in_amounts, rng)?;
-
-		// Output leaves (txos)
-		let out_utxos = self.new_utxos(out_chain_ids, out_amounts, rng)?;
-
-		let in_root_set_f = in_root_set.map(|x| F::from_le_bytes_mod_order(&x));
-
-		let in_leaves_f = in_leaves.map(|leaves| {
-			leaves
-				.iter()
-				.map(|x| F::from_le_bytes_mod_order(&x))
-				.collect()
-		});
-
-		let (circuit, public_inputs) = self.setup_circuit_with_utxos(
-			public_amount,
-			recipient,
-			relayer,
-			ext_amount,
-			fee,
-			in_root_set_f,
-			in_indices,
-			in_leaves_f,
-			in_utxos.clone(),
-			out_utxos.clone(),
-		)?;
-
-		Ok((circuit, public_inputs, in_utxos, out_utxos))
 	}
 
 	pub fn setup_circuit(
