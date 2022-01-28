@@ -165,7 +165,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
@@ -218,7 +217,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
@@ -317,7 +315,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
@@ -418,7 +415,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
@@ -519,7 +515,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
@@ -617,7 +612,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
@@ -718,7 +712,6 @@ mod test {
 		// scalars, then add leaf_hash as the final leaf
 		const HEIGHT: usize = 6usize;
 		let last_index = 1 << (HEIGHT - 1) - 1;
-		// ? There must be a better way to fill an array with random scalars
 		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
 		for i in 0..last_index {
 			leaves[i] = Fq::rand(rng);
