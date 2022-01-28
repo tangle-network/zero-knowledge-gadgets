@@ -104,7 +104,12 @@ It's worth mentioning that all inputs provided to the zero-knowledge proof gener
 
 ## Anchor
 
-Anchor protocol is very similar to mixer. Instead of proving that the membership inside one merkle tree, we are proving the membership in many merkle trees. These trees can live on many different blockchains, and if the merkle tree states are synced across chains, this will allow us to make cross-chain anonymous transactions.
+Anchor protocol is very similar to mixer. Instead of proving that the membership inside one merkle tree, we are proving the membership in many merkle trees. These trees can live on many different blockchains, and if the merkle tree states are synced across chains, this will allow us to make cross-chain anonymous transactions. Higher level overview of how Anchor works:
+
+1. We are computing the leaf commitment using the Poseidon hash function by passing: `secret` (private input), `nullifier` (private input).
+2. We are computing the nullifier hash using the Poseidon hash function, by passing: `nullifier` (private input)
+3. We are calculating the root hash using the calculated leaf and the path (private input)
+4. We are checking if the calculated root is inside the set (public input) using the SetGadget.
 
 ### Leaf structure
 
@@ -127,7 +132,34 @@ Leaf structure is similar to that of a mixer, except we are also introducing a c
 - Recipient, Relayer, Fee and Refund has the same purpose as the ones in the Mixer.
 - Commitment is used for refreshing your leaf -- meaning inserting a new leaf as a replacement for the old one, if the value of commitment is non-zero.
 
-## VAnchor
+## VAnchor (This circuit is still under construction - use with caution)
+
+VAnchor is a short for Variable Anchor as it introduces the concept of variable deposit amounts. It supports anonymous join-split functionality which allows joining multiple previous deposits into multiple new deposits. VAnchor also supports cross-chain transactions. Higher level overview of how VAnchor works:
+
+1. Using the input Utxos and corresopnding merkle paths, we are calculating the root hashes for each Utxo.
+2. We are checking if the root hash of each Utxo is a member of a root set. We are doing this with SetGadget.
+3. Using the output Utxos we are proving the leaf creation from passed private inputs.
+4. We are making sure that sum of input amounts plus the public amount is equal to the sum of output amounts.
+
+### Utxos
+
+// TODO: Better describe Utxo's
+
+Utxo is another name for a leaf. VAnchor allows for multiple Utxo's to be deposited or withdrawn in the same transaction.
+
+### Public inputs
+
+1. Public amount
+2. Arbitrary input
+3. Array of Nullifier hashes for each Utxo
+4. Array of Leaf commitments for each Utxo
+5. Chain id where the transaction is made
+6. Merkle root set
+
+- Public amount specifies the amount being deposited or withdrawn. Negative value means that we are withdrawing and positive means we are depositing.
+- Array of nullifier hashes relates to the input Utxos, or the Utxos we want to spend
+- Array of leaf commitments relates to the output Utxos, or the Utxos we want to deposit
+- Chain Id and Merkle root set remain the same as in the Anchor
 
 # Usage
 
