@@ -649,7 +649,7 @@ mod test {
 		.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
-			_ => panic!("Unexpected error"),
+			err => panic!("Unexpected error: {:?}", err),
 		};
 	}
 }
