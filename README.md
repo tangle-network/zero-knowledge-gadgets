@@ -108,9 +108,24 @@ Anchor protocol is very similar to mixer. Instead of proving that the membership
 
 ### Leaf structure
 
-Leaf structure is similar to that of a mixer, except we are also introducing a chain id as a public input. Chain id ensures that you can only withdraw on one chain, thus preventing double spending
+Leaf structure is similar to that of a mixer, except we are also introducing a chain id as a public input. Chain id ensures that you can only withdraw on one chain, thus preventing double spending. So, an Anchor leaf consists of a `secret` (random value), `nullifier` (random value) and `chain_id`.
 
 ### Public input structure
+
+1. Chain Id
+1. Nullifier hash
+2. Merkle root set
+3. Recipient
+4. Relayer
+5. Fee
+6. Refund
+7. Commitment
+
+- Chain Id - ensures that you only withdraw on one chain and prevents double-spending.
+- Nullifier hash is the same as in the mixer, except it's used in a multi-chain context. Meaning it will be registered on a chain that has an Id same as Chain Id (our public input).
+- Merkle root set is an array of root hashes. It consists of a local root (root on the chain the withdraw is made) and roots from other chains that are connected to local one.
+- Recipient, Relayer, Fee and Refund has the same purpose as the ones in the Mixer.
+- Commitment is used for refreshing your leaf -- meaning inserting a new leaf as a replacement for the old one, if the value of commitment is non-zero.
 
 ## VAnchor
 
