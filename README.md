@@ -104,6 +104,14 @@ It's worth mentioning that all inputs provided to the zero-knowledge proof gener
 
 ## Anchor
 
+Anchor protocol is very similar to mixer. Instead of proving that the membership inside one merkle tree, we are proving the membership in many merkle trees. These trees can live on many different blockchains, and if the merkle tree states are synced across chains, this will allow us to make cross-chain anonymous transactions.
+
+### Leaf structure
+
+Leaf structure is similar to that of a mixer, except we are also introducing a chain id as a public input. Chain id ensures that you can only withdraw on one chain, thus preventing double spending
+
+### Public input structure
+
 ## VAnchor
 
 # Usage
