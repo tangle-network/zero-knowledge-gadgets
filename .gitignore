@@ -1,3 +1,5 @@
 /target
 /protocol-solidity-fixtures
 Cargo.lock
+
+.idea
