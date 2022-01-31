@@ -13,39 +13,48 @@ Many thanks to the following people for help and insights in both learning and i
 
 # Overview
 
-This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a anchor that can be integrated into compatible blockchain and smart contract protocols. The repo is split into two main parts: the intermediate modular gadgets and the circuits that consume these gadgets.
+This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and a anchor that can be integrated into compatible blockchain and smart contract protocols. The repo is split into three main parts: 
+- Intermediate modular gadgets
+- The circuits that consume these gadgets
+- Basic utilities used by the gadgets and the circuits (like parameters for poseidon hash function)
 
 ## Gadgets
 
+You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/basic.rs).
+
 In this repo you will find gadgets for:
 
-- [x] [Poseidon hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/poseidon)
-- [x] [MiMC hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/mimc)
-- [x] [Leaf commitment construction for various leaf schemas (for mixers and anchors)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/leaf)
-- [x] [Merkle tree membership and construction](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/merkle_tree)
-- [x] [Set membership](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/set)
-- [x] [Arbitrary computation (no constraints applied)](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/arbitrary)
+- [x] [Poseidon hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/poseidon)
+- [x] [MiMC hashing](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/mimc)
+- [x] [Leaf commitment construction for various leaf schemas (for mixers and anchors)](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/leaf)
+- [x] [Merkle tree membership and construction](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/merkle_tree)
+- [x] [Set](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/set)
+- [x] [Arbitrary computation](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-gadgets/src/arbitrary)
 
-You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/basic.rs).
+- Poseidon hashing function matches the [circom implementation](https://github.com/iden3/circomlib/blob/master/circuits/poseidon.circom). Implemented based on this paper: https://eprint.iacr.org/2019/458.pdf.
+- MiMC hashing function matches the [circom implementation](https://github.com/iden3/circomlib/blob/master/circuits/mimc.circom)
+- Set membership - Used for proving that some value is inside the set in a zero-knowladge manner. That is done by first calculating the differences (denoted as `diffs`) from the `target` (value that we are checking the membership of) and each value from the set. We then calculate the sum of products of a target and each element in the set. If one value from the `diffs` is 0 (meaning that its equal to `target`) the product will be zero, thus meaning that the `target` is in the set.
 
 ## Circuits
 
 In this repo you will find circuits for:
 
-- [x] [Poseidon preimage proofs](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/poseidon.rs) - using a Poseidon hash gadget
-- [x] [Mixer](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/mixer.rs) - using a hash gadget, mixer leaf commitment gadget, merkle tree membership gadget, and arbitrary computations.
-- [x] [Anchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/circuit/anchor.rs) - using a hash gadget, anchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
+- [x] [Poseidon preimage proofs](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/poseidon.rs) - using a Poseidon hash gadget
+- [x] [Mixer](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/mixer.rs) - using a hash gadget, mixer leaf commitment gadget, merkle tree membership gadget, and arbitrary computations.
+- [x] [Anchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/anchor.rs) - using a hash gadget, anchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
+- [x] [VAnchor](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-circuits/src/circuit/vanchor.rs) - using a hash gadget, vanchor leaf commitment gadget, merkle tree construction gadget, set membership gadget, and arbitrary computations.
 
-## Setup
+## Setup Helpers
 
-In order to deploy zero-knowledge circuits in end applications, you have to set them up. Often times you may hear the term "trusted setup" thrown about. For the circuits implemented in this repo, we have Groth16 style setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/src/setup) directory. This folder contains circuit-specific setup helpers for creating your provers and verifiers for your circuits from the previous section.
+For the circuits implemented in this repo, we have setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-circuits/src/setup) directory. This folder contains circuit-specific setup helpers for creating your provers and verifiers for your circuits from the previous section.
 
-The circuit-specific files of the setup section contain tests and circuit definitions that instantiate circuits w/ different configurations of hash gadgets and merkle tree gadgets. This is the primary place where one fixes the exact instantiations of a specific circuit.
+The circuit-specific files of the setup section contain tests and circuit definitions that instantiate circuits w/ different configurations of hash gadgets, merkle tree gadgets and elliptic curves. This is the primary place where one fixes the exact instantiations of a specific circuit.
 
-Each application-specific file in `src/setup` encapsulates the full-setup of a zero-knowledge gadget's prover and verifier. There are currently application-specific gadgets for:
+Each application-specific file in `arkworks-circuits/src/setup` encapsulates the full-setup of a zero-knowledge gadget's prover and verifier. There are currently application-specific gadgets for:
 
 - zero-knowledge mixers
 - zero-knowledge anchors
+- zero-knowladge variable anchors
 
 For tests and instantiations of the gadgets used to compose each of these larger scale application gadgets, refer to the individual directories and their tests. Most all of the tests and implementations in this repo use Groth16 proofs and setups for the zero-knowledge gadgets. Occasionally Marlin zkSNARKs are used for intermediate gadget tests. There are no application-specific instantiations of gadgets that use Marlin however, but pull requests are welcome to create them.
 
@@ -67,27 +76,92 @@ Any instantiation of a zero-knowledge mixer circuit requires that all data provi
 
 ### Leaf structure
 
-The structure of our leaves must be the hash of 3 random field elements from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/leaf/mixer/constraints.rs).
+The structure of our leaves must be the hash of 2 random field elements (the secret and the nullifier)) from a compatible field (BLS381, BN254) based on the instantiation of your circuit. You can find more details about the leaf structures by investigating the [`mixer_leaf`](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-gadgets/src/leaf/mixer/constraints.rs).
 
 ### Public input structure
 
 The structure of public inputs must be the ordered array of the following data taken from Tornado Cash's design & architecture.
 
-1. Recipient
-2. Relayer
-3. Fee
-4. Refund
+1. Nullifier hash
+2. Merkle root
+3. Recipient
+4. Relayer
+5. Fee
+6. Refund
 
-You can find more details about the arbitrary data structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/src/arbitrary/mixer_data/constraints.rs).
+You can find more details about the arbitrary data structures by investigating the [`mixer_data`](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-gadgets/src/arbitrary/mixer_data/constraints.rs).
 
 These parameters are provided to zero-knowledge proofs as public inputs and are geared towards on-chain customizability.
 
+- Nullifier hash is the hash of the randomly generated nullifier. We are hashing it so that the preimage remains hidden, to prevent front-run attacks.
+- Merkle root is the root hash of the merkle tree we are proving the leaf membership in.
 - For an on-chain cryptocurrency mixer, we must know where we are withdrawing tokens to. This is the purpose of the recipient.
 - For an on-chain cryptocurrency mixer, we must provide a private transaction relaying service that the user decides a priori. This is the purpose of the relayer.
 - For a given relayer, a fee may be asked to be paid on behalf of relaying the private transaction. This is the purpose of the fee.
 - For now, the refund is not used in any context and is merely an artifact to maintain stability with Tornado Cash's public inputs structure.
 
 It's worth mentioning that all inputs provided to the zero-knowledge proof generation bind the proof to those inputs. This helps prevent tampering if for example a user wants to change the recipient after proof generation. If the public inputs change for a proof submitted on-chain, the proof will fail with the underlying security of the zkSNARK. We leverage this design to provide the right incentives for users and relayers of the end application, an on-chain cryptocurrency mixer.
+
+## Anchor
+
+Anchor protocol is very similar to mixer. Instead of proving that the membership inside one merkle tree, we are proving the membership in many merkle trees. These trees can live on many different blockchains, and if the merkle tree states are synced across chains, this will allow us to make cross-chain anonymous transactions. Higher level overview of how Anchor works:
+
+1. We are computing the leaf commitment using the Poseidon hash function by passing: `secret` (private input), `nullifier` (private input).
+2. We are computing the nullifier hash using the Poseidon hash function, by passing: `nullifier` (private input)
+3. We are calculating the root hash using the calculated leaf and the path (private input)
+4. We are checking if the calculated root is inside the set (public input) using the SetGadget.
+
+### Leaf structure
+
+Leaf structure is similar to that of a mixer, except we are also introducing a chain id as a public input. Chain id ensures that you can only withdraw on one chain, thus preventing double spending. So, an Anchor leaf consists of a `secret` (random value), `nullifier` (random value) and `chain_id`.
+
+### Public input structure
+
+1. Chain Id
+1. Nullifier hash
+2. Merkle root set
+3. Recipient
+4. Relayer
+5. Fee
+6. Refund
+7. Commitment
+
+- Chain Id - ensures that you only withdraw on one chain and prevents double-spending.
+- Nullifier hash is the same as in the mixer, except it's used in a multi-chain context. Meaning it will be registered on a chain that has an Id same as Chain Id (our public input).
+- Merkle root set is an array of root hashes. It consists of a local root (root on the chain the withdraw is made) and roots from other chains that are connected to local one.
+- Recipient, Relayer, Fee and Refund has the same purpose as the ones in the Mixer.
+- Commitment is used for refreshing your leaf -- meaning inserting a new leaf as a replacement for the old one, if the value of commitment is non-zero.
+
+## VAnchor (This circuit is still under construction - use with caution)
+
+VAnchor is a short for Variable Anchor as it introduces the concept of variable deposit amounts. It supports anonymous join-split functionality which allows joining multiple previous deposits into multiple new deposits. VAnchor also supports cross-chain transactions. Higher level overview of how VAnchor works:
+
+1. Using the input Utxos and corresopnding merkle paths, we are calculating the root hashes for each Utxo.
+2. We are checking if the root hash of each Utxo is a member of a root set. We are doing this with SetGadget.
+3. Using the output Utxos we are proving the leaf creation from passed private inputs.
+4. We are making sure that sum of input amounts plus the public amount is equal to the sum of output amounts.
+
+### UTXOs
+
+UTXOs stand for unspent transaction outputs. Each UTXO represents a shielded balance that can be spent in the system. In order to create new UTXOs one must prove ownership over existing UTXOs that have at least as much balance as the newly created one.
+
+UTXOs contain a value, denoting the amount contained in the UTXO, the chain ID where the UTXO is meant to be spent on, and secret data relevant for creating zero-knowledge proofs of ownership and membership over.
+
+UTXOs are deposited and stored in on-chain merkle trees first by serializing its components and then by hashing the serialized data before insertion. Each hash can be considered a commitment to a UTXO. In order to create new UTXOs from old ones, users must submit valid zero-knowledge proofs that satisfy constraints around the consistency of values and membership within a set of merkle roots.
+
+### Public inputs
+
+1. Public amount
+2. Arbitrary input
+3. Array of Nullifier hashes for each Utxo
+4. Array of Leaf commitments for each Utxo
+5. Chain id where the transaction is made
+6. Merkle root set
+
+- Public amount specifies the amount being deposited or withdrawn. Negative value means that we are withdrawing and positive means we are depositing.
+- Array of nullifier hashes relates to the input Utxos, or the Utxos we want to spend
+- Array of leaf commitments relates to the output Utxos, or the Utxos we want to deposit
+- Chain Id and Merkle root set remain the same as in the Anchor
 
 # Usage
 
@@ -100,59 +174,19 @@ For example, we might be interested in creating a mixer circuit and generating z
 ```rust
 /// import all dependencies...
 
-/// We first define the Poseidon instantiation, which requires
-/// setting the parameters of the particular Poseidon hash
-/// implementation we want to use. We will instantiate 2 types
-/// of Poseidon hashers, one for hashing leaf commitments, and
-/// the other for hasing nodes to build the merkle tree. Since
-/// these have different elements and structures we must define
-/// two hash functions for each, separately.
-///
-/// Poseidon parameters w/ exponentiation 5 has a width of 3 for hashing
-/// merkle tree elements together.
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_3;
-
-impl Rounds for PoseidonRounds_x5_3 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 57;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 3;
-}
-
-/// Poseidon parameters w/ exponentiation 5 has a width of 5 for hashing
-/// mixer data into leaf commitments.
-#[derive(Default, Clone)]
-pub struct PoseidonRounds_x5_5;
-
-impl Rounds for PoseidonRounds_x5_5 {
-	const FULL_ROUNDS: usize = 8;
-	const PARTIAL_ROUNDS: usize = 60;
-	const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
-	const WIDTH: usize = 5;
-}
-
-/// Poseidon hash function & gadget instantiation for merkle tree hasher
-pub type PoseidonCRH_x5_3<F> = CRH<F, PoseidonRounds_x5_3>;
-pub type PoseidonCRH_x5_3Gadget<F> = CRHGadget<F, PoseidonRounds_x5_3>;
-
-/// Poseidon hash function & gadget instantiation for merkle tree hasher
-pub type PoseidonCRH_x5_5<F> = CRH<F, PoseidonRounds_x5_5>;
-pub type PoseidonCRH_x5_5Gadget<F> = CRHGadget<F, PoseidonRounds_x5_5>;
-
 /// Mixer leaf gadget instatiation using Poseidon w/ exponentiation 5 and width 5 (what this leaf requires)
 pub type MixerConstraintData<F> = MixerData<F>;
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 pub type MixerConstraintDataGadget<F> = MixerDataGadget<F>;
-pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
-pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>, Leaf_x5<F>>;
+pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH<F>>;
+pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH<F>, PoseidonCRHGadget<F>, Leaf_x5<F>>;
 
 /// Merkle tree gadget configuration instantiation using the Poseidon w/ exponentiation 5 and widht 3 merkle tree hasher.
 #[derive(Clone)]
 pub struct TreeConfig_x5<F: PrimeField>(PhantomData<F>);
 impl<F: PrimeField> MerkleConfig for TreeConfig_x5<F> {
-	type H = PoseidonCRH_x5_3<F>;
-	type LeafH = LeafCRH<F>;
+	type H = PoseidonCRH<F>;
+	type LeafH = IdentityCRH<F>;
 
 	const HEIGHT: u8 = 30;
 }
@@ -165,61 +199,18 @@ pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
 	MixerConstraintData<F>,
 	MixerConstraintDataGadget<F>,
-	PoseidonCRH_x5_5<F>,
-	PoseidonCRH_x5_5Gadget<F>,
+	PoseidonCRH<F>,
+	PoseidonCRHGadget<F>,
 	TreeConfig_x5<F>,
 	LeafCRHGadget<F>,
-	PoseidonCRH_x5_3Gadget<F>,
+	PoseidonCRHGadget<F>,
 	Leaf_x5<F>,
 	LeafGadget_x5<F>,
 	N,
 >;
 ```
 
-### Instantiating helpers and prover/verifiers
-
-```rust
-/// This macro generates setup functions for creating leaf commitments
-/// compatible with the Poseidon w/ exponentiation 5 and width 5 hasher.
-/// We use this macro's generated functions to create leaves. These leaves
-/// are meant to be inserted into a corresponding merkle tree defined below.
-impl_setup_mixer_leaf!(
-	leaf: Leaf_x5,
-	crh: PoseidonCRH_x5_5,
-	params: PoseidonParameters
-);
-
-/// This macro generates setup functions for creating a merkle tree
-/// with the intended configuration. The macro's generated functions
-/// provide us utilities for building the merkle tree and getting the
-/// path of elements in the tree that we want to generate proofs for.
-impl_setup_tree!(
-	tree: Tree_x5,
-	config: TreeConfig_x5,
-	params: PoseidonParameters
-);
-
-/// With all the generated functions thus far, we can generate the setup
-/// functionality for instantiating circuit instances, which provide us with
-/// the arguments and structs necessary for generating zero-knowledge proofs.
-/// We must provide this macro with the parameters used for each hash function
-/// denoted by `setup_params_x5_X` for each Poseidon hash instantiation we
-/// made above and functions for setting up the corresponding leaf and merkle tree
-/// structure used in the `Circuit_x5` definition.
-impl_setup_mixer_circuit!(
-	circuit: Circuit_x5,
-	params3_fn: setup_params_x5_3,
-	params5_fn: setup_params_x5_5,
-	leaf_setup_fn: setup_leaf_x5,
-	tree_setup_fn: setup_tree_and_create_path_tree_x5
-);
-
-/// This macro generates us groth16 helpers for generating provers/verifiers
-/// to generate proofs and verify proofs from our zero-knowledge circuit.
-impl_groth16_api_wrappers!(circuit: Circuit_x5);
-```
-
-### Putting it all together
+### Instantiating helpers and prover/verifiers (This feature is still under construction - use with caution)
 
 ```rust
 /// With the generated functionality we can now create example circuits and
@@ -228,34 +219,39 @@ impl_groth16_api_wrappers!(circuit: Circuit_x5);
 /// circuit we have set up.
 
 /// Generate all values for the circuit's public inputs.
-let mut rng = test_rng();
-let curve = Curve::Bls381;
-let recipient = Bls381::from(0u8);
-let relayer = Bls381::from(0u8);
-let fee = Bls381::from(0u8);
-let refund = Bls381::from(0u8);
-let leaves = Vec::new();
+let rng = &mut test_rng();
+let curve = Curve::Bn254;
+
+let recipient = Bn254Fr::one();
+let relayer = Bn254Fr::zero();
+let fee = Bn254Fr::zero();
+let refund = Bn254Fr::zero();
 
 /// Generate a circuit instance w/ leaves and supplied public inputs.
 /// This will also generate a leaf commitment and return both the leaf
 /// and the corresponding values for generating zero-knowledge proofs.
-let (circuit, leaf, nullifier_hash, root, public_inputs) = setup_circuit_x5(
-    &leaves,
-    0,
-    recipient,
-    relayer,
-    fee,
-    refund,
-    &mut rng,
-    curve
-);
+let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+let params5 = setup_params_x5_5::<Bn254Fr>(curve);
+let prover = MixerProverSetupBn254_30::new(params3, params5);
+
+let (leaf_privates, leaf_hash, ..) = prover.setup_leaf(rng).unwrap();
+let secret = leaf_privates.secret();
+let nullifier = leaf_privates.nullifier();
+let leaves = vec![leaf_hash];
+let index = 0;
+let (circuit, .., public_inputs) = prover
+	.setup_circuit_with_privates(
+		secret, nullifier, &leaves, index, recipient, relayer, fee, refund,
+	)
+	.unwrap();
 
 /// create prover and verifier keys for Groth16 zkSNARK
-let (pk, vk) = setup_circuit_groth16(&mut rng, circuit.clone());
+let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 /// generate the proof
-let proof = prove_groth16_circuit_x5::<_, Bls12_381, LEN>(&pk, circuit.clone(), &mut rng);
+let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
+
 /// verify the proof
-let res = verify_groth16::<Bls12_381>(&vk, &public_inputs, &proof);
+let res = verify::<Bn254>(&public_inputs, &vk, &proof).unwrap();
 ```
 
 ## Parameter generation
