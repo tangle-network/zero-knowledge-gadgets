@@ -2,8 +2,6 @@ use ark_crypto_primitives::Error;
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
-use ethabi::{encode, Token};
-use tiny_keccak::{Hasher, Keccak};
 
 pub mod common;
 
@@ -143,66 +141,4 @@ pub fn get_results_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
 #[cfg(feature = "mimc_220_ed_on_bn254")]
 pub fn get_rounds_mimc_220<F: PrimeField>() -> Vec<F> {
 	parse_vec(crate::mimc::CONSTANTS.to_vec())
-}
-
-#[derive(Debug)]
-pub struct ExtData {
-	pub recipient_bytes: Vec<u8>,
-	pub relayer_bytes: Vec<u8>,
-	pub ext_amount_bytes: Vec<u8>,
-	pub fee_bytes: Vec<u8>,
-	pub encrypted_output1_bytes: Vec<u8>,
-	pub encrypted_output2_bytes: Vec<u8>,
-}
-
-impl ExtData {
-	pub fn new(
-		recipient_bytes: Vec<u8>,
-		relayer_bytes: Vec<u8>,
-		ext_amount_bytes: Vec<u8>,
-		fee_bytes: Vec<u8>,
-		encrypted_output1_bytes: Vec<u8>,
-		encrypted_output2_bytes: Vec<u8>,
-	) -> Self {
-		Self {
-			recipient_bytes,
-			relayer_bytes,
-			ext_amount_bytes,
-			fee_bytes,
-			encrypted_output1_bytes,
-			encrypted_output2_bytes,
-		}
-	}
-
-	// TODO: fix types of tokens
-	fn into_abi(&self) -> Token {
-		let recipient = Token::Bytes(self.recipient_bytes.clone());
-		let ext_amount = Token::Bytes(self.ext_amount_bytes.clone());
-		let relayer = Token::Bytes(self.relayer_bytes.clone());
-		let fee = Token::Bytes(self.fee_bytes.clone());
-		let encrypted_output1 = Token::Bytes(self.encrypted_output1_bytes.clone());
-		let encrypted_output2 = Token::Bytes(self.encrypted_output2_bytes.clone());
-		Token::Tuple(vec![
-			recipient,
-			relayer,
-			ext_amount,
-			fee,
-			encrypted_output1,
-			encrypted_output2,
-		])
-	}
-
-	pub fn encode_abi(&self) -> Vec<u8> {
-		let token = self.into_abi();
-		let encoded_input = encode(&[token]);
-		encoded_input
-	}
-}
-
-pub fn keccak_256(input: &[u8]) -> Vec<u8> {
-	let mut hasher = Keccak::v256();
-	hasher.update(input);
-	let mut res: [u8; 32] = [0; 32];
-	hasher.finalize(&mut res);
-	res.to_vec()
 }
