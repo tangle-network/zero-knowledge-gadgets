@@ -141,11 +141,13 @@ VAnchor is a short for Variable Anchor as it introduces the concept of variable 
 3. Using the output Utxos we are proving the leaf creation from passed private inputs.
 4. We are making sure that sum of input amounts plus the public amount is equal to the sum of output amounts.
 
-### Utxos
+### UTXOs
 
-// TODO: Better describe Utxo's
+UTXOs stand for unspent transaction outputs. Each UTXO represents a shielded balance that can be spent in the system. In order to create new UTXOs one must prove ownership over existing UTXOs that have at least as much balance as the newly created one.
 
-Utxo is another name for a leaf. VAnchor allows for multiple Utxo's to be deposited or withdrawn in the same transaction.
+UTXOs contain a value, denoting the amount contained in the UTXO, the chain ID where the UTXO is meant to be spent on, and secret data relevant for creating zero-knowledge proofs of ownership and membership over.
+
+UTXOs are deposited and stored in on-chain merkle trees first by serializing its components and then by hashing the serialized data before insertion. Each hash can be considered a commitment to a UTXO. In order to create new UTXOs from old ones, users must submit valid zero-knowledge proofs that satisfy constraints around the consistency of values and membership within a set of merkle roots.
 
 ### Public inputs
 
