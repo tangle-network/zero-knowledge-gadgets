@@ -80,7 +80,7 @@ pub fn setup_leaf_x5_4<F: PrimeField, R: RngCore>(
 	curve: Curve,
 	chain_id: u128,
 	rng: &mut R,
-) -> Result<LeafX5_4, Error> {
+) -> Result<Leaf_x5_4, Error> {
 	let params5 = setup_params_x5_4::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
@@ -97,7 +97,7 @@ pub fn setup_leaf_x5_4<F: PrimeField, R: RngCore>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 
-	Ok(LeafX5_4 {
+	Ok(Leaf_x5_4{
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,
@@ -127,10 +127,10 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 
-	Ok((LeafWithPrivateRaw_x5_4 {
+	Ok(LeafWithPrivateRaw_x5_4 {
 		leaf_bytes,
 		nullifier_hash_bytes,
-	}))
+	})
 }
 
 pub const N: usize = 30;

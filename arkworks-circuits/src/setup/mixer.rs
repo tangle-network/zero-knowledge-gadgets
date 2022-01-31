@@ -127,7 +127,7 @@ pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	Ok((LeafWithPrivateRaw_x5_5{leaf_bytes, nullifier_hash_bytes}))
+	Ok(LeafWithPrivateRaw_x5_5{leaf_bytes, nullifier_hash_bytes})
 }
 
 pub const LEN: usize = 30;
