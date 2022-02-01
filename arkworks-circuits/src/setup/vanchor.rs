@@ -8,7 +8,7 @@ use crate::{
 use ark_bn254::Fr as Bn254Fr;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::{error::Error as ArkError, rand::RngCore, rc::Rc, vec::Vec};
+use ark_std::{error::Error as ArkError, rand::RngCore, rc::Rc, string::ToString, vec::Vec};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
