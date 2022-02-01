@@ -8,7 +8,7 @@ use crate::{
 use ark_bn254::Fr as Bn254Fr;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::{rand::RngCore, rc::Rc, vec::Vec};
+use ark_std::{error::Error as ArkError, rand::RngCore, rc::Rc, vec::Vec};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
@@ -38,6 +38,22 @@ pub fn get_hash_params<F: PrimeField>(
 	)
 }
 
+#[derive(Debug)]
+pub enum UtxoError {
+	NullifierNotCalculated,
+}
+
+impl core::fmt::Display for UtxoError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let msg = match self {
+			UtxoError::NullifierNotCalculated => "Nullifier not calculated".to_string(),
+		};
+		write!(f, "{}", msg)
+	}
+}
+
+impl ArkError for UtxoError {}
+
 #[derive(Clone, Copy)]
 pub struct Utxo<F: PrimeField> {
 	pub chain_id: F,
@@ -45,8 +61,66 @@ pub struct Utxo<F: PrimeField> {
 	pub keypair: Keypair<F, PoseidonCRH_x5_2<F>>,
 	pub leaf_private: LeafPrivateInput<F>,
 	pub leaf_public: LeafPublicInput<F>,
-	pub nullifier: F,
+	pub index: Option<F>,
+	pub nullifier: Option<F>,
 	pub commitment: F,
+}
+
+impl<F: PrimeField> Utxo<F> {
+	pub fn new<R: RngCore>(
+		chain_id: F,
+		amount: F,
+		index: Option<F>,
+		private_key: Option<F>,
+		blinding: Option<F>,
+		params2: &PoseidonParameters<F>,
+		params4: &PoseidonParameters<F>,
+		params5: &PoseidonParameters<F>,
+		rng: &mut R,
+	) -> Result<Self, Error> {
+		let blinding = blinding.unwrap_or(F::rand(rng));
+		let private_input = LeafPrivateInput::<F>::new(amount, blinding);
+		let public_input = LeafPublicInput::<F>::new(chain_id);
+
+		let keypair = Keypair::new(private_key.unwrap_or(F::rand(rng)));
+		let pub_key = keypair.public_key(params2)?;
+
+		let leaf = Leaf::<F, PoseidonCRH_x5_4<F>>::create_leaf(
+			&private_input,
+			&public_input,
+			&pub_key,
+			&params5,
+		)?;
+
+		let nullifier = if index.is_some() {
+			let i = index.unwrap();
+
+			let signature = keypair.signature(&leaf, &i, params4)?;
+
+			let nullifier =
+				Leaf::<_, PoseidonCRH_x5_4<F>>::create_nullifier(&signature, &leaf, &params4, &i)?;
+
+			Some(nullifier)
+		} else {
+			None
+		};
+
+		Ok(Self {
+			chain_id,
+			amount,
+			keypair,
+			leaf_private: private_input,
+			leaf_public: public_input,
+			index,
+			nullifier,
+			commitment: leaf,
+		})
+	}
+
+	pub fn get_nullifier(&self) -> Result<F, Error> {
+		self.nullifier
+			.ok_or(UtxoError::NullifierNotCalculated.into())
+	}
 }
 
 pub struct VAnchorProverSetup<
@@ -84,32 +158,26 @@ impl<
 		}
 	}
 
-	pub fn new_utxos<R: RngCore, const N: usize>(
+	pub fn new_utxo<R: RngCore>(
 		&self,
-		chain_ids: [F; N],
-		amounts: [F; N],
+		chain_id: F,
+		amount: F,
+		index: Option<F>,
+		secret_key: Option<F>,
+		blinding: Option<F>,
 		rng: &mut R,
-	) -> Result<[Utxo<F>; N], Error> {
-		let keypairs = Self::setup_keypairs::<_, N>(rng);
-		let (commitments, nullifiers, leaf_privates, leaf_publics) =
-			self.setup_leaves::<_, N>(&chain_ids, &amounts, &keypairs, rng)?;
-
-		let mut i = 0;
-		let utxos: [Utxo<F>; N] = [None; N].map(|_: Option<Utxo<F>>| {
-			let utxo = Utxo {
-				chain_id: chain_ids[i],
-				amount: amounts[i],
-				keypair: keypairs[i].clone(),
-				leaf_private: leaf_privates[i].clone(),
-				leaf_public: leaf_publics[i].clone(),
-				nullifier: nullifiers[i],
-				commitment: commitments[i],
-			};
-			i += 1;
-			utxo
-		});
-
-		Ok(utxos)
+	) -> Result<Utxo<F>, Error> {
+		Utxo::new(
+			chain_id,
+			amount,
+			index,
+			secret_key,
+			blinding,
+			&self.params2,
+			&self.params4,
+			&self.params5,
+			rng,
+		)
 	}
 
 	pub fn setup_random_circuit<R: RngCore>(
@@ -136,13 +204,30 @@ impl<
 		let in_leaves = [F::rand(rng); INS].map(|x| vec![x]);
 		let in_indices = [rng.next_u64(); INS];
 
-		let in_chain_id = [F::rand(rng); INS];
-		let in_amounts = [F::rand(rng); INS];
-		let out_chain_ids = [F::rand(rng); OUTS];
-		let out_amounts = [F::rand(rng); OUTS];
+		let chain_id = F::rand(rng);
+		let amount = F::rand(rng);
+		let index = F::rand(rng);
+		let secret_key = F::rand(rng);
+		let blinding = F::rand(rng);
 
-		let in_utxos = self.new_utxos(in_chain_id, in_amounts, rng)?;
-		let out_utxos = self.new_utxos(out_chain_ids, out_amounts, rng)?;
+		let in_utxo = self.new_utxo(
+			chain_id,
+			amount,
+			Some(index),
+			Some(secret_key),
+			Some(blinding),
+			rng,
+		)?;
+		let in_utxos = [in_utxo; INS];
+		let out_utxo = self.new_utxo(
+			chain_id,
+			amount,
+			None,
+			Some(secret_key),
+			Some(blinding),
+			rng,
+		)?;
+		let out_utxos = [out_utxo; OUTS];
 
 		let (circuit, ..) = self.setup_circuit_with_utxos(
 			public_amount,
@@ -207,13 +292,14 @@ impl<
 			out_utxos.clone(),
 		)?;
 
-		let in_nullifiers = in_utxos.iter().map(|x| x.nullifier).collect::<Vec<F>>();
+		let in_nullifiers: Result<Vec<F>, Error> =
+			in_utxos.iter().map(|x| x.get_nullifier()).collect();
 		let out_nullifiers = out_utxos.iter().map(|x| x.commitment).collect::<Vec<F>>();
 		let public_inputs = Self::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
 			public_amount,
 			in_root_set.to_vec(),
-			in_nullifiers,
+			in_nullifiers?,
 			out_nullifiers,
 			ext_data_hash,
 		);
@@ -256,7 +342,8 @@ impl<
 			.iter()
 			.map(|x| x.keypair.clone())
 			.collect::<Vec<Keypair<F, PoseidonCRH_x5_2<F>>>>();
-		let in_nullifiers = in_utxos.iter().map(|x| x.nullifier).collect::<Vec<F>>();
+		let in_nullifiers: Result<Vec<F>, Error> =
+			in_utxos.iter().map(|x| x.get_nullifier()).collect();
 
 		let out_pub_keys: Result<Vec<F>, _> = out_utxos
 			.iter()
@@ -294,7 +381,7 @@ impl<
 			self.params5,
 			in_paths,
 			in_indicies.to_vec(),
-			in_nullifiers,
+			in_nullifiers?,
 			out_commitments,
 			out_leaf_private,
 			out_leaf_public,
@@ -308,64 +395,6 @@ impl<
 		rng: &mut R,
 	) -> [Keypair<F, PoseidonCRH_x5_2<F>>; N] {
 		[(); N].map(|_| Keypair::<_, PoseidonCRH_x5_2<F>>::new(F::rand(rng)))
-	}
-
-	pub fn setup_leaves<R: RngCore, const N: usize>(
-		&self,
-		chain_ids: &[F; N],
-		amounts: &[F; N],
-		keypairs: &[Keypair<F, PoseidonCRH_x5_2<F>>; N],
-		rng: &mut R,
-	) -> Result<
-		(
-			[F; N],
-			[F; N],
-			[LeafPrivateInput<F>; N],
-			[LeafPublicInput<F>; N],
-		),
-		Error,
-	> {
-		let num_inputs = amounts.len();
-
-		let mut leaves = [F::default(); N];
-		let mut nullifiers = [F::default(); N];
-		let mut private_inputs = [LeafPrivateInput::<F>::default(); N];
-		let mut public_inputs = [LeafPublicInput::<F>::default(); N];
-
-		for i in 0..num_inputs {
-			let chain_id = F::from(chain_ids[i]);
-			let amount = F::from(amounts[i]);
-			let blinding = F::rand(rng);
-			let index = F::from(i as u64);
-
-			let private_input = LeafPrivateInput::<F>::new(amount, blinding);
-			let public_input = LeafPublicInput::<F>::new(chain_id);
-
-			let pub_key = keypairs[i].public_key(&self.params2)?;
-
-			let leaf = Leaf::<F, PoseidonCRH_x5_4<F>>::create_leaf(
-				&private_input,
-				&public_input,
-				&pub_key,
-				&self.params5,
-			)?;
-
-			let signature = keypairs[i].signature(&leaf, &index, &self.params4)?;
-
-			let nullifier = Leaf::<F, PoseidonCRH_x5_4<F>>::create_nullifier(
-				&signature,
-				&leaf,
-				&self.params4,
-				&index,
-			)?;
-
-			leaves[i] = leaf;
-			nullifiers[i] = nullifier;
-			private_inputs[i] = private_input;
-			public_inputs[i] = public_input;
-		}
-
-		Ok((leaves, nullifiers, private_inputs, public_inputs))
 	}
 
 	pub fn setup_tree(

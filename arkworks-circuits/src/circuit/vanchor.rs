@@ -449,18 +449,33 @@ mod test {
 		let public_amount = BnFr::from(10u32);
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [BnFr::from(5u32); 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(5u32);
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxos = [in_utxo1, in_utxo2];
 
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
-		let leaf0 = in_utxos[0].commitment;
+		let leaf0 = in_utxo1.commitment;
 		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
 		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
-		let leaf1 = in_utxos[1].commitment;
+		let leaf1 = in_utxo2.commitment;
 		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
 		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
 
@@ -500,13 +515,28 @@ mod test {
 		let public_amount = BnFr::from(10u32);
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [BnFr::from(5u32); 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(5u32);
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxos = [in_utxo1, in_utxo2];
 
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
 		let leaf0 = in_utxos[0].commitment;
 		let leaf1 = in_utxos[1].commitment;
@@ -549,16 +579,32 @@ mod test {
 		let public_amount = BnFr::from(10u32);
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [BnFr::from(5u32); 2];
-		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
-
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(5u32);
+		let index = BnFr::from(0u32);
+		let mut in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
 
 		// Adding invalid nullifier
-		in_utxos[0].nullifier = BnFr::rand(rng);
+		in_utxo1.nullifier = Some(BnFr::rand(rng));
+
+		let in_utxos = [in_utxo1, in_utxo2];
+
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
 		let leaf0 = in_utxos[0].commitment;
 		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
@@ -604,16 +650,27 @@ mod test {
 		let public_amount = BnFr::from(0u32);
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [BnFr::from(5u32); 2];
-		let mut in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(5u32);
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
 
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Both inputs are the same -- attempt of double spending
+		let in_utxos = [in_utxo1, in_utxo1];
 
-		// Enure both nullifiers are the same
-		in_utxos[0] = in_utxos[1].clone();
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
 		let leaf0 = in_utxos[0].commitment;
 		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
@@ -658,13 +715,29 @@ mod test {
 		let public_amount = BnFr::from(10u32);
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [BnFr::from(10u32); 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		// Input amount too high
+		let in_amount = BnFr::from(10u32);
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxos = [in_utxo1, in_utxo2];
 
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
 		let leaf0 = in_utxos[0].commitment;
 		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
@@ -715,13 +788,28 @@ mod test {
 		let public_amount = BnFr::zero();
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [limit + BnFr::one(); 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(limit + BnFr::one());
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxos = [in_utxo1, in_utxo2];
 
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [limit + BnFr::one(); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
 		let leaf0 = in_utxos[0].commitment;
 		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
@@ -766,13 +854,28 @@ mod test {
 		let public_amount = BnFr::from(0u32);
 		let ext_data_hash = BnFr::rand(rng);
 
-		let in_chain_ids = [BnFr::from(0u32); 2];
-		let in_amounts = [BnFr::from(5u32); 2];
-		let in_utxos = prover.new_utxos(in_chain_ids, in_amounts, rng).unwrap();
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(5u32);
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxos = [in_utxo1, in_utxo2];
 
-		let out_chain_ids = [BnFr::from(0u32); 2];
-		let out_amounts = [BnFr::from(5u32); 2];
-		let out_utxos = prover.new_utxos(out_chain_ids, out_amounts, rng).unwrap();
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
 		let leaf0 = in_utxos[0].commitment;
 		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
