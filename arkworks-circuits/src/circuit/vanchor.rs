@@ -437,6 +437,76 @@ mod test {
 	use ark_std::test_rng;
 
 	#[test]
+	fn should_create_proof_for_random_circuit() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+		let params2 = setup_params_x5_2::<BnFr>(curve);
+		let params3 = setup_params_x5_3::<BnFr>(curve);
+		let params4 = setup_params_x5_4::<BnFr>(curve);
+		let params5 = setup_params_x5_5::<BnFr>(curve);
+
+		// Set up a random circuit and make pk/vk pair
+		let prover = VAnchorProverBn2542x2::new(params2, params3, params4, params5);
+		let random_circuit = prover.clone().setup_random_circuit(rng).unwrap();
+		let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+		// Make a proof now
+		let public_amount = BnFr::from(10u32);
+		let ext_data_hash = BnFr::rand(rng);
+
+		// Input Utxos
+		let in_chain_id = BnFr::from(0u32);
+		let in_amount = BnFr::from(5u32);
+		let index = BnFr::from(0u32);
+		let in_utxo1 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxo2 = prover
+			.new_utxo(in_chain_id, in_amount, Some(index), None, None, rng)
+			.unwrap();
+		let in_utxos = [in_utxo1, in_utxo2];
+
+		// Output Utxos
+		let out_chain_id = BnFr::from(0u32);
+		let out_amount = BnFr::from(10u32);
+		let out_utxo1 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxo2 = prover
+			.new_utxo(out_chain_id, out_amount, None, None, None, rng)
+			.unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
+
+		let leaf0 = in_utxo1.commitment;
+		let (in_path0, _) = prover.setup_tree(&vec![leaf0], 0).unwrap();
+		let root0 = in_path0.root_hash(&leaf0).unwrap().inner();
+		let leaf1 = in_utxo2.commitment;
+		let (in_path1, _) = prover.setup_tree(&vec![leaf1], 0).unwrap();
+		let root1 = in_path1.root_hash(&leaf1).unwrap().inner();
+
+		let in_leaves = [vec![leaf0], vec![leaf1]];
+		let in_indices = [0; 2];
+		let in_root_set = [root0, root1];
+
+		let (circuit, .., pub_ins) = prover
+			.setup_circuit_with_utxos(
+				public_amount,
+				ext_data_hash,
+				in_root_set,
+				in_indices,
+				in_leaves,
+				in_utxos,
+				out_utxos,
+			)
+			.unwrap();
+
+		let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+		let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+
+		assert!(res);
+	}
+
+	#[test]
 	fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;

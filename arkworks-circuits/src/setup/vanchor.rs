@@ -123,6 +123,7 @@ impl<F: PrimeField> Utxo<F> {
 	}
 }
 
+#[derive(Clone)]
 pub struct VAnchorProverSetup<
 	F: PrimeField,
 	const TREE_DEPTH: usize,
@@ -202,7 +203,7 @@ impl<
 		let ext_data_hash = F::rand(rng);
 		let in_root_set = [F::rand(rng); M];
 		let in_leaves = [F::rand(rng); INS].map(|x| vec![x]);
-		let in_indices = [rng.next_u64(); INS];
+		let in_indices = [0; INS];
 
 		let chain_id = F::rand(rng);
 		let amount = F::rand(rng);
