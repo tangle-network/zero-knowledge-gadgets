@@ -23,14 +23,13 @@ impl<F: PrimeField> SetGadget<F> {
 		let target = Boolean::le_bits_to_fp_var(&target.to_bytes()?.to_bits_le()?)?;
 		// Calculating the diffs inside the circuit
 		let mut diffs = Vec::new();
-		for root in &self.set {
-			diffs.push(root - &target);
+		for item in &self.set {
+			diffs.push(item - &target);
 		}
 
 		// Checking the membership
-		let mut product = target.clone();
-		for (diff, real) in diffs.iter().zip(self.set.iter()) {
-			real.enforce_equal(&(diff + &target))?;
+		let mut product = FpVar::new_witness(target.cs(), || Ok(F::one()))?;
+		for diff in diffs.iter() {
 			product *= diff;
 		}
 
