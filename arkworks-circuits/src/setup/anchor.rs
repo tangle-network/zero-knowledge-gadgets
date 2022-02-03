@@ -72,7 +72,7 @@ pub fn setup_leaf_x5_4<F: PrimeField, R: RngCore>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 
-	Ok(Leaf{
+	Ok(Leaf {
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,

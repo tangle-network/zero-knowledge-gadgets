@@ -76,7 +76,7 @@ pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	Ok(Leaf{
+	Ok(Leaf {
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,
@@ -101,7 +101,10 @@ pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	Ok(LeafWithPrivateRaw{leaf_bytes, nullifier_hash_bytes})
+	Ok(LeafWithPrivateRaw {
+		leaf_bytes,
+		nullifier_hash_bytes,
+	})
 }
 
 pub const LEN: usize = 30;
@@ -138,12 +141,12 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;
 
-	Ok(MixerProof{
+	Ok(MixerProof {
 		proof,
 		leaf_raw,
 		nullifier_hash_raw,
 		root_raw,
-		public_inputs_raw
+		public_inputs_raw,
 	})
 }
 
@@ -159,7 +162,7 @@ pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let (pk, vk) = setup_keys_unchecked::<E, _, _>(circuit, rng)?;
 
-	Ok(Keys{pk, vk})
+	Ok(Keys { pk, vk })
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
