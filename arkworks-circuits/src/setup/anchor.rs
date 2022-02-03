@@ -51,36 +51,11 @@ pub type Circuit_x17<F, const N: usize, const M: usize> = AnchorCircuit<
 	M,
 >;
 
-pub struct Leaf_x5_4 {
-	pub secret_bytes: Vec<u8>,
-	pub nullifier_bytes: Vec<u8>,
-	leaf_bytes: Vec<u8>,
-	nullifier_hash_bytes: Vec<u8>,
-}
-
-pub struct LeafWithPrivateRaw_x5_4 {
-	leaf_bytes: Vec<u8>,
-	nullifier_hash_bytes: Vec<u8>,
-}
-
-pub struct Proof_x5_4 {
-	pub proof: Vec<u8>,
-	pub nullifier_hash_raw: Vec<u8>,
-	pub leaf_raw: Vec<u8>,
-	pub roots_raw: Vec<Vec<u8>>,
-	pub public_inputs_raw: Vec<Vec<u8>>,
-}
-
-pub struct Keys_x5_4 {
-	pk: Vec<u8>,
-	vk: Vec<u8>,
-}
-
 pub fn setup_leaf_x5_4<F: PrimeField, R: RngCore>(
 	curve: Curve,
 	chain_id: u128,
 	rng: &mut R,
-) -> Result<Leaf_x5_4, Error> {
+) -> Result<Leaf, Error> {
 	let params5 = setup_params_x5_4::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
@@ -97,7 +72,7 @@ pub fn setup_leaf_x5_4<F: PrimeField, R: RngCore>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 
-	Ok(Leaf_x5_4{
+	Ok(Leaf{
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,
@@ -110,7 +85,7 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 	secret_bytes: Vec<u8>,
 	nullfier_bytes: Vec<u8>,
 	chain_id: u128,
-) -> Result<LeafWithPrivateRaw_x5_4, Error> {
+) -> Result<LeafWithPrivateRaw, Error> {
 	let params5 = setup_params_x5_4::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
@@ -127,7 +102,7 @@ pub fn setup_leaf_with_privates_raw_x5_4<F: PrimeField>(
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
 
-	Ok(LeafWithPrivateRaw_x5_4 {
+	Ok(LeafWithPrivateRaw {
 		leaf_bytes,
 		nullifier_hash_bytes,
 	})
@@ -152,7 +127,7 @@ pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	refund: u128,
 	pk: Vec<u8>,
 	rng: &mut R,
-) -> Result<Proof_x5_4, Error> {
+) -> Result<AnchorProof, Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params4 = setup_params_x5_4::<E::Fr>(curve);
 	let prover = AnchorProverSetupBn254_30::new(params3, params4);
@@ -174,7 +149,7 @@ pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;
 
-	Ok(Proof_x5_4 {
+	Ok(AnchorProof {
 		proof,
 		leaf_raw,
 		nullifier_hash_raw,
@@ -186,7 +161,7 @@ pub fn setup_proof_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 pub fn setup_keys_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	rng: &mut R,
-) -> Result<Keys_x5_4, Error> {
+) -> Result<Keys, Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params5 = setup_params_x5_4::<E::Fr>(curve);
 	let prover = AnchorProverSetupBn254_30::new(params3, params5);
@@ -195,7 +170,7 @@ pub fn setup_keys_x5_4<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let (pk, vk) = setup_keys_unchecked::<E, _, _>(circuit, rng)?;
 
-	Ok(Keys_x5_4 { pk, vk })
+	Ok(Keys { pk, vk })
 }
 
 #[derive(Clone)]
