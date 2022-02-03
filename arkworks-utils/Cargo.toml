@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-utils"
-version = "0.4.18"
+version = "0.4.19"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's utils for zero-knowledge gadgets written using Arkworks"
@@ -32,10 +32,6 @@ ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features =
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
-
-ethabi = { version = "15.0.0", default-features = false }
-hex-literal = { version = "0.3.4" }
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
 default = ["std", "r1cs", "default_mimc", "default_poseidon"]
