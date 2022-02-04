@@ -88,7 +88,7 @@ pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullifier_bytes: Vec<u8>,
-) -> Result<LeafWithPrivateRaw, Error> {
+) -> Result<Leaf, Error> {
 	let params5 = setup_params_x5_5::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
@@ -101,7 +101,9 @@ pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	Ok(LeafWithPrivateRaw {
+	Ok(Leaf {
+		secret_bytes,
+		nullifier_bytes,
 		leaf_bytes,
 		nullifier_hash_bytes,
 	})

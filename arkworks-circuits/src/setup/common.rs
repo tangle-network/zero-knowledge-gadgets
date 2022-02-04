@@ -22,11 +22,6 @@ pub struct Leaf {
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
-pub struct LeafWithPrivateRaw {
-	pub leaf_bytes: Vec<u8>,
-	pub nullifier_hash_bytes: Vec<u8>,
-}
-
 pub struct AnchorProof {
 	pub proof: Vec<u8>,
 	pub leaf_raw: Vec<u8>,
