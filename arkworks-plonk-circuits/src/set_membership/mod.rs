@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul};
+
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{marker::PhantomData, vec::Vec};
@@ -42,6 +44,106 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> Circuit<F, P>
 	fn padded_circuit_size(&self) -> usize {
 		1 << 11
 	}
+}
+
+/// A function whose output is 1 if `member` belongs to `set`
+/// and 0 otherwise.  Contraints are added to a StandardComposer
+/// and the output is added as a variable to the StandardComposer.
+/// The set is assumed to consist of private inputs.
+fn check_private_set_membership<F, P>(
+	composer: &mut StandardComposer<F, P>,
+	set: &Vec<F>,
+	member: F,
+) -> Variable
+where
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+{
+	let member = composer.add_input(member);
+	let set: Vec<Variable> = set.iter().map(|x| composer.add_input(*x)).collect();
+
+	// Compute all differences between `member` and set elements
+	let mut diffs = Vec::new();
+	for x in set.iter() {
+		let diff = composer
+			.arithmetic_gate(|gate| gate.witness(member, *x, None).add(F::one(), -F::one()));
+		diffs.push(diff);
+	}
+
+	// Accumulate the product of all differences
+	let mut accumulator = composer.add_witness_to_circuit_description(F::one());
+	for diff in diffs {
+		accumulator =
+			composer.arithmetic_gate(|gate| gate.witness(accumulator, diff, None).mul(F::one()));
+	}
+
+	composer.is_zero_with_output(accumulator)
+}
+
+/// A function whose output is 1 if `member` belongs to `set`
+/// and 0 otherwise.  Contraints are added to a StandardComposer
+/// and the output is added as a variable to the StandardComposer.
+/// The set is assumed to consist of public inputs, which reduces
+/// the number of variables in the circuit.
+fn check_public_set_membership<F, P>(
+	composer: &mut StandardComposer<F, P>,
+	set: &Vec<F>,
+	member: F,
+) -> Variable
+where
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+{
+	let member = composer.add_input(member);
+
+	// Compute all differences between `member` and set elements
+	let mut diffs = Vec::new();
+	for x in set.iter() {
+		let diff = composer.arithmetic_gate(|gate| {
+			gate.witness(member, member, None)
+				.add(F::zero(), F::one())
+				.pi(-*x)
+		});
+		diffs.push(diff);
+	}
+
+	// Accumulate the product of all differences
+	let mut accumulator = composer.add_witness_to_circuit_description(F::one());
+	for diff in diffs {
+		accumulator =
+			composer.arithmetic_gate(|gate| gate.witness(accumulator, diff, None).mul(F::one()));
+	}
+
+	composer.is_zero_with_output(accumulator)
+}
+
+/// A function whose output is 1 if `member` belongs to `set`
+/// and 0 otherwise.  Contraints are added to a StandardComposer
+/// and the output is added as a variable to the StandardComposer.
+/// The set is assumed to consist of public constants, which
+/// may not be appropriate.  This cuts the number of gates in half, however.
+fn check_constant_set_membership<F, P>(
+	composer: &mut StandardComposer<F, P>,
+	set: &Vec<F>,
+	member: F,
+) -> Variable
+where
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+{
+	let member = composer.add_input(member);
+
+	// iterate through set, multiplying an accumulated value by the next
+	// difference (x - s)
+	let mut accumulated = composer.add_witness_to_circuit_description(F::one());
+	for s in set.iter() {
+		accumulated = composer.arithmetic_gate(|gate| {
+			gate.witness(member, accumulated, None)
+				.add(F::zero(), -*s)
+				.mul(F::one())
+		});
+	}
+	composer.is_zero_with_output(accumulated)
 }
 
 #[cfg(test)]
@@ -129,7 +231,7 @@ pub(crate) mod tests {
 	}
 
 	#[test]
-	fn test_verify_set_membership() {
+	fn test_verify_set_membership_circuit() {
 		let roots = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 		let target = Fq::from(2u32);
 		let mut circuit = SetMembershipCircuit::<Fq, JubjubParameters> {
@@ -155,5 +257,41 @@ pub(crate) mod tests {
 
 		let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut circuit, 2000);
 		assert!(res.is_err());
+	}
+
+	#[test]
+	fn test_verify_set_membership_functions() {
+		let set = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
+		let member = Fq::from(2u32);
+
+		// Check private version
+		{
+			let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+			let one = composer.add_input(Fq::from(1u32));
+
+			let result_private = check_private_set_membership(&mut composer, &set, member);
+			composer.assert_equal(result_private, one);
+			composer.check_circuit_satisfied();
+		}
+
+		// Check public version
+		{
+			let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+			let one = composer.add_input(Fq::from(1u32));
+
+			let result_private = check_public_set_membership(&mut composer, &set, member);
+			composer.assert_equal(result_private, one);
+			composer.check_circuit_satisfied();
+		}
+
+		// Check constant version
+		{
+			let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+			let one = composer.add_input(Fq::from(1u32));
+
+			let result_private = check_constant_set_membership(&mut composer, &set, member);
+			composer.assert_equal(result_private, one);
+			composer.check_circuit_satisfied();
+		}
 	}
 }
