@@ -1,5 +1,3 @@
-use std::ops::{Add, Mul};
-
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{marker::PhantomData, vec::Vec};
