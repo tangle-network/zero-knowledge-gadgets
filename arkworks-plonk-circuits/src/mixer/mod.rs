@@ -123,14 +123,13 @@ where
 #[cfg(test)]
 mod test {
 	use super::MixerCircuit;
-	use crate::{poseidon::poseidon::PoseidonGadget, set_membership::tests::gadget_tester};
+	use crate::{poseidon::poseidon::PoseidonGadget, utils::gadget_tester};
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_ec::TEModelParameters;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-	use ark_ff::{Field, PrimeField};
+	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
-	use ark_std::{log2, test_rng};
+	use ark_std::test_rng;
 	use arkworks_gadgets::{
 		ark_std::UniformRand,
 		merkle_tree::simple_merkle::SparseMerkleTree,
