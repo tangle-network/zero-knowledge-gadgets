@@ -5,3 +5,4 @@ pub mod mixer;
 pub mod poseidon;
 pub mod set_membership;
 pub mod utils;
+pub mod anchor;
