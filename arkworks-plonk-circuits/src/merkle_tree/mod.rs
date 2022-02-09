@@ -1,7 +1,7 @@
 use crate::poseidon::poseidon::FieldHasherGadget;
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::Field;
-use ark_std::{One, Zero, marker::PhantomData};
+use ark_std::{marker::PhantomData, One, Zero};
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
@@ -105,13 +105,16 @@ impl<
 			// Check if previous hash is a left node
 			let previous_is_left = composer.is_eq_with_output(previous_hash, *left_hash);
 			right_value = composer.arithmetic_gate(|gate| {
-				gate.witness(index, two_power, None).add(E::Fr::one(), E::Fr::one())
+				gate.witness(index, two_power, None)
+					.add(E::Fr::one(), E::Fr::one())
 			});
 
 			// Assign index based on whether prev hash is left or right
 			index = composer.conditional_select(previous_is_left, index, right_value);
-			two_power = composer
-				.arithmetic_gate(|gate| gate.witness(two_power, one, None).mul(E::Fr::one().double()));
+			two_power = composer.arithmetic_gate(|gate| {
+				gate.witness(two_power, one, None)
+					.mul(E::Fr::one().double())
+			});
 
 			previous_hash = hasher.hash_two(composer, left_hash, right_hash)?;
 		}
@@ -127,7 +130,7 @@ mod test {
 	use super::*;
 	use crate::poseidon::poseidon::{FieldHasherGadget, PoseidonGadget};
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_ec::{TEModelParameters, PairingEngine};
+	use ark_ec::{PairingEngine, TEModelParameters};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::PrimeField;
 	use ark_poly::polynomial::univariate::DensePolynomial;
@@ -214,9 +217,7 @@ mod test {
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 14, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit
-			.compile(&u_params)
-			.unwrap();
+		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
@@ -230,10 +231,13 @@ mod test {
 			&u_params,
 			key,
 			&proof,
-			&public_inputs.iter().map(|pi| {
-				let temp = *pi;
-				temp.into_pi()
-			}).collect::<Vec<_>>()[..],
+			&public_inputs
+				.iter()
+				.map(|pi| {
+					let temp = *pi;
+					temp.into_pi()
+				})
+				.collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMT Test",
 		)
@@ -314,9 +318,7 @@ mod test {
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 15, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit
-			.compile(&u_params)
-			.unwrap();
+		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit
@@ -332,10 +334,13 @@ mod test {
 			&u_params,
 			key,
 			&proof,
-			&public_inputs.iter().map(|pi| {
-				let temp = *pi;
-				temp.into_pi()
-			}).collect::<Vec<_>>()[..],
+			&public_inputs
+				.iter()
+				.map(|pi| {
+					let temp = *pi;
+					temp.into_pi()
+				})
+				.collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)
@@ -428,9 +433,7 @@ mod test {
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit
-			.compile(&u_params)
-			.unwrap();
+		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit
@@ -446,10 +449,13 @@ mod test {
 			&u_params,
 			key,
 			&proof,
-			&public_inputs.iter().map(|pi| {
-				let temp = *pi;
-				temp.into_pi()
-			}).collect::<Vec<_>>()[..],
+			&public_inputs
+				.iter()
+				.map(|pi| {
+					let temp = *pi;
+					temp.into_pi()
+				})
+				.collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)
@@ -534,9 +540,7 @@ mod test {
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit
-			.compile(&u_params)
-			.unwrap();
+		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
@@ -550,10 +554,13 @@ mod test {
 			&u_params,
 			key,
 			&proof,
-			&public_inputs.iter().map(|pi| {
-				let temp = *pi;
-				temp.into_pi()
-			}).collect::<Vec<_>>()[..],
+			&public_inputs
+				.iter()
+				.map(|pi| {
+					let temp = *pi;
+					temp.into_pi()
+				})
+				.collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)
@@ -638,9 +645,7 @@ mod test {
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit
-			.compile(&u_params)
-			.unwrap();
+		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
@@ -654,10 +659,13 @@ mod test {
 			&u_params,
 			key,
 			&proof,
-			&public_inputs.iter().map(|pi| {
-				let temp = *pi;
-				temp.into_pi()
-			}).collect::<Vec<_>>()[..],
+			&public_inputs
+				.iter()
+				.map(|pi| {
+					let temp = *pi;
+					temp.into_pi()
+				})
+				.collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)

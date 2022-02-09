@@ -1,10 +1,7 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_std::vec::Vec;
-use plonk_core::{
-	constraint_system::StandardComposer, prelude::Variable,
-};
-use ark_std::{Zero, One};
+use ark_std::{vec::Vec, One, Zero};
+use plonk_core::{constraint_system::StandardComposer, prelude::Variable};
 
 /// A function whose output is 1 if `member` belongs to `set`
 /// and 0 otherwise.  Contraints are added to a StandardComposer
@@ -34,8 +31,8 @@ where
 	// Accumulate the product of all differences
 	let mut accumulator = composer.add_witness_to_circuit_description(E::Fr::one());
 	for diff in diffs {
-		accumulator =
-			composer.arithmetic_gate(|gate| gate.witness(accumulator, diff, None).mul(E::Fr::one()));
+		accumulator = composer
+			.arithmetic_gate(|gate| gate.witness(accumulator, diff, None).mul(E::Fr::one()));
 	}
 
 	composer.is_zero_with_output(accumulator)

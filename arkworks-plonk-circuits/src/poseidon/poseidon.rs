@@ -104,8 +104,10 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c_temp = self.params.round_keys[(r * width + i)];
-				*a = composer
-					.arithmetic_gate(|gate| gate.witness(*a, c_temp, None).add(E::Fr::one(), E::Fr::one()));
+				*a = composer.arithmetic_gate(|gate| {
+					gate.witness(*a, c_temp, None)
+						.add(E::Fr::one(), E::Fr::one())
+				});
 			});
 
 			let half_rounds = full_rounds / 2;
@@ -130,11 +132,13 @@ impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>> FieldHasherGadge
 						.fold(composer.zero_var(), |acc, (j, a)| {
 							let m = &self.params.mds_matrix[i][j];
 
-							let mul_result = composer
-								.arithmetic_gate(|gate| gate.witness(*a, *m, None).mul(E::Fr::one()));
+							let mul_result = composer.arithmetic_gate(|gate| {
+								gate.witness(*a, *m, None).mul(E::Fr::one())
+							});
 
 							let add_result = composer.arithmetic_gate(|gate| {
-								gate.witness(acc, mul_result, None).add(E::Fr::one(), E::Fr::one())
+								gate.witness(acc, mul_result, None)
+									.add(E::Fr::one(), E::Fr::one())
 							});
 
 							add_result
@@ -187,8 +191,11 @@ mod tests {
 		hasher: HG::Native,
 	}
 
-	impl<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>, HG: FieldHasherGadget<E, P>>
-		Circuit<E, P> for TestCircuit<E, P, HG>
+	impl<
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E, P>,
+		> Circuit<E, P> for TestCircuit<E, P, HG>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
@@ -241,9 +248,7 @@ mod tests {
 		let u_params: UniversalParams<Bn254> =
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, None, rng).unwrap();
 
-		let (pk, vd) = test_circuit
-			.compile(&u_params)
-			.unwrap();
+		let (pk, vd) = test_circuit.compile(&u_params).unwrap();
 
 		// PROVER
 		let proof = test_circuit
@@ -259,10 +264,13 @@ mod tests {
 			&u_params,
 			key,
 			&proof,
-			&public_inputs.iter().map(|pi| {
-				let temp = *pi;
-				temp.into_pi()
-			}).collect::<Vec<_>>()[..],
+			&public_inputs
+				.iter()
+				.map(|pi| {
+					let temp = *pi;
+					temp.into_pi()
+				})
+				.collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"Poseidon Test",
 		)

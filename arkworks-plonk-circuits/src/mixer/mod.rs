@@ -1,6 +1,6 @@
 use crate::{merkle_tree::PathGadget, poseidon::poseidon::FieldHasherGadget};
 use ark_ec::{models::TEModelParameters, PairingEngine};
-use ark_std::{Zero, One};
+use ark_std::{One, Zero};
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
@@ -100,7 +100,10 @@ where
 
 /// Add a variable to a circuit and constrain it to a public input value that
 /// is expected to be different in each instance of the circuit.
-pub fn add_public_input_variable<E, P>(composer: &mut StandardComposer<E, P>, value: E::Fr) -> Variable
+pub fn add_public_input_variable<E, P>(
+	composer: &mut StandardComposer<E, P>,
+	value: E::Fr,
+) -> Variable
 where
 	E: PairingEngine,
 	P: TEModelParameters<BaseField = E::Fr>,
@@ -128,8 +131,12 @@ mod test {
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{kzg10::{UniversalParams, self}, sonic_pc::{SonicKZG10, self}, PolynomialCommitment};
-	use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+	use ark_poly_commit::{
+		kzg10::{self, UniversalParams},
+		sonic_pc::{self, SonicKZG10},
+		PolynomialCommitment,
+	};
+	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
 	use arkworks_gadgets::{
 		ark_std::UniformRand,
@@ -255,10 +262,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover =
-				Prover::<Bn254, JubjubParameters>::new(
-					b"mixer",
-				);
+			let mut prover = Prover::<Bn254, JubjubParameters>::new(b"mixer");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = mixer.gadget(prover.mut_cs());
@@ -287,9 +291,11 @@ mod test {
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		let mut vk_bytes = Vec::new();
-        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
-        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
-		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
+		sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+		let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier
+			.verify(&proof, &kzg_vk, &public_inputs)
+			.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -357,10 +363,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover =
-				Prover::<Bn254, JubjubParameters>::new(
-					b"mixer",
-				);
+			let mut prover = Prover::<Bn254, JubjubParameters>::new(b"mixer");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = mixer.gadget(prover.mut_cs());
@@ -389,9 +392,11 @@ mod test {
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		let mut vk_bytes = Vec::new();
-        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
-        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
-		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
+		sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+		let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier
+			.verify(&proof, &kzg_vk, &public_inputs)
+			.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -459,10 +464,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover =
-				Prover::<Bn254, JubjubParameters>::new(
-					b"mixer",
-				);
+			let mut prover = Prover::<Bn254, JubjubParameters>::new(b"mixer");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = mixer.gadget(prover.mut_cs());
@@ -491,9 +493,11 @@ mod test {
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		let mut vk_bytes = Vec::new();
-        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
-        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
-		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
+		sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+		let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier
+			.verify(&proof, &kzg_vk, &public_inputs)
+			.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -558,10 +562,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover =
-				Prover::<Bn254, JubjubParameters>::new(
-					b"mixer",
-				);
+			let mut prover = Prover::<Bn254, JubjubParameters>::new(b"mixer");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = mixer.gadget(prover.mut_cs());
@@ -590,9 +591,11 @@ mod test {
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		let mut vk_bytes = Vec::new();
-        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
-        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
-		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
+		sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+		let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier
+			.verify(&proof, &kzg_vk, &public_inputs)
+			.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -660,10 +663,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover =
-				Prover::<Bn254, JubjubParameters>::new(
-					b"mixer",
-				);
+			let mut prover = Prover::<Bn254, JubjubParameters>::new(b"mixer");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = mixer.gadget(prover.mut_cs());
@@ -692,9 +692,11 @@ mod test {
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		let mut vk_bytes = Vec::new();
-        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
-        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
-		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
+		sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+		let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier
+			.verify(&proof, &kzg_vk, &public_inputs)
+			.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -759,10 +761,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover =
-				Prover::<Bn254, JubjubParameters>::new(
-					b"mixer",
-				);
+			let mut prover = Prover::<Bn254, JubjubParameters>::new(b"mixer");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = mixer.gadget(prover.mut_cs());
@@ -796,9 +795,11 @@ mod test {
 		public_inputs[5].double_in_place();
 
 		let mut vk_bytes = Vec::new();
-        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
-        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
-		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
+		sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+		let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier
+			.verify(&proof, &kzg_vk, &public_inputs)
+			.unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),

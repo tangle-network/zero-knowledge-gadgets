@@ -1,7 +1,11 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_poly::polynomial::univariate::DensePolynomial;
-use ark_poly_commit::{kzg10::{KZG10, self}, sonic_pc::{SonicKZG10, self}, PolynomialCommitment};
-use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+use ark_poly_commit::{
+	kzg10::{self, KZG10},
+	sonic_pc::{self, SonicKZG10},
+	PolynomialCommitment,
+};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{test_rng, vec::Vec};
 use plonk_core::{
 	prelude::*,
@@ -23,8 +27,7 @@ pub(crate) fn gadget_tester<
 	// Provers View
 	let (proof, public_inputs) = {
 		// Create a prover struct
-		let mut prover: Prover<E, P> =
-			Prover::new(b"demo");
+		let mut prover: Prover<E, P> = Prover::new(b"demo");
 
 		// Additionally key the transcript
 		prover.key_transcript(b"key", b"additional seed information");
