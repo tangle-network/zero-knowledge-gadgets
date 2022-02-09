@@ -134,7 +134,7 @@ use ark_std::test_rng;
     const BRIDGE_SIZE: usize = 2;
 
 	#[test]
-	fn should_verify_correct_mixer_plonk() {
+	fn should_verify_correct_anchor_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
@@ -807,7 +807,7 @@ use ark_std::test_rng;
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		// The arbitrary data is stored at index 5 of the public input vector:
-		assert_eq!(arbitrary_data, public_inputs[5]);
+		assert_eq!(arbitrary_data, public_inputs[7]);
 		// Modify the arbitrary data so that prover/verifier disagree
 		public_inputs[5].double_in_place();
 
