@@ -1,5 +1,5 @@
 use crate::{
-	merkle_tree::PathGadget, anchor::add_public_input_variable,
+	anchor::add_public_input_variable, merkle_tree::PathGadget,
 	poseidon::poseidon::FieldHasherGadget, set_membership::check_set_membership,
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};
@@ -263,7 +263,11 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover = Prover::<Bn254, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(b"anchor");
+			let mut prover = Prover::<
+				Bn254,
+				JubjubParameters,
+				SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
+			>::new(b"anchor");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = anchor.gadget(prover.mut_cs());
@@ -292,9 +296,7 @@ mod test {
 		verifier.preprocess(&ck.powers()).unwrap();
 
 		// Verify proof
-		let res = verifier
-			.verify(&proof, &vk, &public_inputs)
-			.unwrap_err();
+		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -365,7 +367,11 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover = Prover::<Bn254, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(b"anchor");
+			let mut prover = Prover::<
+				Bn254,
+				JubjubParameters,
+				SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
+			>::new(b"anchor");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = anchor.gadget(prover.mut_cs());
@@ -471,7 +477,11 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover = Prover::<Bn254, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(b"anchor");
+			let mut prover = Prover::<
+				Bn254,
+				JubjubParameters,
+				SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
+			>::new(b"anchor");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = anchor.gadget(prover.mut_cs());
@@ -574,7 +584,11 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover = Prover::<Bn254, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(b"anchor");
+			let mut prover = Prover::<
+				Bn254,
+				JubjubParameters,
+				SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
+			>::new(b"anchor");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = anchor.gadget(prover.mut_cs());
@@ -680,7 +694,11 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover = Prover::<Bn254, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(b"anchor");
+			let mut prover = Prover::<
+				Bn254,
+				JubjubParameters,
+				SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
+			>::new(b"anchor");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = anchor.gadget(prover.mut_cs());
@@ -783,7 +801,11 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
 		let proof = {
 			// Create a prover struct
-			let mut prover = Prover::<Bn254, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(b"anchor");
+			let mut prover = Prover::<
+				Bn254,
+				JubjubParameters,
+				SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
+			>::new(b"anchor");
 			prover.key_transcript(b"key", b"additional seed information");
 			// Add gadgets
 			let _ = anchor.gadget(prover.mut_cs());
