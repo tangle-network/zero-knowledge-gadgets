@@ -1,39 +1,39 @@
 use crate::{merkle_tree::PathGadget, poseidon::poseidon::FieldHasherGadget};
-use ark_ec::models::TEModelParameters;
-use ark_ff::PrimeField;
+use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_std::{Zero, One};
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
 
 pub struct MixerCircuit<
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
-	HG: FieldHasherGadget<F, P>,
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
+	HG: FieldHasherGadget<E, P>,
 	const N: usize,
 > {
-	secret: F,
-	nullifier: F,
-	nullifier_hash: F,
-	path: Path<F, HG::Native, N>,
-	root: F,
-	arbitrary_data: F,
+	secret: E::Fr,
+	nullifier: E::Fr,
+	nullifier_hash: E::Fr,
+	path: Path<E::Fr, HG::Native, N>,
+	root: E::Fr,
+	arbitrary_data: E::Fr,
 	hasher: HG::Native,
 }
 
-impl<F, P, HG, const N: usize> MixerCircuit<F, P, HG, N>
+impl<E, P, HG, const N: usize> MixerCircuit<E, P, HG, N>
 where
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
-	HG: FieldHasherGadget<F, P>,
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
+	HG: FieldHasherGadget<E, P>,
 {
 	pub fn new(
-		secret: F,
-		nullifier: F,
-		nullifier_hash: F,
-		path: Path<F, HG::Native, N>,
-		root: F,
-		arbitrary_data: F,
+		secret: E::Fr,
+		nullifier: E::Fr,
+		nullifier_hash: E::Fr,
+		path: Path<E::Fr, HG::Native, N>,
+		root: E::Fr,
+		arbitrary_data: E::Fr,
 		hasher: HG::Native,
 	) -> Self {
 		Self {
@@ -48,19 +48,19 @@ where
 	}
 }
 
-impl<F, P, HG, const N: usize> Circuit<F, P> for MixerCircuit<F, P, HG, N>
+impl<E, P, HG, const N: usize> Circuit<E, P> for MixerCircuit<E, P, HG, N>
 where
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
-	HG: FieldHasherGadget<F, P>,
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
+	HG: FieldHasherGadget<E, P>,
 {
 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
 
-	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+	fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
 		// Private Inputs
 		let secret = composer.add_input(self.secret);
 		let nullifier = composer.add_input(self.nullifier);
-		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
+		let path_gadget = PathGadget::<E, P, HG, N>::from_native(composer, self.path.clone());
 
 		// Public Inputs
 		let nullifier_hash = add_public_input_variable(composer, self.nullifier_hash);
@@ -69,7 +69,7 @@ where
 
 		// Create the hasher_gadget from native
 		let hasher_gadget: HG =
-			FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
+			FieldHasherGadget::<E, P>::from_native(composer, self.hasher.clone());
 
 		// Preimage proof of nullifier
 		let res_nullifier = hasher_gadget.hash_two(composer, &nullifier, &nullifier)?;
@@ -82,13 +82,13 @@ where
 
 		// Proof of Merkle tree membership
 		let is_member = path_gadget.check_membership(composer, &root, &res_leaf, &hasher_gadget)?;
-		let one = composer.add_witness_to_circuit_description(F::one());
+		let one = composer.add_witness_to_circuit_description(E::Fr::one());
 		composer.assert_equal(is_member, one);
 
 		// Safety constraint to prevent tampering with arbitrary_data
 		let _arbitrary_data_squared = composer.arithmetic_gate(|gate| {
 			gate.witness(arbitrary_data, arbitrary_data, None)
-				.mul(F::one())
+				.mul(E::Fr::one())
 		});
 		Ok(())
 	}
@@ -100,21 +100,21 @@ where
 
 /// Add a variable to a circuit and constrain it to a public input value that
 /// is expected to be different in each instance of the circuit.
-pub fn add_public_input_variable<F, P>(composer: &mut StandardComposer<F, P>, value: F) -> Variable
+pub fn add_public_input_variable<E, P>(composer: &mut StandardComposer<E, P>, value: E::Fr) -> Variable
 where
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
 {
 	let variable = composer.add_input(value);
 	composer.poly_gate(
 		variable,
 		variable,
 		variable,
-		F::zero(),
-		-F::one(),
-		F::zero(),
-		F::zero(),
-		F::zero(),
+		E::Fr::zero(),
+		-E::Fr::one(),
+		E::Fr::zero(),
+		E::Fr::zero(),
+		E::Fr::zero(),
 		Some(value),
 	);
 	variable
@@ -128,7 +128,8 @@ mod test {
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
+	use ark_poly_commit::{kzg10::{UniversalParams, self}, sonic_pc::{SonicKZG10, self}, PolynomialCommitment};
+	use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
 	use ark_std::test_rng;
 	use arkworks_gadgets::{
 		ark_std::UniformRand,
@@ -181,7 +182,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			nullifier,
 			nullifier_hash,
@@ -234,7 +235,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			nullifier,
 			nullifier_hash,
@@ -245,7 +246,7 @@ mod test {
 		);
 
 		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let public_inputs = composer.construct_dense_pi_vec();
 
@@ -255,7 +256,7 @@ mod test {
 		let proof = {
 			// Create a prover struct
 			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+				Prover::<Bn254, JubjubParameters>::new(
 					b"mixer",
 				);
 			prover.key_transcript(b"key", b"additional seed information");
@@ -266,9 +267,9 @@ mod test {
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
 			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck.powers());
 			// Compute Proof
-			prover.prove(&ck).unwrap()
+			prover.prove(&ck.powers()).unwrap()
 		};
 
 		// Verifier's view
@@ -283,10 +284,12 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 				.unwrap();
 		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
+		verifier.preprocess(&ck.powers()).unwrap();
 
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		let mut vk_bytes = Vec::new();
+        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -334,7 +337,7 @@ mod test {
 		let bad_secret = secret.double();
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			bad_secret,
 			nullifier,
 			nullifier_hash,
@@ -345,7 +348,7 @@ mod test {
 		);
 
 		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let public_inputs = composer.construct_dense_pi_vec();
 
@@ -355,7 +358,7 @@ mod test {
 		let proof = {
 			// Create a prover struct
 			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+				Prover::<Bn254, JubjubParameters>::new(
 					b"mixer",
 				);
 			prover.key_transcript(b"key", b"additional seed information");
@@ -366,9 +369,9 @@ mod test {
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
 			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck.powers());
 			// Compute Proof
-			prover.prove(&ck).unwrap()
+			prover.prove(&ck.powers()).unwrap()
 		};
 
 		// Verifier's view
@@ -383,10 +386,12 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 				.unwrap();
 		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
+		verifier.preprocess(&ck.powers()).unwrap();
 
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		let mut vk_bytes = Vec::new();
+        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -434,7 +439,7 @@ mod test {
 		let bad_nullifier = nullifier.double();
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			bad_nullifier,
 			nullifier_hash,
@@ -445,7 +450,7 @@ mod test {
 		);
 
 		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let public_inputs = composer.construct_dense_pi_vec();
 
@@ -455,7 +460,7 @@ mod test {
 		let proof = {
 			// Create a prover struct
 			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+				Prover::<Bn254, JubjubParameters>::new(
 					b"mixer",
 				);
 			prover.key_transcript(b"key", b"additional seed information");
@@ -466,9 +471,9 @@ mod test {
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
 			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck.powers());
 			// Compute Proof
-			prover.prove(&ck).unwrap()
+			prover.prove(&ck.powers()).unwrap()
 		};
 
 		// Verifier's view
@@ -483,10 +488,12 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 				.unwrap();
 		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
+		verifier.preprocess(&ck.powers()).unwrap();
 
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		let mut vk_bytes = Vec::new();
+        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -531,7 +538,7 @@ mod test {
 		let bad_path = tree.generate_membership_proof((last_index as u64) - 1);
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			nullifier,
 			nullifier_hash,
@@ -542,7 +549,7 @@ mod test {
 		);
 
 		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let public_inputs = composer.construct_dense_pi_vec();
 
@@ -552,7 +559,7 @@ mod test {
 		let proof = {
 			// Create a prover struct
 			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+				Prover::<Bn254, JubjubParameters>::new(
 					b"mixer",
 				);
 			prover.key_transcript(b"key", b"additional seed information");
@@ -563,9 +570,9 @@ mod test {
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
 			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck.powers());
 			// Compute Proof
-			prover.prove(&ck).unwrap()
+			prover.prove(&ck.powers()).unwrap()
 		};
 
 		// Verifier's view
@@ -580,10 +587,12 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 				.unwrap();
 		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
+		verifier.preprocess(&ck.powers()).unwrap();
 
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		let mut vk_bytes = Vec::new();
+        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -631,7 +640,7 @@ mod test {
 		let bad_nullifier_hash = nullifier_hash.double();
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			nullifier,
 			bad_nullifier_hash,
@@ -642,7 +651,7 @@ mod test {
 		);
 
 		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let public_inputs = composer.construct_dense_pi_vec();
 
@@ -652,7 +661,7 @@ mod test {
 		let proof = {
 			// Create a prover struct
 			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+				Prover::<Bn254, JubjubParameters>::new(
 					b"mixer",
 				);
 			prover.key_transcript(b"key", b"additional seed information");
@@ -663,9 +672,9 @@ mod test {
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
 			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck.powers());
 			// Compute Proof
-			prover.prove(&ck).unwrap()
+			prover.prove(&ck.powers()).unwrap()
 		};
 
 		// Verifier's view
@@ -680,10 +689,12 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 				.unwrap();
 		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
+		verifier.preprocess(&ck.powers()).unwrap();
 
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		let mut vk_bytes = Vec::new();
+        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),
@@ -728,7 +739,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		// Create MixerCircuit
-		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
+		let mut mixer = MixerCircuit::<Bn254, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			nullifier,
 			nullifier_hash,
@@ -739,7 +750,7 @@ mod test {
 		);
 
 		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let _ = mixer.gadget(&mut composer);
 		let mut public_inputs = composer.construct_dense_pi_vec();
 
@@ -749,7 +760,7 @@ mod test {
 		let proof = {
 			// Create a prover struct
 			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
+				Prover::<Bn254, JubjubParameters>::new(
 					b"mixer",
 				);
 			prover.key_transcript(b"key", b"additional seed information");
@@ -760,9 +771,9 @@ mod test {
 				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 					.unwrap();
 			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
+			let _ = prover.preprocess(&ck.powers());
 			// Compute Proof
-			prover.prove(&ck).unwrap()
+			prover.prove(&ck.powers()).unwrap()
 		};
 
 		// Verifier's view
@@ -777,15 +788,17 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
 				.unwrap();
 		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
+		verifier.preprocess(&ck.powers()).unwrap();
 
 		// The arbitrary data is stored at index 5 of the public input vector:
 		assert_eq!(arbitrary_data, public_inputs[5]);
 		// Modify the arbitrary data so that prover/verifier disagree
 		public_inputs[5].double_in_place();
 
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		let mut vk_bytes = Vec::new();
+        sonic_pc::VerifierKey::<Bn254>::serialize(&vk, &mut vk_bytes).unwrap();
+        let kzg_vk = kzg10::VerifierKey::<Bn254>::deserialize(&vk_bytes[..]).unwrap();
+		let res = verifier.verify(&proof, &kzg_vk, &public_inputs).unwrap_err();
 		match res {
 			Error::ProofVerificationError => (),
 			err => panic!("Unexpected error: {:?}", err),

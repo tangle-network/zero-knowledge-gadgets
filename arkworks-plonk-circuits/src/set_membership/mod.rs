@@ -1,40 +1,41 @@
-use ark_ec::models::TEModelParameters;
+use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
 use ark_std::vec::Vec;
 use plonk_core::{
-	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
+	constraint_system::StandardComposer, prelude::Variable,
 };
+use ark_std::{Zero, One};
 
 /// A function whose output is 1 if `member` belongs to `set`
 /// and 0 otherwise.  Contraints are added to a StandardComposer
 /// and the output is added as a variable to the StandardComposer.
 /// The set is assumed to consist of public inputs, such as roots
 /// of various Merkle trees.
-fn check_set_membership<F, P>(
-	composer: &mut StandardComposer<F, P>,
-	set: &Vec<F>,
+pub fn check_set_membership<E, P>(
+	composer: &mut StandardComposer<E, P>,
+	set: &Vec<E::Fr>,
 	member: Variable,
 ) -> Variable
 where
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
 {
 	// Compute all differences between `member` and set elements
 	let mut diffs = Vec::new();
 	for x in set.iter() {
 		let diff = composer.arithmetic_gate(|gate| {
 			gate.witness(member, member, None)
-				.add(F::zero(), F::one())
+				.add(E::Fr::zero(), E::Fr::one())
 				.pi(-*x)
 		});
 		diffs.push(diff);
 	}
 
 	// Accumulate the product of all differences
-	let mut accumulator = composer.add_witness_to_circuit_description(F::one());
+	let mut accumulator = composer.add_witness_to_circuit_description(E::Fr::one());
 	for diff in diffs {
 		accumulator =
-			composer.arithmetic_gate(|gate| gate.witness(accumulator, diff, None).mul(F::one()));
+			composer.arithmetic_gate(|gate| gate.witness(accumulator, diff, None).mul(E::Fr::one()));
 	}
 
 	composer.is_zero_with_output(accumulator)
@@ -44,13 +45,14 @@ where
 pub(crate) mod tests {
 	//copied from ark-plonk
 	use super::*;
+	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 
 	#[test]
 	fn test_verify_set_membership_functions() {
 		let set = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let one = composer.add_input(Fq::from(1u32));
 		let member = composer.add_input(Fq::from(2u32));
 
@@ -63,7 +65,7 @@ pub(crate) mod tests {
 	fn test_fail_to_verify_set_membership_functions() {
 		let set = vec![Fq::from(1u32), Fq::from(2u32), Fq::from(3u32)];
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let mut composer = StandardComposer::<Bn254, JubjubParameters>::new();
 		let zero = composer.zero_var();
 		let member = composer.add_input(Fq::from(4u32));
 

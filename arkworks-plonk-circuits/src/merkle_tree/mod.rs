@@ -1,33 +1,33 @@
 use crate::poseidon::poseidon::FieldHasherGadget;
-use ark_ec::models::TEModelParameters;
-use ark_ff::PrimeField;
-use ark_std::marker::PhantomData;
+use ark_ec::{models::TEModelParameters, PairingEngine};
+use ark_ff::Field;
+use ark_std::{One, Zero, marker::PhantomData};
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 #[derive(Clone)]
 pub struct PathGadget<
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
-	HG: FieldHasherGadget<F, P>,
+	E: PairingEngine,
+	P: TEModelParameters<BaseField = E::Fr>,
+	HG: FieldHasherGadget<E, P>,
 	const N: usize,
 > {
 	path: [(Variable, Variable); N],
-	_field: PhantomData<F>,
+	_field: PhantomData<E::Fr>,
 	_te: PhantomData<P>,
 	_hg: PhantomData<HG>,
 }
 
 impl<
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E, P>,
 		const N: usize,
-	> PathGadget<F, P, HG, N>
+	> PathGadget<E, P, HG, N>
 {
 	pub fn from_native(
-		composer: &mut StandardComposer<F, P>,
-		native: Path<F, HG::Native, N>,
+		composer: &mut StandardComposer<E, P>,
+		native: Path<E::Fr, HG::Native, N>,
 	) -> Self {
 		// Initialize the array
 		let mut path_vars = [(composer.zero_var(), composer.zero_var()); N];
@@ -49,7 +49,7 @@ impl<
 
 	pub fn check_membership(
 		&self,
-		composer: &mut StandardComposer<F, P>,
+		composer: &mut StandardComposer<E, P>,
 		root_hash: &Variable,
 		leaf: &Variable,
 		hasher: &HG,
@@ -61,7 +61,7 @@ impl<
 
 	pub fn calculate_root(
 		&self,
-		composer: &mut StandardComposer<F, P>,
+		composer: &mut StandardComposer<E, P>,
 		leaf: &Variable,
 		hash_gadget: &HG,
 	) -> Result<Variable, Error> {
@@ -84,18 +84,18 @@ impl<
 
 	pub fn get_index(
 		&self,
-		composer: &mut StandardComposer<F, P>,
+		composer: &mut StandardComposer<E, P>,
 		root_hash: &Variable,
 		leaf: &Variable,
 		hasher: &HG,
 	) -> Result<Variable, Error> {
 		// First check that leaf is on path
 		// let is_on_path = self.check_membership(composer, root_hash, leaf, hasher)?;
-		let one = composer.add_input(F::one());
+		let one = composer.add_input(E::Fr::one());
 		// composer.assert_equal(is_on_path, one);
 
-		let mut index = composer.add_input(F::zero());
-		let mut two_power = composer.add_input(F::one());
+		let mut index = composer.add_input(E::Fr::zero());
+		let mut two_power = composer.add_input(E::Fr::one());
 		let mut right_value: Variable;
 
 		// Check the levels between leaf level and root
@@ -105,13 +105,13 @@ impl<
 			// Check if previous hash is a left node
 			let previous_is_left = composer.is_eq_with_output(previous_hash, *left_hash);
 			right_value = composer.arithmetic_gate(|gate| {
-				gate.witness(index, two_power, None).add(F::one(), F::one())
+				gate.witness(index, two_power, None).add(E::Fr::one(), E::Fr::one())
 			});
 
 			// Assign index based on whether prev hash is left or right
 			index = composer.conditional_select(previous_is_left, index, right_value);
 			two_power = composer
-				.arithmetic_gate(|gate| gate.witness(two_power, one, None).mul(F::one().double()));
+				.arithmetic_gate(|gate| gate.witness(two_power, one, None).mul(E::Fr::one().double()));
 
 			previous_hash = hasher.hash_two(composer, left_hash, right_hash)?;
 		}
@@ -124,10 +124,10 @@ impl<
 
 #[cfg(test)]
 mod test {
-	use super::PathGadget;
+	use super::*;
 	use crate::poseidon::poseidon::{FieldHasherGadget, PoseidonGadget};
 	use ark_bn254::{Bn254, Fr as Bn254Fr};
-	use ark_ec::TEModelParameters;
+	use ark_ec::{TEModelParameters, PairingEngine};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::PrimeField;
 	use ark_poly::polynomial::univariate::DensePolynomial;
@@ -144,29 +144,29 @@ mod test {
 
 	struct TestCircuit<
 		'a,
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E, P>,
 		const N: usize,
 	> {
-		leaves: &'a [F],
+		leaves: &'a [E::Fr],
 		empty_leaf: &'a [u8],
 		hasher: &'a HG::Native,
 	}
 
 	impl<
-			F: PrimeField,
-			P: TEModelParameters<BaseField = F>,
-			HG: FieldHasherGadget<F, P>,
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E, P>,
 			const N: usize,
-		> Circuit<F, P> for TestCircuit<'_, F, P, HG, N>
+		> Circuit<E, P> for TestCircuit<'_, E, P, HG, N>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xfe; 32];
 
-		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
 			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
-			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+			let smt = SparseMerkleTree::<E::Fr, HG::Native, N>::new_sequential(
 				self.leaves,
 				&self.hasher,
 				self.empty_leaf,
@@ -175,13 +175,13 @@ mod test {
 			let path = smt.generate_membership_proof(0);
 			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
 
-			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<E, P, HG, N>::from_native(composer, path);
 			let root_var = composer.add_input(root);
 			let leaf_var = composer.add_input(self.leaves[0]);
 
 			let res =
 				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
-			let one = composer.add_input(F::one());
+			let one = composer.add_input(E::Fr::one());
 			composer.assert_equal(res, one);
 
 			Ok(())
@@ -204,7 +204,7 @@ mod test {
 		let empty_leaf = [0u8; 32];
 
 		// Create the test circuit
-		let mut test_circuit = TestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+		let mut test_circuit = TestCircuit::<Bn254, JubjubParameters, PoseidonGadget, 3usize> {
 			leaves: &leaves,
 			empty_leaf: &empty_leaf,
 			hasher: &poseidon,
@@ -215,7 +215,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 14, None, rng).unwrap();
 
 		let (pk, vd) = test_circuit
-			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.compile(&u_params)
 			.unwrap();
 
 		// PROVER
@@ -226,11 +226,14 @@ mod test {
 
 		let VerifierData { key, pi_pos } = vd;
 
-		circuit::verify_proof::<_, JubjubParameters, _>(
+		circuit::verify_proof::<_, JubjubParameters>(
 			&u_params,
 			key,
 			&proof,
-			&public_inputs,
+			&public_inputs.iter().map(|pi| {
+				let temp = *pi;
+				temp.into_pi()
+			}).collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMT Test",
 		)
@@ -239,30 +242,30 @@ mod test {
 
 	struct IndexTestCircuit<
 		'a,
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E, P>,
 		const N: usize,
 	> {
 		index: u64,
-		leaves: &'a [F],
+		leaves: &'a [E::Fr],
 		empty_leaf: &'a [u8],
 		hasher: &'a HG::Native,
 	}
 
 	impl<
-			F: PrimeField,
-			P: TEModelParameters<BaseField = F>,
-			HG: FieldHasherGadget<F, P>,
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E, P>,
 			const N: usize,
-		> Circuit<F, P> for IndexTestCircuit<'_, F, P, HG, N>
+		> Circuit<E, P> for IndexTestCircuit<'_, E, P, HG, N>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xfd; 32];
 
-		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
 			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
-			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+			let smt = SparseMerkleTree::<E::Fr, HG::Native, N>::new_sequential(
 				self.leaves,
 				&self.hasher,
 				self.empty_leaf,
@@ -271,12 +274,12 @@ mod test {
 			let root = smt.root();
 			let path = smt.generate_membership_proof(self.index);
 
-			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<E, P, HG, N>::from_native(composer, path);
 			let root_var = composer.add_input(root);
 			let leaf_var = composer.add_input(self.leaves[self.index as usize]);
 
 			let res = path_gadget.get_index(composer, &root_var, &leaf_var, &hasher_gadget)?;
-			let index_var = composer.add_input(F::from(self.index));
+			let index_var = composer.add_input(E::Fr::from(self.index));
 			composer.assert_equal(res, index_var);
 
 			Ok(())
@@ -300,7 +303,7 @@ mod test {
 		let index = 2u64;
 
 		let mut test_circuit =
-			IndexTestCircuit::<'_, Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+			IndexTestCircuit::<'_, Bn254, JubjubParameters, PoseidonGadget, 3usize> {
 				index,
 				leaves: &leaves,
 				empty_leaf: &empty_leaf,
@@ -312,7 +315,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 15, None, rng).unwrap();
 
 		let (pk, vd) = test_circuit
-			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.compile(&u_params)
 			.unwrap();
 
 		// PROVER
@@ -325,11 +328,14 @@ mod test {
 
 		let VerifierData { key, pi_pos } = vd;
 
-		circuit::verify_proof::<_, JubjubParameters, _>(
+		circuit::verify_proof::<_, JubjubParameters>(
 			&u_params,
 			key,
 			&proof,
-			&public_inputs,
+			&public_inputs.iter().map(|pi| {
+				let temp = *pi;
+				temp.into_pi()
+			}).collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)
@@ -341,30 +347,30 @@ mod test {
 	// the invalidity of a circuit lead to higher degree polynomials?
 	struct BadIndexTestCircuit<
 		'a,
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E, P>,
 		const N: usize,
 	> {
 		index: u64,
-		leaves: &'a [F],
+		leaves: &'a [E::Fr],
 		empty_leaf: &'a [u8],
 		hasher: &'a HG::Native,
 	}
 
 	impl<
-			F: PrimeField,
-			P: TEModelParameters<BaseField = F>,
-			HG: FieldHasherGadget<F, P>,
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E, P>,
 			const N: usize,
-		> Circuit<F, P> for BadIndexTestCircuit<'_, F, P, HG, N>
+		> Circuit<E, P> for BadIndexTestCircuit<'_, E, P, HG, N>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xfd; 32];
 
-		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
 			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
-			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+			let smt = SparseMerkleTree::<E::Fr, HG::Native, N>::new_sequential(
 				self.leaves,
 				&self.hasher,
 				self.empty_leaf,
@@ -372,11 +378,11 @@ mod test {
 			.unwrap();
 			let path = smt.generate_membership_proof(self.index);
 
-			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<E, P, HG, N>::from_native(composer, path);
 
 			// Now create an invalid root to show that get_index detects this:
 			let bad_leaves = &self.leaves[0..1];
-			let bad_smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+			let bad_smt = SparseMerkleTree::<E::Fr, HG::Native, N>::new_sequential(
 				bad_leaves,
 				&self.hasher,
 				self.empty_leaf,
@@ -387,7 +393,7 @@ mod test {
 			let leaf_var = composer.add_input(self.leaves[self.index as usize]);
 
 			let res = path_gadget.get_index(composer, &bad_root_var, &leaf_var, &hasher_gadget)?;
-			let index_var = composer.add_input(F::from(self.index));
+			let index_var = composer.add_input(E::Fr::from(self.index));
 			composer.assert_equal(res, index_var);
 
 			Ok(())
@@ -411,7 +417,7 @@ mod test {
 		let index = 2u64;
 
 		let mut test_circuit =
-			BadIndexTestCircuit::<'_, Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+			BadIndexTestCircuit::<'_, Bn254, JubjubParameters, PoseidonGadget, 3usize> {
 				index,
 				leaves: &leaves,
 				empty_leaf: &empty_leaf,
@@ -423,7 +429,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
 
 		let (pk, vd) = test_circuit
-			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.compile(&u_params)
 			.unwrap();
 
 		// PROVER
@@ -436,11 +442,14 @@ mod test {
 
 		let VerifierData { key, pi_pos } = vd;
 
-		let res = circuit::verify_proof::<_, JubjubParameters, _>(
+		let res = circuit::verify_proof::<_, JubjubParameters>(
 			&u_params,
 			key,
 			&proof,
-			&public_inputs,
+			&public_inputs.iter().map(|pi| {
+				let temp = *pi;
+				temp.into_pi()
+			}).collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)
@@ -454,29 +463,29 @@ mod test {
 	// Membership proof should fail due to invalid leaf input
 	struct BadLeafTestCircuit<
 		'a,
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E, P>,
 		const N: usize,
 	> {
-		leaves: &'a [F],
+		leaves: &'a [E::Fr],
 		empty_leaf: &'a [u8],
 		hasher: &'a HG::Native,
 	}
 
 	impl<
-			F: PrimeField,
-			P: TEModelParameters<BaseField = F>,
-			HG: FieldHasherGadget<F, P>,
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E, P>,
 			const N: usize,
-		> Circuit<F, P> for BadLeafTestCircuit<'_, F, P, HG, N>
+		> Circuit<E, P> for BadLeafTestCircuit<'_, E, P, HG, N>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xfe; 32];
 
-		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
 			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
-			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+			let smt = SparseMerkleTree::<E::Fr, HG::Native, N>::new_sequential(
 				self.leaves,
 				&self.hasher,
 				self.empty_leaf,
@@ -485,13 +494,13 @@ mod test {
 			let path = smt.generate_membership_proof(0);
 			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
 
-			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<E, P, HG, N>::from_native(composer, path);
 			let root_var = composer.add_input(root);
 			let leaf_var = composer.zero_var();
 
 			let res =
 				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
-			let one = composer.add_input(F::one());
+			let one = composer.add_input(E::Fr::one());
 			composer.assert_equal(res, one);
 
 			Ok(())
@@ -515,7 +524,7 @@ mod test {
 
 		// Create the test circuit
 		let mut test_circuit =
-			BadLeafTestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+			BadLeafTestCircuit::<Bn254, JubjubParameters, PoseidonGadget, 3usize> {
 				leaves: &leaves,
 				empty_leaf: &empty_leaf,
 				hasher: &poseidon,
@@ -526,7 +535,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
 
 		let (pk, vd) = test_circuit
-			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.compile(&u_params)
 			.unwrap();
 
 		// PROVER
@@ -537,11 +546,14 @@ mod test {
 
 		let VerifierData { key, pi_pos } = vd;
 
-		let res = circuit::verify_proof::<_, JubjubParameters, _>(
+		let res = circuit::verify_proof::<_, JubjubParameters>(
 			&u_params,
 			key,
 			&proof,
-			&public_inputs,
+			&public_inputs.iter().map(|pi| {
+				let temp = *pi;
+				temp.into_pi()
+			}).collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)
@@ -555,29 +567,29 @@ mod test {
 	// Membership proof should fail due to invalid leaf input
 	struct BadRootTestCircuit<
 		'a,
-		F: PrimeField,
-		P: TEModelParameters<BaseField = F>,
-		HG: FieldHasherGadget<F, P>,
+		E: PairingEngine,
+		P: TEModelParameters<BaseField = E::Fr>,
+		HG: FieldHasherGadget<E, P>,
 		const N: usize,
 	> {
-		leaves: &'a [F],
+		leaves: &'a [E::Fr],
 		empty_leaf: &'a [u8],
 		hasher: &'a HG::Native,
 	}
 
 	impl<
-			F: PrimeField,
-			P: TEModelParameters<BaseField = F>,
-			HG: FieldHasherGadget<F, P>,
+			E: PairingEngine,
+			P: TEModelParameters<BaseField = E::Fr>,
+			HG: FieldHasherGadget<E, P>,
 			const N: usize,
-		> Circuit<F, P> for BadRootTestCircuit<'_, F, P, HG, N>
+		> Circuit<E, P> for BadRootTestCircuit<'_, E, P, HG, N>
 	{
 		const CIRCUIT_ID: [u8; 32] = [0xfe; 32];
 
-		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+		fn gadget(&mut self, composer: &mut StandardComposer<E, P>) -> Result<(), Error> {
 			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
 
-			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+			let smt = SparseMerkleTree::<E::Fr, HG::Native, N>::new_sequential(
 				self.leaves,
 				&self.hasher,
 				self.empty_leaf,
@@ -586,13 +598,13 @@ mod test {
 			let path = smt.generate_membership_proof(0);
 			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
 
-			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+			let path_gadget = PathGadget::<E, P, HG, N>::from_native(composer, path);
 			let root_var = composer.zero_var();
 			let leaf_var = composer.add_input(self.leaves[0]);
 
 			let res =
 				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
-			let one = composer.add_input(F::one());
+			let one = composer.add_input(E::Fr::one());
 			composer.assert_equal(res, one);
 
 			Ok(())
@@ -616,7 +628,7 @@ mod test {
 
 		// Create the test circuit
 		let mut test_circuit =
-			BadRootTestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, 3usize> {
+			BadRootTestCircuit::<Bn254, JubjubParameters, PoseidonGadget, 3usize> {
 				leaves: &leaves,
 				empty_leaf: &empty_leaf,
 				hasher: &poseidon,
@@ -627,7 +639,7 @@ mod test {
 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 17, None, rng).unwrap();
 
 		let (pk, vd) = test_circuit
-			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+			.compile(&u_params)
 			.unwrap();
 
 		// PROVER
@@ -638,11 +650,14 @@ mod test {
 
 		let VerifierData { key, pi_pos } = vd;
 
-		let res = circuit::verify_proof::<_, JubjubParameters, _>(
+		let res = circuit::verify_proof::<_, JubjubParameters>(
 			&u_params,
 			key,
 			&proof,
-			&public_inputs,
+			&public_inputs.iter().map(|pi| {
+				let temp = *pi;
+				temp.into_pi()
+			}).collect::<Vec<_>>()[..],
 			&pi_pos,
 			b"SMTIndex Test",
 		)

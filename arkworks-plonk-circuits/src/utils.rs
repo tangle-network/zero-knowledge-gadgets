@@ -1,7 +1,8 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_poly::polynomial::univariate::DensePolynomial;
-use ark_poly_commit::{kzg10::KZG10, sonic_pc::SonicKZG10, PolynomialCommitment};
-use ark_std::test_rng;
+use ark_poly_commit::{kzg10::{KZG10, self}, sonic_pc::{SonicKZG10, self}, PolynomialCommitment};
+use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
+use ark_std::{test_rng, vec::Vec};
 use plonk_core::{
 	prelude::*,
 	proof_system::{Prover, Verifier},
@@ -11,7 +12,7 @@ use plonk_core::{
 pub(crate) fn gadget_tester<
 	E: PairingEngine,
 	P: TEModelParameters<BaseField = E::Fr>,
-	C: Circuit<E::Fr, P>,
+	C: Circuit<E, P>,
 >(
 	circuit: &mut C,
 	n: usize,
@@ -22,7 +23,7 @@ pub(crate) fn gadget_tester<
 	// Provers View
 	let (proof, public_inputs) = {
 		// Create a prover struct
-		let mut prover: Prover<E::Fr, P, SonicKZG10<E, DensePolynomial<<E as PairingEngine>::Fr>>> =
+		let mut prover: Prover<E, P> =
 			Prover::new(b"demo");
 
 		// Additionally key the transcript
@@ -40,7 +41,7 @@ pub(crate) fn gadget_tester<
 		)
 		.unwrap();
 		// Preprocess circuit
-		prover.preprocess(&ck)?;
+		prover.preprocess(&ck.powers())?;
 
 		// Once the prove method is called, the public inputs are cleared
 		// So pre-fetch these before calling Prove
@@ -48,7 +49,7 @@ pub(crate) fn gadget_tester<
 		//? let lookup_table = prover.mut_cs().lookup_table.clone();
 
 		// Compute Proof
-		(prover.prove(&ck)?, public_inputs)
+		(prover.prove(&ck.powers())?, public_inputs)
 	};
 	// Verifiers view
 	//
@@ -71,8 +72,10 @@ pub(crate) fn gadget_tester<
 	.unwrap();
 
 	// Preprocess circuit
-	verifier.preprocess(&sonic_ck)?;
+	verifier.preprocess(&sonic_ck.powers())?;
 
-	// Verify proof
-	Ok(verifier.verify(&proof, &sonic_vk, &public_inputs)?)
+	let mut vk_bytes = Vec::new();
+	sonic_pc::VerifierKey::<E>::serialize(&sonic_vk, &mut vk_bytes).unwrap();
+	let kzg_vk = kzg10::VerifierKey::<E>::deserialize(&vk_bytes[..]).unwrap();
+	Ok(verifier.verify(&proof, &kzg_vk, &public_inputs)?)
 }
