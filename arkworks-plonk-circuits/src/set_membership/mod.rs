@@ -10,7 +10,7 @@ use plonk_core::{
 /// and the output is added as a variable to the StandardComposer.
 /// The set is assumed to consist of public inputs, such as roots
 /// of various Merkle trees.
-fn check_set_membership<F, P>(
+pub fn check_set_membership<F, P>(
 	composer: &mut StandardComposer<F, P>,
 	set: &Vec<F>,
 	member: Variable,

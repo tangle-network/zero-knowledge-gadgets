@@ -1,5 +1,5 @@
 use crate::{
-	anchor::add_public_input_variable, merkle_tree::PathGadget,
+	mixer::add_public_input_variable, merkle_tree::PathGadget,
 	poseidon::poseidon::FieldHasherGadget, set_membership::check_set_membership,
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};

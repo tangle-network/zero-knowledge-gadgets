@@ -19,11 +19,11 @@
 use std::ops::Add;
 
 use crate::{
-	merkle_tree::{PatHadget, PathGadget},
+	merkle_tree::{PathGadget},
 	mixer::add_public_input_variable,
 	poseidon::poseidon::FieldHasherGadget,
 	set_membership::check_set_membership,
-	vanchor::add_public_input_variable,
+	// vanchor::add_public_input_variable,
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
@@ -159,11 +159,6 @@ where
 		// Initialize public inputs
 		let public_amount = add_public_input_variable(composer, self.public_amount);
 		let public_chain_id = add_public_input_variable(composer, self.public_chain_id);
-		let roots = self
-			.in_root_set
-			.iter()
-			.map(|root| add_public_input_variable(composer, *root))
-			.collect::<Vec<Variable>>();
 		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
 
 		// Initialize hashers
@@ -181,7 +176,10 @@ where
 		let mut output_sum = composer.zero_var();
 
 		// Storage for the nullifier hash variables as we allocate them
-		let nullifier_hashes: Vec<Variable> = Vec::new();
+		let mut nullifier_hashes: Vec<Variable> = Vec::new();
+
+		// Name the composer's build in zero variable
+		let zero = composer.zero_var();
 
 		// General strategy
 		// 1. Reconstruct the commitments (along the way reconstruct other values)
@@ -226,7 +224,7 @@ where
 			// Optimized version of allocating public nullifier input and constraining
 			// to the calculate one.
 			let _ = composer.arithmetic_gate(|gate| {
-				gate.witness(calc_nullifier, calc_nullifier, Some(composer.zero_var()))
+				gate.witness(calc_nullifier, calc_nullifier, Some(zero))
 					.add(-F::one(), F::zero())
 					.pi(self.in_nullifier_hashes[i])
 			});
@@ -237,7 +235,7 @@ where
 
 			// Check if calculated root hash is in the set
 			// TODO: Check membership enabled is needed here.
-			let is_member = check_set_membership(composer, roots, calc_root_hash);
+			let is_member = check_set_membership(composer, &self.in_root_set.to_vec(), calc_root_hash);
 			composer.constrain_to_constant(is_member, F::one(), None);
 
 			// Finally add the amount to the sum
@@ -273,7 +271,7 @@ where
 
 			// Check if calculated leaf is the same as the passed one
 			let _ = composer.arithmetic_gate(|gate| {
-				gate.witness(calc_leaf, calc_leaf, Some(composer.zero_var()))
+				gate.witness(calc_leaf, calc_leaf, Some(zero))
 					.add(-F::one(), F::zero())
 					.pi(self.out_commitments[i])
 			});
