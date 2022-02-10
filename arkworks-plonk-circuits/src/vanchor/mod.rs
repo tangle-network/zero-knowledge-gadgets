@@ -436,7 +436,7 @@ mod test {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
-		let mut in_paths = [default_path; INS];
+		let mut in_paths: [Path<_,_,TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
 		// We'll say the index of each input is index:
 		let index = 0u64;
