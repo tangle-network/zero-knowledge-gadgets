@@ -63,7 +63,7 @@ pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
 pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
 	curve: Curve,
 	rng: &mut R,
-) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>), Error> {
+) -> Result<Leaf, Error> {
 	let params5 = setup_params_x5_5::<F>(curve);
 	// Secret inputs for the leaf
 	let leaf_private = LeafPrivate::generate(rng);
@@ -76,19 +76,19 @@ pub fn setup_leaf_x5_5<F: PrimeField, R: RngCore>(
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	Ok((
+	Ok(Leaf {
 		secret_bytes,
 		nullifier_bytes,
 		leaf_bytes,
 		nullifier_hash_bytes,
-	))
+	})
 }
 
 pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 	curve: Curve,
 	secret_bytes: Vec<u8>,
 	nullifier_bytes: Vec<u8>,
-) -> Result<(Vec<u8>, Vec<u8>), Error> {
+) -> Result<Leaf, Error> {
 	let params5 = setup_params_x5_5::<F>(curve);
 
 	let secret = F::from_le_bytes_mod_order(&secret_bytes);
@@ -101,7 +101,12 @@ pub fn setup_leaf_with_privates_raw_x5_5<F: PrimeField>(
 
 	let leaf_bytes = leaf_hash.into_repr().to_bytes_le();
 	let nullifier_hash_bytes = nullifier_hash.into_repr().to_bytes_le();
-	Ok((leaf_bytes, nullifier_hash_bytes))
+	Ok(Leaf {
+		secret_bytes,
+		nullifier_bytes,
+		leaf_bytes,
+		nullifier_hash_bytes,
+	})
 }
 
 pub const LEN: usize = 30;
@@ -119,7 +124,7 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	refund: u128,
 	pk: Vec<u8>,
 	rng: &mut R,
-) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
+) -> Result<MixerProof, Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params5 = setup_params_x5_5::<E::Fr>(curve);
 	let prover = MixerProverSetupBn254_30::new(params3, params5);
@@ -138,19 +143,19 @@ pub fn setup_proof_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;
 
-	Ok((
+	Ok(MixerProof {
 		proof,
 		leaf_raw,
 		nullifier_hash_raw,
 		root_raw,
 		public_inputs_raw,
-	))
+	})
 }
 
 pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 	curve: Curve,
 	rng: &mut R,
-) -> Result<(Vec<u8>, Vec<u8>), Error> {
+) -> Result<Keys, Error> {
 	let params3 = setup_params_x5_3::<E::Fr>(curve);
 	let params5 = setup_params_x5_5::<E::Fr>(curve);
 	let prover = MixerProverSetupBn254_30::new(params3, params5);
@@ -159,7 +164,7 @@ pub fn setup_keys_x5_5<E: PairingEngine, R: RngCore + CryptoRng>(
 
 	let (pk, vk) = setup_keys_unchecked::<E, _, _>(circuit, rng)?;
 
-	Ok((pk, vk))
+	Ok(Keys { pk, vk })
 }
 
 pub struct MixerProverSetup<F: PrimeField, const N: usize> {
