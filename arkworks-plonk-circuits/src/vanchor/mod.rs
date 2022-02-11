@@ -429,6 +429,7 @@ mod test {
 		let mut in_blindings = [Fq::from(0u64); INS];
 		let mut in_amounts = [Fq::from(0u64); INS];
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
 		// I don't like this default path thing -- how can I initalize the in_paths
 		// array?
@@ -436,7 +437,7 @@ mod test {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
-		let mut in_paths: [Path<_,_,TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
 		// We'll say the index of each input is index:
 		let index = 0u64;
@@ -445,8 +446,9 @@ mod test {
 		for i in 0..INS {
 			in_private_keys[i] = Fq::rand(rng);
 			in_blindings[i] = Fq::rand(rng);
-			// TODO: Enforce range check on input amounts
-			in_amounts[i] = Fq::rand(rng);
+			// Multiplying by 1/20 prevents the amounts from summing to more than
+			// the size of the field (at least for fewer than 20 inputs)
+			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
 			// Calculate what the input nullifier hashes would be based on these:
 			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
@@ -469,75 +471,74 @@ mod test {
 			)
 			.unwrap();
 			in_paths[i] = merkle_tree.generate_membership_proof(index);
+
+			// Fix this for INS > BRIDGE_SIZE
+			if i < BRIDGE_SIZE {
+				in_root_set[i] = merkle_tree.root();
+			}
 		}
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
 		let mut out_amounts = [Fq::from(0u64); OUTS];
 		out_amounts[0] = in_amounts[0];
-		out_amounts[1] = public_amount + in_amounts[1];
+		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
 
 		// Other output quantities can be randomly generated
 		let mut out_private_keys = [Fq::from(0u64); OUTS];
 		let mut out_public_keys = [Fq::from(0u64); OUTS];
 		let mut out_blindings = [Fq::from(0u64); OUTS];
 		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
 		for i in 0..OUTS {
 			out_blindings[i] = Fq::rand(rng);
 			out_private_keys[i] = Fq::rand(rng);
 			out_chain_ids[i] = Fq::rand(rng);
 			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
 		}
 
-		// // Public data
-		// let nullifier_hash = poseidon_native.hash_two(&nullifier,
-		// &nullifier).unwrap(); let leaf_hash =
-		// poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
 
-		// // Create a tree whose leaves are already populated with 2^HEIGHT - 1
-		// random // scalars, then add leaf_hash as the final leaf
-		// const HEIGHT: usize = 6usize;
-		// let last_index = 1 << (HEIGHT - 1) - 1;
-		// let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-		// for i in 0..last_index {
-		// 	leaves[i] = Fq::rand(rng);
-		// }
-		// leaves[last_index] = leaf_hash;
-		// let tree = SparseMerkleTree::<Fq, PoseidonBn254,
-		// HEIGHT>::new_sequential( 	&leaves,
-		// 	&poseidon_native,
-		// 	&[0u8; 32],
-		// )
-		// .unwrap();
-
-		// let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		// roots[0] = tree.root();
-
-		// // Path
-		// let path = tree.generate_membership_proof(last_index as u64);
-
-		// // Create VariableAnchorCircuit
-		// let mut anchor = VariableAnchorCircuit::<
-		// 	Bn254Fr,
-		// 	JubjubParameters,
-		// 	PoseidonGadget,
-		// 	HEIGHT,
-		// 	BRIDGE_SIZE,
-		// 	INS,
-		// 	OUTS,
-		// >::new(
-		// 	chain_id,
-		// 	secret,
-		// 	nullifier,
-		// 	nullifier_hash,
-		// 	path,
-		// 	roots,
-		// 	arbitrary_data,
-		// 	poseidon_native,
-		// );
-
-		// let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut anchor, 1
-		// << 17); assert!(res.is_ok(), "{:?}", res.err().unwrap());
+		let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut circuit, 1 << 16);
+		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 
 	// #[test]
