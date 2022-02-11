@@ -7,3 +7,5 @@ pub mod common;
 pub mod mixer;
 
 pub mod vanchor;
+
+pub mod utxo;

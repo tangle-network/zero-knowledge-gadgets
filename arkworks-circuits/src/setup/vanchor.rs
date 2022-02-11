@@ -1,18 +1,19 @@
+use super::utxo::Utxo;
 use crate::{
 	circuit::vanchor::VAnchorCircuit as VACircuit,
 	setup::common::{
 		LeafCRHGadget, PoseidonCRH_x5_2, PoseidonCRH_x5_2Gadget, PoseidonCRH_x5_3Gadget,
-		PoseidonCRH_x5_4, TreeConfig_x5, Tree_x5,
+		TreeConfig_x5, Tree_x5,
 	},
 };
 use ark_bn254::Fr as Bn254Fr;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::{error::Error as ArkError, rand::RngCore, rc::Rc, string::ToString, vec::Vec};
+use ark_std::{rand::RngCore, rc::Rc, vec::Vec};
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
-	leaf::vanchor::{Private as LeafPrivateInput, Public as LeafPublicInput, VAnchorLeaf as Leaf},
+	leaf::vanchor::{Private as LeafPrivateInput, Public as LeafPublicInput},
 	merkle_tree::Path,
 };
 use arkworks_utils::{
@@ -36,91 +37,6 @@ pub fn get_hash_params<F: PrimeField>(
 		setup_params_x5_4::<F>(curve),
 		setup_params_x5_5::<F>(curve),
 	)
-}
-
-#[derive(Debug)]
-pub enum UtxoError {
-	NullifierNotCalculated,
-}
-
-impl core::fmt::Display for UtxoError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		let msg = match self {
-			UtxoError::NullifierNotCalculated => "Nullifier not calculated".to_string(),
-		};
-		write!(f, "{}", msg)
-	}
-}
-
-impl ArkError for UtxoError {}
-
-#[derive(Clone, Copy)]
-pub struct Utxo<F: PrimeField> {
-	pub chain_id: F,
-	pub amount: F,
-	pub keypair: Keypair<F, PoseidonCRH_x5_2<F>>,
-	pub leaf_private: LeafPrivateInput<F>,
-	pub leaf_public: LeafPublicInput<F>,
-	pub index: Option<F>,
-	pub nullifier: Option<F>,
-	pub commitment: F,
-}
-
-impl<F: PrimeField> Utxo<F> {
-	pub fn new<R: RngCore>(
-		chain_id: F,
-		amount: F,
-		index: Option<F>,
-		private_key: Option<F>,
-		blinding: Option<F>,
-		params2: &PoseidonParameters<F>,
-		params4: &PoseidonParameters<F>,
-		params5: &PoseidonParameters<F>,
-		rng: &mut R,
-	) -> Result<Self, Error> {
-		let blinding = blinding.unwrap_or(F::rand(rng));
-		let private_input = LeafPrivateInput::<F>::new(amount, blinding);
-		let public_input = LeafPublicInput::<F>::new(chain_id);
-
-		let keypair = Keypair::new(private_key.unwrap_or(F::rand(rng)));
-		let pub_key = keypair.public_key(params2)?;
-
-		let leaf = Leaf::<F, PoseidonCRH_x5_4<F>>::create_leaf(
-			&private_input,
-			&public_input,
-			&pub_key,
-			&params5,
-		)?;
-
-		let nullifier = if index.is_some() {
-			let i = index.unwrap();
-
-			let signature = keypair.signature(&leaf, &i, params4)?;
-
-			let nullifier =
-				Leaf::<_, PoseidonCRH_x5_4<F>>::create_nullifier(&signature, &leaf, &params4, &i)?;
-
-			Some(nullifier)
-		} else {
-			None
-		};
-
-		Ok(Self {
-			chain_id,
-			amount,
-			keypair,
-			leaf_private: private_input,
-			leaf_public: public_input,
-			index,
-			nullifier,
-			commitment: leaf,
-		})
-	}
-
-	pub fn get_nullifier(&self) -> Result<F, Error> {
-		self.nullifier
-			.ok_or(UtxoError::NullifierNotCalculated.into())
-	}
 }
 
 #[derive(Clone)]
