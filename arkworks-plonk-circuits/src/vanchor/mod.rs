@@ -197,7 +197,7 @@ where
 				add_public_input_variable(composer, self.in_nullifier_hashes[i]);
 			nullifier_hashes.push(in_nullifier_hash_i);
 
-			// Computing the public key, which is done, just by hashing the private key
+			// Computing the public key, which is done just by hashing the private key
 			let calc_public_key = pk_hasher_gadget.hash(composer, &[in_private_key_i])?;
 
 			// Computing the leaf
@@ -306,17 +306,10 @@ mod test {
 	use std::marker::PhantomData;
 
 	use super::VariableAnchorCircuit;
-	use crate::{poseidon::poseidon::PoseidonGadget, utils::gadget_tester};
-	use ark_bn254::{Bn254, Fr as Bn254Fr};
+	use crate::{poseidon::poseidon::PoseidonGadget, utils::prove_then_verify};
+	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
-	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{
-		kzg10::{self, UniversalParams},
-		sonic_pc::{self, SonicKZG10},
-		PolynomialCommitment,
-	};
-	use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 	use ark_std::test_rng;
 	use arkworks_gadgets::{
 		ark_std::UniformRand,
@@ -326,10 +319,7 @@ mod test {
 	use arkworks_utils::utils::common::{
 		setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
 	};
-	use plonk_core::{
-		prelude::*,
-		proof_system::{Prover, Verifier},
-	};
+	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
 
@@ -359,6 +349,15 @@ mod test {
 			poseidon_native5,
 		]
 	}
+
+	// Useful to know the order of public inputs in this circuit:
+	// let public_inputs = vec![public_amount, public_chain_id, arbitrary_data,
+	// in_nullifier_hashes[0],  in_nullifier_hashes[0], -in_root_set[0],
+	// -in_root_set[1], in_nullifier_hashes[1], in_nullifier_hashes[1],
+	// -in_root_set[0], -in_root_set[1], out_commitments[0], out_commitments[1]];
+	// ! Note that because of how check_set_membership is written the public input
+	// values are actually (-1)*root_hash, not root hash !
+
 	#[test]
 	fn should_verify_correct_vanchor_plonk() {
 		let rng = &mut test_rng();
@@ -485,13 +484,19 @@ mod test {
 			poseidon_native5,
 		);
 
-		let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut circuit, 1 << 16);
-		assert!(res.is_ok(), "{:?}", res.err().unwrap());
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 17,
+			None, // Use None argument to give verifier the same public input data
+		);
+		match res {
+			Ok(()) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+		};
 	}
 
-	// TODO: the `should_panic` is not preferred, write an improved gadget tester
-	// instead
-	#[should_panic(expected = "assertion failed")]
+	// TODO: Actually this should be done by giving verifier different root set public input
 	#[test]
 	fn should_fail_with_invalid_root_plonk() {
 		let rng = &mut test_rng();
@@ -621,19 +626,20 @@ mod test {
 			poseidon_native5,
 		);
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = circuit.gadget(&mut composer);
-		composer.check_circuit_satisfied();
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 19,
+			None,
+		);
 
-		// TODO: Preferred would be to use gadget_tester and match the error to
-		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
-		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
-		// res.err().unwrap());
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
 	}
 
-	// TODO: the `should_panic` is not preferred, write an improved gadget tester
-	// instead
-	#[should_panic(expected = "assertion failed")]
 	#[test]
 	fn should_fail_with_wrong_secret_plonk() {
 		let rng = &mut test_rng();
@@ -763,19 +769,20 @@ mod test {
 			poseidon_native5,
 		);
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = circuit.gadget(&mut composer);
-		composer.check_circuit_satisfied();
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 19,
+			None,
+		);
 
-		// TODO: Preferred would be to use gadget_tester and match the error to
-		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
-		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
-		// res.err().unwrap());
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
 	}
 
-	// TODO: the `should_panic` is not preferred, write an improved gadget tester
-	// instead
-	#[should_panic(expected = "assertion failed")]
 	#[test]
 	fn should_fail_with_wrong_nullifier_plonk() {
 		let rng = &mut test_rng();
@@ -843,9 +850,6 @@ mod test {
 			}
 		}
 
-		// Change the first nullifier something incorrect
-		in_nullifier_hashes[0] = Fq::from(0u32);
-
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
 		let mut out_amounts = [Fq::from(0u64); OUTS];
@@ -905,19 +909,36 @@ mod test {
 			poseidon_native5,
 		);
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = circuit.gadget(&mut composer);
-		composer.check_circuit_satisfied();
+		let verifier_public_inputs = vec![
+			public_amount,
+			public_chain_id,
+			arbitrary_data,
+			in_nullifier_hashes[0].double(), // Give the verifier a different nullifier hash here
+			in_nullifier_hashes[0],
+			-in_root_set[0],
+			-in_root_set[1],
+			in_nullifier_hashes[1],
+			in_nullifier_hashes[1],
+			-in_root_set[0],
+			-in_root_set[1],
+			out_commitments[0],
+			out_commitments[1],
+		];
 
-		// TODO: Preferred would be to use gadget_tester and match the error to
-		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
-		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
-		// res.err().unwrap());
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 19,
+			Some(verifier_public_inputs),
+		);
+
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
 	}
 
-	// TODO: the `should_panic` is not preferred, write an improved gadget tester
-	// instead
-	#[should_panic(expected = "assertion failed")]
 	#[test]
 	fn should_fail_with_wrong_path_plonk() {
 		let rng = &mut test_rng();
@@ -1048,20 +1069,20 @@ mod test {
 			poseidon_native5,
 		);
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = circuit.gadget(&mut composer);
-		composer.check_circuit_satisfied();
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 19,
+			None,
+		);
 
-		// TODO: Preferred would be to use gadget_tester and match the error to
-		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
-		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
-		// res.err().unwrap());
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
 	}
 
-	// THIS TEST DOESN"T WORK YET: NEED TO SEPARATE OUT PROOF FROM VERIFICATION
-	// TODO: the `should_panic` is not preferred, write an improved gadget tester
-	// instead
-	#[should_panic(expected = "assertion failed")]
 	#[test]
 	fn should_fail_with_wrong_arbitrary_data_plonk() {
 		let rng = &mut test_rng();
@@ -1072,7 +1093,7 @@ mod test {
 		// Randomly generated public inputs
 		let public_amount = Fq::rand(rng);
 		let public_chain_id = Fq::rand(rng);
-		let mut arbitrary_data = Fq::rand(rng);
+		let arbitrary_data = Fq::rand(rng);
 
 		// Randomly generated private inputs
 		// Initialize arrays
@@ -1128,9 +1149,6 @@ mod test {
 				in_root_set[i] = merkle_tree.root();
 			}
 		}
-
-		// Change the arbitrary data to something incorrect
-		arbitrary_data = Fq::from(0u32);
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1191,134 +1209,33 @@ mod test {
 			poseidon_native5,
 		);
 
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = circuit.gadget(&mut composer);
-		composer.check_circuit_satisfied();
+		let verifier_public_inputs = vec![
+			public_amount,
+			public_chain_id,
+			arbitrary_data.double(), // Give the verifier different arbitrary data
+			in_nullifier_hashes[0],
+			in_nullifier_hashes[0],
+			-in_root_set[0],
+			-in_root_set[1],
+			in_nullifier_hashes[1],
+			in_nullifier_hashes[1],
+			-in_root_set[0],
+			-in_root_set[1],
+			out_commitments[0],
+			out_commitments[1],
+		];
 
-		// TODO: Preferred would be to use gadget_tester and match the error to
-		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
-		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
-		// res.err().unwrap());
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 19,
+			Some(verifier_public_inputs),
+		);
+
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
 	}
-
-	// #[test]
-	// fn should_fail_with_wrong_arbitrary_data_plonk() {
-	// 	let rng = &mut test_rng();
-	// 	let curve = Curve::Bn254;
-
-	// 	let params = setup_params_x5_3(curve);
-	// 	let poseidon_native = PoseidonBn254 { params };
-
-	// 	// Randomly generated secrets
-	// 	let secret = Fq::rand(rng);
-	// 	let nullifier = Fq::rand(rng);
-
-	// 	// Public data
-	// 	let chain_id = Fq::from(1u32);
-	// 	let arbitrary_data = Fq::rand(rng);
-	// 	let nullifier_hash = poseidon_native.hash_two(&nullifier,
-	// &nullifier).unwrap(); 	let leaf_hash = poseidon_native.hash_two(&secret,
-	// &nullifier).unwrap();
-
-	// 	// Create a tree whose leaves are already populated with 2^HEIGHT - 1
-	// random 	// scalars, then add leaf_hash as the final leaf
-	// 	const HEIGHT: usize = 6usize;
-	// 	let last_index = 1 << (HEIGHT - 1) - 1;
-	// 	let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-	// 	for i in 0..last_index {
-	// 		leaves[i] = Fq::rand(rng);
-	// 	}
-	// 	leaves[last_index] = leaf_hash;
-	// 	let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-	// 		&leaves,
-	// 		&poseidon_native,
-	// 		&[0u8; 32],
-	// 	)
-	// 	.unwrap();
-	// 	let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-	// 	roots[0] = tree.root();
-
-	// 	// Path
-	// 	let path = tree.generate_membership_proof(last_index as u64);
-
-	// 	// Create VariableAnchorCircuit
-	// 	let mut anchor = VariableAnchorCircuit::<
-	// 		Bn254Fr,
-	// 		JubjubParameters,
-	// 		PoseidonGadget,
-	// 		HEIGHT,
-	// 		BRIDGE_SIZE,
-	// 		INS,
-	// 		OUTS,
-	// 	>::new(
-	// 		chain_id,
-	// 		secret,
-	// 		nullifier,
-	// 		nullifier_hash,
-	// 		path,
-	// 		roots,
-	// 		arbitrary_data,
-	// 		poseidon_native,
-	// 	);
-
-	// 	// Fill a composer to extract the public_inputs
-	// 	let mut composer = StandardComposer::<Bn254Fr, JubjubParameters>::new();
-	// 	let _ = anchor.gadget(&mut composer);
-	// 	let mut public_inputs = composer.construct_dense_pi_vec();
-
-	// 	// Go through proof generation/verification
-	// 	let u_params: UniversalParams<Bn254Fr> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None,
-	// rng).unwrap(); 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover = Prover::<
-	// 			Bn254,
-	// 			JubjubParameters,
-	// 			SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
-	// 		>::new(b"vanchor");
-	// 		prover.key_transcript(b"key", b"additional seed information");
-	// 		// Add gadgets
-	// 		let _ = anchor.gadget(prover.mut_cs());
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck.powers());
-	// 		// Compute Proof
-	// 		prover.prove(&ck.powers()).unwrap()
-	// 	};
-
-	// 	// Verifier's view
-
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"vanchor");
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-	// 	// Add gadgets
-	// 	let _ = anchor.gadget(verifier.mut_cs());
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck.powers()).unwrap();
-
-	// 	// The arbitrary data is stored at index 5 of the public input vector:
-	// 	assert_eq!(arbitrary_data, public_inputs[7]);
-	// 	// Modify the arbitrary data so that prover/verifier disagree
-	// 	public_inputs[5].double_in_place();
-
-	// 	// Verify proof
-	// 	let mut vk_bytes = Vec::new();
-	// 	sonic_pc::VerifierKey::<Bn254Fr>::serialize(&vk, &mut vk_bytes).unwrap();
-	// 	let kzg_vk =
-	// kzg10::VerifierKey::<Bn254Fr>::deserialize(&vk_bytes[..]).unwrap();
-	// 	let res = verifier
-	// 		.verify(&proof, &kzg_vk, &public_inputs)
-	// 		.unwrap_err();
-	// 	match res {
-	// 		Error::ProofVerificationError => (),
-	// 		err => panic!("Unexpected error: {:?}", err),
-	// 	};
-	// }
 }
