@@ -335,80 +335,14 @@ mod test {
 
 	const TREE_HEIGHT: usize = 3;
 	const BRIDGE_SIZE: usize = 2;
-	const INS: usize = 2;
+	const INS: usize = 2; // currently the tests will not work if you change INS
 	const OUTS: usize = 2;
 
-	// 	// Helper to set up the necessary Poseidon hash functions
-	// pub struct VariableAnchorPoseidonSetup<F, P>
-	// where
-	// 	F: PrimeField,
-	// 	P: TEModelParameters<BaseField = F>,
-	// {
-	// 	// These are labeled by their width
-	// 	params2: PoseidonParameters<F>,
-	// 	params3: PoseidonParameters<F>,
-	// 	params4: PoseidonParameters<F>,
-	// 	params5: PoseidonParameters<F>,
-	// }
-
-	// impl<F, P, HG, const N: usize, const M: usize, const INS: usize, const OUTS:
-	// usize> 	VariableAnchorPoseidonSetup<F, P>
-	// where
-	// 	F: PrimeField,
-	// 	P: TEModelParameters<BaseField = F>,
-	// 	HG: FieldHasherGadget<F, P>,
-	// {
-	// 	pub fn setup_circuit(
-	// 		self,
-	// 		public_amount: F,
-	// 		public_chain_id: F,
-	// 		// Input transactions
-	// 		in_amounts: [F; INS],
-	// 		in_blindings: [F; INS],
-	// 		in_nullifier_hashes: [F; INS], // Public
-	// 		in_private_keys: [F; INS],
-	// 		in_paths: [Path<F, HG::Native, N>; INS],
-	// 		in_indices: [F; INS],
-	// 		in_root_set: [F; M],
-	// 		// Output transactions
-	// 		out_amounts: [F; OUTS],
-	// 		out_blindings: [F; OUTS],
-	// 		out_chain_ids: [F; OUTS],
-	// 		out_public_keys: [F; OUTS],
-	// 		out_commitments: [F; OUTS], // Public
-
-	// 		// Arbitrary data to be added to the transcript
-	// 		arbitrary_data: F, // Public
-	// 	) -> VariableAnchorCircuit<F, P, HG, N, M, INS, OUTS> {
-
-	// 		VariableAnchorCircuit::new(
-	// 			public_amount,
-	// 			public_chain_id,
-	// 			in_amounts,
-	// 			in_blindings,
-	// 			in_nullifier_hashes,
-	// 			in_private_keys,
-	// 			in_paths, in_indices,
-	// 			in_root_set,
-	// 			out_amounts,
-	// 			out_blindings,
-	// 			out_chain_ids,
-	// 			out_public_keys,
-	// 			out_commitments,
-	// 			arbitrary_data,
-	// 			public_key_hasher,
-	// 			tree_hasher,
-	// 			signature_hasher,
-	// 			leaf_hasher)
-	// 	}
-	// }
-	#[test]
-	fn should_verify_correct_vanchor_plonk() {
-		let rng = &mut test_rng();
+	// Helper that outputs the hash functions of each width we need.
+	// I have not made this generic over the curve
+	fn make_vanchor_hashers() -> [PoseidonBn254; 4] {
 		let curve = Curve::Bn254;
 
-		// Create Poseidon native hash functions of each width (this could be
-		// encapsulated by a helper)
 		let params2 = setup_params_x5_2::<Fq>(curve);
 		let poseidon_native2 = PoseidonBn254 { params: params2 };
 		let params3 = setup_params_x5_3::<Fq>(curve);
@@ -417,6 +351,20 @@ mod test {
 		let poseidon_native4 = PoseidonBn254 { params: params4 };
 		let params5 = setup_params_x5_5::<Fq>(curve);
 		let poseidon_native5 = PoseidonBn254 { params: params5 };
+
+		[
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		]
+	}
+	#[test]
+	fn should_verify_correct_vanchor_plonk() {
+		let rng = &mut test_rng();
+
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
 
 		// Randomly generated public inputs
 		let public_amount = Fq::rand(rng);
@@ -541,589 +489,717 @@ mod test {
 		assert!(res.is_ok(), "{:?}", res.err().unwrap());
 	}
 
-	// #[test]
-	// fn should_fail_with_invalid_root_plonk() {
-	// 	let rng = &mut test_rng();
-	// 	let curve = Curve::Bn254;
+	// TODO: the `should_panic` is not preferred, write an improved gadget tester
+	// instead
+	#[should_panic(expected = "assertion failed")]
+	#[test]
+	fn should_fail_with_invalid_root_plonk() {
+		let rng = &mut test_rng();
 
-	// 	let params = setup_params_x5_3(curve);
-	// 	let poseidon_native = PoseidonBn254 { params };
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
 
-	// 	// Randomly generated secrets
-	// 	let secret = Fq::rand(rng);
-	// 	let nullifier = Fq::rand(rng);
+		// Randomly generated public inputs
+		let public_amount = Fq::rand(rng);
+		let public_chain_id = Fq::rand(rng);
+		let arbitrary_data = Fq::rand(rng);
 
-	// 	// Public data
-	// 	let chain_id = Fq::from(1u32);
-	// 	let arbitrary_data = Fq::rand(rng);
-	// 	let nullifier_hash = poseidon_native.hash_two(&nullifier,
-	// &nullifier).unwrap(); 	let leaf_hash = poseidon_native.hash_two(&secret,
-	// &nullifier).unwrap();
+		// Randomly generated private inputs
+		// Initialize arrays
+		let mut in_private_keys = [Fq::from(0u64); INS];
+		let mut in_blindings = [Fq::from(0u64); INS];
+		let mut in_amounts = [Fq::from(0u64); INS];
+		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-	// 	// Create a tree whose leaves are already populated with 2^HEIGHT - 1
-	// random 	// scalars, then add leaf_hash as the final leaf
-	// 	const HEIGHT: usize = 6usize;
-	// 	let last_index = 1 << (HEIGHT - 1) - 1;
-	// 	let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-	// 	for i in 0..last_index {
-	// 		leaves[i] = Fq::rand(rng);
-	// 	}
-	// 	leaves[last_index] = leaf_hash;
-	// 	let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-	// 		&leaves,
-	// 		&poseidon_native,
-	// 		&[0u8; 32],
-	// 	)
-	// 	.unwrap();
-	// 	let mut root = tree.root();
-	// 	let bad_root = root.double();
-	// 	let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-	// 	roots[0] = bad_root;
+		// I don't like this default path thing -- how can I initalize the in_paths
+		// array?
+		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
+			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
+			_marker: PhantomData,
+		};
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
+		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+		// We'll say the index of each input is index:
+		let index = 0u64;
+		let in_indices = [Fq::from(index); INS];
+		// Populate with random numbers
+		for i in 0..INS {
+			in_private_keys[i] = Fq::rand(rng);
+			in_blindings[i] = Fq::rand(rng);
+			// Multiplying by 1/20 prevents the amounts from summing to more than
+			// the size of the field (at least for fewer than 20 inputs)
+			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-	// 	// Path
-	// 	let path = tree.generate_membership_proof(last_index as u64);
+			// Calculate what the input nullifier hashes would be based on these:
+			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
+			let leaf = poseidon_native5
+				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
+				.unwrap();
+			let signature = poseidon_native4
+				.hash(&[in_private_keys[i], leaf, in_indices[i]])
+				.unwrap();
+			in_nullifier_hashes[i] = poseidon_native4
+				.hash(&[leaf, in_indices[i], signature])
+				.unwrap();
 
-	// 	// Create VariableAnchorCircuit
-	// 	let mut anchor = VariableAnchorCircuit::<
-	// 		Bn254Fr,
-	// 		JubjubParameters,
-	// 		PoseidonGadget,
-	// 		HEIGHT,
-	// 		BRIDGE_SIZE,
-	// 		INS,
-	// 		OUTS,
-	// 	>::new(
-	// 		chain_id,
-	// 		secret,
-	// 		nullifier,
-	// 		nullifier_hash,
-	// 		path,
-	// 		roots,
-	// 		arbitrary_data,
-	// 		poseidon_native,
-	// 	);
+			// Simulate a Merkle tree for each input
+			let default_leaf = [0u8; 32];
+			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+				&[leaf],
+				&poseidon_native3,
+				&default_leaf,
+			)
+			.unwrap();
+			in_paths[i] = merkle_tree.generate_membership_proof(index);
 
-	// 	// Fill a composer to extract the public_inputs
-	// 	let mut composer = StandardComposer::<Bn254Fr, JubjubParameters>::new();
-	// 	let _ = anchor.gadget(&mut composer);
-	// 	let public_inputs = composer.construct_dense_pi_vec();
+			// Fix this for INS > BRIDGE_SIZE
+			if i < BRIDGE_SIZE {
+				in_root_set[i] = merkle_tree.root();
+			}
+		}
 
-	// 	// Go through proof generation/verification
-	// 	let u_params: UniversalParams<Bn254> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None,
-	// rng).unwrap(); 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover = Prover::<
-	// 			Bn254,
-	// 			JubjubParameters,
-	// 			SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
-	// 		>::new(b"vanchor");
-	// 		prover.key_transcript(b"key", b"additional seed information");
-	// 		// Add gadgets
-	// 		let _ = anchor.gadget(prover.mut_cs());
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck.powers());
-	// 		// Compute Proof
-	// 		prover.prove(&ck.powers()).unwrap()
-	// 	};
+		// Change the first root to something incorrect
+		in_root_set[0] = Fq::from(0u32);
 
-	// 	// Verifier's view
+		// Output amounts cannot be randomly generated since they may then exceed input
+		// amount.
+		let mut out_amounts = [Fq::from(0u64); OUTS];
+		out_amounts[0] = in_amounts[0];
+		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
 
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"vanchor");
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-	// 	// Add gadgets
-	// 	let _ = anchor.gadget(verifier.mut_cs());
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck.powers()).unwrap();
+		// Other output quantities can be randomly generated
+		let mut out_private_keys = [Fq::from(0u64); OUTS];
+		let mut out_public_keys = [Fq::from(0u64); OUTS];
+		let mut out_blindings = [Fq::from(0u64); OUTS];
+		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
+		for i in 0..OUTS {
+			out_blindings[i] = Fq::rand(rng);
+			out_private_keys[i] = Fq::rand(rng);
+			out_chain_ids[i] = Fq::rand(rng);
+			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
+		}
 
-	// 	// Verify proof
-	// 	let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
-	// 	match res {
-	// 		Error::ProofVerificationError => (),
-	// 		err => panic!("Unexpected error: {:?}", err),
-	// 	};
-	// }
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
 
-	// #[test]
-	// fn should_fail_with_wrong_secret_plonk() {
-	// 	let rng = &mut test_rng();
-	// 	let curve = Curve::Bn254;
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = circuit.gadget(&mut composer);
+		composer.check_circuit_satisfied();
 
-	// 	let params = setup_params_x5_3(curve);
-	// 	let poseidon_native = PoseidonBn254 { params };
+		// TODO: Preferred would be to use gadget_tester and match the error to
+		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
+		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
+		// res.err().unwrap());
+	}
 
-	// 	// Randomly generated secrets
-	// 	let secret = Fq::rand(rng);
-	// 	let nullifier = Fq::rand(rng);
+	// TODO: the `should_panic` is not preferred, write an improved gadget tester
+	// instead
+	#[should_panic(expected = "assertion failed")]
+	#[test]
+	fn should_fail_with_wrong_secret_plonk() {
+		let rng = &mut test_rng();
 
-	// 	// Public data
-	// 	let chain_id = Fq::from(1u32);
-	// 	let arbitrary_data = Fq::rand(rng);
-	// 	let nullifier_hash = poseidon_native.hash_two(&nullifier,
-	// &nullifier).unwrap(); 	let leaf_hash = poseidon_native.hash_two(&secret,
-	// &nullifier).unwrap();
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
 
-	// 	// Create a tree whose leaves are already populated with 2^HEIGHT - 1
-	// random 	// scalars, then add leaf_hash as the final leaf
-	// 	const HEIGHT: usize = 6usize;
-	// 	let last_index = 1 << (HEIGHT - 1) - 1;
-	// 	let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-	// 	for i in 0..last_index {
-	// 		leaves[i] = Fq::rand(rng);
-	// 	}
-	// 	leaves[last_index] = leaf_hash;
-	// 	let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-	// 		&leaves,
-	// 		&poseidon_native,
-	// 		&[0u8; 32],
-	// 	)
-	// 	.unwrap();
-	// 	let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-	// 	roots[0] = tree.root();
-	// 	// Path
-	// 	let path = tree.generate_membership_proof(last_index as u64);
+		// Randomly generated public inputs
+		let public_amount = Fq::rand(rng);
+		let public_chain_id = Fq::rand(rng);
+		let arbitrary_data = Fq::rand(rng);
 
-	// 	// An incorrect secret value to use below
-	// 	let bad_secret = secret.double();
+		// Randomly generated private inputs
+		// Initialize arrays
+		let mut in_private_keys = [Fq::from(0u64); INS];
+		let mut in_blindings = [Fq::from(0u64); INS];
+		let mut in_amounts = [Fq::from(0u64); INS];
+		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-	// 	// Create VariableAnchorCircuit
-	// 	let mut anchor = VariableAnchorCircuit::<
-	// 		Bn254Fr,
-	// 		JubjubParameters,
-	// 		PoseidonGadget,
-	// 		HEIGHT,
-	// 		BRIDGE_SIZE,
-	// 		INS,
-	// 		OUTS,
-	// 	>::new(
-	// 		chain_id,
-	// 		bad_secret,
-	// 		nullifier,
-	// 		nullifier_hash,
-	// 		path,
-	// 		roots,
-	// 		arbitrary_data,
-	// 		poseidon_native,
-	// 	);
+		// I don't like this default path thing -- how can I initalize the in_paths
+		// array?
+		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
+			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
+			_marker: PhantomData,
+		};
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
+		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+		// We'll say the index of each input is index:
+		let index = 0u64;
+		let in_indices = [Fq::from(index); INS];
+		// Populate with random numbers
+		for i in 0..INS {
+			in_private_keys[i] = Fq::rand(rng);
+			in_blindings[i] = Fq::rand(rng);
+			// Multiplying by 1/20 prevents the amounts from summing to more than
+			// the size of the field (at least for fewer than 20 inputs)
+			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-	// 	// Fill a composer to extract the public_inputs
-	// 	let mut composer = StandardComposer::<Bn254Fr, JubjubParameters>::new();
-	// 	let _ = anchor.gadget(&mut composer);
-	// 	let public_inputs = composer.construct_dense_pi_vec();
+			// Calculate what the input nullifier hashes would be based on these:
+			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
+			let leaf = poseidon_native5
+				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
+				.unwrap();
+			let signature = poseidon_native4
+				.hash(&[in_private_keys[i], leaf, in_indices[i]])
+				.unwrap();
+			in_nullifier_hashes[i] = poseidon_native4
+				.hash(&[leaf, in_indices[i], signature])
+				.unwrap();
 
-	// 	// Go through proof generation/verification
-	// 	let u_params: UniversalParams<Bn254Fr> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None,
-	// rng).unwrap(); 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover = Prover::<
-	// 			Bn254,
-	// 			JubjubParameters,
-	// 			SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
-	// 		>::new(b"vanchor");
-	// 		prover.key_transcript(b"key", b"additional seed information");
-	// 		// Add gadgets
-	// 		let _ = anchor.gadget(prover.mut_cs());
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck.powers());
-	// 		// Compute Proof
-	// 		prover.prove(&ck.powers()).unwrap()
-	// 	};
+			// Simulate a Merkle tree for each input
+			let default_leaf = [0u8; 32];
+			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+				&[leaf],
+				&poseidon_native3,
+				&default_leaf,
+			)
+			.unwrap();
+			in_paths[i] = merkle_tree.generate_membership_proof(index);
 
-	// 	// Verifier's view
+			// Fix this for INS > BRIDGE_SIZE
+			if i < BRIDGE_SIZE {
+				in_root_set[i] = merkle_tree.root();
+			}
+		}
 
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"vanchor");
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-	// 	// Add gadgets
-	// 	let _ = anchor.gadget(verifier.mut_cs());
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck.powers()).unwrap();
+		// Change the first secret to something incorrect
+		in_private_keys[0] = Fq::from(0u32);
 
-	// 	// Verify proof
-	// 	let mut vk_bytes = Vec::new();
-	// 	sonic_pc::VerifierKey::<Bn254Fr>::serialize(&vk, &mut vk_bytes).unwrap();
-	// 	let kzg_vk =
-	// kzg10::VerifierKey::<Bn254Fr>::deserialize(&vk_bytes[..]).unwrap();
-	// 	let res = verifier
-	// 		.verify(&proof, &kzg_vk, &public_inputs)
-	// 		.unwrap_err();
-	// 	match res {
-	// 		Error::ProofVerificationError => (),
-	// 		err => panic!("Unexpected error: {:?}", err),
-	// 	};
-	// }
+		// Output amounts cannot be randomly generated since they may then exceed input
+		// amount.
+		let mut out_amounts = [Fq::from(0u64); OUTS];
+		out_amounts[0] = in_amounts[0];
+		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
 
-	// #[test]
-	// fn should_fail_with_wrong_nullifier_plonk() {
-	// 	let rng = &mut test_rng();
-	// 	let curve = Curve::Bn254;
+		// Other output quantities can be randomly generated
+		let mut out_private_keys = [Fq::from(0u64); OUTS];
+		let mut out_public_keys = [Fq::from(0u64); OUTS];
+		let mut out_blindings = [Fq::from(0u64); OUTS];
+		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
+		for i in 0..OUTS {
+			out_blindings[i] = Fq::rand(rng);
+			out_private_keys[i] = Fq::rand(rng);
+			out_chain_ids[i] = Fq::rand(rng);
+			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
+		}
 
-	// 	let params = setup_params_x5_3(curve);
-	// 	let poseidon_native = PoseidonBn254 { params };
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
 
-	// 	// Randomly generated secrets
-	// 	let secret = Fq::rand(rng);
-	// 	let nullifier = Fq::rand(rng);
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = circuit.gadget(&mut composer);
+		composer.check_circuit_satisfied();
 
-	// 	// Public data
-	// 	let chain_id = Fq::from(1u32);
-	// 	let arbitrary_data = Fq::rand(rng);
-	// 	let nullifier_hash = poseidon_native.hash_two(&nullifier,
-	// &nullifier).unwrap(); 	let leaf_hash = poseidon_native.hash_two(&secret,
-	// &nullifier).unwrap();
+		// TODO: Preferred would be to use gadget_tester and match the error to
+		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
+		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
+		// res.err().unwrap());
+	}
 
-	// 	// Create a tree whose leaves are already populated with 2^HEIGHT - 1
-	// random 	// scalars, then add leaf_hash as the final leaf
-	// 	const HEIGHT: usize = 6usize;
-	// 	let last_index = 1 << (HEIGHT - 1) - 1;
-	// 	let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-	// 	for i in 0..last_index {
-	// 		leaves[i] = Fq::rand(rng);
-	// 	}
-	// 	leaves[last_index] = leaf_hash;
-	// 	let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-	// 		&leaves,
-	// 		&poseidon_native,
-	// 		&[0u8; 32],
-	// 	)
-	// 	.unwrap();
-	// 	let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-	// 	roots[0] = tree.root();
+	// TODO: the `should_panic` is not preferred, write an improved gadget tester
+	// instead
+	#[should_panic(expected = "assertion failed")]
+	#[test]
+	fn should_fail_with_wrong_nullifier_plonk() {
+		let rng = &mut test_rng();
 
-	// 	// Path
-	// 	let path = tree.generate_membership_proof(last_index as u64);
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
 
-	// 	// An incorrect secret value to use below
-	// 	let bad_nullifier = nullifier.double();
+		// Randomly generated public inputs
+		let public_amount = Fq::rand(rng);
+		let public_chain_id = Fq::rand(rng);
+		let arbitrary_data = Fq::rand(rng);
 
-	// 	// Create VariableAnchorCircuit
-	// 	let mut anchor = VariableAnchorCircuit::<
-	// 		Bn254Fr,
-	// 		JubjubParameters,
-	// 		PoseidonGadget,
-	// 		HEIGHT,
-	// 		BRIDGE_SIZE,
-	// 		INS,
-	// 		OUTS,
-	// 	>::new(
-	// 		chain_id,
-	// 		secret,
-	// 		bad_nullifier,
-	// 		nullifier_hash,
-	// 		path,
-	// 		roots,
-	// 		arbitrary_data,
-	// 		poseidon_native,
-	// 	);
+		// Randomly generated private inputs
+		// Initialize arrays
+		let mut in_private_keys = [Fq::from(0u64); INS];
+		let mut in_blindings = [Fq::from(0u64); INS];
+		let mut in_amounts = [Fq::from(0u64); INS];
+		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-	// 	// Fill a composer to extract the public_inputs
-	// 	let mut composer = StandardComposer::<Bn254Fr, JubjubParameters>::new();
-	// 	let _ = anchor.gadget(&mut composer);
-	// 	let public_inputs = composer.construct_dense_pi_vec();
+		// I don't like this default path thing -- how can I initalize the in_paths
+		// array?
+		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
+			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
+			_marker: PhantomData,
+		};
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
+		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+		// We'll say the index of each input is index:
+		let index = 0u64;
+		let in_indices = [Fq::from(index); INS];
+		// Populate with random numbers
+		for i in 0..INS {
+			in_private_keys[i] = Fq::rand(rng);
+			in_blindings[i] = Fq::rand(rng);
+			// Multiplying by 1/20 prevents the amounts from summing to more than
+			// the size of the field (at least for fewer than 20 inputs)
+			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-	// 	// Go through proof generation/verification
-	// 	let u_params: UniversalParams<Bn254Fr> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None,
-	// rng).unwrap(); 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover = Prover::<
-	// 			Bn254,
-	// 			JubjubParameters,
-	// 			SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
-	// 		>::new(b"vanchor");
-	// 		prover.key_transcript(b"key", b"additional seed information");
-	// 		// Add gadgets
-	// 		let _ = anchor.gadget(prover.mut_cs());
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck.powers());
-	// 		// Compute Proof
-	// 		prover.prove(&ck.powers()).unwrap()
-	// 	};
+			// Calculate what the input nullifier hashes would be based on these:
+			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
+			let leaf = poseidon_native5
+				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
+				.unwrap();
+			let signature = poseidon_native4
+				.hash(&[in_private_keys[i], leaf, in_indices[i]])
+				.unwrap();
+			in_nullifier_hashes[i] = poseidon_native4
+				.hash(&[leaf, in_indices[i], signature])
+				.unwrap();
 
-	// 	// Verifier's view
+			// Simulate a Merkle tree for each input
+			let default_leaf = [0u8; 32];
+			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+				&[leaf],
+				&poseidon_native3,
+				&default_leaf,
+			)
+			.unwrap();
+			in_paths[i] = merkle_tree.generate_membership_proof(index);
 
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"vanchor");
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-	// 	// Add gadgets
-	// 	let _ = anchor.gadget(verifier.mut_cs());
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck.powers()).unwrap();
+			// Fix this for INS > BRIDGE_SIZE
+			if i < BRIDGE_SIZE {
+				in_root_set[i] = merkle_tree.root();
+			}
+		}
 
-	// 	// Verify proof
-	// 	let mut vk_bytes = Vec::new();
-	// 	sonic_pc::VerifierKey::<Bn254Fr>::serialize(&vk, &mut vk_bytes).unwrap();
-	// 	let kzg_vk =
-	// kzg10::VerifierKey::<Bn254Fr>::deserialize(&vk_bytes[..]).unwrap();
-	// 	let res = verifier
-	// 		.verify(&proof, &kzg_vk, &public_inputs)
-	// 		.unwrap_err();
-	// 	match res {
-	// 		Error::ProofVerificationError => (),
-	// 		err => panic!("Unexpected error: {:?}", err),
-	// 	};
-	// }
+		// Change the first nullifier something incorrect
+		in_nullifier_hashes[0] = Fq::from(0u32);
 
-	// #[test]
-	// fn should_fail_with_wrong_path_plonk() {
-	// 	let rng = &mut test_rng();
-	// 	let curve = Curve::Bn254;
+		// Output amounts cannot be randomly generated since they may then exceed input
+		// amount.
+		let mut out_amounts = [Fq::from(0u64); OUTS];
+		out_amounts[0] = in_amounts[0];
+		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
 
-	// 	let params = setup_params_x5_3(curve);
-	// 	let poseidon_native = PoseidonBn254 { params };
+		// Other output quantities can be randomly generated
+		let mut out_private_keys = [Fq::from(0u64); OUTS];
+		let mut out_public_keys = [Fq::from(0u64); OUTS];
+		let mut out_blindings = [Fq::from(0u64); OUTS];
+		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
+		for i in 0..OUTS {
+			out_blindings[i] = Fq::rand(rng);
+			out_private_keys[i] = Fq::rand(rng);
+			out_chain_ids[i] = Fq::rand(rng);
+			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
+		}
 
-	// 	// Randomly generated secrets
-	// 	let secret = Fq::rand(rng);
-	// 	let nullifier = Fq::rand(rng);
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
 
-	// 	// Public data
-	// 	let chain_id = Fq::from(1u32);
-	// 	let arbitrary_data = Fq::rand(rng);
-	// 	let nullifier_hash = poseidon_native.hash_two(&nullifier,
-	// &nullifier).unwrap(); 	let leaf_hash = poseidon_native.hash_two(&secret,
-	// &nullifier).unwrap();
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = circuit.gadget(&mut composer);
+		composer.check_circuit_satisfied();
 
-	// 	// Create a tree whose leaves are already populated with 2^HEIGHT - 1
-	// random 	// scalars, then add leaf_hash as the final leaf
-	// 	const HEIGHT: usize = 6usize;
-	// 	let last_index = 1 << (HEIGHT - 1) - 1;
-	// 	let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-	// 	for i in 0..last_index {
-	// 		leaves[i] = Fq::rand(rng);
-	// 	}
-	// 	leaves[last_index] = leaf_hash;
-	// 	let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-	// 		&leaves,
-	// 		&poseidon_native,
-	// 		&[0u8; 32],
-	// 	)
-	// 	.unwrap();
-	// 	let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-	// 	roots[0] = tree.root();
+		// TODO: Preferred would be to use gadget_tester and match the error to
+		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
+		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
+		// res.err().unwrap());
+	}
 
-	// 	// An incorrect path to use below
-	// 	let bad_path = tree.generate_membership_proof((last_index as u64) - 1);
+	// TODO: the `should_panic` is not preferred, write an improved gadget tester
+	// instead
+	#[should_panic(expected = "assertion failed")]
+	#[test]
+	fn should_fail_with_wrong_path_plonk() {
+		let rng = &mut test_rng();
 
-	// 	// Create VariableAnchorCircuit
-	// 	let mut anchor = VariableAnchorCircuit::<
-	// 		Bn254Fr,
-	// 		JubjubParameters,
-	// 		PoseidonGadget,
-	// 		HEIGHT,
-	// 		BRIDGE_SIZE,
-	// 		INS,
-	// 		OUTS,
-	// 	>::new(
-	// 		chain_id,
-	// 		secret,
-	// 		nullifier,
-	// 		nullifier_hash,
-	// 		bad_path,
-	// 		roots,
-	// 		arbitrary_data,
-	// 		poseidon_native,
-	// 	);
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
 
-	// 	// Fill a composer to extract the public_inputs
-	// 	let mut composer = StandardComposer::<Bn254Fr, JubjubParameters>::new();
-	// 	let _ = anchor.gadget(&mut composer);
-	// 	let public_inputs = composer.construct_dense_pi_vec();
+		// Randomly generated public inputs
+		let public_amount = Fq::rand(rng);
+		let public_chain_id = Fq::rand(rng);
+		let arbitrary_data = Fq::rand(rng);
 
-	// 	// Go through proof generation/verification
-	// 	let u_params: UniversalParams<Bn254Fr> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None,
-	// rng).unwrap(); 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover = Prover::<
-	// 			Bn254,
-	// 			JubjubParameters,
-	// 			SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
-	// 		>::new(b"vanchor");
-	// 		prover.key_transcript(b"key", b"additional seed information");
-	// 		// Add gadgets
-	// 		let _ = anchor.gadget(prover.mut_cs());
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck.powers());
-	// 		// Compute Proof
-	// 		prover.prove(&ck.powers()).unwrap()
-	// 	};
+		// Randomly generated private inputs
+		// Initialize arrays
+		let mut in_private_keys = [Fq::from(0u64); INS];
+		let mut in_blindings = [Fq::from(0u64); INS];
+		let mut in_amounts = [Fq::from(0u64); INS];
+		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-	// 	// Verifier's view
+		// I don't like this default path thing -- how can I initalize the in_paths
+		// array?
+		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
+			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
+			_marker: PhantomData,
+		};
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] =
+			[default_path.clone(), default_path.clone()];
+		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+		// We'll say the index of each input is index:
+		let index = 0u64;
+		let in_indices = [Fq::from(index); INS];
+		// Populate with random numbers
+		for i in 0..INS {
+			in_private_keys[i] = Fq::rand(rng);
+			in_blindings[i] = Fq::rand(rng);
+			// Multiplying by 1/20 prevents the amounts from summing to more than
+			// the size of the field (at least for fewer than 20 inputs)
+			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"vanchor");
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-	// 	// Add gadgets
-	// 	let _ = anchor.gadget(verifier.mut_cs());
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck.powers()).unwrap();
+			// Calculate what the input nullifier hashes would be based on these:
+			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
+			let leaf = poseidon_native5
+				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
+				.unwrap();
+			let signature = poseidon_native4
+				.hash(&[in_private_keys[i], leaf, in_indices[i]])
+				.unwrap();
+			in_nullifier_hashes[i] = poseidon_native4
+				.hash(&[leaf, in_indices[i], signature])
+				.unwrap();
 
-	// 	// Verify proof
-	// 	let mut vk_bytes = Vec::new();
-	// 	sonic_pc::VerifierKey::<Bn254Fr>::serialize(&vk, &mut vk_bytes).unwrap();
-	// 	let kzg_vk =
-	// kzg10::VerifierKey::<Bn254Fr>::deserialize(&vk_bytes[..]).unwrap();
-	// 	let res = verifier
-	// 		.verify(&proof, &kzg_vk, &public_inputs)
-	// 		.unwrap_err();
-	// 	match res {
-	// 		Error::ProofVerificationError => (),
-	// 		err => panic!("Unexpected error: {:?}", err),
-	// 	};
-	// }
+			// Simulate a Merkle tree for each input
+			let default_leaf = [0u8; 32];
+			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+				&[leaf],
+				&poseidon_native3,
+				&default_leaf,
+			)
+			.unwrap();
+			in_paths[i] = merkle_tree.generate_membership_proof(index);
 
-	// #[test]
-	// fn should_fail_with_wrong_nullifier_hash_plonk() {
-	// 	let rng = &mut test_rng();
-	// 	let curve = Curve::Bn254;
+			// Fix this for INS > BRIDGE_SIZE
+			if i < BRIDGE_SIZE {
+				in_root_set[i] = merkle_tree.root();
+			}
+		}
 
-	// 	let params = setup_params_x5_3(curve);
-	// 	let poseidon_native = PoseidonBn254 { params };
+		// Change the first path to something incorrect
+		in_paths[0] = default_path;
 
-	// 	// Randomly generated secrets
-	// 	let secret = Fq::rand(rng);
-	// 	let nullifier = Fq::rand(rng);
+		// Output amounts cannot be randomly generated since they may then exceed input
+		// amount.
+		let mut out_amounts = [Fq::from(0u64); OUTS];
+		out_amounts[0] = in_amounts[0];
+		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
 
-	// 	// Public data
-	// 	let chain_id = Fq::from(1u32);
-	// 	let arbitrary_data = Fq::rand(rng);
-	// 	let nullifier_hash = poseidon_native.hash_two(&nullifier,
-	// &nullifier).unwrap(); 	let leaf_hash = poseidon_native.hash_two(&secret,
-	// &nullifier).unwrap();
+		// Other output quantities can be randomly generated
+		let mut out_private_keys = [Fq::from(0u64); OUTS];
+		let mut out_public_keys = [Fq::from(0u64); OUTS];
+		let mut out_blindings = [Fq::from(0u64); OUTS];
+		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
+		for i in 0..OUTS {
+			out_blindings[i] = Fq::rand(rng);
+			out_private_keys[i] = Fq::rand(rng);
+			out_chain_ids[i] = Fq::rand(rng);
+			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
+		}
 
-	// 	// Create a tree whose leaves are already populated with 2^HEIGHT - 1
-	// random 	// scalars, then add leaf_hash as the final leaf
-	// 	const HEIGHT: usize = 6usize;
-	// 	let last_index = 1 << (HEIGHT - 1) - 1;
-	// 	let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-	// 	for i in 0..last_index {
-	// 		leaves[i] = Fq::rand(rng);
-	// 	}
-	// 	leaves[last_index] = leaf_hash;
-	// 	let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-	// 		&leaves,
-	// 		&poseidon_native,
-	// 		&[0u8; 32],
-	// 	)
-	// 	.unwrap();
-	// 	let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-	// 	roots[0] = tree.root();
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
 
-	// 	// Path
-	// 	let path = tree.generate_membership_proof(last_index as u64);
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = circuit.gadget(&mut composer);
+		composer.check_circuit_satisfied();
 
-	// 	// Incorrect nullifier hash to use below
-	// 	let bad_nullifier_hash = nullifier_hash.double();
+		// TODO: Preferred would be to use gadget_tester and match the error to
+		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
+		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
+		// res.err().unwrap());
+	}
 
-	// 	// Create VariableAnchorCircuit
-	// 	let mut anchor = VariableAnchorCircuit::<
-	// 		Bn254Fr,
-	// 		JubjubParameters,
-	// 		PoseidonGadget,
-	// 		HEIGHT,
-	// 		BRIDGE_SIZE,
-	// 		INS,
-	// 		OUTS,
-	// 	>::new(
-	// 		chain_id,
-	// 		secret,
-	// 		nullifier,
-	// 		bad_nullifier_hash,
-	// 		path,
-	// 		roots,
-	// 		arbitrary_data,
-	// 		poseidon_native,
-	// 	);
+	// THIS TEST DOESN"T WORK YET: NEED TO SEPARATE OUT PROOF FROM VERIFICATION
+	// TODO: the `should_panic` is not preferred, write an improved gadget tester
+	// instead
+	#[should_panic(expected = "assertion failed")]
+	#[test]
+	fn should_fail_with_wrong_arbitrary_data_plonk() {
+		let rng = &mut test_rng();
 
-	// 	// Fill a composer to extract the public_inputs
-	// 	let mut composer = StandardComposer::<Bn254Fr, JubjubParameters>::new();
-	// 	let _ = anchor.gadget(&mut composer);
-	// 	let public_inputs = composer.construct_dense_pi_vec();
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
 
-	// 	// Go through proof generation/verification
-	// 	let u_params: UniversalParams<Bn254Fr> =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None,
-	// rng).unwrap(); 	let proof = {
-	// 		// Create a prover struct
-	// 		let mut prover = Prover::<
-	// 			Bn254,
-	// 			JubjubParameters,
-	// 			SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>,
-	// 		>::new(b"vanchor");
-	// 		prover.key_transcript(b"key", b"additional seed information");
-	// 		// Add gadgets
-	// 		let _ = anchor.gadget(prover.mut_cs());
-	// 		// Commit Key (being lazy with error)
-	// 		let (ck, _) =
-	// 			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 				.unwrap();
-	// 		// Preprocess circuit
-	// 		let _ = prover.preprocess(&ck.powers());
-	// 		// Compute Proof
-	// 		prover.prove(&ck.powers()).unwrap()
-	// 	};
+		// Randomly generated public inputs
+		let public_amount = Fq::rand(rng);
+		let public_chain_id = Fq::rand(rng);
+		let mut arbitrary_data = Fq::rand(rng);
 
-	// 	// Verifier's view
+		// Randomly generated private inputs
+		// Initialize arrays
+		let mut in_private_keys = [Fq::from(0u64); INS];
+		let mut in_blindings = [Fq::from(0u64); INS];
+		let mut in_amounts = [Fq::from(0u64); INS];
+		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-	// 	// Create a Verifier object
-	// 	let mut verifier = Verifier::new(b"vanchor");
-	// 	verifier.key_transcript(b"key", b"additional seed information");
-	// 	// Add gadgets
-	// 	let _ = anchor.gadget(verifier.mut_cs());
-	// 	// Compute Commit and Verifier key
-	// 	let (ck, vk) =
-	// 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18,
-	// 0, None) 			.unwrap();
-	// 	// Preprocess circuit
-	// 	verifier.preprocess(&ck.powers()).unwrap();
+		// I don't like this default path thing -- how can I initalize the in_paths
+		// array?
+		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
+			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
+			_marker: PhantomData,
+		};
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
+		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+		// We'll say the index of each input is index:
+		let index = 0u64;
+		let in_indices = [Fq::from(index); INS];
+		// Populate with random numbers
+		for i in 0..INS {
+			in_private_keys[i] = Fq::rand(rng);
+			in_blindings[i] = Fq::rand(rng);
+			// Multiplying by 1/20 prevents the amounts from summing to more than
+			// the size of the field (at least for fewer than 20 inputs)
+			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-	// 	// Verify proof
-	// 	let mut vk_bytes = Vec::new();
-	// 	sonic_pc::VerifierKey::<Bn254Fr>::serialize(&vk, &mut vk_bytes).unwrap();
-	// 	let kzg_vk =
-	// kzg10::VerifierKey::<Bn254Fr>::deserialize(&vk_bytes[..]).unwrap();
-	// 	let res = verifier
-	// 		.verify(&proof, &kzg_vk, &public_inputs)
-	// 		.unwrap_err();
-	// 	match res {
-	// 		Error::ProofVerificationError => (),
-	// 		err => panic!("Unexpected error: {:?}", err),
-	// 	};
-	// }
+			// Calculate what the input nullifier hashes would be based on these:
+			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
+			let leaf = poseidon_native5
+				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
+				.unwrap();
+			let signature = poseidon_native4
+				.hash(&[in_private_keys[i], leaf, in_indices[i]])
+				.unwrap();
+			in_nullifier_hashes[i] = poseidon_native4
+				.hash(&[leaf, in_indices[i], signature])
+				.unwrap();
+
+			// Simulate a Merkle tree for each input
+			let default_leaf = [0u8; 32];
+			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+				&[leaf],
+				&poseidon_native3,
+				&default_leaf,
+			)
+			.unwrap();
+			in_paths[i] = merkle_tree.generate_membership_proof(index);
+
+			// Fix this for INS > BRIDGE_SIZE
+			if i < BRIDGE_SIZE {
+				in_root_set[i] = merkle_tree.root();
+			}
+		}
+
+		// Change the arbitrary data to something incorrect
+		arbitrary_data = Fq::from(0u32);
+
+		// Output amounts cannot be randomly generated since they may then exceed input
+		// amount.
+		let mut out_amounts = [Fq::from(0u64); OUTS];
+		out_amounts[0] = in_amounts[0];
+		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
+
+		// Other output quantities can be randomly generated
+		let mut out_private_keys = [Fq::from(0u64); OUTS];
+		let mut out_public_keys = [Fq::from(0u64); OUTS];
+		let mut out_blindings = [Fq::from(0u64); OUTS];
+		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
+		for i in 0..OUTS {
+			out_blindings[i] = Fq::rand(rng);
+			out_private_keys[i] = Fq::rand(rng);
+			out_chain_ids[i] = Fq::rand(rng);
+			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
+		}
+
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
+
+		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
+		let _ = circuit.gadget(&mut composer);
+		composer.check_circuit_satisfied();
+
+		// TODO: Preferred would be to use gadget_tester and match the error to
+		// an expected error let res = gadget_tester::<Bn254, JubjubParameters,
+		// _>(&mut circuit, 1 << 19); assert!(res.is_ok(), "{:?}",
+		// res.err().unwrap());
+	}
 
 	// #[test]
 	// fn should_fail_with_wrong_arbitrary_data_plonk() {
