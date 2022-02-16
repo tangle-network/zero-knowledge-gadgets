@@ -170,9 +170,10 @@ mod tests {
 	use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 	use arkworks_utils::{
 		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
-		utils::common::setup_params_x5_3,
+		utils::common::{setup_params_x5_3, Curve}, utils::{parse_vec, parse_matrix},
 	};
 	use plonk_core::prelude::*;
+use plonk_hashing::poseidon::poseidon_ref::{PoseidonRef, NativeSpecRef};
 
 	type PoseidonHasher = arkworks_gadgets::poseidon::field_hasher::Poseidon<Fq>;
 
@@ -265,5 +266,89 @@ mod tests {
 			b"Poseidon Test",
 		)
 		.unwrap();
+	}
+
+	#[test]
+	fn should_verify_against_zk_garage_non_optimized_poseidon() {
+		// Webb's Poseidon hash using field hasher
+		let util_params = setup_params_x5_3(Curve::Bn254);
+		let params = PoseidonParameters {
+			round_keys: util_params.clone().round_keys,
+			mds_matrix: util_params.clone().mds_matrix,
+			full_rounds: util_params.clone().full_rounds,
+			partial_rounds: util_params.clone().partial_rounds,
+			sbox: UtilsPoseidonSbox(5),
+			width: util_params.clone().width,
+		};
+		let poseidon_hasher = PoseidonHasher::new(params);
+
+		// Choose hash fn inputs and compute hash:
+		let left = Fq::from(100);
+		let right = Fq::from(100).double();
+		let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
+
+		// ZK-Garage Poseidon implementation using non-optimized PoseidonRef
+		use plonk_hashing::poseidon::matrix::Matrix;
+		use plonk_hashing::poseidon::mds::{MdsMatrices, factor_to_sparse_matrixes};
+		// Private method for now..
+		// use plonk_hashing::poseidon::preprocessing::compress_round_constants;
+		use plonk_hashing::poseidon::constants::PoseidonConstants;
+		const ARITY: usize = 2;
+		const WIDTH: usize = ARITY + 1;
+		let rounds = arkworks_utils::utils::bn254_x5_3::ROUND_CONSTS;
+		let mds = arkworks_utils::utils::bn254_x5_3::MDS_ENTRIES;
+		// Fill in Webb's Poseidon constants by hand
+		let round_constants = parse_vec::<Bn254Fr>(rounds.to_vec());
+		// It is essential to transpose the matrix! Webb uses left matrix mult, this implementation uses right !!!
+		let mds_matrix = Matrix::from(parse_matrix::<Bn254Fr>(mds.iter().map(|x| x.to_vec()).collect::<Vec<_>>())).transpose();
+		let domain_tag = Bn254Fr::from(0u32); // circom used 0 as the domain tag
+		let full_rounds = 8usize;
+		let half_full_rounds = 4usize;
+		let partial_rounds = 57usize;
+		let mds_matrices = MdsMatrices {
+			m: mds_matrix.clone(),
+			m_inv: Matrix::from(vec![]),
+			m_hat: Matrix::from(vec![]),
+			m_hat_inv: Matrix::from(vec![]),
+			m_prime: Matrix::from(vec![]),
+			m_double_prime: Matrix::from(vec![]),
+		};
+		// let compressed_round_constants = compress_round_constants(WIDTH, full_rounds, partial_rounds, &round_constants, &mds_matrices);
+		let (pre_sparse_matrix, sparse_matrixes) = factor_to_sparse_matrixes(mds_matrix, partial_rounds);
+
+		// let constants = PoseidonConstants::generate::<WIDTH>();
+		let constants = PoseidonConstants {
+			mds_matrices,
+			round_constants,
+			domain_tag,
+			full_rounds,
+			half_full_rounds,
+			partial_rounds,
+			pre_sparse_matrix,
+			sparse_matrixes,
+			compressed_round_constants: vec![],
+		};
+
+		let inputs = [Bn254Fr::from(100u32), Bn254Fr::from(200u32)];
+
+		let mut poseidon = PoseidonRef::<(), NativeSpecRef<Bn254Fr>, WIDTH>::new(
+			&mut (),
+			constants,
+		);
+
+		inputs.iter().for_each(|x| {
+			poseidon.input(*x).unwrap();
+		});
+
+		// let res: Vec<Fq> = parse_vec(vec![
+		// 	"0x115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a",
+		// ]);
+
+		poseidon.output_hash(&mut ());
+		let digest_actual = poseidon.elements;
+
+		// Remember they are returning element 1 for some reason
+		println!("expected {:?}, got {:?}", expected, digest_actual[0]);
+		assert_eq!(expected, digest_actual[0]);
 	}
 }
