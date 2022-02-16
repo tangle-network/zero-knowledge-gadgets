@@ -165,6 +165,7 @@ mod test {
 		utils::{gadget_tester, prove_then_verify},
 	};
 	use ark_bn254::Bn254;
+	use ark_ec::{PairingEngine, TEModelParameters};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
 	use ark_poly::polynomial::univariate::DensePolynomial;
@@ -302,6 +303,108 @@ mod test {
 			Some(verifier_public_inputs),
 		);
 
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
+	}
+
+	/// Gadget to use in the tests below.  Takes two numbers a and b and adds
+	/// constraints to the composer that show the numbers sum to the given
+	/// public input value.
+	/// The prove_then_verify function takes the gadget in the form of a closure, so
+	/// in this case that looks like
+	/// ```&mut | composer | minimal_test_gadget(composer, a, b, public_input) ```
+	/// In the case of a circuit (implementing the Circuit trait) that argument 
+	/// would look like 
+	/// ```&mut | composer | circuit.gadget(composer) ```
+	fn minimal_test_gadget<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
+		composer: &mut StandardComposer<E::Fr, P>,
+		a: E::Fr,
+		b: E::Fr,
+		public_input: E::Fr,
+	) -> Result<(), Error> {
+		let a = composer.add_input(a);
+		let b = composer.add_input(b);
+		let zero = composer.zero_var();
+		let _ = composer.arithmetic_gate(|g| {
+			g.witness(a, b, Some(zero))
+				.add(-E::Fr::from(1u32), -E::Fr::from(1u32))
+				.pi(public_input)
+		});
+		Ok(())
+	}
+
+	#[test]
+	fn minimal_success_test() {
+		// Create a circuit that demonstrates the prover knows two numbers that
+		// sum to a given public input value.
+		let a = Fq::from(1u32);
+		let b = Fq::from(2u32);
+		let public_input = Fq::from(3u32);
+
+		// Generate then verify a proof that we know two numbers that add to 3
+		// Note that we do not use the optional `verifier_public_inputs` argument
+		// because we want the prover and verifier to agree on what the public input
+		// value was.
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| minimal_test_gadget::<Bn254, JubjubParameters>(c, a, b, public_input),
+			1 << 4,
+			None,
+		);
+		// Assert that verification was successful
+		match res {
+			Ok(()) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+		};
+	}
+
+	#[test]
+	fn minimal_failure_test() {
+		// Create a circuit that demonstrates the prover knows two numbers that
+		// sum to a given public input value.
+		let a = Fq::from(1u32);
+		let b = Fq::from(2u32);
+		let public_input = Fq::from(3u32);
+
+		// This time prover and verifier disagree on what the public input
+		// value was.  The verifier will think it was 4:
+		let verifier_public_inputs = vec![Fq::from(4u32)];
+
+		// Generate then verify a proof that we know two numbers that add to 4
+		// This should fail because the prover is actually using the public
+		// input value of 3.
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| minimal_test_gadget::<Bn254, JubjubParameters>(c, a, b, public_input),
+			1 << 4,
+			Some(verifier_public_inputs),
+		);
+		// Assert that verification failed
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+		};
+
+		// Another possible sort of failure is that prover and verifier
+		// agree on the public input value but prover's secret witnesses are 
+		// invalid.  That looks like this:
+		let x = Fq::from(1u32);
+		let y = Fq::from(1u32);
+		let public_input_two = Fq::from(3u32);
+
+		// Observe that `max_degree` has been increased to 2^5. Otherwise
+		// we will have a polynomial commitment error.  This always 
+		// happens when the prover tries to generate invalid proofs, and
+		// I believe it has to do with trying to divide one polynomial
+		// by another that does not actually divide it.
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| minimal_test_gadget::<Bn254, JubjubParameters>(c, x, y, public_input_two),
+			1 << 5,
+			None,
+		);
+		// Assert that verification failed
 		match res {
 			Err(Error::ProofVerificationError) => (),
 			Err(err) => panic!("Unexpected error: {:?}", err),

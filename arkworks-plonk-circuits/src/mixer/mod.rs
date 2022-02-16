@@ -313,13 +313,11 @@ mod test {
 			poseidon_native,
 		);
 
-
 		// Prove then verify
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),
 			1 << 17,
-			None, 	// No need to give verifier different public data
-
+			None, // No need to give verifier different public data
 		);
 		match res {
 			Err(Error::ProofVerificationError) => (),
@@ -383,7 +381,7 @@ mod test {
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),
 			1 << 17,
-			None, 		// No need to give verifier different public inputs
+			None, // No need to give verifier different public inputs
 		);
 		match res {
 			Err(Error::ProofVerificationError) => (),
@@ -444,7 +442,7 @@ mod test {
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),
 			1 << 17,
-			None,	// No need to give verifier different public inputs
+			None, // No need to give verifier different public inputs
 		);
 		match res {
 			Err(Error::ProofVerificationError) => (),
