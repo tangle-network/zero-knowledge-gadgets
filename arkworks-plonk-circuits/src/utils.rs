@@ -313,11 +313,12 @@ mod test {
 	/// Gadget to use in the tests below.  Takes two numbers a and b and adds
 	/// constraints to the composer that show the numbers sum to the given
 	/// public input value.
-	/// The prove_then_verify function takes the gadget in the form of a closure, so
-	/// in this case that looks like
-	/// ```&mut | composer | minimal_test_gadget(composer, a, b, public_input) ```
-	/// In the case of a circuit (implementing the Circuit trait) that argument 
-	/// would look like 
+	/// The prove_then_verify function takes the gadget in the form of a
+	/// closure, so in this case that looks like
+	/// ```&mut | composer | minimal_test_gadget(composer, a, b, public_input)
+	/// ```
+	/// In the case of a circuit (implementing the Circuit trait) that argument
+	/// would look like
 	/// ```&mut | composer | circuit.gadget(composer) ```
 	fn minimal_test_gadget<E: PairingEngine, P: TEModelParameters<BaseField = E::Fr>>(
 		composer: &mut StandardComposer<E::Fr, P>,
@@ -388,14 +389,14 @@ mod test {
 		};
 
 		// Another possible sort of failure is that prover and verifier
-		// agree on the public input value but prover's secret witnesses are 
+		// agree on the public input value but prover's secret witnesses are
 		// invalid.  That looks like this:
 		let x = Fq::from(1u32);
 		let y = Fq::from(1u32);
 		let public_input_two = Fq::from(3u32);
 
 		// Observe that `max_degree` has been increased to 2^5. Otherwise
-		// we will have a polynomial commitment error.  This always 
+		// we will have a polynomial commitment error.  This always
 		// happens when the prover tries to generate invalid proofs, and
 		// I believe it has to do with trying to divide one polynomial
 		// by another that does not actually divide it.
