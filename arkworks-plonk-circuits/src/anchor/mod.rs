@@ -24,7 +24,8 @@ pub struct AnchorCircuit<
 	path: Path<F, HG::Native, N>,
 	roots: [F; M],
 	arbitrary_data: F,
-	hasher: HG::Native,
+	hasher_two: HG::Native,   // Arity 2 hasher
+	hasher_three: HG::Native, // Arity 3 hasher
 }
 
 impl<F, P, HG, const N: usize, const M: usize> AnchorCircuit<F, P, HG, N, M>
@@ -41,7 +42,8 @@ where
 		path: Path<F, HG::Native, N>,
 		roots: [F; M],
 		arbitrary_data: F,
-		hasher: HG::Native,
+		hasher_two: HG::Native,
+		hasher_three: HG::Native,
 	) -> Self {
 		Self {
 			chain_id,
@@ -51,7 +53,8 @@ where
 			path,
 			roots,
 			arbitrary_data,
-			hasher,
+			hasher_two,
+			hasher_three,
 		}
 	}
 }
@@ -72,30 +75,29 @@ where
 		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
 
 		// Public Inputs
-		let chain_id = add_public_input_variable(composer, self.chain_id); // Unused -- Why ?
+		let chain_id = add_public_input_variable(composer, self.chain_id);
 		let nullifier_hash = add_public_input_variable(composer, self.nullifier_hash);
-		let roots = self
-			.roots
-			.iter()
-			.map(|root| add_public_input_variable(composer, *root))
-			.collect::<Vec<Variable>>(); // Unused -- Why ?
 		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
 
-		// Create the hasher_gadget from native
-		let hasher_gadget: HG =
-			FieldHasherGadget::<F, P>::from_native(composer, self.hasher.clone());
+		// Create the hasher gadgets from native
+		let hasher_gadget_two: HG =
+			FieldHasherGadget::<F, P>::from_native(composer, self.hasher_two.clone());
+		let hasher_gadget_three: HG =
+			FieldHasherGadget::<F, P>::from_native(composer, self.hasher_three.clone());
 
 		// Preimage proof of nullifier
-		let res_nullifier = hasher_gadget.hash_two(composer, &nullifier, &nullifier)?;
+		let res_nullifier = hasher_gadget_two.hash_two(composer, &nullifier, &nullifier)?;
 		// TODO: (This has 1 more gate than skipping the nullifier_hash variable and
 		// putting this straight in to a poly_gate)
 		composer.assert_equal(res_nullifier, nullifier_hash);
 
 		// Preimage proof of leaf hash
-		let res_leaf = hasher_gadget.hash_two(composer, &secret, &nullifier)?;
+		// leaf should be hash of [chain_id, secret, nullifier]
+		let res_leaf = hasher_gadget_three.hash(composer, &[chain_id, secret, nullifier])?;
 
 		// Proof of Merkle tree set membership
-		let calculated_root = path_gadget.calculate_root(composer, &res_leaf, &hasher_gadget)?;
+		let calculated_root =
+			path_gadget.calculate_root(composer, &res_leaf, &hasher_gadget_two)?;
 		let result = check_set_membership(composer, &self.roots.to_vec(), calculated_root);
 		let one = composer.add_witness_to_circuit_description(F::one());
 		composer.assert_equal(result, one);
@@ -109,7 +111,7 @@ where
 	}
 
 	fn padded_circuit_size(&self) -> usize {
-		1 << 16
+		1 << 19
 	}
 }
 
@@ -127,7 +129,7 @@ mod test {
 		merkle_tree::simple_merkle::SparseMerkleTree,
 		poseidon::field_hasher::{FieldHasher, Poseidon},
 	};
-	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 	use plonk_core::prelude::*;
 
 	type Bn254Fr = <Bn254 as PairingEngine>::Fr;
@@ -139,8 +141,16 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
 
 		// Randomly generated secrets
 		let secret = Fq::rand(rng);
@@ -149,8 +159,12 @@ mod test {
 		// Public data
 		let chain_id = Fq::from(1u32);
 		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
 
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
@@ -163,16 +177,18 @@ mod test {
 		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
-			&poseidon_native,
+			&poseidon_native_three,
 			&[0u8; 32],
 		)
 		.unwrap();
 
-		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = tree.root();
-
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
+
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -184,7 +200,8 @@ mod test {
 				path,
 				roots,
 				arbitrary_data,
-				poseidon_native,
+				poseidon_native_three,
+				poseidon_native_four,
 			);
 
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
@@ -200,79 +217,20 @@ mod test {
 	}
 
 	#[test]
-	fn should_fail_with_invalid_root_plonk() {
-		let rng = &mut test_rng();
-		let curve = Curve::Bn254;
-
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
-
-		// Randomly generated secrets
-		let secret = Fq::rand(rng);
-		let nullifier = Fq::rand(rng);
-
-		// Public data
-		let chain_id = Fq::from(1u32);
-		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
-
-		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
-		// scalars, then add leaf_hash as the final leaf
-		const HEIGHT: usize = 6usize;
-		let last_index = 1 << (HEIGHT - 1) - 1;
-		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
-		for i in 0..last_index {
-			leaves[i] = Fq::rand(rng);
-		}
-		leaves[last_index] = leaf_hash;
-		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
-			&leaves,
-			&poseidon_native,
-			&[0u8; 32],
-		)
-		.unwrap();
-
-		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		// Use a bad root for this failure test
-		roots[0] = tree.root().double();
-
-		// Path
-		let path = tree.generate_membership_proof(last_index as u64);
-
-		// Create AnchorCircuit
-		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
-				chain_id,
-				secret,
-				nullifier,
-				nullifier_hash,
-				path,
-				roots,
-				arbitrary_data,
-				poseidon_native,
-			);
-
-		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
-			&mut |c| anchor.gadget(c),
-			1 << 17,
-			None,
-		);
-		// Assert that verification failed
-		match res {
-			Err(Error::ProofVerificationError) => (),
-			Err(err) => panic!("Unexpected error: {:?}", err),
-			Ok(()) => panic!("Proof was successfully verified when error was expected"),
-		};
-	}
-
-	#[test]
 	fn should_fail_with_invalid_secret_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
 
 		// Randomly generated secrets
 		let secret = Fq::rand(rng);
@@ -281,8 +239,12 @@ mod test {
 		// Public data
 		let chain_id = Fq::from(1u32);
 		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
 
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
@@ -295,16 +257,18 @@ mod test {
 		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
-			&poseidon_native,
+			&poseidon_native_three,
 			&[0u8; 32],
 		)
 		.unwrap();
 
-		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = tree.root();
-
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
+
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
 
 		// Use the wrong secret:
 		let bad_secret = secret.double();
@@ -319,7 +283,8 @@ mod test {
 				path,
 				roots,
 				arbitrary_data,
-				poseidon_native,
+				poseidon_native_three,
+				poseidon_native_four,
 			);
 
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
@@ -340,8 +305,16 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
 
 		// Randomly generated secrets
 		let secret = Fq::rand(rng);
@@ -350,8 +323,12 @@ mod test {
 		// Public data
 		let chain_id = Fq::from(1u32);
 		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
 
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
@@ -364,18 +341,20 @@ mod test {
 		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
-			&poseidon_native,
+			&poseidon_native_three,
 			&[0u8; 32],
 		)
 		.unwrap();
 
-		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = tree.root();
-
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
 
-		// Use bad nullifier
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
+
+		// Use the wrong nullifier:
 		let bad_nullifier = nullifier.double();
 
 		// Create AnchorCircuit
@@ -388,7 +367,8 @@ mod test {
 				path,
 				roots,
 				arbitrary_data,
-				poseidon_native,
+				poseidon_native_three,
+				poseidon_native_four,
 			);
 
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
@@ -409,8 +389,16 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
 
 		// Randomly generated secrets
 		let secret = Fq::rand(rng);
@@ -419,8 +407,12 @@ mod test {
 		// Public data
 		let chain_id = Fq::from(1u32);
 		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
 
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
@@ -433,13 +425,18 @@ mod test {
 		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
-			&poseidon_native,
+			&poseidon_native_three,
 			&[0u8; 32],
 		)
 		.unwrap();
 
+		// Path
+		let path = tree.generate_membership_proof(last_index as u64);
+
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = tree.root();
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
 
 		// Use an invalid path
 		let bad_path = tree.generate_membership_proof((last_index - 1) as u64);
@@ -454,7 +451,8 @@ mod test {
 				bad_path,
 				roots,
 				arbitrary_data,
-				poseidon_native,
+				poseidon_native_three,
+				poseidon_native_four,
 			);
 
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
@@ -471,12 +469,20 @@ mod test {
 	}
 
 	#[test]
-	fn should_fail_with_invalid_nullifier_hash_plonk() {
+	fn should_fail_with_invalid_root_plonk() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
 
 		// Randomly generated secrets
 		let secret = Fq::rand(rng);
@@ -485,8 +491,12 @@ mod test {
 		// Public data
 		let chain_id = Fq::from(1u32);
 		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
 
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
@@ -499,16 +509,18 @@ mod test {
 		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
-			&poseidon_native,
+			&poseidon_native_three,
 			&[0u8; 32],
 		)
 		.unwrap();
 
-		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = tree.root();
-
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
+
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -520,24 +532,115 @@ mod test {
 				path,
 				roots,
 				arbitrary_data,
-				poseidon_native,
+				poseidon_native_three,
+				poseidon_native_four,
 			);
 
 		// Prover and verifier disagree on public inputs:
 		// The order of public inputs is [chain_id, nullifier_hash, roots,
-		// arbitrary_data ] (Uncomment the following block to verify that)
+		// arbitrary_data, -roots ] (Uncomment the following block to verify that)
 		// let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
 		// let _ = anchor.gadget(&mut composer);
 		// println!("The public input positions are {:?}", composer.pi_positions());
 		// let prover_pi = composer.construct_dense_pi_vec();
-		// assert_eq!([prover_pi[3], prover_pi[4], prover_pi[5], prover_pi[6],
-		// prover_pi[7], prover_pi[13125], prover_pi[13126]], 	[chain_id, nullifier_hash,
-		// roots[0], roots[1], arbitrary_data, -roots[0], -roots[1]]);
+		// assert_eq!(
+		// 	[prover_pi[3], prover_pi[4], prover_pi[5], prover_pi[14355],
+		// prover_pi[14356]], 	[chain_id, nullifier_hash, arbitrary_data, -roots[0],
+		// -roots[1]]);
+		let verifier_pi = vec![
+			chain_id,
+			nullifier_hash,
+			arbitrary_data,
+			-roots[0].double(), // Verifier has different root set
+			-roots[1],
+		];
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| anchor.gadget(c),
+			1 << 17,
+			Some(verifier_pi),
+		);
+		// // Assert that verification failed
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error wasexpected"),
+		};
+	}
+
+	#[test]
+	fn should_fail_with_invalid_nullifier_hash_plonk() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let chain_id = Fq::from(1u32);
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
+
+		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
+		// scalars, then add leaf_hash as the final leaf
+		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
+			leaves[i] = Fq::rand(rng);
+		}
+		leaves[last_index] = leaf_hash;
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
+			&leaves,
+			&poseidon_native_three,
+			&[0u8; 32],
+		)
+		.unwrap();
+
+		// Path
+		let path = tree.generate_membership_proof(last_index as u64);
+
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
+
+		// Create AnchorCircuit
+		let mut anchor =
+			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+				chain_id,
+				secret,
+				nullifier,
+				nullifier_hash,
+				path,
+				roots,
+				arbitrary_data,
+				poseidon_native_three,
+				poseidon_native_four,
+			);
+
+		// Prover and verifier disagree on public inputs:
+		// The order of public inputs is [chain_id, nullifier_hash, roots,
+		// arbitrary_data, -roots ]
 		let verifier_pi = vec![
 			chain_id,
 			nullifier_hash.double(), // Verifier has different nullifier hash
-			roots[0],
-			roots[1],
 			arbitrary_data,
 			-roots[0],
 			-roots[1],
@@ -551,7 +654,7 @@ mod test {
 		match res {
 			Err(Error::ProofVerificationError) => (),
 			Err(err) => panic!("Unexpected error: {:?}", err),
-			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+			Ok(()) => panic!("Proof was successfully verified when error wasexpected"),
 		};
 	}
 
@@ -560,8 +663,16 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
-		let poseidon_native = PoseidonBn254 { params };
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
 
 		// Randomly generated secrets
 		let secret = Fq::rand(rng);
@@ -570,8 +681,12 @@ mod test {
 		// Public data
 		let chain_id = Fq::from(1u32);
 		let arbitrary_data = Fq::rand(rng);
-		let nullifier_hash = poseidon_native.hash_two(&nullifier, &nullifier).unwrap();
-		let leaf_hash = poseidon_native.hash_two(&secret, &nullifier).unwrap();
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
 
 		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
 		// scalars, then add leaf_hash as the final leaf
@@ -584,16 +699,18 @@ mod test {
 		leaves[last_index] = leaf_hash;
 		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
 			&leaves,
-			&poseidon_native,
+			&poseidon_native_three,
 			&[0u8; 32],
 		)
 		.unwrap();
 
-		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = tree.root();
-
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
+
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -605,24 +722,16 @@ mod test {
 				path,
 				roots,
 				arbitrary_data,
-				poseidon_native,
+				poseidon_native_three,
+				poseidon_native_four,
 			);
 
 		// Prover and verifier disagree on public inputs:
 		// The order of public inputs is [chain_id, nullifier_hash, roots,
-		// arbitrary_data ] (Uncomment the following block to verify that)
-		// let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		// let _ = anchor.gadget(&mut composer);
-		// println!("The public input positions are {:?}", composer.pi_positions());
-		// let prover_pi = composer.construct_dense_pi_vec();
-		// assert_eq!([prover_pi[3], prover_pi[4], prover_pi[5], prover_pi[6],
-		// prover_pi[7], prover_pi[13125], prover_pi[13126]], 	[chain_id, nullifier_hash,
-		// roots[0], roots[1], arbitrary_data, -roots[0], -roots[1]]);
+		// arbitrary_data, -roots ]
 		let verifier_pi = vec![
 			chain_id,
 			nullifier_hash,
-			roots[0],
-			roots[1],
 			arbitrary_data.double(), // Verifier has different arbitrary data
 			-roots[0],
 			-roots[1],
@@ -636,7 +745,98 @@ mod test {
 		match res {
 			Err(Error::ProofVerificationError) => (),
 			Err(err) => panic!("Unexpected error: {:?}", err),
-			Ok(()) => panic!("Proof was successfully verified when error was expected"),
+			Ok(()) => panic!("Proof was successfully verified when error wasexpected"),
+		};
+	}
+
+	#[test]
+	fn should_fail_with_invalid_chain_id_plonk() {
+		let rng = &mut test_rng();
+		let curve = Curve::Bn254;
+
+		// These poseidon hashers are named after their WIDTH, not ARITY.
+		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
+		let params_three = setup_params_x5_3(curve);
+		let params_four = setup_params_x5_4(curve);
+		let poseidon_native_three = PoseidonBn254 {
+			params: params_three,
+		};
+		let poseidon_native_four = PoseidonBn254 {
+			params: params_four,
+		};
+
+		// Randomly generated secrets
+		let secret = Fq::rand(rng);
+		let nullifier = Fq::rand(rng);
+
+		// Public data
+		let chain_id = Fq::from(1u32);
+		let arbitrary_data = Fq::rand(rng);
+		let nullifier_hash = poseidon_native_three
+			.hash_two(&nullifier, &nullifier)
+			.unwrap();
+		let leaf_hash = poseidon_native_four
+			.hash(&[chain_id, secret, nullifier])
+			.unwrap();
+
+		// Create a tree whose leaves are already populated with 2^HEIGHT - 1 random
+		// scalars, then add leaf_hash as the final leaf
+		const HEIGHT: usize = 6usize;
+		let last_index = 1 << (HEIGHT - 1) - 1;
+		let mut leaves = [Fq::from(0u8); 1 << (HEIGHT - 1)];
+		for i in 0..last_index {
+			leaves[i] = Fq::rand(rng);
+		}
+		leaves[last_index] = leaf_hash;
+		let tree = SparseMerkleTree::<Fq, PoseidonBn254, HEIGHT>::new_sequential(
+			&leaves,
+			&poseidon_native_three,
+			&[0u8; 32],
+		)
+		.unwrap();
+
+		// Path
+		let path = tree.generate_membership_proof(last_index as u64);
+
+		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
+		roots[0] = path
+			.calculate_root(&leaf_hash, &poseidon_native_three)
+			.unwrap();
+
+		// Create AnchorCircuit
+		let mut anchor =
+			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+				chain_id,
+				secret,
+				nullifier,
+				nullifier_hash,
+				path,
+				roots,
+				arbitrary_data,
+				poseidon_native_three,
+				poseidon_native_four,
+			);
+
+		// Prover and verifier disagree on public inputs:
+		// The order of public inputs is [chain_id, nullifier_hash, roots,
+		// arbitrary_data, -roots ]
+		let verifier_pi = vec![
+			chain_id.double(), // Verifier has different chain id
+			nullifier_hash,
+			arbitrary_data,
+			-roots[0],
+			-roots[1],
+		];
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| anchor.gadget(c),
+			1 << 17,
+			Some(verifier_pi),
+		);
+		// // Assert that verification failed
+		match res {
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error wasexpected"),
 		};
 	}
 }

@@ -167,6 +167,9 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(smt)
 	}
 
+	/// This returns the DEFAULT root, i.e. root of an empty tree!
+	/// Not the root of the tree after some leaves have
+	/// been changed
 	pub fn root(&self) -> F {
 		self.tree
 			.get(&0)
