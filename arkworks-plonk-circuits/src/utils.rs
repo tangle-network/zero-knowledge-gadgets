@@ -84,7 +84,8 @@ pub(crate) fn gadget_tester<
 
 /// Helper function that accepts a composer that has already been filled,
 /// generates a proof, then verifies it.
-/// Probably want it to  accept a public inputs argument (could be optional)
+/// Accepts an optional public input argument that can be used to simulate
+/// a situation where prover and verifier disagree on public input values
 pub(crate) fn prove_then_verify<
 	E: PairingEngine,
 	P: TEModelParameters<BaseField = E::Fr>,
