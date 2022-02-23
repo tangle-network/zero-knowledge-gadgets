@@ -20,7 +20,7 @@ use std::ops::Add;
 
 use crate::{
 	merkle_tree::PathGadget, mixer::add_public_input_variable,
-	poseidon::poseidon::FieldHasherGadget, set_membership::check_set_membership,
+	poseidon::poseidon::FieldHasherGadget, set_membership::check_set_membership_is_enabled,
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
@@ -231,9 +231,15 @@ where
 				path_gadget.calculate_root(composer, &calc_leaf, &tree_hasher_gadget)?;
 
 			// Check if calculated root hash is in the set
-			// TODO: Check membership enabled is needed here.
-			let is_member =
-				check_set_membership(composer, &self.in_root_set.to_vec(), calc_root_hash);
+			// Note that if `in_amount_i = 0` then the input is a
+			// "dummy" input, so the check is not needed.  The
+			// `check_set_membership_is_enabled` function accounts for this.
+			let is_member = check_set_membership_is_enabled(
+				composer,
+				&self.in_root_set.to_vec(),
+				calc_root_hash,
+				in_amount_i,
+			);
 			composer.constrain_to_constant(is_member, F::one(), None);
 
 			// Finally add the amount to the sum
@@ -389,8 +395,34 @@ mod test {
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
+
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
+
+		// Populate remaining inputs with random numbers
+		for i in 1..INS {
 			in_private_keys[i] = Fq::rand(rng);
 			in_blindings[i] = Fq::rand(rng);
 			// Multiplying by 1/20 prevents the amounts from summing to more than
