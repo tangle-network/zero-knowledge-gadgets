@@ -4,7 +4,7 @@ use crate::{
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_std::{One, Zero};
+use ark_std::{vec, One, Zero};
 use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,

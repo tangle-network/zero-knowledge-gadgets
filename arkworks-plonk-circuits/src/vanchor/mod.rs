@@ -16,15 +16,13 @@
 // Then we will verify that the reconstructed root from each input's
 // membership path is within a set of public merkle roots.
 
-use std::ops::Add;
-
 use crate::{
 	merkle_tree::PathGadget, mixer::add_public_input_variable,
 	poseidon::poseidon::FieldHasherGadget, set_membership::check_set_membership_is_enabled,
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_std::{One, Zero};
+use ark_std::{vec, One, Zero};
 use arkworks_gadgets::{merkle_tree::simple_merkle::Path, poseidon::field_hasher::FieldHasher};
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
