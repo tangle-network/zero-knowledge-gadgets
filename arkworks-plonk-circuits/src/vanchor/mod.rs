@@ -22,7 +22,7 @@ use crate::{
 };
 use ark_ec::{models::TEModelParameters, PairingEngine};
 use ark_ff::PrimeField;
-use ark_std::{vec, One, Zero};
+use ark_std::{vec::Vec, One, Zero};
 use arkworks_gadgets::{merkle_tree::simple_merkle::Path, poseidon::field_hasher::FieldHasher};
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
@@ -361,6 +361,8 @@ mod test {
 	// -in_root_set[0], -in_root_set[1], out_commitments[0], out_commitments[1]];
 	// ! Note that because of how check_set_membership is written the public input
 	// values are actually (-1)*root_hash, not root hash !
+
+	// TODO: Add a 16-2 test rather than making INS generic
 
 	#[test]
 	fn should_verify_correct_vanchor_plonk() {

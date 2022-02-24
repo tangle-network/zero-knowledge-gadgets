@@ -6,7 +6,7 @@ use ark_poly_commit::{
 	sonic_pc::SonicKZG10,
 	PolynomialCommitment,
 };
-use ark_std::test_rng;
+use ark_std::{test_rng, vec::Vec};
 use plonk_core::{
 	prelude::*,
 	proof_system::{Prover, Verifier},
