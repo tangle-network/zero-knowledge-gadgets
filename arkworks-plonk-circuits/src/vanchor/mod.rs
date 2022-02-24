@@ -596,47 +596,46 @@ mod test {
 		.unwrap();
 		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-		// Populate remaining inputs with random numbers
-		for i in 1..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
-		// Output amounts cannot be randomly generated since they may then exceed input
-		// amount.
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
+
+		// Output amounts should sum to inputs plus public amount.
+		// In this case the first output is 0 and the remaining output
+		// contains the full value of the transaction
 		let mut out_amounts = [Fq::from(0u64); OUTS];
 		out_amounts[0] = in_amounts[0];
-		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
+		out_amounts[1] = public_amount + in_amounts[1];
 
 		// Other output quantities can be randomly generated
 		let mut out_private_keys = [Fq::from(0u64); OUTS];
