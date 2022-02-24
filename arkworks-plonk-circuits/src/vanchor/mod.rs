@@ -327,11 +327,6 @@ mod test {
 
 	type PoseidonBn254 = Poseidon<Fq>;
 
-	const TREE_HEIGHT: usize = 3;
-	const BRIDGE_SIZE: usize = 2;
-	const INS: usize = 2; // currently the tests will not work if you change INS
-	const OUTS: usize = 2;
-
 	// Helper that outputs the hash functions of each width we need.
 	// I have not made this generic over the curve
 	fn make_vanchor_hashers() -> [PoseidonBn254; 4] {
@@ -364,6 +359,187 @@ mod test {
 
 	// TODO: Add a 16-2 test rather than making INS generic
 
+	// This is the only test of a 16-2 vanchor transaction. All others
+	// test 2-2 transactions.
+
+	#[test]
+	fn should_verify_correct_16_2_vanchor_plonk() {
+		const TREE_HEIGHT: usize = 5;
+		const BRIDGE_SIZE: usize = 2;
+		const INS: usize = 16;
+		const OUTS: usize = 2;
+
+		let rng = &mut test_rng();
+
+		let [poseidon_native2, poseidon_native3, poseidon_native4, poseidon_native5] =
+			make_vanchor_hashers();
+
+		// Randomly generated public inputs
+		let public_amount = Fq::rand(rng);
+		let public_chain_id = Fq::rand(rng);
+		let arbitrary_data = Fq::rand(rng);
+
+		// Randomly generated private inputs
+		// Initialize arrays
+		let mut in_private_keys = [Fq::from(0u64); INS];
+		let mut in_blindings = [Fq::from(0u64); INS];
+		let mut in_amounts = [Fq::from(0u64); INS];
+		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
+		let mut in_leaf_hashes = [Fq::from(0u64); INS];
+		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
+
+		// Default path to initialize the `in_paths` array
+		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
+			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
+			_marker: PhantomData,
+		};
+		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path.clone(),
+			default_path,
+		];
+
+		// We index the paths from 0 to 15:
+		let mut in_indices = [Fq::from(0u32); INS];
+		for i in 0..INS {
+			in_indices[i] = Fq::from(i as u32);
+		}
+
+		// We will let a few of the inputs be non-zero, the rest will be
+		// dummy inputs
+		in_amounts[0] = Fq::from(1u32);
+		in_amounts[1] = Fq::from(2u32);
+		in_amounts[3] = Fq::from(3u32);
+
+		// Compute nullifier hash and leaf hash for each input
+		for i in 0..INS {
+			in_private_keys[i] = Fq::rand(rng);
+			in_blindings[i] = Fq::rand(rng);
+
+			// Calculate what the input nullifier hashes would be based on these:
+			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
+			in_leaf_hashes[i] = poseidon_native5
+				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
+				.unwrap();
+			let signature = poseidon_native4
+				.hash(&[in_private_keys[i], in_leaf_hashes[i], in_indices[i]])
+				.unwrap();
+			in_nullifier_hashes[i] = poseidon_native4
+				.hash(&[in_leaf_hashes[i], in_indices[i], signature])
+				.unwrap();
+		}
+
+		// Now put all input leaves into a merkle tree
+		// (we assume here that all came from same chain)
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&in_leaf_hashes,
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		// Store the path of each leaf
+		for i in 0..INS {
+			in_paths[i] = merkle_tree.generate_membership_proof(i as u64);
+		}
+
+		// The root set should contain this merkle tree's root, which
+		// can be gotten from any of the above paths since they all
+		// belong to same tree.
+		in_root_set[0] = in_paths[0]
+			.calculate_root(&in_leaf_hashes[0], &poseidon_native3)
+			.unwrap();
+
+		// Output amounts: (remember input amounts sum to 6 and there is also the public
+		// amount)
+		let mut out_amounts = [Fq::from(0u64); OUTS];
+		out_amounts[0] = Fq::from(2u32) + public_amount;
+		out_amounts[1] = Fq::from(4u32);
+
+		// Other output quantities can be randomly generated
+		let mut out_private_keys = [Fq::from(0u64); OUTS];
+		let mut out_public_keys = [Fq::from(0u64); OUTS];
+		let mut out_blindings = [Fq::from(0u64); OUTS];
+		let mut out_chain_ids = [Fq::from(0u64); OUTS];
+		let mut out_commitments = [Fq::from(0u64); OUTS];
+		for i in 0..OUTS {
+			out_blindings[i] = Fq::rand(rng);
+			out_private_keys[i] = Fq::rand(rng);
+			out_chain_ids[i] = Fq::rand(rng);
+			out_public_keys[i] = poseidon_native2.hash(&out_private_keys[i..i + 1]).unwrap();
+			// Compute the out commitment
+			out_commitments[i] = poseidon_native5
+				.hash(&[
+					out_chain_ids[i],
+					out_amounts[i],
+					out_public_keys[i],
+					out_blindings[i],
+				])
+				.unwrap();
+		}
+
+		// Create the VAnchor circuit
+		let mut circuit = VariableAnchorCircuit::<
+			Fq,
+			JubjubParameters,
+			PoseidonGadget,
+			TREE_HEIGHT,
+			BRIDGE_SIZE,
+			INS,
+			OUTS,
+		>::new(
+			public_amount,
+			public_chain_id,
+			in_amounts,
+			in_blindings,
+			in_nullifier_hashes,
+			in_private_keys,
+			in_paths,
+			in_indices,
+			in_root_set,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
+			out_public_keys,
+			out_commitments,
+			arbitrary_data,
+			poseidon_native2,
+			poseidon_native3,
+			poseidon_native4,
+			poseidon_native5,
+		);
+
+		// Verify proof
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| circuit.gadget(c),
+			1 << 22,
+			None, // Use None argument to give verifier the same public input data
+		);
+		match res {
+			Ok(()) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+		};
+	}
+
+	// All subsequent tests are for a 2-2 vanchor transaction
+	const TREE_HEIGHT: usize = 3;
+	const BRIDGE_SIZE: usize = 3;
+	const INS: usize = 2;
+	const OUTS: usize = 2;
+
 	#[test]
 	fn should_verify_correct_vanchor_plonk() {
 		let rng = &mut test_rng();
@@ -384,14 +560,13 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
