@@ -15,6 +15,34 @@ use arkworks_gadgets::{
 	poseidon::{constraints::CRHGadget, CRH},
 };
 
+pub struct Leaf {
+	pub secret_bytes: Vec<u8>,
+	pub nullifier_bytes: Vec<u8>,
+	pub leaf_bytes: Vec<u8>,
+	pub nullifier_hash_bytes: Vec<u8>,
+}
+
+pub struct AnchorProof {
+	pub proof: Vec<u8>,
+	pub leaf_raw: Vec<u8>,
+	pub nullifier_hash_raw: Vec<u8>,
+	pub roots_raw: Vec<Vec<u8>>,
+	pub public_inputs_raw: Vec<Vec<u8>>,
+}
+
+pub struct MixerProof {
+	pub proof: Vec<u8>,
+	pub leaf_raw: Vec<u8>,
+	pub nullifier_hash_raw: Vec<u8>,
+	pub root_raw: Vec<u8>,
+	pub public_inputs_raw: Vec<Vec<u8>>,
+}
+
+pub struct Keys {
+	pub pk: Vec<u8>,
+	pub vk: Vec<u8>,
+}
+
 pub type PoseidonCRH_x3_3<F> = CRH<F>;
 pub type PoseidonCRH_x3_3Gadget<F> = CRHGadget<F>;
 

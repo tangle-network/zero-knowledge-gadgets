@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-utils"
-version = "0.4.19"
+version = "0.4.20"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's utils for zero-knowledge gadgets written using Arkworks"
@@ -54,6 +54,19 @@ default_poseidon = [
 ]
 
 test = ["poseidon_bn254_x5_5", "poseidon_bn254_x5_3"]
+parallel = [
+  "ark-crypto-primitives/parallel",
+  "ark-ff/parallel",
+  "ark-std/parallel",
+  "ark-r1cs-std/parallel",
+  "ark-marlin/parallel",
+  "ark-groth16/parallel",
+  "ark-poly-commit/parallel",
+  "ark-poly/parallel",
+  "ark-ec/parallel",
+  "ark-ff/parallel",
+  "ark-std/parallel",
+]
 r1cs = []
 std = ["ark-std/std"]
 all = [
