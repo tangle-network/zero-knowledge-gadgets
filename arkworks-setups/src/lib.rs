@@ -18,6 +18,7 @@ pub mod plonk;
 trait MixerProver<E: PairingEngine, H: FieldHasher<E::Fr>, const HEIGHT: usize> {
     // For creating leaves where we supply the secret and the nullifier, for generating new values, pass None
     fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+        &self,
         curve: Curve,
         secret: Option<Vec<u8>>,
         nullifier: Option<Vec<u8>>,
@@ -25,6 +26,7 @@ trait MixerProver<E: PairingEngine, H: FieldHasher<E::Fr>, const HEIGHT: usize> 
     ) -> Result<Leaf, Error>;
     // For making proofs
     fn create_proof<R: RngCore + CryptoRng>(
+        &self,
         curve: Curve,
         secret: Vec<u8>,
         nullifier: Vec<u8>,
