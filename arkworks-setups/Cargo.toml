@@ -1,0 +1,57 @@
+[package]
+name = "arkworks-setups"
+version = "0.4.20"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arkworks-circuits = { path = "../arkworks-circuits", version = "0.4.20", default-features = false }
+arkworks-utils = { path = "../arkworks-utils", version = "0.4.20", features = ["r1cs", "default_poseidon"], default-features = false }
+arkworks-gadgets = { path = "../arkworks-gadgets", version = "0.4.20", features = ["r1cs"], default-features = false }
+
+ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
+ark-ff = { version = "^0.3.0", default-features = false }
+ark-std = { version = "^0.3.0", default-features = false }
+ark-r1cs-std = { version = "^0.3.0", default-features = false }
+ark-relations = { version = "^0.3.0", default-features = false }
+
+ark-snark = { version = "^0.3.0", default-features = false }
+ark-ec = { version = "^0.3.0", default-features = false }
+ark-serialize = {version = "^0.3.0", default-features = false }
+digest = { version = "0.9" }
+
+# curves
+ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
+ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
+ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
+ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
+
+hex-literal = { version = "0.3.4" }
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+
+[features]
+default = ["std", "r1cs"]
+r1cs = []
+plonk = []
+std = [
+  "ark-crypto-primitives/std",
+  "ark-std/std",
+  "ark-r1cs-std/std",
+  "ark-ec/std",
+  "ark-ff/std",
+  "arkworks-circuits/std",
+  "arkworks-gadgets/std",
+  "arkworks-utils/std",
+]
+parallel = [
+  "ark-crypto-primitives/parallel",
+  "ark-std/parallel",
+  "ark-r1cs-std/parallel",
+  "ark-ec/parallel",
+  "ark-ff/parallel",
+  "arkworks-circuits/parallel",
+  "arkworks-gadgets/parallel",
+  "arkworks-utils/parallel",
+]
+
