@@ -167,12 +167,15 @@ impl<F: PrimeField> Utxo<F> {
 	}
 
 	pub fn decrypt(&self, encrypted_utxo: &EncryptedUtxo) -> Result<(Vec<u8>, Vec<u8>), Error> {
+		// Creating a secret key
 		let private_key_bytes = to_bytes![self.keypair.secret_key]?;
 		let mut sc_bytes = [0u8; 32];
 		for i in 0..sc_bytes.len() {
 			sc_bytes[i] = private_key_bytes[i];
 		}
 		let secret_key = SecretKey::from(sc_bytes);
+
+		// Making ephemeral public key from the encryption data
 		let eph_bytes = &encrypted_utxo.ephemeral_pk[..];
 		let ephemeral_pk_bytes: [u8; 32] = eph_bytes
 			.try_into()
@@ -181,7 +184,10 @@ impl<F: PrimeField> Utxo<F> {
 
 		let my_box = ChaChaBox::new(&ephemeral_pk, &secret_key);
 
+		// Converting nonce into proper type
 		let nonce = GenericArray::from_slice(&encrypted_utxo.nonce);
+
+		// Decrypt the cypher text, get the plaintext
 		let plaintext = my_box
 			.decrypt(&nonce, Payload {
 				msg: &encrypted_utxo.cypher_text,
@@ -189,6 +195,8 @@ impl<F: PrimeField> Utxo<F> {
 			})
 			.map_err::<Error, _>(|_| UtxoError::DecryptionFailed.into())?;
 
+		// First 32 bytes is amount
+		// Second 32 bytes is blinding
 		let amount = plaintext[..32].to_vec();
 		let blinding = plaintext[32..64].to_vec();
 		Ok((amount, blinding))
