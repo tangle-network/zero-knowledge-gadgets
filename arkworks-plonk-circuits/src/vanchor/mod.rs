@@ -41,20 +41,6 @@ pub struct VariableAnchorCircuit<
 	// Number of outputs
 	const OUTS: usize,
 > {
-	// chain_id: F,
-	// secret: F,
-	// nullifier: F,
-	// nullifier_hash: F,
-	// path: Path<F, H::Native, N>,
-	// roots: [F; M],
-	// arbitrary_data: F,
-	// hasher: H::Native,
-
-	// INS = number of input transactions
-	// OUTS = number of output transactions
-	// N = Tree height
-	// M = Size of the root set
-
 	// sum of input amounts + public amount == sum of output amounts
 	public_amount: F,   // Public
 	public_chain_id: F, // Public
@@ -219,9 +205,9 @@ where
 			// Optimized version of allocating public nullifier input and constraining
 			// to the calculated one.
 			let _ = composer.arithmetic_gate(|gate| {
-				gate.witness(calc_nullifier, calc_nullifier, Some(zero))
-					.add(-F::one(), F::zero())
-					.pi(self.in_nullifier_hashes[i])
+				gate.witness(calc_nullifier, nullifier_hashes[i], Some(zero))
+					.add(-F::one(), F::one())
+				// .pi(self.in_nullifier_hashes[i])
 			});
 
 			// Calculate the root hash
@@ -279,9 +265,12 @@ where
 			});
 
 			// Each amount should not be greater than the limit constant
-			// TODO: Investigate if we can get the field size bits
+			// TODO: The field size can be gotten as F::size_in_bits()
+			// What is the correct transaction limit?
+			// Each amount should be less than (field size)/2 to prevent
+			// overflow, which suggests that F::size_in_bits() - 1 would
+			// be small enough.  Maybe use F::size_in_bits() - 100 to be safe?
 			composer.range_gate(out_amount_i, 254);
-			// assert_less_than(out_amounts[i], limit);
 
 			// Add in to the sum
 			output_sum = composer.arithmetic_gate(|gate| {
@@ -348,16 +337,6 @@ mod test {
 			poseidon_native5,
 		]
 	}
-
-	// Useful to know the order of public inputs in this circuit:
-	// let public_inputs = vec![public_amount, public_chain_id, arbitrary_data,
-	// in_nullifier_hashes[0],  in_nullifier_hashes[0], -in_root_set[0],
-	// -in_root_set[1], in_nullifier_hashes[1], in_nullifier_hashes[1],
-	// -in_root_set[0], -in_root_set[1], out_commitments[0], out_commitments[1]];
-	// ! Note that because of how check_set_membership is written the public input
-	// values are actually (-1)*root_hash, not root hash !
-
-	// TODO: Add a 16-2 test rather than making INS generic
 
 	// This is the only test of a 16-2 vanchor transaction. All others
 	// test 2-2 transactions.
@@ -722,61 +701,81 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-		// Change the first root to something incorrect
-		in_root_set[0] = Fq::from(0u32);
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
 		let mut out_amounts = [Fq::from(0u64); OUTS];
 		out_amounts[0] = in_amounts[0];
-		out_amounts[1] = public_amount + in_amounts[1]; // fix for INS > 2
+		out_amounts[1] = public_amount + in_amounts[1];
 
 		// Other output quantities can be randomly generated
 		let mut out_private_keys = [Fq::from(0u64); OUTS];
@@ -837,12 +836,12 @@ mod test {
 			arbitrary_data,
 			in_nullifier_hashes[0],
 			in_nullifier_hashes[0],
-			-in_root_set[0].double(), // Give the verifier a different root set
-			-in_root_set[1],
+			in_root_set[0].double(), // Give the verifier a different root set
+			in_root_set[1],
 			in_nullifier_hashes[1],
 			in_nullifier_hashes[1],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
 			out_commitments[0],
 			out_commitments[1],
 		];
@@ -881,55 +880,78 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-		// Change the first secret to something incorrect
-		in_private_keys[0] = Fq::from(0u32);
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
+
+		// Change the second secret to something incorrect
+		in_private_keys[1] = Fq::from(0u32);
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1024,52 +1046,75 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
+
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1135,13 +1180,13 @@ mod test {
 			public_chain_id,
 			arbitrary_data,
 			in_nullifier_hashes[0].double(), // Give the verifier a different nullifier hash here
-			in_nullifier_hashes[0],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_nullifier_hashes[1],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
 		];
@@ -1180,53 +1225,76 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] =
 			[default_path.clone(), default_path.clone()];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
+
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
 
 		// Change the first path to something incorrect
 		in_paths[0] = default_path;
@@ -1324,52 +1392,75 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
+
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1435,13 +1526,13 @@ mod test {
 			public_chain_id,
 			arbitrary_data.double(), // Give the verifier different arbitrary data
 			in_nullifier_hashes[0],
-			in_nullifier_hashes[0],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_nullifier_hashes[1],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
 		];
@@ -1480,52 +1571,75 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
+
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1588,16 +1702,16 @@ mod test {
 
 		let verifier_public_inputs = vec![
 			public_amount,
-			public_chain_id.double(), // Give the verifier different chain ID
+			public_chain_id.double(), // Give the verifier different chain id
 			arbitrary_data,
 			in_nullifier_hashes[0],
-			in_nullifier_hashes[0],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_nullifier_hashes[1],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
 		];
@@ -1636,52 +1750,75 @@ mod test {
 		let mut in_nullifier_hashes = [Fq::from(0u64); INS];
 		let mut in_root_set = [Fq::from(0u64); BRIDGE_SIZE];
 
-		// I don't like this default path thing -- how can I initalize the in_paths
-		// array?
+		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
 			_marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
-		// let mut in_paths_vec: Vec<Path::<Fq, PoseidonBn254, TREE_HEIGHT>>;
+
 		// We'll say the index of each input is index:
 		let index = 0u64;
 		let in_indices = [Fq::from(index); INS];
-		// Populate with random numbers
-		for i in 0..INS {
-			in_private_keys[i] = Fq::rand(rng);
-			in_blindings[i] = Fq::rand(rng);
-			// Multiplying by 1/20 prevents the amounts from summing to more than
-			// the size of the field (at least for fewer than 20 inputs)
-			in_amounts[i] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
 
-			// Calculate what the input nullifier hashes would be based on these:
-			let public_key = poseidon_native2.hash(&in_private_keys[i..i + 1]).unwrap();
-			let leaf = poseidon_native5
-				.hash(&[public_chain_id, in_amounts[i], public_key, in_blindings[i]])
-				.unwrap();
-			let signature = poseidon_native4
-				.hash(&[in_private_keys[i], leaf, in_indices[i]])
-				.unwrap();
-			in_nullifier_hashes[i] = poseidon_native4
-				.hash(&[leaf, in_indices[i], signature])
-				.unwrap();
-
-			// Simulate a Merkle tree for each input
-			let default_leaf = [0u8; 32];
-			let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
-				&[leaf],
-				&poseidon_native3,
-				&default_leaf,
-			)
+		// First input will be a dummy input, so its
+		// data is left as zeros.  Nullifier hashes must be
+		// computed properly, and we need to add a fake merkle
+		// tree membership proof since the gadget checks this,
+		// but the tree's root does not belong to the root set.
+		let public_key = poseidon_native2.hash(&in_private_keys[0..1]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[0], public_key, in_blindings[0]])
 			.unwrap();
-			in_paths[i] = merkle_tree.generate_membership_proof(index);
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[0], leaf, in_indices[0]])
+			.unwrap();
+		in_nullifier_hashes[0] = poseidon_native4
+			.hash(&[leaf, in_indices[0], signature])
+			.unwrap();
+		// Simulate a Merkle tree path for this dummy input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[0] = merkle_tree.generate_membership_proof(index);
 
-			// Fix this for INS > BRIDGE_SIZE
-			if i < BRIDGE_SIZE {
-				in_root_set[i] = merkle_tree.root();
-			}
-		}
+		// The remaining input can be a random number
+		in_private_keys[1] = Fq::rand(rng);
+		in_blindings[1] = Fq::rand(rng);
+		// Multiplying by 1/20 prevents the amounts from summing to more than
+		// the size of the field (at least for fewer than 20 inputs)
+		in_amounts[1] = Fq::rand(rng) * (Fq::from(20u64).inverse().unwrap());
+
+		// Calculate what the input nullifier hashes would be based on these:
+		let public_key = poseidon_native2.hash(&in_private_keys[1..2]).unwrap();
+		let leaf = poseidon_native5
+			.hash(&[public_chain_id, in_amounts[1], public_key, in_blindings[1]])
+			.unwrap();
+		let signature = poseidon_native4
+			.hash(&[in_private_keys[1], leaf, in_indices[1]])
+			.unwrap();
+		in_nullifier_hashes[1] = poseidon_native4
+			.hash(&[leaf, in_indices[1], signature])
+			.unwrap();
+
+		// Simulate a Merkle tree for each input
+		let default_leaf = [0u8; 32];
+		let merkle_tree = SparseMerkleTree::<Fq, PoseidonBn254, TREE_HEIGHT>::new_sequential(
+			&[leaf],
+			&poseidon_native3,
+			&default_leaf,
+		)
+		.unwrap();
+		in_paths[1] = merkle_tree.generate_membership_proof(index);
+
+		// Add the root of this Merkle tree to the root set.
+		in_root_set[0] = in_paths[1]
+			.calculate_root(&leaf, &poseidon_native3)
+			.unwrap();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1747,13 +1884,13 @@ mod test {
 			public_chain_id,
 			arbitrary_data,
 			in_nullifier_hashes[0],
-			in_nullifier_hashes[0],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_nullifier_hashes[1],
-			-in_root_set[0],
-			-in_root_set[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
 		];

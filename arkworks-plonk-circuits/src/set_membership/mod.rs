@@ -24,8 +24,8 @@ where
 	for x in set.iter() {
 		let diff = composer.arithmetic_gate(|gate| {
 			gate.witness(member, member, None)
-				.add(F::zero(), F::one())
-				.pi(-*x)
+				.add(F::zero(), -F::one())
+				.pi(*x)
 		});
 		diffs.push(diff);
 	}
@@ -63,8 +63,8 @@ where
 	for x in set.iter() {
 		let diff = composer.arithmetic_gate(|gate| {
 			gate.witness(member, member, None)
-				.add(F::zero(), F::one())
-				.pi(-*x)
+				.add(F::zero(), -F::one())
+				.pi(*x)
 		});
 		diffs.push(diff);
 	}

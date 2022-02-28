@@ -59,7 +59,6 @@ where
 	}
 }
 
-// Should this include a check that the Merkle root belongs to some root set?
 impl<F, P, HG, const N: usize, const M: usize> Circuit<F, P> for AnchorCircuit<F, P, HG, N, M>
 where
 	F: PrimeField,
@@ -537,22 +536,22 @@ mod test {
 			);
 
 		// Prover and verifier disagree on public inputs:
-		// The order of public inputs is [chain_id, nullifier_hash, roots,
-		// arbitrary_data, -roots ] (Uncomment the following block to verify that)
+		// The order of public inputs is [chain_id, nullifier_hash,
+		// arbitrary_data, roots ] (Uncomment the following block to verify that)
 		// let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
 		// let _ = anchor.gadget(&mut composer);
 		// println!("The public input positions are {:?}", composer.pi_positions());
 		// let prover_pi = composer.construct_dense_pi_vec();
 		// assert_eq!(
 		// 	[prover_pi[3], prover_pi[4], prover_pi[5], prover_pi[14355],
-		// prover_pi[14356]], 	[chain_id, nullifier_hash, arbitrary_data, -roots[0],
-		// -roots[1]]);
+		// prover_pi[14356]], 	[chain_id, nullifier_hash, arbitrary_data, roots[0],
+		// roots[1]]);
 		let verifier_pi = vec![
 			chain_id,
 			nullifier_hash,
 			arbitrary_data,
-			-roots[0].double(), // Verifier has different root set
-			-roots[1],
+			roots[0].double(), // Verifier has different root set
+			roots[1],
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
@@ -636,14 +635,14 @@ mod test {
 			);
 
 		// Prover and verifier disagree on public inputs:
-		// The order of public inputs is [chain_id, nullifier_hash, roots,
-		// arbitrary_data, -roots ]
+		// The order of public inputs is [chain_id, nullifier_hash,
+		// arbitrary_data, roots ]
 		let verifier_pi = vec![
 			chain_id,
 			nullifier_hash.double(), // Verifier has different nullifier hash
 			arbitrary_data,
-			-roots[0],
-			-roots[1],
+			roots[0],
+			roots[1],
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
@@ -727,14 +726,14 @@ mod test {
 			);
 
 		// Prover and verifier disagree on public inputs:
-		// The order of public inputs is [chain_id, nullifier_hash, roots,
-		// arbitrary_data, -roots ]
+		// The order of public inputs is [chain_id, nullifier_hash,
+		// arbitrary_data, roots ]
 		let verifier_pi = vec![
 			chain_id,
 			nullifier_hash,
 			arbitrary_data.double(), // Verifier has different arbitrary data
-			-roots[0],
-			-roots[1],
+			roots[0],
+			roots[1],
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
@@ -818,14 +817,14 @@ mod test {
 			);
 
 		// Prover and verifier disagree on public inputs:
-		// The order of public inputs is [chain_id, nullifier_hash, roots,
-		// arbitrary_data, -roots ]
+		// The order of public inputs is [chain_id, nullifier_hash,
+		// arbitrary_data, roots ]
 		let verifier_pi = vec![
 			chain_id.double(), // Verifier has different chain id
 			nullifier_hash,
 			arbitrary_data,
-			-roots[0],
-			-roots[1],
+			roots[0],
+			roots[1],
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
