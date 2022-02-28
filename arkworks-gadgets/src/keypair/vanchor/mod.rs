@@ -7,20 +7,20 @@ pub mod constraints;
 
 #[derive(Default, Debug, Copy)]
 pub struct Keypair<B: Clone + Copy + ToBytes, H: CRH> {
-	pub private_key: B,
+	pub secret_key: B,
 	_h: PhantomData<H>,
 }
 
 impl<B: Clone + Copy + ToBytes, H: CRH> Keypair<B, H> {
-	pub fn new(private_key: B) -> Self {
+	pub fn new(secret_key: B) -> Self {
 		Self {
-			private_key,
+			secret_key,
 			_h: PhantomData,
 		}
 	}
 
 	pub fn public_key(&self, h: &H::Parameters) -> Result<H::Output, Error> {
-		let bytes = to_bytes![&self.private_key]?;
+		let bytes = to_bytes![&self.secret_key]?;
 		H::evaluate(h, &bytes)
 	}
 
@@ -31,15 +31,15 @@ impl<B: Clone + Copy + ToBytes, H: CRH> Keypair<B, H> {
 		index: &B,
 		h_w4: &H::Parameters,
 	) -> Result<H::Output, Error> {
-		let bytes = to_bytes![self.private_key.clone(), commitment, index]?;
+		let bytes = to_bytes![self.secret_key.clone(), commitment, index]?;
 		H::evaluate(h_w4, &bytes)
 	}
 }
 
 impl<B: Clone + Copy + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 	fn clone(&self) -> Self {
-		let private_key = self.private_key.clone();
-		Self::new(private_key)
+		let secret_key = self.secret_key.clone();
+		Self::new(secret_key)
 	}
 }
 

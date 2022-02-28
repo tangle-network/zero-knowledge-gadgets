@@ -58,7 +58,7 @@ impl<F: PrimeField, H2: CRH, HG2: CRHGadget<H2, F>> AllocVar<Keypair<F, H2>, F>
 		mode: AllocationMode,
 	) -> Result<Self, SynthesisError> {
 		let inp = f()?.borrow().clone();
-		let private_key_in = FpVar::<F>::new_variable(into_ns, || Ok(inp.private_key), mode)?;
+		let private_key_in = FpVar::<F>::new_variable(into_ns, || Ok(inp.secret_key), mode)?;
 		KeypairVar::new(&private_key_in)
 	}
 }

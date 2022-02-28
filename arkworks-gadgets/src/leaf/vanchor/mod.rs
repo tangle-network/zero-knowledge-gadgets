@@ -9,7 +9,7 @@ pub mod constraints;
 #[derive(Clone, Debug, Copy, Default)]
 pub struct Private<F: PrimeField> {
 	pub amount: F,
-	blinding: F,
+	pub blinding: F,
 }
 
 #[derive(Default, Clone, Copy, Debug)]
