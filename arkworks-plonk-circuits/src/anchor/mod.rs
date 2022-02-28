@@ -189,7 +189,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				nullifier,
@@ -270,7 +270,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				bad_secret,
 				nullifier,
@@ -352,7 +352,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				bad_nullifier,
@@ -434,7 +434,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				nullifier,
@@ -513,7 +513,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				nullifier,
@@ -610,7 +610,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				nullifier,
@@ -699,7 +699,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				nullifier,
@@ -788,7 +788,7 @@ mod test {
 
 		// Create AnchorCircuit
 		let mut anchor =
-			AnchorCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
+			AnchorCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT, BRIDGE_SIZE>::new(
 				chain_id,
 				secret,
 				nullifier,
