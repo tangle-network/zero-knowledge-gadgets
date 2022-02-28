@@ -435,12 +435,9 @@ mod test {
 			in_paths[i] = merkle_tree.generate_membership_proof(i as u64);
 		}
 
-		// The root set should contain this merkle tree's root, which
-		// can be gotten from any of the above paths since they all
-		// belong to same tree.
-		in_root_set[0] = in_paths[0]
-			.calculate_root(&in_leaf_hashes[0], &poseidon_native3)
-			.unwrap();
+		// The root set should contain this merkle tree's root
+		in_root_set[0] = merkle_tree.root();
+
 
 		// Output amounts: (remember input amounts sum to 6 and there is also the public
 		// amount)
@@ -605,9 +602,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Output amounts should sum to inputs plus public amount.
 		// In this case the first output is 0 and the remaining output
@@ -767,9 +762,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -946,9 +939,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Change the second secret to something incorrect
 		in_private_keys[1] = Fq::from(0u32);
@@ -1112,9 +1103,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1292,9 +1281,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Change the first path to something incorrect
 		in_paths[0] = default_path;
@@ -1458,9 +1445,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1637,9 +1622,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.
@@ -1816,9 +1799,7 @@ mod test {
 		in_paths[1] = merkle_tree.generate_membership_proof(index);
 
 		// Add the root of this Merkle tree to the root set.
-		in_root_set[0] = in_paths[1]
-			.calculate_root(&leaf, &poseidon_native3)
-			.unwrap();
+		in_root_set[0] = merkle_tree.root();
 
 		// Output amounts cannot be randomly generated since they may then exceed input
 		// amount.

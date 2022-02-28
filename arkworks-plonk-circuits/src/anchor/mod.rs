@@ -185,9 +185,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -265,9 +263,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Use the wrong secret:
 		let bad_secret = secret.double();
@@ -349,9 +345,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Use the wrong nullifier:
 		let bad_nullifier = nullifier.double();
@@ -433,9 +427,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Use an invalid path
 		let bad_path = tree.generate_membership_proof((last_index - 1) as u64);
@@ -517,9 +509,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -616,9 +606,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -707,9 +695,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Create AnchorCircuit
 		let mut anchor =
@@ -798,9 +784,7 @@ mod test {
 		let path = tree.generate_membership_proof(last_index as u64);
 
 		let mut roots = [Fq::from(0u8); BRIDGE_SIZE];
-		roots[0] = path
-			.calculate_root(&leaf_hash, &poseidon_native_three)
-			.unwrap();
+		roots[0] = tree.root();
 
 		// Create AnchorCircuit
 		let mut anchor =
