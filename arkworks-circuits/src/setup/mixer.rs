@@ -21,6 +21,7 @@ use arkworks_utils::{
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 
 pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
+
 pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_x5_5Gadget<F>>;
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
