@@ -1,6 +1,6 @@
 use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, prelude::*};
+use ark_r1cs_std::{eq::EqGadget, prelude::*, fields::fp::FpVar};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 use arkworks_gadgets::{
@@ -10,52 +10,45 @@ use arkworks_gadgets::{
 		Private as LeafPrivate,
 	},
 	merkle_tree::{
-		constraints::{NodeVar, PathVar},
-		Config as MerkleConfig, Path,
-	},
+		constraints::{NodeVar, PathVar}, simple_merkle::Path,
+	}, poseidon::{field_hasher::FieldHasher, field_hasher_constraints::{FieldHasherGadget, PoseidonParametersVar}},
 };
 
 pub struct MixerCircuit<
 	F: PrimeField,
 	// Hasher for the leaf creation
-	H: CRH,
-	HG: CRHGadget<H, F>,
-	// Merkle config and hasher gadget for the tree
-	C: MerkleConfig,
-	LHGT: CRHGadget<C::LeafH, F>,
-	HGT: CRHGadget<C::H, F>,
+	H: FieldHasher<F>,
+	// Hasher gadget for the leaf creation
+	HG: FieldHasherGadget<F>,
+	// Hasher gadget for merkle tree
+	MTHG: FieldHasherGadget<F>,
 	const N: usize,
 > {
 	arbitrary_input: ArbitraryInput<F>,
 	leaf_private_inputs: LeafPrivate<F>,
-	hasher_params: H::Parameters,
-	path: Path<C, N>,
-	root: <C::H as CRH>::Output,
-	nullifier_hash: H::Output,
-	_field: PhantomData<F>,
-	_hasher: PhantomData<H>,
+	// hasher params for merkle tree
+	hasher_params: PoseidonParametersVar<F>,
+	path: Path<F, H, N>,
+	root: F,
+	nullifier_hash: F,
 	_hasher_gadget: PhantomData<HG>,
-	_leaf_hasher_gadget: PhantomData<LHGT>,
-	_tree_hasher_gadget: PhantomData<HGT>,
-	_merkle_config: PhantomData<C>,
+	_tree_hasher_gadget: PhantomData<MTHG>,
 }
 
-impl<F, H, HG, C, LHGT, HGT, const N: usize> MixerCircuit<F, H, HG, C, LHGT, HGT, N>
+impl<F, H, HG, MTHG, const N: usize> MixerCircuit<F, H, HG, MTHG, N>
 where
 	F: PrimeField,
 	H: CRH,
 	HG: CRHGadget<H, F>,
-	C: MerkleConfig,
-	LHGT: CRHGadget<C::LeafH, F>,
-	HGT: CRHGadget<C::H, F>,
+	MTHG: FieldHasherGadget<F>,
 {
 	pub fn new(
 		arbitrary_input: ArbitraryInput<F>,
 		leaf_private_inputs: LeafPrivate<F>,
-		hasher_params: H::Parameters,
-		path: Path<C, N>,
-		root: <C::H as CRH>::Output,
-		nullifier_hash: H::Output,
+		hasher_params: PoseidonParametersVar<F>,
+		path: Path<F, H, N>,
+		root: F,
+		nullifier_hash: F,
 	) -> Self {
 		Self {
 			arbitrary_input,
@@ -64,24 +57,18 @@ where
 			path,
 			root,
 			nullifier_hash,
-			_field: PhantomData,
-			_hasher: PhantomData,
 			_hasher_gadget: PhantomData,
-			_leaf_hasher_gadget: PhantomData,
 			_tree_hasher_gadget: PhantomData,
-			_merkle_config: PhantomData,
 		}
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, const N: usize> Clone for MixerCircuit<F, H, HG, C, LHGT, HGT, N>
+impl<F, H, HG, MTHG, const N: usize> Clone for MixerCircuit<F, H, HG, MTHG, N>
 where
 	F: PrimeField,
 	H: CRH,
 	HG: CRHGadget<H, F>,
-	C: MerkleConfig,
-	LHGT: CRHGadget<C::LeafH, F>,
-	HGT: CRHGadget<C::H, F>,
+	MTHG: FieldHasherGadget<F>,
 {
 	fn clone(&self) -> Self {
 		let arbitrary_input = self.arbitrary_input.clone();
@@ -101,15 +88,13 @@ where
 	}
 }
 
-impl<F, H, HG, C, LHGT, HGT, const N: usize> ConstraintSynthesizer<F>
-	for MixerCircuit<F, H, HG, C, LHGT, HGT, N>
+impl<F, H, HG, MTHG, const N: usize> ConstraintSynthesizer<F>
+	for MixerCircuit<F, H, HG, MTHG, N>
 where
 	F: PrimeField,
 	H: CRH,
 	HG: CRHGadget<H, F>,
-	C: MerkleConfig,
-	LHGT: CRHGadget<C::LeafH, F>,
-	HGT: CRHGadget<C::H, F>,
+	MTHG: FieldHasherGadget<F>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let arbitrary_input = self.arbitrary_input;
@@ -121,8 +106,8 @@ where
 
 		// Generating vars
 		// Public inputs
-		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
-		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
+		let nullifier_hash_var = FpVar::<F>::new_input(cs.clone(), || Ok(nullifier_hash))?;
+		let root_var = FpVar::<F>::new_input(cs.clone(), || Ok(root))?;
 		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
@@ -130,7 +115,7 @@ where
 
 		// Private inputs
 		let leaf_private_var = LeafPrivateVar::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let path_var = PathVar::<F, C, HGT, LHGT, N>::new_witness(cs, || Ok(path))?;
+		let path_var = PathVar::<F, H, N>::new_witness(cs, || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
 		let mixer_leaf_hash =

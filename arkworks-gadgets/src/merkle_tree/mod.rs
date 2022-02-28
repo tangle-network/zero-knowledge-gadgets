@@ -11,6 +11,10 @@ use core::convert::TryInto;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+
+#[cfg(feature = "r1cs")]
+pub mod simple_merkle_constraints;
+
 pub mod simple_merkle;
 
 /// configuration of a Merkle tree
