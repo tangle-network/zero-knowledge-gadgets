@@ -438,7 +438,6 @@ mod test {
 		// The root set should contain this merkle tree's root
 		in_root_set[0] = merkle_tree.root();
 
-
 		// Output amounts: (remember input amounts sum to 6 and there is also the public
 		// amount)
 		let mut out_amounts = [Fq::from(0u64); OUTS];
