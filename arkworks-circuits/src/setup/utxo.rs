@@ -1,16 +1,22 @@
 use crate::setup::common::{PoseidonCRH_x5_2, PoseidonCRH_x5_4};
 use ark_crypto_primitives::Error;
-use ark_ff::PrimeField;
-use ark_std::{error::Error as ArkError, rand::{RngCore, CryptoRng}, string::ToString};
+use ark_ff::{to_bytes, PrimeField};
+use ark_std::{
+	convert::TryInto,
+	error::Error as ArkError,
+	rand::{CryptoRng, RngCore},
+	string::ToString,
+	vec::Vec,
+};
 use arkworks_gadgets::{
 	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private as LeafPrivateInput, Public as LeafPublicInput, VAnchorLeaf as Leaf},
 };
 use arkworks_utils::poseidon::PoseidonParameters;
-use ark_std::vec::Vec;
-use ark_std::convert::TryInto;
-use ark_ff::to_bytes;
-use crypto_box::{generate_nonce, SecretKey, PublicKey, ChaChaBox, aead::Aead, aead::Payload, aead::generic_array::GenericArray};
+use crypto_box::{
+	aead::{generic_array::GenericArray, Aead, Payload},
+	generate_nonce, ChaChaBox, PublicKey, SecretKey,
+};
 
 #[derive(Debug)]
 pub enum UtxoError {
@@ -106,18 +112,22 @@ impl<F: PrimeField> Utxo<F> {
 			.ok_or(UtxoError::NullifierNotCalculated.into())
 	}
 
-    pub fn set_index(&mut self, i: F, params4: &PoseidonParameters<F>) -> Result<(), Error> {
-        let signature = self.keypair.signature(&self.commitment, &i, params4)?;
+	pub fn set_index(&mut self, i: F, params4: &PoseidonParameters<F>) -> Result<(), Error> {
+		let signature = self.keypair.signature(&self.commitment, &i, params4)?;
 
-        let nullifier =
-            Leaf::<_, PoseidonCRH_x5_4<F>>::create_nullifier(&signature, &self.commitment, &params4, &i)?;
+		let nullifier = Leaf::<_, PoseidonCRH_x5_4<F>>::create_nullifier(
+			&signature,
+			&self.commitment,
+			&params4,
+			&i,
+		)?;
 
-        self.nullifier = Some(nullifier);
+		self.nullifier = Some(nullifier);
 
-        Ok(())
-    }
+		Ok(())
+	}
 
-    pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R) -> Result<EncryptedUtxo, Error> {
+	pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R) -> Result<EncryptedUtxo, Error> {
 		// Generate new nonce
 		let nonce = generate_nonce(rng);
 
@@ -136,7 +146,7 @@ impl<F: PrimeField> Utxo<F> {
 		// Generate ephemeral sk/pk
 		// QUESTION: What are those?
 		let ephemeral_sk = SecretKey::generate(rng);
-        let ephemeral_pk = PublicKey::from(&ephemeral_sk);
+		let ephemeral_pk = PublicKey::from(&ephemeral_sk);
 
 		let my_box = ChaChaBox::new(&public_key, &ephemeral_sk);
 
@@ -144,16 +154,17 @@ impl<F: PrimeField> Utxo<F> {
 		let msg = to_bytes![self.leaf_private.amount, self.leaf_private.blinding]?;
 		// Encrypting the message
 		let ct = my_box
-            .encrypt(&nonce, Payload { msg: &msg, aad: &[] })
+			.encrypt(&nonce, Payload {
+				msg: &msg,
+				aad: &[],
+			})
 			.map_err::<Error, _>(|_| UtxoError::EncryptionFailed.into())?;
-        Ok(
-			EncryptedUtxo {
-				nonce: nonce.as_slice().to_vec(),
-				cypher_text: ct,
-				ephemeral_pk: ephemeral_pk.as_bytes().to_vec()
-			}
-		)
-    }
+		Ok(EncryptedUtxo {
+			nonce: nonce.as_slice().to_vec(),
+			cypher_text: ct,
+			ephemeral_pk: ephemeral_pk.as_bytes().to_vec(),
+		})
+	}
 
 	pub fn decrypt(&self, encrypted_utxo: &EncryptedUtxo) -> Result<(Vec<u8>, Vec<u8>), Error> {
 		let private_key_bytes = to_bytes![self.keypair.secret_key]?;
@@ -163,38 +174,36 @@ impl<F: PrimeField> Utxo<F> {
 		}
 		let secret_key = SecretKey::from(sc_bytes);
 		let eph_bytes = &encrypted_utxo.ephemeral_pk[..];
-		let ephemeral_pk_bytes: [u8; 32] = eph_bytes.try_into().map_err(|_| UtxoError::DecryptionFailed)?;
+		let ephemeral_pk_bytes: [u8; 32] = eph_bytes
+			.try_into()
+			.map_err(|_| UtxoError::DecryptionFailed)?;
 		let ephemeral_pk = PublicKey::from(ephemeral_pk_bytes);
 
 		let my_box = ChaChaBox::new(&ephemeral_pk, &secret_key);
 
 		let nonce = GenericArray::from_slice(&encrypted_utxo.nonce);
 		let plaintext = my_box
-            .decrypt(
-                &nonce,
-                Payload {
-                    msg: &encrypted_utxo.cypher_text,
-                    aad: &[],
-                },
-            )
-            .map_err::<Error, _>(|_| UtxoError::DecryptionFailed.into())?;
+			.decrypt(&nonce, Payload {
+				msg: &encrypted_utxo.cypher_text,
+				aad: &[],
+			})
+			.map_err::<Error, _>(|_| UtxoError::DecryptionFailed.into())?;
 
 		let amount = plaintext[..32].to_vec();
 		let blinding = plaintext[32..64].to_vec();
 		Ok((amount, blinding))
-
 	}
 }
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_bn254::{Fr as BnFr};
+	use ark_bn254::Fr as BnFr;
 	use ark_ff::BigInteger;
-use arkworks_utils::utils::common::{
+	use ark_std::test_rng;
+	use arkworks_utils::utils::common::{
 		setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
 	};
-	use ark_std::test_rng;
 
 	#[test]
 	fn test_encrypt() {
@@ -209,7 +218,18 @@ use arkworks_utils::utils::common::{
 		let amount = BnFr::from(5u32);
 		let blinding = BnFr::from(10u32);
 		// let utxo
-		let utxo = Utxo::new(chain_id, amount, None, None, Some(blinding), &params2, &params4, &params5, rng).unwrap();
+		let utxo = Utxo::new(
+			chain_id,
+			amount,
+			None,
+			None,
+			Some(blinding),
+			&params2,
+			&params4,
+			&params5,
+			rng,
+		)
+		.unwrap();
 
 		let encrypted_data = utxo.encrypt(rng).unwrap();
 		let (amount_bytes, blinding_bytes) = utxo.decrypt(&encrypted_data).unwrap();
