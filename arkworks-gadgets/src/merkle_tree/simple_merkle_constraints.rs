@@ -1,6 +1,3 @@
-use core::convert::TryInto;
-use std::marker::PhantomData;
-
 use super::simple_merkle::Path;
 use crate::{
 	poseidon::{field_hasher::FieldHasher, field_hasher_constraints::FieldHasherGadget},
@@ -11,7 +8,8 @@ use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, fields::fp::FpVar, prelude::*, select::CondSelectGadget,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
-use ark_std::borrow::Borrow;
+use ark_std::{borrow::Borrow, marker::PhantomData};
+use core::convert::TryInto;
 
 /// Gadgets for one Merkle tree path
 #[derive(Debug, Clone)]
@@ -44,7 +42,6 @@ where
 
 	pub fn root_hash(&self, leaf: &FpVar<F>, hasher: &HG) -> Result<FpVar<F>, SynthesisError> {
 		assert_eq!(self.path.len(), N);
-		let mut cs = leaf.cs();
 		// Check if leaf is one of the bottom-most siblings.
 		let leaf_is_left = leaf.is_eq(&self.path[0].0)?;
 
@@ -78,7 +75,6 @@ where
 		leaf: &FpVar<F>,
 		hasher: &HG,
 	) -> Result<FpVar<F>, SynthesisError> {
-		let mut cs = leaf.cs();
 		let mut index = FpVar::<F>::zero();
 		let mut twopower = FpVar::<F>::one();
 		let mut rightvalue: FpVar<F>;
@@ -151,22 +147,17 @@ mod test {
 	use super::PathVar;
 	use crate::{
 		ark_std::UniformRand,
-		merkle_tree::{
-			simple_merkle::{Path, SparseMerkleTree},
-			Config,
-		},
+		merkle_tree::simple_merkle::SparseMerkleTree,
 		poseidon::{
-			constraints::CRHGadget as PoseidonCRHGadget,
-			field_hasher::{FieldHasher, Poseidon},
-			field_hasher_constraints::{FieldHasherGadget, PoseidonGadget, PoseidonParametersVar},
-			CRH as PoseidonCRH,
+			field_hasher::Poseidon,
+			field_hasher_constraints::{FieldHasherGadget, PoseidonGadget},
 		},
 	};
 
 	use ark_ed_on_bn254::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
-	use ark_std::{rc::Rc, test_rng};
+	use ark_std::test_rng;
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 	type FieldVar = FpVar<Fq>;
