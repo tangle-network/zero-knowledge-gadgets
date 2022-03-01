@@ -1,4 +1,4 @@
-use crate::{common::*, AnchorProver};
+use crate::{common::*, AnchorProver, r1cs::vanchor::utxo::Utxo};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
@@ -41,7 +41,7 @@ impl<
 		const OUTS: usize,
 	> AnchorProver<E, HEIGHT, ANCHOR_CT> for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 {
-	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+	fn create_utxo<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
 		secret: Option<Vec<u8>>,
@@ -73,13 +73,9 @@ impl<
 			vanchor::VAnchorLeaf::create_leaf(&private, &public, &leaf_hasher)?;
 		let nullifier_hash_field_element =
 			vanchor::VAnchorLeaf::create_nullifier(&private, &tree_hasher)?;
-		Ok(VAnchorLeaf {
-			chain_id_bytes: chain_id.to_be_bytes().to_vec(),
-			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
-			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
-			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
-			nullifier_hash_bytes: nullifier_hash_field_element.into_repr().to_bytes_le(),
-		})
+        // TODO: Create utxo
+        let utxo = Utxo::new(leaf_field_element, nullifier_hash_field_element);
+		Ok(utxo)
 	}
 
 	fn create_proof<R: RngCore + CryptoRng>(

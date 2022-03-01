@@ -7,6 +7,7 @@ use ark_std::{
 use arkworks_gadgets::poseidon::field_hasher_constraints::FieldHasherGadget;
 use arkworks_utils::utils::common::Curve;
 use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorLeaf};
+use r1cs::vanchor::utxo::Utxo;
 
 pub mod common;
 
@@ -80,7 +81,7 @@ trait VAnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usiz
 		private_key: Option<Vec<u8>>,
 		blinding: Option<Vec<u8>>,
 		rng: &mut R,
-	) -> Result<VAnchorLeaf, Error> {
+	) -> Result<Utxo<E::Fr>, Error> {
 		Self::create_utxo(curve, chain_id, amount, index, secret_key, blinding, rng)
 	}
 	// For creating fresh utxo, or create a new one by passing values for secret key
@@ -93,7 +94,7 @@ trait VAnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usiz
 		secret_key: Option<Vec<u8>>,
 		blinding: Option<Vec<u8>>,
 		rng: &mut R,
-	) -> Result<VAnchorLeaf, Error>;
+	) -> Result<Utxo<E::Fr>, Error>;
 
 	// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(
