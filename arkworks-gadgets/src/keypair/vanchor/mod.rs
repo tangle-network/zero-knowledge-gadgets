@@ -113,7 +113,7 @@ impl<B: Clone + Copy + ToBytes, H: CRH> Keypair<B, H> {
 		})
 	}
 
-	pub fn decypt(&self, encrypted_data: &EncryptedData) -> Result<Vec<u8>, Error> {
+	pub fn decrypt(&self, encrypted_data: &EncryptedData) -> Result<Vec<u8>, Error> {
 		// Creating a secret key
 		let secret_key_bytes = to_bytes![self.secret_key]?;
 
