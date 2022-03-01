@@ -1,14 +1,17 @@
 use core::convert::TryInto;
 use std::marker::PhantomData;
 
-use super::{simple_merkle::Path};
-use crate::{Vec, poseidon::{field_hasher_constraints::FieldHasherGadget, field_hasher::FieldHasher}};
+use super::simple_merkle::Path;
+use crate::{
+	poseidon::{field_hasher::FieldHasher, field_hasher_constraints::FieldHasherGadget},
+	Vec,
+};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, fields::fp::FpVar, prelude::*, select::CondSelectGadget,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
-use ark_std::{borrow::Borrow};
+use ark_std::borrow::Borrow;
 
 /// Gadgets for one Merkle tree path
 #[derive(Debug, Clone)]
@@ -39,11 +42,7 @@ where
 		root.is_eq(&computed_root)
 	}
 
-	pub fn root_hash(
-		&self,
-		leaf: &FpVar<F>,
-		hasher: &HG,
-	) -> Result<FpVar<F>, SynthesisError> {
+	pub fn root_hash(&self, leaf: &FpVar<F>, hasher: &HG) -> Result<FpVar<F>, SynthesisError> {
 		assert_eq!(self.path.len(), N);
 		let mut cs = leaf.cs();
 		// Check if leaf is one of the bottom-most siblings.
@@ -67,7 +66,7 @@ where
 				right_hash,
 			)?)?;
 
-			previous_hash = hasher.hash_two(&mut cs, left_hash, right_hash)?;
+			previous_hash = hasher.hash_two(left_hash, right_hash)?;
 		}
 
 		Ok(previous_hash)
@@ -94,7 +93,7 @@ where
 			index = FpVar::<F>::conditionally_select(&previous_is_left, &index, &rightvalue)?;
 			twopower = twopower.clone() + twopower.clone();
 
-			previous_hash = hasher.hash_two(&mut cs, left_hash, right_hash)?;
+			previous_hash = hasher.hash_two(left_hash, right_hash)?;
 		}
 
 		// Now check that path has the correct Merkle root
@@ -122,10 +121,16 @@ where
 		let mut path = Vec::new();
 		let path_obj = f()?;
 		for &(ref l, ref r) in &path_obj.borrow().path {
-			let l_hash =
-				FpVar::<F>::new_variable(ark_relations::ns!(cs, "l_child"), || Ok(l.clone()), mode)?;
-			let r_hash =
-				FpVar::<F>::new_variable(ark_relations::ns!(cs, "r_child"), || Ok(r.clone()), mode)?;
+			let l_hash = FpVar::<F>::new_variable(
+				ark_relations::ns!(cs, "l_child"),
+				|| Ok(l.clone()),
+				mode,
+			)?;
+			let r_hash = FpVar::<F>::new_variable(
+				ark_relations::ns!(cs, "r_child"),
+				|| Ok(r.clone()),
+				mode,
+			)?;
 			path.push((l_hash, r_hash));
 		}
 
@@ -143,11 +148,19 @@ where
 
 #[cfg(test)]
 mod test {
-	use super::{PathVar};
+	use super::PathVar;
 	use crate::{
 		ark_std::UniformRand,
-		merkle_tree::{Config, simple_merkle::{Path, SparseMerkleTree}},
-		poseidon::{constraints::CRHGadget as PoseidonCRHGadget, CRH as PoseidonCRH, field_hasher::{FieldHasher, Poseidon}, field_hasher_constraints::{FieldHasherGadget, PoseidonGadget, PoseidonParametersVar}},
+		merkle_tree::{
+			simple_merkle::{Path, SparseMerkleTree},
+			Config,
+		},
+		poseidon::{
+			constraints::CRHGadget as PoseidonCRHGadget,
+			field_hasher::{FieldHasher, Poseidon},
+			field_hasher_constraints::{FieldHasherGadget, PoseidonGadget, PoseidonParametersVar},
+			CRH as PoseidonCRH,
+		},
 	};
 
 	use ark_ed_on_bn254::Fq;
@@ -170,9 +183,7 @@ mod test {
 		let curve = Curve::Bls381;
 
 		let params3 = setup_params_x5_3(curve);
-		let hasher = Poseidon::<Fq> {
-			params: params3,
-		};
+		let hasher = Poseidon::<Fq> { params: params3 };
 
 		let mut cs = ConstraintSystem::<Fq>::new_ref();
 		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone());
@@ -183,14 +194,13 @@ mod test {
 		let path = smt.generate_membership_proof(0);
 
 		let path_var =
-			PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || {
-				Ok(path)
-			})
-			.unwrap();
+			PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
 		let root_var = FieldVar::new_witness(cs.clone(), || Ok(root)).unwrap();
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 
-		let res = path_var.check_membership(&root_var, &leaf_var, &hasher_gadget).unwrap();
+		let res = path_var
+			.check_membership(&root_var, &leaf_var, &hasher_gadget)
+			.unwrap();
 		assert!(res.cs().is_satisfied().unwrap());
 		assert!(res.value().unwrap());
 	}
@@ -201,9 +211,7 @@ mod test {
 		let curve = Curve::Bls381;
 
 		let params3 = setup_params_x5_3(curve);
-		let hasher = Poseidon::<Fq> {
-			params: params3,
-		};
+		let hasher = Poseidon::<Fq> { params: params3 };
 
 		let index = 2;
 		let mut cs = ConstraintSystem::<Fq>::new_ref();
@@ -215,14 +223,13 @@ mod test {
 		let path = smt.generate_membership_proof(index);
 
 		let path_var =
-			PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || {
-				Ok(path)
-			})
-			.unwrap();
+			PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
 		let root_var = FieldVar::new_witness(cs.clone(), || Ok(root)).unwrap();
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[index as usize])).unwrap();
 
-		let res = path_var.get_index(&root_var, &leaf_var, &hasher_gadget).unwrap();
+		let res = path_var
+			.get_index(&root_var, &leaf_var, &hasher_gadget)
+			.unwrap();
 		let desired_res = Fq::from(index);
 
 		assert!(res.cs().is_satisfied().unwrap());
@@ -238,9 +245,7 @@ mod test {
 		let curve = Curve::Bls381;
 
 		let params3 = setup_params_x5_3(curve);
-		let hasher = Poseidon::<Fq> {
-			params: params3,
-		};
+		let hasher = Poseidon::<Fq> { params: params3 };
 
 		let index = 2;
 
@@ -257,14 +262,13 @@ mod test {
 		let bad_root = bad_smt.root();
 
 		let path_var =
-			PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || {
-				Ok(path)
-			})
-			.unwrap();
+			PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
 		let bad_root_var = FieldVar::new_witness(cs.clone(), || Ok(bad_root)).unwrap();
 		let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[index as usize])).unwrap();
 
-		let res = path_var.get_index(&bad_root_var, &leaf_var, &hasher_gadget).unwrap();
+		let res = path_var
+			.get_index(&bad_root_var, &leaf_var, &hasher_gadget)
+			.unwrap();
 		let desired_res = Fq::from(index);
 
 		assert!(res.cs().is_satisfied().unwrap());

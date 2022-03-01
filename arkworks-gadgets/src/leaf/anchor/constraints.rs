@@ -1,9 +1,12 @@
 use super::{Private, Public};
-use crate::{Vec, poseidon::{field_hasher::FieldHasher, field_hasher_constraints::FieldHasherGadget}};
+use crate::{
+	poseidon::{field_hasher::FieldHasher, field_hasher_constraints::FieldHasherGadget},
+	Vec,
+};
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
-use ark_relations::r1cs::{Namespace, SynthesisError, ConstraintSystemRef};
+use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
 
@@ -39,12 +42,11 @@ impl<F: PrimeField, HG: FieldHasherGadget<F>> AnchorLeafGadget<F, HG> {
 	// Leaf creation should match across all anchor protocol implementations
 	// Solidity impl: https://github.com/webb-tools/protocol-solidity/blob/main/circuits/bridge/withdraw.circom#L5
 	pub fn create_leaf(
-		cs: &mut ConstraintSystemRef<F>,
 		private: &PrivateVar<F>,
 		public: &PublicVar<F>,
 		hasher: &HG,
 	) -> Result<FpVar<F>, SynthesisError> {
-		hasher.hash(cs, &[
+		hasher.hash(&[
 			public.chain_id.clone(),
 			private.nullifier.clone(),
 			private.secret.clone(),
@@ -52,11 +54,10 @@ impl<F: PrimeField, HG: FieldHasherGadget<F>> AnchorLeafGadget<F, HG> {
 	}
 
 	pub fn create_nullifier(
-		cs: &mut ConstraintSystemRef<F>,
 		private: &PrivateVar<F>,
 		hasher: &HG,
 	) -> Result<FpVar<F>, SynthesisError> {
-		hasher.hash_two(cs, &private.nullifier, &private.nullifier.clone())
+		hasher.hash_two(&private.nullifier, &private.nullifier.clone())
 	}
 }
 
@@ -99,14 +100,16 @@ mod test {
 		leaf::anchor::AnchorLeaf,
 		poseidon::{
 			constraints::{CRHGadget, PoseidonParametersVar},
-			CRH, field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
+			field_hasher::Poseidon,
+			field_hasher_constraints::PoseidonGadget,
+			CRH,
 		},
 	};
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::One;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
-	use arkworks_utils::utils::common::{setup_params_x5_4, setup_params_x5_3};
+	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4};
 
 	type Leaf = AnchorLeaf<Fq, Poseidon<Fq>>;
 	type LeafGadget = AnchorLeafGadget<Fq, PoseidonGadget<Fq>>;
@@ -114,14 +117,14 @@ mod test {
 	#[test]
 	fn should_create_anchor_leaf_constraints() {
 		let rng = &mut test_rng();
-		let curve = arkworks_utils::utils::common::Curve::Bls381;
+		let curve = arkworks_utils::utils::common::Curve::Bn254;
 
 		let mut cs = ConstraintSystem::<Fq>::new_ref();
 
 		// Native version
-		let leaf_hash_params = setup_params_x5_3(curve);
+		let leaf_hash_params = setup_params_x5_4(curve);
 		let leaf_hasher = Poseidon::<Fq>::new(leaf_hash_params);
-		let nullifier_hash_params = setup_params_x5_4(curve);
+		let nullifier_hash_params = setup_params_x5_3(curve);
 		let nullifier_hasher = Poseidon::<Fq>::new(nullifier_hash_params);
 		let chain_id = Fq::one();
 
@@ -131,12 +134,14 @@ mod test {
 		let nullifier = Leaf::create_nullifier(&private, &nullifier_hasher).unwrap();
 
 		let leaf_hasher_gadget = FieldHasherGadget::<Fq>::from_native(&mut cs, leaf_hasher);
-		let nullifier_hasher_gadget = FieldHasherGadget::<Fq>::from_native(&mut cs, nullifier_hasher);
+		let nullifier_hasher_gadget =
+			FieldHasherGadget::<Fq>::from_native(&mut cs, nullifier_hasher);
 		let public_var = PublicVar::new_input(cs.clone(), || Ok(&public)).unwrap();
 		let private_var = PrivateVar::new_witness(cs.clone(), || Ok(&private)).unwrap();
 		let leaf_hash_var =
-			LeafGadget::create_leaf(&mut cs, &private_var, &public_var, &leaf_hasher_gadget).unwrap();
-		let nullifier_var = LeafGadget::create_nullifier(&mut cs, &private_var, &nullifier_hasher_gadget).unwrap();
+			LeafGadget::create_leaf(&private_var, &public_var, &leaf_hasher_gadget).unwrap();
+		let nullifier_var =
+			LeafGadget::create_nullifier(&private_var, &nullifier_hasher_gadget).unwrap();
 
 		// Checking equality
 		let leaf_new_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&leaf_hash)).unwrap();

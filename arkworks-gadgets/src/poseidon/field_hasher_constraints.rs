@@ -7,8 +7,8 @@ use ark_r1cs_std::{
 	prelude::*,
 	uint8::UInt8,
 };
-use ark_relations::r1cs::{Namespace, SynthesisError, ConstraintSystemRef};
-use ark_std::{marker::PhantomData, vec::Vec, fmt::Debug};
+use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
+use ark_std::{fmt::Debug, marker::PhantomData, vec::Vec};
 use arkworks_utils::poseidon::{
 	sbox::{constraints::SboxConstraints, PoseidonSbox},
 	PoseidonParameters,
@@ -25,17 +25,8 @@ pub trait FieldHasherGadget<F: PrimeField> {
 
 	// For easy conversion from native version
 	fn from_native(cs: &mut ConstraintSystemRef<F>, native: Self::Native) -> Self;
-	fn hash(
-		&self,
-		cs: &mut ConstraintSystemRef<F>,
-		inputs: &[FpVar<F>],
-	) -> Result<FpVar<F>, SynthesisError>;
-	fn hash_two(
-		&self,
-		cs: &mut ConstraintSystemRef<F>,
-		left: &FpVar<F>,
-		right: &FpVar<F>,
-	) -> Result<FpVar<F>, SynthesisError>;
+	fn hash(&self, inputs: &[FpVar<F>]) -> Result<FpVar<F>, SynthesisError>;
+	fn hash_two(&self, left: &FpVar<F>, right: &FpVar<F>) -> Result<FpVar<F>, SynthesisError>;
 }
 
 #[derive(Default, Clone)]
@@ -95,11 +86,8 @@ pub struct PoseidonGadget<F: PrimeField> {
 }
 
 impl<F: PrimeField> PoseidonGadget<F> {
-	pub fn permute(
-        &self,
-		mut state: Vec<FpVar<F>>,
-	) -> Result<Vec<FpVar<F>>, SynthesisError> {
-        let params = &self.params;
+	pub fn permute(&self, mut state: Vec<FpVar<F>>) -> Result<Vec<FpVar<F>>, SynthesisError> {
+		let params = &self.params;
 		let nr = (params.full_rounds + params.partial_rounds) as usize;
 		for r in 0..nr {
 			state.iter_mut().enumerate().for_each(|(i, a)| {
@@ -135,9 +123,9 @@ impl<F: PrimeField> PoseidonGadget<F> {
 }
 
 impl<F: PrimeField> FieldHasherGadget<F> for PoseidonGadget<F> {
-    type Native = Poseidon<F>;
+	type Native = Poseidon<F>;
 
-    fn from_native(cs: &mut ConstraintSystemRef<F>, native: Self::Native) -> Self {
+	fn from_native(cs: &mut ConstraintSystemRef<F>, native: Self::Native) -> Self {
 		let mut round_keys_var = Vec::new();
 		for rk in native.params.round_keys {
 			round_keys_var.push(FpVar::Constant(rk));
@@ -155,26 +143,20 @@ impl<F: PrimeField> FieldHasherGadget<F> for PoseidonGadget<F> {
 		let width = native.params.width;
 		let sbox = native.params.sbox;
 
-        let params_var = PoseidonParametersVar {
-            round_keys: round_keys_var,
-            mds_matrix: mds_var,
-            full_rounds,
-            partial_rounds,
-            width,
-            sbox,
-        };
+		let params_var = PoseidonParametersVar {
+			round_keys: round_keys_var,
+			mds_matrix: mds_var,
+			full_rounds,
+			partial_rounds,
+			width,
+			sbox,
+		};
 
-        Self {
-            params: params_var,
-        }
-    }
+		Self { params: params_var }
+	}
 
-    fn hash(
-		&self,
-		cs: &mut ConstraintSystemRef<F>,
-		inputs: &[FpVar<F>],
-	) -> Result<FpVar<F>, SynthesisError> {
-        let parameters = &self.params;
+	fn hash(&self, inputs: &[FpVar<F>]) -> Result<FpVar<F>, SynthesisError> {
+		let parameters = &self.params;
 		if inputs.len() >= parameters.width.into() {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
@@ -191,16 +173,10 @@ impl<F: PrimeField> FieldHasherGadget<F> for PoseidonGadget<F> {
 			.zip(inputs)
 			.for_each(|(a, b)| *a = b.clone());
 		let result = self.permute(buffer);
-        result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
-    }
+		result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
+	}
 
-    fn hash_two(
-		&self,
-		cs: &mut ConstraintSystemRef<F>,
-		left: &FpVar<F>,
-		right: &FpVar<F>,
-	) -> Result<FpVar<F>, SynthesisError> {
-        self.hash(cs, &[left.clone(), right.clone()])
-    }
+	fn hash_two(&self, left: &FpVar<F>, right: &FpVar<F>) -> Result<FpVar<F>, SynthesisError> {
+		self.hash(&[left.clone(), right.clone()])
+	}
 }
-

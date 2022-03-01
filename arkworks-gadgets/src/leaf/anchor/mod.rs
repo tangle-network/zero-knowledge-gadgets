@@ -2,6 +2,7 @@ use ark_crypto_primitives::{crh::CRH, Error};
 use ark_ff::{fields::PrimeField, to_bytes};
 use ark_relations::r1cs::SynthesisError;
 use ark_std::{marker::PhantomData, rand::Rng};
+use arkworks_utils::poseidon::PoseidonError;
 
 use crate::poseidon::field_hasher::FieldHasher;
 
@@ -57,12 +58,11 @@ impl<F: PrimeField, H: FieldHasher<F>> AnchorLeaf<F, H> {
 		private: &Private<F>,
 		public: &Public<F>,
 		h: &H,
-	) -> Result<F, String> {
-		h.hash(&[public.chain_id, private.nullifier, private.secret]).map_err(|_| "Leaf hash error".to_string())
+	) -> Result<F, PoseidonError> {
+		h.hash(&[public.chain_id, private.nullifier, private.secret])
 	}
 
-	pub fn create_nullifier(private: &Private<F>, h: &H) -> Result<F, String> {
-		h.hash_two(&private.nullifier, &private.nullifier).map_err(|_| "Nullifier hash error".to_string())
+	pub fn create_nullifier(private: &Private<F>, h: &H) -> Result<F, PoseidonError> {
+		h.hash_two(&private.nullifier, &private.nullifier)
 	}
 }
-

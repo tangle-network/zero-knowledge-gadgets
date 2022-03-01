@@ -36,7 +36,7 @@ mod tests;
 
 use crate::MixerProver;
 
-use super::{SMT, create_merkle_tree};
+use super::{create_merkle_tree, setup_tree_and_create_path, SMT};
 
 pub fn create_leaf<F: PrimeField, H: FieldHasher<F>>(
 	hasher: &H,
@@ -98,43 +98,18 @@ pub fn deconstruct_public_inputs<F: PrimeField>(
 
 pub type PoseidonMixerCircuit<F, const N: usize> = MixerCircuit<F, PoseidonGadget<F>, N>;
 
-struct MixerR1CSProver<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> {
+struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
 	engine: PhantomData<E>,
-	hasher: HG::Native,
-	default_leaf: [u8; 32],
 }
 
-impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
-	MixerR1CSProver<E, HG, HEIGHT>
-{
-	pub fn setup_tree_and_create_path(
-		&self,
-		leaves: &[E::Fr],
-		index: u64,
-	) -> Result<
-		(
-			SMT<E::Fr, HG::Native, HEIGHT>,
-			Path<E::Fr, HG::Native, HEIGHT>,
-		),
-		Error,
-	> {
-		// Making the merkle tree
-		let smt = create_merkle_tree::<E::Fr, HG::Native, HEIGHT>(
-			self.hasher.clone(),
-			leaves,
-			&self.default_leaf,
-		);
-		// Getting the proof path
-		let path = smt.generate_membership_proof(index);
-		Ok((smt, path))
-	}
-
+impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	pub fn setup_random_circuit<R: CryptoRng + RngCore>(
-		self,
+		curve: Curve,
+		default_leaf: [u8; 32],
 		rng: &mut R,
 	) -> Result<
 		(
-			MixerCircuit<E::Fr, HG, HEIGHT>,
+			MixerCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>,
 			E::Fr,
 			E::Fr,
 			E::Fr,
@@ -142,6 +117,9 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 		),
 		Error,
 	> {
+		let params3 = setup_params_x5_3(curve);
+		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
+
 		let recipient = E::Fr::rand(rng);
 		let relayer = E::Fr::rand(rng);
 		let fee = E::Fr::rand(rng);
@@ -149,7 +127,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 		// Create the arbitrary input data
 		let arbitrary_input = setup_arbitrary_data::<E::Fr>(recipient, relayer, fee, refund);
 		// Generate the leaf
-		let leaf = self.create_leaf_with_privates(None, None, rng)?;
+		let leaf = Self::create_leaf_with_privates(curve, None, None, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
 		let leaf_private = Private::new(
 			E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes),
@@ -157,16 +135,21 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 		);
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
-		let (tree, path) = self.setup_tree_and_create_path(&leaves, 0)?;
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
+			poseidon.clone(),
+			&leaves,
+			0,
+			&default_leaf,
+		)?;
 		let root = tree.root();
 
-		let mc = MixerCircuit::new(
+		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
 			leaf_private,
 			path,
 			root,
 			nullifier_hash,
-			self.hasher,
+			poseidon,
 		);
 		let public_inputs =
 			construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
@@ -175,7 +158,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 	}
 
 	pub fn setup_circuit_with_privates(
-		self,
+		curve: Curve,
 		secret: E::Fr,
 		nullifier: E::Fr,
 		leaves: &[E::Fr],
@@ -184,29 +167,49 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 		relayer: E::Fr,
 		fee: E::Fr,
 		refund: E::Fr,
-	) -> Result<(MixerCircuit<E::Fr, HG, HEIGHT>, E::Fr, E::Fr, E::Fr, Vec<E::Fr>), Error> {
+		default_leaf: [u8; 32],
+	) -> Result<
+		(
+			MixerCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>,
+			E::Fr,
+			E::Fr,
+			E::Fr,
+			Vec<E::Fr>,
+		),
+		Error,
+	> {
+		// Initialize hasher
+		let params3 = setup_params_x5_3(curve);
+		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
+		// Setup inputs
 		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 		let leaf_private: Private<E::Fr> = Private::new(secret, nullifier);
-		let leaf = create_leaf(&self.hasher, &leaf_private)?;
-		let nullifier_hash = create_nullifier(&self.hasher, &leaf_private)?;
-		let (tree, path) = self.setup_tree_and_create_path(&leaves, index)?;
+		let leaf = create_leaf(&poseidon, &leaf_private)?;
+		let nullifier_hash = create_nullifier(&poseidon, &leaf_private)?;
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
+			poseidon.clone(),
+			&leaves,
+			index,
+			&default_leaf,
+		)?;
 		let root = tree.root();
 
-		let mc = MixerCircuit::new(
+		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
 			leaf_private,
 			path,
 			root,
 			nullifier_hash,
-			self.hasher,
+			poseidon,
 		);
-		let public_inputs = construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
+		let public_inputs =
+			construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
 		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
 	#[allow(clippy::too_many_arguments)]
 	pub fn setup_circuit_with_privates_raw(
-		self,
+		curve: Curve,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
 		leaves: &[Vec<u8>],
@@ -215,7 +218,17 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 		relayer: Vec<u8>,
 		fee: u128,
 		refund: u128,
-	) -> Result<(MixerCircuit<E::Fr, HG, HEIGHT>, Vec<u8>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>), Error> {
+		default_leaf: [u8; 32],
+	) -> Result<
+		(
+			MixerCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>,
+			Vec<u8>,
+			Vec<u8>,
+			Vec<u8>,
+			Vec<Vec<u8>>,
+		),
+		Error,
+	> {
 		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
 		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<E::Fr> = leaves
@@ -227,7 +240,8 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 		let fee_f = E::Fr::from(fee);
 		let refund_f = E::Fr::from(refund);
 
-		let (mc, leaf, nullifier_hash, root, public_inputs) = self.setup_circuit_with_privates(
+		let (mc, leaf, nullifier_hash, root, public_inputs) = Self::setup_circuit_with_privates(
+			curve,
 			secret_f,
 			nullifier_f,
 			&leaves_f,
@@ -236,6 +250,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 			relayer_f,
 			fee_f,
 			refund_f,
+			default_leaf,
 		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();
@@ -256,30 +271,32 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 	}
 
 	pub fn create_circuit(
-		self,
+		curve: Curve,
 		arbitrary_input: MixerConstraintDataInput<E::Fr>,
 		leaf_private: Private<E::Fr>,
-		path: Path<E::Fr, HG::Native, HEIGHT>,
+		path: Path<E::Fr, Poseidon<E::Fr>, HEIGHT>,
 		root: E::Fr,
 		nullifier_hash: E::Fr,
-	) -> MixerCircuit<E::Fr, HG, HEIGHT> {
+	) -> MixerCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT> {
+		// Initialize hasher
+		let params3 = setup_params_x5_3(curve);
+		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
+		// Setup circuit
 		let mc = MixerCircuit::new(
 			arbitrary_input,
 			leaf_private,
 			path,
 			root,
 			nullifier_hash,
-			self.hasher,
+			poseidon,
 		);
 		mc
 	}
 }
 
-impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerProver<E, HG, HEIGHT>
-	for MixerR1CSProver<E, HG, HEIGHT>
-{
+impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CSProver<E, HEIGHT> {
 	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
-		&self,
+		curve: Curve,
 		secret: Option<Vec<u8>>,
 		nullifier: Option<Vec<u8>>,
 		rng: &mut R,
@@ -293,9 +310,11 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 			None => E::Fr::rand(rng),
 		};
 
+		let params3 = setup_params_x5_3(curve);
+		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
-		let leaf_field_element = create_leaf(&self.hasher, &private)?;
-		let nullifier_hash_field_element = create_nullifier(&self.hasher, &private)?;
+		let leaf_field_element = create_leaf(&poseidon, &private)?;
+		let nullifier_hash_field_element = create_nullifier(&poseidon, &private)?;
 		Ok(MixerLeaf {
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
@@ -305,7 +324,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 	}
 
 	fn create_proof<R: RngCore + CryptoRng>(
-		&self,
+		curve: Curve,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
 		leaves: Vec<Vec<u8>>,
@@ -315,8 +334,11 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 		fee: u128,
 		refund: u128,
 		pk: Vec<u8>,
+		default_leaf: [u8; 32],
 		rng: &mut R,
 	) -> Result<MixerProof, Error> {
+		let params3 = setup_params_x5_3(curve);
+		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Get field element version of all the data
 		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
 		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
@@ -336,19 +358,24 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..
-		} = self.create_leaf_with_privates(Some(secret), Some(nullifier), rng)?;
+		} = Self::create_leaf_with_privates(curve, Some(secret), Some(nullifier), rng)?;
 		// Setup the tree and generate the path
-		let (tree, path) = self.setup_tree_and_create_path(&leaves_f, index)?;
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
+			poseidon.clone(),
+			&leaves_f,
+			index,
+			&default_leaf,
+		)?;
 		let root = tree.root();
 
 		let leaf_private = Private::new(secret_f, nullifier_f);
-		let mc = MixerCircuit::<E::Fr, HG, HEIGHT>::new(
+		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
 			leaf_private,
 			path,
 			root,
 			nullifier_f,
-			self.hasher.clone(),
+			poseidon,
 		);
 		let public_inputs =
 			construct_public_inputs(nullifier_f, root, recipient_f, relayer_f, fee_f, refund_f);
