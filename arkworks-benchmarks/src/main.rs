@@ -9,7 +9,6 @@ use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_p
 use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
 use arkworks_circuits::circuit::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	arbitrary::anchor_data::Input as AnchorDataInput,
 	leaf::anchor::{AnchorLeaf, Private as LeafPrivate, Public as LeafPublic},
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
@@ -64,13 +63,8 @@ macro_rules! setup_circuit {
 		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
 		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
 
-		let fee = <$test_field>::rand(rng);
-		let refund = <$test_field>::rand(rng);
-		let recipient = <$test_field>::rand(rng);
-		let relayer = <$test_field>::rand(rng);
-		let commitment = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = AnchorDataInput::new(recipient, relayer, fee, refund, commitment);
+		let arbitrary_input = <$test_field>::rand(rng);
 
 		// Making params for poseidon in merkle tree
 
@@ -107,11 +101,7 @@ macro_rules! setup_circuit {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots.to_vec());
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.refund);
-		public_inputs.push(arbitrary_input.commitment);
+		public_inputs.push(arbitrary_input);
 		(public_inputs, mc)
 	}};
 }
