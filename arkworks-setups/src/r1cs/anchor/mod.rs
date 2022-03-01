@@ -121,7 +121,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, LHG: FieldHasherGadget<E::F
 			commitment,
 		};
 		// Create random chain_id public input
-		let chain_id = 1u64.into();
+		let chain_id = 1u64;
 		let chain_id_f = E::Fr::from(chain_id);
 		// Generate the leaf
 		let leaf = self.create_leaf_with_privates(chain_id, None, None, rng)?;
@@ -204,7 +204,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, LHG: FieldHasherGadget<E::F
 		refund: u128,
 		commitment: Vec<u8>,
 	) -> Result<(AnchorCircuit<E::Fr, HG, LHG, HEIGHT, ANCHOR_CT>, Vec<u8>, Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>), Error> {
-		let chain_id_f = E::Fr::from_le_bytes_mod_order(&chain_id.to_be_bytes());
+		let chain_id_f = E::Fr::from(chain_id);
 		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
 		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<E::Fr> = leaves
@@ -295,7 +295,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, LHG: FieldHasherGadget<E::F
 			None => E::Fr::rand(rng),
 		};
 		// We big-endian encode the chain ID when we pass it into the field elements
-		let chain_id_elt = E::Fr::from_le_bytes_mod_order(&chain_id.to_be_bytes());
+		let chain_id_elt = E::Fr::from(chain_id);
 		let public = Public::new(chain_id_elt);
 		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
 		let leaf_field_element = anchor::AnchorLeaf::create_leaf(&private, &public, &self.leaf_hasher)?;
@@ -350,7 +350,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, LHG: FieldHasherGadget<E::F
 		let mut root_set = [E::Fr::zero(); ANCHOR_CT];
 		root_set[0] = tree.root();
 
-		let chain_id_f = E::Fr::from_le_bytes_mod_order(&chain_id.to_be_bytes());
+		let chain_id_f = E::Fr::from(chain_id);
 		let leaf_public = Public::new(chain_id_f);
 		let leaf_private = Private::new(secret_f, nullifier_f);
 		let mc = AnchorCircuit::<E::Fr, HG, LHG, HEIGHT, ANCHOR_CT>::new(

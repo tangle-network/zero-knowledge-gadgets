@@ -58,7 +58,7 @@ impl<F: PrimeField, H: FieldHasher<F>> AnchorLeaf<F, H> {
 		public: &Public<F>,
 		h: &H,
 	) -> Result<F, String> {
-		h.hash(&[private.secret, private.nullifier, public.chain_id]).map_err(|_| "Leaf hash error".to_string())
+		h.hash(&[public.chain_id, private.nullifier, private.secret]).map_err(|_| "Leaf hash error".to_string())
 	}
 
 	pub fn create_nullifier(private: &Private<F>, h: &H) -> Result<F, String> {
