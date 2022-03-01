@@ -259,7 +259,7 @@ mod test {
 
 		// Computing the nullifier with vanchorleaf
 		let nullifier_from_vanchorleaf = LeafCircom::create_nullifier(
-			// TODO: Change this to signature
+			// TODO: Change to signature
 			&private_key[0],
 			&leaf_from_vanchorleaf,
 			&path_index[0],

@@ -3,7 +3,7 @@ use ark_std::vec::Vec;
 
 use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct Poseidon<F: PrimeField> {
 	pub params: PoseidonParameters<F>,
 }

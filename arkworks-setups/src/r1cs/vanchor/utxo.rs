@@ -20,7 +20,7 @@ impl core::fmt::Display for UtxoError {
 
 impl ArkError for UtxoError {}
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct Utxo<F: PrimeField> {
 	pub chain_id_raw: u64,
 	pub chain_id: F,

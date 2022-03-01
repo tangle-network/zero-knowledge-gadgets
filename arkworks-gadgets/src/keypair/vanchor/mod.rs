@@ -8,7 +8,7 @@ use crate::poseidon::field_hasher::FieldHasher;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Copy)]
 pub struct Keypair<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> {
 	pub private_key: F,
 	_h: PhantomData<(PH, SH)>,

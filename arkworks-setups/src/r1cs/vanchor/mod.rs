@@ -1,4 +1,4 @@
-use ark_std::collections::BTreeMap;
+use ark_std::{collections::BTreeMap, rand};
 use crate::{common::*, AnchorProver, r1cs::vanchor::utxo::Utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
@@ -44,6 +44,184 @@ impl<
 	const INS: usize,
 	const OUTS: usize,
 > VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS> {
+	// TODO: Should be deprecated and tests migrated to `create_utxo`
+	pub fn new_utxo<R: RngCore>(
+		curve: Curve,
+		chain_id: u64,
+		amount: E::Fr,
+		index: Option<u64>,
+		secret_key: Option<E::Fr>,
+		blinding: Option<E::Fr>,
+		rng: &mut R,
+	) -> Result<Utxo<E::Fr>, Error> {
+		// Initialize hashers
+		let params2 = setup_params_x5_2::<E::Fr>(curve);
+		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
+		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
+		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
+		Utxo::new(
+			chain_id,
+			amount,
+			index,
+			secret_key,
+			blinding,
+			&keypair_hasher,
+			&nullifier_hasher,
+			&leaf_hasher,
+			rng,
+		)
+	}
+
+	pub fn setup_random_circuit<R: RngCore>(
+		curve: Curve,
+		default_leaf: [u8; 32],
+		rng: &mut R,
+	) -> Result<
+		VAnchorCircuit<
+			E::Fr,
+			PoseidonGadget<E::Fr>,
+			PoseidonGadget<E::Fr>,
+			PoseidonGadget<E::Fr>,
+			PoseidonGadget<E::Fr>,
+			HEIGHT,
+			INS,
+			OUTS,
+			ANCHOR_CT,
+		>,
+		Error,
+	> {
+		let public_amount = E::Fr::rand(rng);
+		let ext_data_hash = E::Fr::rand(rng);
+		let in_root_set = [E::Fr::rand(rng); ANCHOR_CT];
+		let in_leaves = [E::Fr::rand(rng); INS].map(|x| vec![x]);
+		let in_indices = [0; INS];
+
+		let chain_id: u64 = rng.gen();
+		let amount: u128 = rng.gen();
+		let index: u64 = rng.gen();
+		let secret_key = E::Fr::rand(rng);
+		let blinding = E::Fr::rand(rng);
+
+		let in_utxo = Self::create_utxo(
+			curve,
+			chain_id,
+			amount,
+			Some(index),
+			Some(secret_key.into_repr().to_bytes_le()),
+			Some(blinding.into_repr().to_bytes_le()),
+			rng,
+		)?;
+		let in_utxos: [Utxo<E::Fr>; INS] = [0; INS].map(|_| in_utxo.clone());
+
+		let out_utxo = Self::create_utxo(
+			curve,
+			chain_id,
+			amount,
+			None,
+			Some(secret_key.into_repr().to_bytes_le()),
+			Some(blinding.into_repr().to_bytes_le()),
+			rng,
+		)?;
+		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
+
+		let (circuit, ..) = Self::setup_circuit_with_utxos(
+			curve,
+			E::Fr::from(chain_id),
+			E::Fr::from(public_amount),
+			ext_data_hash,
+			in_root_set,
+			in_indices,
+			in_leaves,
+			in_utxos,
+			out_utxos,
+			default_leaf,
+		)?;
+
+		Ok(circuit)
+	}
+
+	pub fn setup_circuit_with_utxos(
+		curve: Curve,
+		chain_id: E::Fr,
+		// External data
+		public_amount: E::Fr,
+		ext_data_hash: E::Fr,
+		in_root_set: [E::Fr; ANCHOR_CT],
+		in_indices: [u64; INS],
+		in_leaves: [Vec<E::Fr>; INS],
+		// Input transactions
+		in_utxos: [Utxo<E::Fr>; INS],
+		// Output transactions
+		out_utxos: [Utxo<E::Fr>; OUTS],
+		default_leaf: [u8; 32],
+	) -> Result<
+		(
+			VAnchorCircuit<
+				E::Fr,
+				PoseidonGadget<E::Fr>,
+				PoseidonGadget<E::Fr>,
+				PoseidonGadget<E::Fr>,
+				PoseidonGadget<E::Fr>,
+				HEIGHT,
+				INS,
+				OUTS,
+				ANCHOR_CT,
+			>,
+			Vec<E::Fr>,
+		),
+		Error,
+	> {
+		// Initialize hashers
+		let params2 = setup_params_x5_2::<E::Fr>(curve);
+		let params3 = setup_params_x5_3::<E::Fr>(curve);
+		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
+		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
+		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
+		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
+		// Tree + set for proving input txos
+		let in_indices_f = in_indices.map(|x| E::Fr::from(x));
+		let mut in_paths = Vec::new();
+		for i in 0..INS {
+			let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(tree_hasher.clone(), &in_leaves[i], in_indices[i], &default_leaf)?;
+			in_paths.push(path)
+		}
+		// Arbitrary data
+		let arbitrary_data = VAnchorArbitraryData::new(ext_data_hash);
+
+		let circuit = Self::setup_circuit(
+			chain_id,
+			public_amount,
+			arbitrary_data,
+			in_utxos.clone(),
+			in_indices_f,
+			in_paths,
+			in_root_set,
+			out_utxos.clone(),
+			keypair_hasher,
+			tree_hasher,
+			nullifier_hasher,
+			leaf_hasher,
+		)?;
+
+		let in_nullifiers: Result<Vec<E::Fr>, Error> =
+			in_utxos.iter().map(|x| x.get_nullifier()).collect();
+		let out_nullifiers = out_utxos.iter().map(|x| x.commitment).collect::<Vec<E::Fr>>();
+		let public_inputs = Self::construct_public_inputs(
+			in_utxos[0].leaf_public.chain_id,
+			public_amount,
+			in_root_set.to_vec(),
+			in_nullifiers?,
+			out_nullifiers,
+			ext_data_hash,
+		);
+
+		Ok((circuit, public_inputs))
+	}
+
 	pub fn setup_circuit(
 		chain_id: E::Fr,
 		public_amount: E::Fr,
