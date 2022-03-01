@@ -9,7 +9,6 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::{
-	arbitrary::mixer_data::Input as MixerDataInput,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
 	merkle_tree::Path,
 };
@@ -17,8 +16,6 @@ use arkworks_utils::{
 	poseidon::PoseidonParameters,
 	utils::common::{setup_params_x5_3, setup_params_x5_5, Curve},
 };
-
-pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
 
 pub type Leaf_x5<F> = MixerLeaf<F, PoseidonCRH_x5_5<F>>;
 
@@ -177,24 +174,12 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		Self { params3, params5 }
 	}
 
-	pub fn setup_arbitrary_data(
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
-	) -> MixerConstraintDataInput<F> {
-		MixerConstraintDataInput::new(recipient, relayer, fee, refund)
-	}
-
 	pub fn construct_public_inputs(
 		nullifier_hash: F,
 		root: F,
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
+		arbitrary_input: F,
 	) -> Vec<F> {
-		vec![nullifier_hash, root, recipient, relayer, fee, refund]
+		vec![nullifier_hash, root, arbitrary_input]
 	}
 
 	pub fn deconstruct_public_inputs(
@@ -260,12 +245,8 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		nullifier: F,
 		leaves: &[F],
 		index: u64,
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
+		arbitrary_input: F,
 	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
-		let arbitrary_input = Self::setup_arbitrary_data(recipient, relayer, fee, refund);
 		let (leaf_private, leaf, nullifier_hash) =
 			self.setup_leaf_with_privates(secret, nullifier)?;
 		let (tree, path) = self.setup_tree_and_create_path(&leaves, index)?;
@@ -280,7 +261,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			nullifier_hash,
 		);
 		let public_inputs =
-			Self::construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
+			Self::construct_public_inputs(nullifier_hash, root, arbitrary_input);
 		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
@@ -302,20 +283,21 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			.iter()
 			.map(|x| F::from_le_bytes_mod_order(x))
 			.collect();
-		let recipient_f = F::from_le_bytes_mod_order(&recipient);
-		let relayer_f = F::from_le_bytes_mod_order(&relayer);
-		let fee_f = F::from(fee);
-		let refund_f = F::from(refund);
+
+		let mut input = Vec::new();
+		input.extend(recipient);
+		input.extend(relayer);
+		input.extend(fee.to_be_bytes());
+		input.extend(refund.to_be_bytes());
+		let arbitrary_input = keccak_256(&input);
+		let arbitrary_input_f = F::from_le_bytes_mod_order(&arbitrary_input);
 
 		let (mc, leaf, nullifier_hash, root, public_inputs) = self.setup_circuit_with_privates(
 			secret_f,
 			nullifier_f,
 			&leaves_f,
 			index,
-			recipient_f,
-			relayer_f,
-			fee_f,
-			refund_f,
+			arbitrary_input_f,
 		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();
@@ -339,10 +321,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		self,
 		rng: &mut R,
 	) -> Result<(Circuit_x5<F, N>, F, F, F, Vec<F>), Error> {
-		let recipient = F::rand(rng);
-		let relayer = F::rand(rng);
-		let fee = F::rand(rng);
-		let refund = F::rand(rng);
+		let arbitrary_input = F::rand(rng);
 
 		let (leaf_privates, leaf_hash, ..) = self.setup_leaf(rng).unwrap();
 		let secret = leaf_privates.secret();
@@ -351,13 +330,13 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let index = 0;
 
 		self.setup_circuit_with_privates(
-			secret, nullifier, &leaves, index, recipient, relayer, fee, refund,
+			secret, nullifier, &leaves, index, arbitrary_input,
 		)
 	}
 
 	pub fn create_circuit(
 		self,
-		arbitrary_input: MixerConstraintDataInput<F>,
+		arbitrary_input: F,
 		leaf_private: LeafPrivate<F>,
 		path: Path<TreeConfig_x5<F>, N>,
 		root: F,

@@ -9,7 +9,7 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::{
-	arbitrary::anchor_data::Input as AnchorDataInput,
+	arbitrary::{anchor_data::Input as AnchorDataInput, self},
 	leaf::anchor::{
 		constraints::AnchorLeafGadget, AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
@@ -201,15 +201,11 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		chain_id: F,
 		nullifier_hash: F,
 		roots: [F; M],
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
-		commitment: F,
+		arbitrary_input: F
 	) -> Vec<F> {
 		let mut pub_ins = vec![chain_id, nullifier_hash];
 		pub_ins.extend(roots.to_vec());
-		pub_ins.extend(vec![recipient, relayer, fee, refund, commitment]);
+		pub_ins.push(arbitrary_input);
 
 		pub_ins
 	}
@@ -294,15 +290,9 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		leaves: &[F],
 		index: u64,
 		roots: [F; M], // only first M - 1 member will be used
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
-		commitment: F,
+		arbitrary_input: F,
 		rng: &mut R,
 	) -> Result<(Circuit_x5<F, N, M>, F, F, Vec<F>, Vec<F>), Error> {
-		let arbitrary_input =
-			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) = self.setup_leaf(chain_id, rng)?;
 		let (_, path) = self.setup_tree_and_path(&leaves, index)?;
 
@@ -320,11 +310,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			chain_id,
 			nullifier_hash,
 			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input
 		);
 
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
@@ -339,14 +325,8 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		leaves: &[F],
 		index: u64,
 		roots: [F; M],
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
-		commitment: F,
+		arbitrary_input: F,
 	) -> Result<(Circuit_x5<F, N, M>, F, F, Vec<F>, Vec<F>), Error> {
-		let arbitrary_input =
-			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, nullifier_hash) =
 			self.setup_leaf_with_privates(chain_id, secret, nullifier)?;
 		let (_, path) = self.setup_tree_and_path(&leaves, index)?;
@@ -365,11 +345,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			chain_id,
 			nullifier_hash,
 			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input
 		);
 
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
@@ -382,11 +358,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		let chain_id = F::rand(rng);
 
 		let roots = [F::rand(rng); M];
-		let recipient = F::rand(rng);
-		let relayer = F::rand(rng);
-		let fee = F::rand(rng);
-		let refund = F::rand(rng);
-		let commitment = F::rand(rng);
+		let arbitrary_input = F::rand(rng);
 
 		let (leaf_privates, _leaf_public, leaf_hash, ..) = self.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_privates.secret();
@@ -395,8 +367,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		let index = 0;
 
 		self.setup_circuit_with_privates(
-			chain_id, secret, nullifier, &leaves, index, roots, recipient, relayer, fee, refund,
-			commitment,
+			chain_id, secret, nullifier, &leaves, index, roots, arbitrary_input
 		)
 	}
 
@@ -434,11 +405,15 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		for i in 0..M {
 			roots_f[i] = F::from_le_bytes_mod_order(&roots[i]);
 		}
-		let recipient_f = F::from_le_bytes_mod_order(&recipient);
-		let relayer_f = F::from_le_bytes_mod_order(&relayer);
-		let commitment_f = F::from_le_bytes_mod_order(&commitment);
-		let fee_f = F::from(fee);
-		let refund_f = F::from(refund);
+
+		let mut input = Vec::new();
+		input.extend(recipient);
+		input.extend(relayer);
+		input.extend(commitment);
+		input.extend(fee.to_le_bytes());
+		input.extend(refund.to_le_bytes());
+		let arbitrary_data_bytes = keccak_256(&input);
+		let arbitrary_data_f = F::from_le_bytes_mod_order(&arbitrary_data_bytes);
 
 		let (mc, leaf, nullifier_hash, roots, public_inputs) = self.setup_circuit_with_privates(
 			chain_id_f,
@@ -447,11 +422,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			&leaves_f,
 			index,
 			roots_f,
-			recipient_f,
-			relayer_f,
-			fee_f,
-			refund_f,
-			commitment_f,
+			arbitrary_data_f
 		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();

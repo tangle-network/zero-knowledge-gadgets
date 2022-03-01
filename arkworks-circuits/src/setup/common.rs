@@ -14,6 +14,7 @@ use arkworks_gadgets::{
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
 };
+use tiny_keccak::{Keccak, Hasher};
 
 pub struct Leaf {
 	pub secret_bytes: Vec<u8>,
@@ -212,4 +213,13 @@ pub fn verify_groth16<E: PairingEngine>(
 ) -> Result<bool, Error> {
 	let res = Groth16::<E>::verify(vk, public_inputs, proof)?;
 	Ok(res)
+}
+
+pub fn keccak_256(input: &[u8]) -> Vec<u8> {
+	let mut keccak = Keccak::v256();
+	keccak.update(&input);
+
+	let mut output = Vec::new();
+	keccak.finalize(&mut output);
+	output
 }

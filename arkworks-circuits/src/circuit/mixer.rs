@@ -1,10 +1,9 @@
 use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
-use ark_r1cs_std::{eq::EqGadget, prelude::*};
+use ark_r1cs_std::{eq::EqGadget, prelude::*, fields::fp::FpVar};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 use arkworks_gadgets::{
-	arbitrary::mixer_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
 	leaf::mixer::{
 		constraints::{MixerLeafGadget, PrivateVar as LeafPrivateVar},
 		Private as LeafPrivate,
@@ -26,7 +25,7 @@ pub struct MixerCircuit<
 	HGT: CRHGadget<C::H, F>,
 	const N: usize,
 > {
-	arbitrary_input: ArbitraryInput<F>,
+	arbitrary_input: F,
 	leaf_private_inputs: LeafPrivate<F>,
 	hasher_params: H::Parameters,
 	path: Path<C, N>,
@@ -50,7 +49,7 @@ where
 	HGT: CRHGadget<C::H, F>,
 {
 	pub fn new(
-		arbitrary_input: ArbitraryInput<F>,
+		arbitrary_input: F,
 		leaf_private_inputs: LeafPrivate<F>,
 		hasher_params: H::Parameters,
 		path: Path<C, N>,
@@ -123,7 +122,7 @@ where
 		// Public inputs
 		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let root_var = HGT::OutputVar::new_input(cs.clone(), || Ok(root))?;
-		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
+		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
@@ -139,7 +138,7 @@ where
 			MixerLeafGadget::<F, H, HG>::create_nullifier(&leaf_private_var, &hasher_params_var)?;
 		let is_member = path_var.check_membership(&NodeVar::Inner(root_var), &mixer_leaf_hash)?;
 		// Constraining arbitrary inputs
-		arbitrary_input_var.constrain()?;
+		let _ = &arbitrary_input_var * &arbitrary_input_var;
 
 		// Enforcing constraints
 		is_member.enforce_equal(&Boolean::TRUE)?;
@@ -189,10 +188,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let recipient = Bn254Fr::one();
-		let relayer = Bn254Fr::zero();
-		let fee = Bn254Fr::zero();
-		let refund = Bn254Fr::zero();
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
@@ -205,7 +201,7 @@ mod test {
 		let index = 0;
 		let (circuit, .., public_inputs) = prover
 			.setup_circuit_with_privates(
-				secret, nullifier, &leaves, index, recipient, relayer, fee, refund,
+				secret, nullifier, &leaves, index, arbitrary_input,
 			)
 			.unwrap();
 
@@ -215,14 +211,11 @@ mod test {
 		assert!(
 			res,
 			"Failed to verify  Proof, here is the inputs:
-			recipient = {},
-			relayer = {},
-			fee = {},
-			refund = {},
+			arbitrary_input = {:?}
 			public_inputs = {:?},
 			proof = {:?},
 			",
-			recipient, relayer, fee, refund, public_inputs, proof
+			arbitrary_input, public_inputs, proof
 		);
 	}
 
@@ -231,10 +224,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let recipient = Bn254Fr::one();
-		let relayer = Bn254Fr::zero();
-		let fee = Bn254Fr::zero();
-		let refund = Bn254Fr::zero();
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
@@ -247,7 +237,7 @@ mod test {
 		let index = 0;
 		let (circuit, .., public_inputs) = prover
 			.setup_circuit_with_privates(
-				secret, nullifier, &leaves, index, recipient, relayer, fee, refund,
+				secret, nullifier, &leaves, index, arbitrary_input,
 			)
 			.unwrap();
 
@@ -267,18 +257,13 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let recipient = Bn254Fr::one();
-		let relayer = Bn254Fr::zero();
-		let fee = Bn254Fr::zero();
-		let refund = Bn254Fr::zero();
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
 		let prover = MixerProverSetupBn254_30::new(params3, params5);
 		let (leaf_private, leaf, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 
-		let arbitrary_input =
-			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
 		let (_, path) = prover.setup_tree_and_create_path(&[leaf], 0).unwrap();
 		let root = Bn254Fr::rand(rng);
 
@@ -293,10 +278,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(nullifier_hash);
 		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.refund);
+		public_inputs.push(arbitrary_input);
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -310,10 +292,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let recipient = Bn254Fr::one();
-		let relayer = Bn254Fr::zero();
-		let fee = Bn254Fr::zero();
-		let refund = Bn254Fr::zero();
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
@@ -321,8 +300,6 @@ mod test {
 		let (leaf_private, _, nullifier_hash) = prover.setup_leaf(rng).unwrap();
 		let leaf = Bn254Fr::rand(rng);
 
-		let arbitrary_input =
-			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
 		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0).unwrap();
 		let root = tree.root().inner();
 
@@ -337,10 +314,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(nullifier_hash);
 		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.refund);
+		public_inputs.push(arbitrary_input);
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -354,10 +328,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let recipient = Bn254Fr::one();
-		let relayer = Bn254Fr::zero();
-		let fee = Bn254Fr::zero();
-		let refund = Bn254Fr::zero();
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 		let params5 = setup_params_x5_5::<Bn254Fr>(curve);
@@ -367,8 +338,6 @@ mod test {
 		// Invalid nullifier
 		let leaf_private = LeafPrivate::new(leaf_private.secret(), Bn254Fr::rand(rng));
 
-		let arbitrary_input =
-			MixerProverSetupBn254_30::setup_arbitrary_data(recipient, relayer, fee, refund);
 		let (tree, path) = prover.setup_tree_and_create_path(&[leaf], 0).unwrap();
 		let root = tree.root().inner();
 
@@ -383,10 +352,7 @@ mod test {
 		let mut public_inputs = Vec::new();
 		public_inputs.push(nullifier_hash);
 		public_inputs.push(root);
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.refund);
+		public_inputs.push(arbitrary_input);
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 		let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -430,7 +396,7 @@ mod test {
 				recipient_raw,
 				relayer_raw,
 				fee,
-				refund,
+				refund
 			)
 			.unwrap();
 

@@ -4,7 +4,6 @@ use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
 use arkworks_gadgets::{
-	arbitrary::anchor_data::{constraints::InputVar as ArbitraryInputVar, Input as ArbitraryInput},
 	leaf::anchor::{
 		constraints::{
 			AnchorLeafGadget, PrivateVar as LeafPrivateInputsVar, PublicVar as LeafPublicInputsVar,
@@ -27,7 +26,7 @@ pub struct AnchorCircuit<
 	const N: usize,
 	const M: usize,
 > {
-	arbitrary_input: ArbitraryInput<F>,
+	arbitrary_input: F,
 	leaf_private_inputs: LeafPrivateInputs<F>,
 	leaf_public_inputs: LeafPublicInputs<F>,
 	root_set: [F; M],
@@ -53,7 +52,7 @@ where
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		arbitrary_input: ArbitraryInput<F>,
+		arbitrary_input: F,
 		leaf_private_inputs: LeafPrivateInputs<F>,
 		leaf_public_inputs: LeafPublicInputs<F>,
 		root_set: [F; M],
@@ -132,7 +131,7 @@ where
 		let leaf_public_var = LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public))?;
 		let nullifier_hash_var = HG::OutputVar::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let roots_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
-		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(arbitrary_input))?;
+		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Constants
 		let hasher_params_var = HG::ParametersVar::new_constant(cs.clone(), hasher_params)?;
@@ -154,7 +153,7 @@ where
 		let set_gadget = SetGadget::new(roots_var);
 		let is_set_member = set_gadget.check_membership(&root_var)?;
 		// Constraining arbitrary inputs
-		arbitrary_input_var.constrain()?;
+		let _ = &arbitrary_input_var * &arbitrary_input_var;
 
 		// Enforcing constraints
 		is_set_member.enforce_equal(&Boolean::TRUE)?;
@@ -190,11 +189,7 @@ mod test {
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_private.secret();
@@ -207,8 +202,7 @@ mod test {
 		let (circuit, .., public_inputs) = anchor_setup
 			.clone()
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
-				commitment,
+				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
 			)
 			.unwrap();
 
@@ -232,11 +226,7 @@ mod test {
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_private.secret();
@@ -248,8 +238,7 @@ mod test {
 
 		let (circuit, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
-				commitment,
+				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
 			)
 			.unwrap();
 
@@ -269,11 +258,7 @@ mod test {
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_private.secret();
@@ -285,8 +270,7 @@ mod test {
 
 		let (circuit, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
-				commitment,
+				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
 			)
 			.unwrap();
 
@@ -311,11 +295,7 @@ mod test {
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let (leaf_private, _, leaf_hash, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_private.secret();
@@ -326,8 +306,7 @@ mod test {
 
 		let (mc, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
-				commitment,
+				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
 			)
 			.unwrap();
 
@@ -347,11 +326,7 @@ mod test {
 		let anchor_setup = AnchorSetup30_2::new(params3, params4);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let (leaf_private, _, _, ..) = anchor_setup.setup_leaf(chain_id, rng).unwrap();
 		let secret = leaf_private.secret();
@@ -363,8 +338,7 @@ mod test {
 
 		let (mc, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, recipient, relayer, fee, refund,
-				commitment,
+				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
 			)
 			.unwrap();
 
@@ -382,15 +356,9 @@ mod test {
 		let params4 = setup_params_x5_4(curve);
 
 		let chain_id = Bn254Fr::rand(rng);
-		let relayer = Bn254Fr::rand(rng);
-		let recipient = Bn254Fr::rand(rng);
-		let fee = Bn254Fr::rand(rng);
-		let refund = Bn254Fr::rand(rng);
-		let commitment = Bn254Fr::rand(rng);
+		let arbitrary_input = Bn254Fr::rand(rng);
 
 		let prover = AnchorSetup30_2::new(params3, params4.clone());
-		let arbitrary_input =
-			AnchorSetup30_2::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 		let (leaf_private, leaf_public, leaf, _) = prover.setup_leaf(chain_id, rng).unwrap();
 		let nullifier_hash = Bn254Fr::rand(rng);
 		let leaves = vec![leaf];
@@ -413,11 +381,7 @@ mod test {
 			chain_id,
 			nullifier_hash,
 			roots_new,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input
 		);
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();
