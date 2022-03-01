@@ -1,6 +1,8 @@
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{to_bytes, ToBytes};
 use ark_std::{
+	vec::Vec,
+	string::ToString,
 	convert::TryInto,
 	error::Error as ArkError,
 	marker::PhantomData,
