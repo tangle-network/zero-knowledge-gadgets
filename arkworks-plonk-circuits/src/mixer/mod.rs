@@ -783,7 +783,7 @@ mod test {
 		assert_eq!(arbitrary_data, public_inputs[6]);
 		// Modify the arbitrary data so that prover/verifier disagree
 		public_inputs[6].double_in_place();
-		
+
 		// Verify proof
 		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
 		match res {
