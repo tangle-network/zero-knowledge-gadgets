@@ -353,7 +353,6 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			Some(nullifier) => E::Fr::from_le_bytes_mod_order(&nullifier),
 			None => E::Fr::rand(rng),
 		};
-		// We big-endian encode the chain ID when we pass it into the field elements
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public = Public::new(chain_id_elt);
 		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);

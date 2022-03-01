@@ -65,8 +65,8 @@ impl<F: PrimeField, H: FieldHasher<F>> VAnchorLeaf<F, H> {
 	pub fn create_nullifier(
 		signature: &F,
 		commitment: &F,
-		h_w4: &H,
 		index: &F,
+		h_w4: &H,
 	) -> Result<F, PoseidonError> {
 		h_w4.hash(&[*commitment, *index, *signature])
 	}
@@ -150,7 +150,7 @@ mod test {
 		// Since Nullifier = hash(commitment, pathIndices, privKey)
 		let signature = Fq::rand(rng);
 		let ev_res = hasher4.hash(&[commitment, index, signature]).unwrap();
-		let nullifier = Leaf::create_nullifier(&signature, &commitment, &hasher4, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&signature, &commitment, &index, &hasher4).unwrap();
 		assert_eq!(ev_res, nullifier);
 	}
 
@@ -262,8 +262,8 @@ mod test {
 			// TODO: Change this to signature
 			&private_key[0],
 			&leaf_from_vanchorleaf,
-			&hasher4,
 			&path_index[0],
+			&hasher4,
 		)
 		.unwrap();
 

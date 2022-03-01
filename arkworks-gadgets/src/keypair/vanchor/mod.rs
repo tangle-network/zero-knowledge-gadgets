@@ -1,42 +1,47 @@
-use ark_crypto_primitives::{Error, CRH};
-use ark_ff::{to_bytes, ToBytes};
+use ark_crypto_primitives::{Error};
+use ark_ff::{PrimeField};
 use ark_std::marker::PhantomData;
+use arkworks_utils::poseidon::PoseidonError;
+
+use crate::poseidon::field_hasher::FieldHasher;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-#[derive(Default, Debug, Copy)]
-pub struct Keypair<B: Clone + Copy + ToBytes, H: CRH> {
-	pub private_key: B,
-	_h: PhantomData<H>,
+#[derive(Default, Debug)]
+pub struct Keypair<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> {
+	pub private_key: F,
+	_h: PhantomData<(PH, SH)>,
 }
 
-impl<B: Clone + Copy + ToBytes, H: CRH> Keypair<B, H> {
-	pub fn new(private_key: B) -> Self {
+impl<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> Keypair<F, PH, SH> {
+	pub fn new(private_key: F) -> Self {
 		Self {
 			private_key,
 			_h: PhantomData,
 		}
 	}
 
-	pub fn public_key(&self, h: &H::Parameters) -> Result<H::Output, Error> {
-		let bytes = to_bytes![&self.private_key]?;
-		H::evaluate(h, &bytes)
+	pub fn public_key(&self, h: &PH) -> Result<F, PoseidonError> {
+		h.hash(&[self.private_key])
 	}
 
 	// Computes the signature = hash(privKey, commitment, pathIndices)
 	pub fn signature(
 		&self,
-		commitment: &H::Output,
-		index: &B,
-		h_w4: &H::Parameters,
-	) -> Result<H::Output, Error> {
-		let bytes = to_bytes![self.private_key.clone(), commitment, index]?;
-		H::evaluate(h_w4, &bytes)
+		commitment: &F,
+		index: &F,
+		h_w4: &SH,
+	) -> Result<F, PoseidonError> {
+		h_w4.hash(&[
+			self.private_key.clone(),
+			commitment.clone(),
+			index.clone(),
+		])
 	}
 }
 
-impl<B: Clone + Copy + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
+impl<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> Clone for Keypair<F, PH, SH> {
 	fn clone(&self) -> Self {
 		let private_key = self.private_key.clone();
 		Self::new(private_key)
@@ -46,12 +51,10 @@ impl<B: Clone + Copy + ToBytes, H2: CRH> Clone for Keypair<B, H2> {
 #[cfg(test)]
 mod test {
 	use crate::{
-		ark_std::{UniformRand, Zero},
-		poseidon::CRH,
+		ark_std::{UniformRand, Zero}, poseidon::field_hasher::{Poseidon, FieldHasher},
 	};
 
-	use ark_bn254::Fq;
-	use ark_crypto_primitives::crh::CRH as CRHTrait;
+	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
 	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
 
@@ -59,22 +62,19 @@ mod test {
 
 	use super::Keypair;
 
-	type PoseidonCRH = CRH<Fq>;
-
 	#[test]
 	fn should_crate_new_public_key() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
 		let params = setup_params_x5_2(curve);
-
+		let hasher = Poseidon::<Fq>::new(params.clone());
 		let private_key = Fq::rand(rng);
 
-		let privkey = to_bytes![private_key].unwrap();
-		let pubkey = PoseidonCRH::evaluate(&params, &privkey).unwrap();
+		let pubkey = hasher.hash(&[private_key]).unwrap();
 
-		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
-		let new_pubkey = keypair.public_key(&params).unwrap();
+		let keypair = Keypair::<Fq, Poseidon<Fq>, Poseidon<Fq>>::new(private_key.clone());
+		let new_pubkey = keypair.public_key(&hasher).unwrap();
 
 		assert_eq!(new_pubkey, pubkey)
 	}
@@ -86,15 +86,14 @@ mod test {
 		let curve = Curve::Bn254;
 
 		let params4 = setup_params_x5_4(curve);
-
+		let hasher = Poseidon::<Fq>::new(params4.clone());
 		let commitment = Fq::rand(rng);
 
-		let keypair = Keypair::<Fq, PoseidonCRH>::new(private_key.clone());
+		let keypair = Keypair::<Fq, Poseidon<Fq>, Poseidon<Fq>>::new(private_key.clone());
 
 		// Since signature = hash(privKey, commitment, pathIndices)
-		let inputs_signature = to_bytes![private_key, commitment, index].unwrap();
-		let ev_res = PoseidonCRH::evaluate(&params4, &inputs_signature).unwrap();
-		let signature = keypair.signature(&commitment, &index, &params4).unwrap();
+		let ev_res = hasher.hash(&[private_key, commitment, index]).unwrap();
+		let signature = keypair.signature(&commitment, &index, &hasher).unwrap();
 		assert_eq!(ev_res, signature);
 	}
 }

@@ -41,13 +41,12 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct VAnchorLeafGadget<F: PrimeField, H: FieldHasher<F>, HG: FieldHasherGadget<F>> {
+pub struct VAnchorLeafGadget<F: PrimeField, HG: FieldHasherGadget<F>> {
 	field: PhantomData<F>,
-	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: FieldHasher<F>, HG: FieldHasherGadget<F>> VAnchorLeafGadget<F, H, HG> {
+impl<F: PrimeField, HG: FieldHasherGadget<F>> VAnchorLeafGadget<F, HG> {
 	pub fn create_leaf(
 		private: &PrivateVar<F>,
 		public: &PublicVar<F>,
@@ -65,8 +64,8 @@ impl<F: PrimeField, H: FieldHasher<F>, HG: FieldHasherGadget<F>> VAnchorLeafGadg
 	pub fn create_nullifier(
 		signature: &FpVar<F>,
 		commitment: &FpVar<F>,
-		h_w4: &HG,
 		index: &FpVar<F>,
+		h_w4: &HG,
 	) -> Result<FpVar<F>, SynthesisError> {
 		h_w4.hash(&[commitment.clone(), index.clone(), signature.clone()])
 	}
@@ -128,7 +127,7 @@ mod test {
 	};
 
 	type Leaf = VAnchorLeaf<Fq, Poseidon<Fq>>;
-	type LeafGadget = VAnchorLeafGadget<Fq, Poseidon<Fq>, PoseidonGadget<Fq>>;
+	type LeafGadget = VAnchorLeafGadget<Fq, PoseidonGadget<Fq>>;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
@@ -202,12 +201,12 @@ mod test {
 			params: params_var5_4,
 		};
 		let signature = Fq::rand(rng);
-		let nullifier = Leaf::create_nullifier(&signature, &leaf, &hasher4, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&signature, &leaf, &index, &hasher4).unwrap();
 
 		// Constraints version
 		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&signature)).unwrap();
 		let nullifier_var =
-			LeafGadget::create_nullifier(&signature_var, &leaf_var, &hasher_gadget4, &index_var)
+			LeafGadget::create_nullifier(&signature_var, &leaf_var, &index_var, &hasher_gadget4)
 				.unwrap();
 
 		// Check equality

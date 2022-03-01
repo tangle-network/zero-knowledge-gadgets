@@ -96,13 +96,11 @@ where
 
 		// Creating the leaf and checking the membership inside the tree
 		let anchor_leaf = AnchorLeafGadget::<F, LHG>::create_leaf(
-			&mut cs.clone(),
 			&leaf_private_var,
 			&leaf_public_var,
 			&leaf_hasher,
 		)?;
 		let anchor_nullifier = AnchorLeafGadget::<F, HG>::create_nullifier(
-			&mut cs.clone(),
 			&leaf_private_var,
 			&tree_hasher,
 		)?;

@@ -1,20 +1,43 @@
-#[derive(Clone, Copy)]
+use ark_crypto_primitives::Error;
+use ark_ff::PrimeField;
+use ark_std::rand::RngCore;
+use arkworks_gadgets::{poseidon::field_hasher::Poseidon, leaf::vanchor::{Private, Public, VAnchorLeaf}, keypair::vanchor::Keypair};
+use ark_std::{error::Error as ArkError};
+
+#[derive(Debug)]
+pub enum UtxoError {
+	NullifierNotCalculated,
+}
+
+impl core::fmt::Display for UtxoError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let msg = match self {
+			UtxoError::NullifierNotCalculated => "Nullifier not calculated".to_string(),
+		};
+		write!(f, "{}", msg)
+	}
+}
+
+impl ArkError for UtxoError {}
+
+#[derive(Clone)]
 pub struct Utxo<F: PrimeField> {
+	pub chain_id_raw: u64,
 	pub chain_id: F,
 	pub amount: F,
-	pub keypair: Keypair<F, PoseidonCRH_x5_2<F>>,
+	pub keypair: Keypair<F, Poseidon<F>, Poseidon<F>>,
 	pub leaf_private: Private<F>,
 	pub leaf_public: Public<F>,
-	pub index: Option<F>,
+	pub index: Option<u64>,
 	pub nullifier: Option<F>,
 	pub commitment: F,
 }
 
 impl<F: PrimeField> Utxo<F> {
 	pub fn new<R: RngCore>(
-		chain_id: F,
+		chain_id_raw: u64,
 		amount: F,
-		index: Option<F>,
+		index: Option<u64>,
 		private_key: Option<F>,
 		blinding: Option<F>,
 		hasher2: &Poseidon<F>,
@@ -22,27 +45,28 @@ impl<F: PrimeField> Utxo<F> {
 		hasher5: &Poseidon<F>,
 		rng: &mut R,
 	) -> Result<Self, Error> {
+		let chain_id = F::from(chain_id_raw);
 		let blinding = blinding.unwrap_or(F::rand(rng));
 		let private_input = Private::<F>::new(amount, blinding);
 		let public_input = Public::<F>::new(chain_id);
 
 		let keypair = Keypair::new(private_key.unwrap_or(F::rand(rng)));
-		let pub_key = keypair.public_key(params2)?;
+		let pub_key = keypair.public_key(hasher2)?;
 
-		let leaf = Leaf::<F, PoseidonCRH_x5_4<F>>::create_leaf(
+		let leaf = VAnchorLeaf::<F, Poseidon<F>>::create_leaf(
 			&private_input,
 			&public_input,
 			&pub_key,
-			&params5,
+			&hasher5,
 		)?;
 
 		let nullifier = if index.is_some() {
-			let i = index.unwrap();
+			let i = F::from(index.unwrap());
 
-			let signature = keypair.signature(&leaf, &i, params4)?;
+			let signature = keypair.signature(&leaf, &i, hasher4)?;
 
 			let nullifier =
-				Leaf::<_, PoseidonCRH_x5_4<F>>::create_nullifier(&signature, &leaf, &params4, &i)?;
+				VAnchorLeaf::<_, Poseidon<F>>::create_nullifier(&signature, &leaf, &i,  &hasher4)?;
 
 			Some(nullifier)
 		} else {
@@ -50,6 +74,7 @@ impl<F: PrimeField> Utxo<F> {
 		};
 
 		Ok(Self {
+			chain_id_raw,
 			chain_id,
 			amount,
 			keypair,

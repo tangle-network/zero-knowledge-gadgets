@@ -42,6 +42,12 @@ pub struct MixerLeaf {
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
+pub struct VAnchorProof {
+	pub proof: Vec<u8>,
+	pub public_inputs_raw: Vec<Vec<u8>>,
+}
+
+
 pub struct AnchorProof {
 	pub proof: Vec<u8>,
 	pub leaf_raw: Vec<u8>,

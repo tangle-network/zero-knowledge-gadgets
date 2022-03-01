@@ -77,12 +77,10 @@ where
 
 		// Creating the leaf and checking the membership inside the tree
 		let mixer_leaf_hash: FpVar<F> = hasher.hash_two(
-			&mut cs.clone(),
 			&leaf_private_var.secret,
 			&leaf_private_var.nullifier,
 		)?;
 		let mixer_nullifier_hash = hasher.hash_two(
-			&mut cs.clone(),
 			&leaf_private_var.nullifier,
 			&leaf_private_var.nullifier,
 		)?;
