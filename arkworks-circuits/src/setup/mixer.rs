@@ -11,7 +11,7 @@ use ark_std::{
 use arkworks_gadgets::{
 	arbitrary::mixer_data::Input as MixerDataInput,
 	leaf::mixer::{constraints::MixerLeafGadget, MixerLeaf, Private as LeafPrivate},
-	merkle_tree::Path,
+	merkle_tree::Path, poseidon::field_hasher_constraints::PoseidonGadget,
 };
 use arkworks_utils::{
 	poseidon::PoseidonParameters,
@@ -26,11 +26,7 @@ pub type LeafGadget_x5<F> = MixerLeafGadget<F, PoseidonCRH_x5_5<F>, PoseidonCRH_
 
 pub type Circuit_x5<F, const N: usize> = MixerCircuit<
 	F,
-	PoseidonCRH_x5_5<F>,
-	PoseidonCRH_x5_5Gadget<F>,
-	TreeConfig_x5<F>,
-	LeafCRHGadget<F>,
-	PoseidonCRH_x5_3Gadget<F>,
+	PoseidonGadget<F>,
 	N,
 >;
 
@@ -44,19 +40,6 @@ pub type Circuit_x17<F, const N: usize> = MixerCircuit<
 	TreeConfig_x17<F>,
 	LeafCRHGadget<F>,
 	PoseidonCRH_x17_3Gadget<F>,
-	N,
->;
-
-pub type Leaf_MiMC220<F> = MixerLeaf<F, MiMCCRH_220<F>>;
-pub type LeafGadget_MiMC220<F> = MixerLeafGadget<F, MiMCCRH_220<F>, MiMCCRH_220Gadget<F>>;
-
-pub type Circuit_MiMC220<F, const N: usize> = MixerCircuit<
-	F,
-	MiMCCRH_220<F>,
-	MiMCCRH_220Gadget<F>,
-	TreeConfig_MiMC220<F>,
-	LeafCRHGadget<F>,
-	MiMCCRH_220Gadget<F>,
 	N,
 >;
 

@@ -89,7 +89,7 @@ impl<F: PrimeField> AllocVar<PoseidonParameters<F>, F> for PoseidonParametersVar
 	}
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PoseidonGadget<F: PrimeField> {
 	pub params: PoseidonParametersVar<F>,
 }

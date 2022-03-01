@@ -12,6 +12,7 @@ arkworks-gadgets = { path = "../arkworks-gadgets", version = "0.4.20", features 
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
+ark-groth16 = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
 ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
@@ -40,6 +41,7 @@ std = [
   "ark-r1cs-std/std",
   "ark-ec/std",
   "ark-ff/std",
+  "ark-groth16/std",
   "arkworks-circuits/std",
   "arkworks-gadgets/std",
   "arkworks-utils/std",
@@ -49,6 +51,7 @@ parallel = [
   "ark-std/parallel",
   "ark-r1cs-std/parallel",
   "ark-ec/parallel",
+  "ark-groth16/parallel",
   "ark-ff/parallel",
   "arkworks-circuits/parallel",
   "arkworks-gadgets/parallel",
