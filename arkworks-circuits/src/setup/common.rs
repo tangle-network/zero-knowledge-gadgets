@@ -14,7 +14,7 @@ use arkworks_gadgets::{
 	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
 	poseidon::{constraints::CRHGadget, CRH},
 };
-use tiny_keccak::{Keccak, Hasher};
+use tiny_keccak::{Hasher, Keccak};
 
 pub struct Leaf {
 	pub secret_bytes: Vec<u8>,

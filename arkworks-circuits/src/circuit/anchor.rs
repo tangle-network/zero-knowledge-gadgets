@@ -202,7 +202,13 @@ mod test {
 		let (circuit, .., public_inputs) = anchor_setup
 			.clone()
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
+				chain_id,
+				secret,
+				nullfier,
+				&leaves,
+				index,
+				roots,
+				arbitrary_input,
 			)
 			.unwrap();
 
@@ -238,7 +244,13 @@ mod test {
 
 		let (circuit, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
+				chain_id,
+				secret,
+				nullfier,
+				&leaves,
+				index,
+				roots,
+				arbitrary_input,
 			)
 			.unwrap();
 
@@ -270,7 +282,13 @@ mod test {
 
 		let (circuit, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
+				chain_id,
+				secret,
+				nullfier,
+				&leaves,
+				index,
+				roots,
+				arbitrary_input,
 			)
 			.unwrap();
 
@@ -306,7 +324,13 @@ mod test {
 
 		let (mc, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
+				chain_id,
+				secret,
+				nullfier,
+				&leaves,
+				index,
+				roots,
+				arbitrary_input,
 			)
 			.unwrap();
 
@@ -338,7 +362,13 @@ mod test {
 
 		let (mc, .., public_inputs) = anchor_setup
 			.setup_circuit_with_privates(
-				chain_id, secret, nullfier, &leaves, index, roots, arbitrary_input
+				chain_id,
+				secret,
+				nullfier,
+				&leaves,
+				index,
+				roots,
+				arbitrary_input,
 			)
 			.unwrap();
 
@@ -381,7 +411,7 @@ mod test {
 			chain_id,
 			nullifier_hash,
 			roots_new,
-			arbitrary_input
+			arbitrary_input,
 		);
 
 		let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();

@@ -9,7 +9,7 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::{
-	arbitrary::{anchor_data::Input as AnchorDataInput, self},
+	arbitrary::{self, anchor_data::Input as AnchorDataInput},
 	leaf::anchor::{
 		constraints::AnchorLeafGadget, AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
@@ -201,7 +201,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		chain_id: F,
 		nullifier_hash: F,
 		roots: [F; M],
-		arbitrary_input: F
+		arbitrary_input: F,
 	) -> Vec<F> {
 		let mut pub_ins = vec![chain_id, nullifier_hash];
 		pub_ins.extend(roots.to_vec());
@@ -306,12 +306,8 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			nullifier_hash,
 		);
 
-		let public_inputs = Self::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots,
-			arbitrary_input
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id, nullifier_hash, roots, arbitrary_input);
 
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
 	}
@@ -341,12 +337,8 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			nullifier_hash,
 		);
 
-		let public_inputs = Self::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots,
-			arbitrary_input
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id, nullifier_hash, roots, arbitrary_input);
 
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
 	}
@@ -367,7 +359,13 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 		let index = 0;
 
 		self.setup_circuit_with_privates(
-			chain_id, secret, nullifier, &leaves, index, roots, arbitrary_input
+			chain_id,
+			secret,
+			nullifier,
+			&leaves,
+			index,
+			roots,
+			arbitrary_input,
 		)
 	}
 
@@ -422,7 +420,7 @@ impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 			&leaves_f,
 			index,
 			roots_f,
-			arbitrary_data_f
+			arbitrary_data_f,
 		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();

@@ -174,11 +174,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		Self { params3, params5 }
 	}
 
-	pub fn construct_public_inputs(
-		nullifier_hash: F,
-		root: F,
-		arbitrary_input: F,
-	) -> Vec<F> {
+	pub fn construct_public_inputs(nullifier_hash: F, root: F, arbitrary_input: F) -> Vec<F> {
 		vec![nullifier_hash, root, arbitrary_input]
 	}
 
@@ -260,8 +256,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 			root,
 			nullifier_hash,
 		);
-		let public_inputs =
-			Self::construct_public_inputs(nullifier_hash, root, arbitrary_input);
+		let public_inputs = Self::construct_public_inputs(nullifier_hash, root, arbitrary_input);
 		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
@@ -329,9 +324,7 @@ impl<F: PrimeField, const N: usize> MixerProverSetup<F, N> {
 		let leaves = vec![leaf_hash];
 		let index = 0;
 
-		self.setup_circuit_with_privates(
-			secret, nullifier, &leaves, index, arbitrary_input,
-		)
+		self.setup_circuit_with_privates(secret, nullifier, &leaves, index, arbitrary_input)
 	}
 
 	pub fn create_circuit(
