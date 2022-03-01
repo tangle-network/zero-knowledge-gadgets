@@ -8,7 +8,7 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::{
-	keypair::vanchor::{Keypair, EncryptedData},
+	keypair::vanchor::{EncryptedData, Keypair},
 	leaf::vanchor::{Private as LeafPrivateInput, Public as LeafPublicInput, VAnchorLeaf as Leaf},
 };
 use arkworks_utils::poseidon::PoseidonParameters;

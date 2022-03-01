@@ -1,6 +1,11 @@
 use ark_crypto_primitives::{Error, CRH};
 use ark_ff::{to_bytes, ToBytes};
-use ark_std::{marker::PhantomData, rand::{RngCore, CryptoRng}, error::Error as ArkError, convert::TryInto};
+use ark_std::{
+	convert::TryInto,
+	error::Error as ArkError,
+	marker::PhantomData,
+	rand::{CryptoRng, RngCore},
+};
 
 use crypto_box::{
 	aead::{generic_array::GenericArray, Aead, Payload},
@@ -66,7 +71,11 @@ impl<B: Clone + Copy + ToBytes, H: CRH> Keypair<B, H> {
 		H::evaluate(h_w4, &bytes)
 	}
 
-	pub fn encrypt<R: RngCore + CryptoRng>(&self, msg: &[u8], rng: &mut R) -> Result<EncryptedData, Error> {
+	pub fn encrypt<R: RngCore + CryptoRng>(
+		&self,
+		msg: &[u8],
+		rng: &mut R,
+	) -> Result<EncryptedData, Error> {
 		// Generate new nonce
 		let nonce = generate_nonce(rng);
 
