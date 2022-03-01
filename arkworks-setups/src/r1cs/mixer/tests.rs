@@ -29,7 +29,7 @@ fn setup_and_prove_mixer_groth16() {
 	let prover = MixerR1CSProver::<Bn254, PoseidonGadget<Bn254Fr>, LEN> {
 		default_leaf: [0u8; 32],
 		hasher: Poseidon::<Bn254Fr> { params: params3 },
-		engine: PhantomData,
+		engine: PhantomData::<Bn254>,
 	};
 	let (circuit, .., public_inputs) = prover.setup_random_circuit(rng).unwrap();
 	let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();

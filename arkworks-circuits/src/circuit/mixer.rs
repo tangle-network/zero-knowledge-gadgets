@@ -1,4 +1,4 @@
-use ark_crypto_primitives::{crh::{constraints::CRHGadget}, CRH};
+use ark_crypto_primitives::{crh::constraints::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -12,16 +12,12 @@ use arkworks_gadgets::{
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
 	poseidon::{
 		field_hasher::{FieldHasher, Poseidon},
-		field_hasher_constraints::{FieldHasherGadget, PoseidonParametersVar, PoseidonGadget},
+		field_hasher_constraints::{FieldHasherGadget, PoseidonGadget, PoseidonParametersVar},
 	},
 };
 
 #[derive(Clone)]
-pub struct MixerCircuit<
-	F: PrimeField,
-	HG: FieldHasherGadget<F>,
-	const N: usize,
-> {
+pub struct MixerCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize> {
 	arbitrary_input: ArbitraryInput<F>,
 	leaf_private_inputs: LeafPrivate<F>,
 	path: Path<F, HG::Native, N>,
@@ -80,10 +76,16 @@ where
 		let path_var = PathVar::<F, HG, N>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
-		let mixer_leaf_hash: FpVar<F> =
-			hasher.hash_two(&mut cs.clone(), &leaf_private_var.secret, &leaf_private_var.nullifier)?;
-		let mixer_nullifier_hash =
-			hasher.hash_two(&mut cs.clone(), &leaf_private_var.nullifier, &leaf_private_var.nullifier)?;
+		let mixer_leaf_hash: FpVar<F> = hasher.hash_two(
+			&mut cs.clone(),
+			&leaf_private_var.secret,
+			&leaf_private_var.nullifier,
+		)?;
+		let mixer_nullifier_hash = hasher.hash_two(
+			&mut cs.clone(),
+			&leaf_private_var.nullifier,
+			&leaf_private_var.nullifier,
+		)?;
 
 		let is_member = path_var.check_membership(&root_var, &mixer_leaf_hash, &hasher)?;
 		// Constraining arbitrary inputs

@@ -1,6 +1,6 @@
 use std::ptr::null;
 
-use crate::common::{Leaf, MixerProof};
+use crate::common::{MixerLeaf, MixerProof};
 use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
@@ -36,6 +36,8 @@ mod tests;
 
 use crate::MixerProver;
 
+use super::{SMT, create_merkle_tree};
+
 pub fn create_leaf<F: PrimeField, H: FieldHasher<F>>(
 	hasher: &H,
 	private: &Private<F>,
@@ -50,21 +52,6 @@ pub fn create_nullifier<F: PrimeField, H: FieldHasher<F>>(
 ) -> Result<F, Error> {
 	let nullifier_hash = hasher.hash_two(&private.nullifier(), &private.nullifier())?;
 	Ok(nullifier_hash)
-}
-
-pub fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
-	hasher: H,
-	leaves: &[F],
-	default_leaf: &[u8],
-) -> SparseMerkleTree<F, H, N> {
-	let pairs: BTreeMap<u32, F> = leaves
-		.iter()
-		.enumerate()
-		.map(|(i, l)| (i as u32, *l))
-		.collect();
-	let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, default_leaf).unwrap();
-
-	smt
 }
 
 pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
@@ -116,8 +103,6 @@ struct MixerR1CSProver<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEI
 	hasher: HG::Native,
 	default_leaf: [u8; 32],
 }
-
-pub type SMT<F, H, const HEIGHT: usize> = SparseMerkleTree<F, H, HEIGHT>;
 
 impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize>
 	MixerR1CSProver<E, HG, HEIGHT>
@@ -298,7 +283,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 		secret: Option<Vec<u8>>,
 		nullifier: Option<Vec<u8>>,
 		rng: &mut R,
-	) -> Result<Leaf, Error> {
+	) -> Result<MixerLeaf, Error> {
 		let secret_field_elt: E::Fr = match secret {
 			Some(secret) => E::Fr::from_le_bytes_mod_order(&secret),
 			None => E::Fr::rand(rng),
@@ -311,7 +296,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
 		let leaf_field_element = create_leaf(&self.hasher, &private)?;
 		let nullifier_hash_field_element = create_nullifier(&self.hasher, &private)?;
-		Ok(Leaf {
+		Ok(MixerLeaf {
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
 			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
@@ -347,7 +332,7 @@ impl<E: PairingEngine, HG: FieldHasherGadget<E::Fr>, const HEIGHT: usize> MixerP
 		let arbitrary_input =
 			setup_arbitrary_data::<E::Fr>(recipient_f, relayer_f, fee_f, refund_f);
 		// Generate the leaf
-		let Leaf {
+		let MixerLeaf {
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..

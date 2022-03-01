@@ -15,7 +15,15 @@ use arkworks_gadgets::{
 	poseidon::{constraints::CRHGadget, CRH},
 };
 
-pub struct Leaf {
+pub struct AnchorLeaf {
+	pub chain_id_bytes: Vec<u8>,
+	pub secret_bytes: Vec<u8>,
+	pub nullifier_bytes: Vec<u8>,
+	pub leaf_bytes: Vec<u8>,
+	pub nullifier_hash_bytes: Vec<u8>,
+}
+
+pub struct MixerLeaf {
 	pub secret_bytes: Vec<u8>,
 	pub nullifier_bytes: Vec<u8>,
 	pub leaf_bytes: Vec<u8>,
