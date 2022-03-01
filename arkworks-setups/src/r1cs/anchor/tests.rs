@@ -250,12 +250,12 @@ fn should_fail_with_invalid_nullifier_hash() {
         AnchorR1CSProver::<Bn254, PoseidonGadget<Bn254Fr>, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
 	let leaf = prover.create_leaf_with_privates(chain_id_u64, None, None, rng).unwrap();
     let leaf_public = Public::new(chain_id);
-    let leaf_private = Private::new(
-        Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes),
-        Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes),
-    );
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+    let leaf_private = Private::new(
+        secret,
+        nullifier,
+    );
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 
     let nullifier_hash = Bn254Fr::rand(rng);
