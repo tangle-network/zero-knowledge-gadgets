@@ -1,16 +1,14 @@
-use std::ptr::null;
-
 use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_serialize::CanonicalDeserialize;
 use ark_snark::SNARK;
-use ark_std::{marker::PhantomData, test_rng, vec::Vec, One, Zero};
+use ark_std::{test_rng, vec::Vec, One, Zero};
 use arkworks_gadgets::{
 	leaf::mixer::Private,
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5, Curve};
+use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 // merkle proof path legth
 // TreeConfig_x5, x7 HEIGHT is hardcoded to 30
@@ -26,7 +24,8 @@ use crate::{
 
 use super::MixerR1CSProver;
 
-pub type MixerR1CSProver_Bn254_Poseidon_30 = MixerR1CSProver<Bn254, LEN>;
+#[allow(non_camel_case_types)]
+type MixerR1CSProver_Bn254_Poseidon_30 = MixerR1CSProver<Bn254, LEN>;
 pub const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
 #[test]
@@ -142,9 +141,6 @@ fn should_fail_with_invalid_root() {
 	let fee = Bn254Fr::zero();
 	let refund = Bn254Fr::zero();
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let hasher = Poseidon::<Bn254Fr> { params: params3 };
-
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
@@ -153,13 +149,6 @@ fn should_fail_with_invalid_root() {
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 
 	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-	let (_, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
-		hasher,
-		&leaves,
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
 	let bad_root = Bn254Fr::rand(rng);
 
 	let index = 0;
@@ -214,7 +203,7 @@ fn should_fail_with_invalid_leaf() {
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
 	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
+	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
 		hasher,
 		&leaves,
 		0,
@@ -379,9 +368,6 @@ fn setup_and_prove_mixer_raw_inputs() {
 	let recipient_raw = recipient.into_repr().to_bytes_le();
 	let relayer_raw = relayer.into_repr().to_bytes_le();
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let hasher = Poseidon::<Bn254Fr> { params: params3 };
-
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();
 	let index = 0;
@@ -436,9 +422,6 @@ fn setup_and_prove_mixer_raw_inputs_unchecked() {
 
 	let recipient_raw = recipient.into_repr().to_bytes_le();
 	let relayer_raw = relayer.into_repr().to_bytes_le();
-
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();

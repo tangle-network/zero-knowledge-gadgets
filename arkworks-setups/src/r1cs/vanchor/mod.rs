@@ -1,26 +1,27 @@
-use ark_std::{collections::BTreeMap, rand};
-use crate::{common::*, AnchorProver, r1cs::vanchor::utxo::Utxo, VAnchorProver};
+use crate::{common::*, r1cs::vanchor::utxo::Utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{
+	collections::BTreeMap,
 	marker::PhantomData,
 	rand::{CryptoRng, Rng, RngCore},
-	rc::Rc,
 	vec::Vec,
-	UniformRand, Zero,
+	UniformRand,
 };
-use arkworks_circuits::circuit::{anchor::AnchorCircuit, vanchor::VAnchorCircuit};
+use arkworks_circuits::circuit::vanchor::VAnchorCircuit;
 use arkworks_gadgets::{
 	arbitrary::vanchor_data::VAnchorArbitraryData,
+	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private, Public},
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::{PoseidonGadget, FieldHasherGadget}}, keypair::vanchor::Keypair, merkle_tree::simple_merkle::Path,
+	merkle_tree::simple_merkle::Path,
+	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
 use arkworks_utils::utils::common::{
 	setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
 };
 
-use super::{create_merkle_tree, setup_tree_and_create_path, SMT};
+use super::{setup_tree_and_create_path, SMT};
 
 pub mod utxo;
 
@@ -38,13 +39,15 @@ struct VAnchorR1CSProver<
 }
 
 impl<
-	E: PairingEngine,
-	const HEIGHT: usize,
-	const ANCHOR_CT: usize,
-	const INS: usize,
-	const OUTS: usize,
-> VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS> {
+		E: PairingEngine,
+		const HEIGHT: usize,
+		const ANCHOR_CT: usize,
+		const INS: usize,
+		const OUTS: usize,
+	> VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+{
 	// TODO: Should be deprecated and tests migrated to `create_utxo`
+	#[allow(dead_code)]
 	pub fn new_utxo<R: RngCore>(
 		curve: Curve,
 		chain_id: u64,
@@ -74,6 +77,7 @@ impl<
 		)
 	}
 
+	#[allow(dead_code)]
 	pub fn setup_random_circuit<R: RngCore>(
 		curve: Curve,
 		default_leaf: [u8; 32],
@@ -142,6 +146,7 @@ impl<
 		Ok(circuit)
 	}
 
+	#[allow(dead_code)]
 	pub fn setup_circuit_with_utxos(
 		curve: Curve,
 		chain_id: E::Fr,
@@ -186,7 +191,12 @@ impl<
 		let in_indices_f = in_indices.map(|x| E::Fr::from(x));
 		let mut in_paths = Vec::new();
 		for i in 0..INS {
-			let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(tree_hasher.clone(), &in_leaves[i], in_indices[i], &default_leaf)?;
+			let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
+				tree_hasher.clone(),
+				&in_leaves[i],
+				in_indices[i],
+				&default_leaf,
+			)?;
 			in_paths.push(path)
 		}
 		// Arbitrary data
@@ -209,7 +219,10 @@ impl<
 
 		let in_nullifiers: Result<Vec<E::Fr>, Error> =
 			in_utxos.iter().map(|x| x.get_nullifier()).collect();
-		let out_nullifiers = out_utxos.iter().map(|x| x.commitment).collect::<Vec<E::Fr>>();
+		let out_nullifiers = out_utxos
+			.iter()
+			.map(|x| x.commitment)
+			.collect::<Vec<E::Fr>>();
 		let public_inputs = Self::construct_public_inputs(
 			in_utxos[0].leaf_public.chain_id,
 			public_amount,
@@ -267,7 +280,10 @@ impl<
 			.iter()
 			.map(|x| x.keypair.public_key(&keypair_hasher))
 			.collect();
-		let out_commitments = out_utxos.iter().map(|x| x.commitment).collect::<Vec<E::Fr>>();
+		let out_commitments = out_utxos
+			.iter()
+			.map(|x| x.commitment)
+			.collect::<Vec<E::Fr>>();
 		let out_leaf_private = out_utxos
 			.iter()
 			.map(|x| x.leaf_private.clone())
@@ -276,7 +292,7 @@ impl<
 			.iter()
 			.map(|x| x.leaf_public.clone())
 			.collect::<Vec<Public<E::Fr>>>();
-		
+
 		let public_chain_id_input = Public::new(chain_id);
 		let circuit = VAnchorCircuit::<
 			E::Fr,
@@ -330,12 +346,13 @@ impl<
 }
 
 impl<
-    E: PairingEngine,
-    const HEIGHT: usize,
-    const ANCHOR_CT: usize,
-    const INS: usize,
-    const OUTS: usize,
-> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS> for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+		E: PairingEngine,
+		const HEIGHT: usize,
+		const ANCHOR_CT: usize,
+		const INS: usize,
+		const OUTS: usize,
+	> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+	for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 {
 	fn create_utxo<R: RngCore>(
 		curve: Curve,
@@ -365,7 +382,7 @@ impl<
 
 		let amount_elt = E::Fr::from(amount);
 
-        let utxo = Utxo::new(
+		let utxo = Utxo::new(
 			chain_id,
 			amount_elt,
 			index,
@@ -380,21 +397,21 @@ impl<
 	}
 
 	fn create_proof<R: RngCore + CryptoRng>(
-        curve: Curve,
+		curve: Curve,
 		chain_id: u64,
-        // External data
-        public_amount: u128,
-        ext_data_hash: Vec<u8>,
-        public_root_set: [Vec<u8>; ANCHOR_CT],
-        in_indices: [u64; INS],
-        in_leaves: BTreeMap<u64, Vec<Vec<u8>>>,
-        // Input transactions
-        in_utxos: [Utxo<E::Fr>; INS],
-        // Output transactions
-        out_utxos: [Utxo<E::Fr>; OUTS],
+		// External data
+		public_amount: u128,
+		ext_data_hash: Vec<u8>,
+		public_root_set: [Vec<u8>; ANCHOR_CT],
+		in_indices: [u64; INS],
+		in_leaves: BTreeMap<u64, Vec<Vec<u8>>>,
+		// Input transactions
+		in_utxos: [Utxo<E::Fr>; INS],
+		// Output transactions
+		out_utxos: [Utxo<E::Fr>; OUTS],
 		pk: Vec<u8>,
 		default_leaf: [u8; 32],
-        rng: &mut R,
+		rng: &mut R,
 	) -> Result<VAnchorProof, Error> {
 		// Initialize hashers
 		let params2 = setup_params_x5_2::<E::Fr>(curve);
@@ -413,28 +430,34 @@ impl<
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
 
-		let in_paths = in_utxos.iter().map(|utxo| {
-			let chain_id_of_utxo: u64 = utxo.chain_id_raw;
-			if trees.contains_key(&chain_id_of_utxo) {
-				let tree = trees.get(&chain_id_of_utxo).unwrap();
-				tree.generate_membership_proof(utxo.index.unwrap_or_default())
-			} else {
-				let leaves = in_leaves.get(&chain_id_of_utxo).unwrap();
-				let leaves_f = leaves.iter().map(|l| E::Fr::from_le_bytes_mod_order(&l)).collect::<Vec<E::Fr>>();
-				match setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-					tree_hasher.clone(),
-					&leaves_f,
-					utxo.index.unwrap_or_default(),
-					&default_leaf,
-				) {
-					Ok((tree, path)) => {
-						trees.insert(chain_id_of_utxo, tree);
-						path
-					},
-					Err(err) => panic!("{}", err),
+		let in_paths = in_utxos
+			.iter()
+			.map(|utxo| {
+				let chain_id_of_utxo: u64 = utxo.chain_id_raw;
+				if trees.contains_key(&chain_id_of_utxo) {
+					let tree = trees.get(&chain_id_of_utxo).unwrap();
+					tree.generate_membership_proof(utxo.index.unwrap_or_default())
+				} else {
+					let leaves = in_leaves.get(&chain_id_of_utxo).unwrap();
+					let leaves_f = leaves
+						.iter()
+						.map(|l| E::Fr::from_le_bytes_mod_order(&l))
+						.collect::<Vec<E::Fr>>();
+					match setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
+						tree_hasher.clone(),
+						&leaves_f,
+						utxo.index.unwrap_or_default(),
+						&default_leaf,
+					) {
+						Ok((tree, path)) => {
+							trees.insert(chain_id_of_utxo, tree);
+							path
+						}
+						Err(err) => panic!("{}", err),
+					}
 				}
-			}
-		}).collect();
+			})
+			.collect();
 
 		// Get the circuit
 		let circuit = Self::setup_circuit(
@@ -444,12 +467,14 @@ impl<
 			in_utxos.clone(),
 			in_indices.map(|elt| E::Fr::from(elt)),
 			in_paths,
-			public_root_set.clone().map(|elt| E::Fr::from_le_bytes_mod_order(&elt)),
+			public_root_set
+				.clone()
+				.map(|elt| E::Fr::from_le_bytes_mod_order(&elt)),
 			out_utxos.clone(),
 			keypair_hasher,
 			tree_hasher,
 			nullifier_hasher,
-			leaf_hasher
+			leaf_hasher,
 		)?;
 
 		let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;
@@ -457,13 +482,18 @@ impl<
 		let public_inputs = Self::construct_public_inputs(
 			chain_id_elt,
 			public_amount_elt,
-			public_root_set.map(|elt| E::Fr::from_le_bytes_mod_order(&elt)).to_vec(),
+			public_root_set
+				.map(|elt| E::Fr::from_le_bytes_mod_order(&elt))
+				.to_vec(),
 			in_utxos.map(|utxo| utxo.get_nullifier().unwrap()).to_vec(),
 			out_utxos.map(|utxo| utxo.commitment).to_vec(),
-			ext_data_hash_elt
+			ext_data_hash_elt,
 		);
 
-		let public_inputs_raw = public_inputs.iter().map(|inp| inp.into_repr().to_bytes_le()).collect();
+		let public_inputs_raw = public_inputs
+			.iter()
+			.map(|inp| inp.into_repr().to_bytes_le())
+			.collect();
 
 		Ok(VAnchorProof {
 			public_inputs_raw,

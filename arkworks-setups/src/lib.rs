@@ -7,7 +7,7 @@ use ark_std::{
 	vec::Vec,
 };
 
-use arkworks_gadgets::{poseidon::field_hasher::Poseidon, merkle_tree::simple_merkle::Path};
+use arkworks_gadgets::{merkle_tree::simple_merkle::Path, poseidon::field_hasher::Poseidon};
 use arkworks_utils::utils::common::Curve;
 use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorLeaf, VAnchorProof};
 use r1cs::vanchor::utxo::Utxo;
@@ -76,7 +76,14 @@ trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize
 	) -> Result<AnchorProof, Error>;
 }
 
-trait VAnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize, const INS: usize, const OUTS: usize> {
+trait VAnchorProver<
+	E: PairingEngine,
+	const HEIGHT: usize,
+	const ANCHOR_CT: usize,
+	const INS: usize,
+	const OUTS: usize,
+>
+{
 	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
@@ -101,21 +108,21 @@ trait VAnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usiz
 	) -> Result<Utxo<E::Fr>, Error>;
 
 	// For making proofs
-    fn create_proof<R: RngCore + CryptoRng>(
-        curve: Curve,
+	fn create_proof<R: RngCore + CryptoRng>(
+		curve: Curve,
 		chain_id: u64,
-        // External data
-        public_amount: u128,
-        ext_data_hash: Vec<u8>,
-        in_root_set: [Vec<u8>; ANCHOR_CT],
-        in_indices: [u64; INS],
-        in_leaves: BTreeMap<u64, Vec<Vec<u8>>>,
-        // Input transactions
-        in_utxos: [Utxo<E::Fr>; INS],
-        // Output transactions
-        out_utxos: [Utxo<E::Fr>; OUTS],
+		// External data
+		public_amount: u128,
+		ext_data_hash: Vec<u8>,
+		in_root_set: [Vec<u8>; ANCHOR_CT],
+		in_indices: [u64; INS],
+		in_leaves: BTreeMap<u64, Vec<Vec<u8>>>,
+		// Input transactions
+		in_utxos: [Utxo<E::Fr>; INS],
+		// Output transactions
+		out_utxos: [Utxo<E::Fr>; OUTS],
 		pk: Vec<u8>,
 		default_leaf: [u8; 32],
-        rng: &mut R,
-    ) -> Result<VAnchorProof, Error>;
+		rng: &mut R,
+	) -> Result<VAnchorProof, Error>;
 }

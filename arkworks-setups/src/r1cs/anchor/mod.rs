@@ -4,8 +4,7 @@ use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{
 	marker::PhantomData,
-	rand::{CryptoRng, Rng, RngCore},
-	rc::Rc,
+	rand::{CryptoRng, RngCore},
 	vec::Vec,
 	UniformRand, Zero,
 };
@@ -14,14 +13,11 @@ use arkworks_gadgets::{
 	arbitrary::anchor_data::Input as AnchorDataInput,
 	leaf::anchor::{Private, Public},
 	merkle_tree::simple_merkle::Path,
-	poseidon::{
-		field_hasher::Poseidon,
-		field_hasher_constraints::{FieldHasherGadget, PoseidonGadget},
-	},
+	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 
-use super::{create_merkle_tree, setup_tree_and_create_path, SMT};
+use super::setup_tree_and_create_path;
 
 #[cfg(test)]
 mod tests;
@@ -64,6 +60,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		AnchorConstraintDataInput::new(recipient, relayer, fee, refund, commitment)
 	}
 
+	#[allow(dead_code)]
 	pub fn setup_random_circuit<R: CryptoRng + RngCore>(
 		curve: Curve,
 		default_leaf: [u8; 32],
@@ -148,6 +145,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		))
 	}
 
+	#[allow(dead_code)]
 	pub fn setup_circuit_with_privates(
 		curve: Curve,
 		chain_id: E::Fr,
@@ -222,6 +220,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
 	}
 
+	#[allow(dead_code)]
 	#[allow(clippy::too_many_arguments)]
 	pub fn setup_circuit_with_privates_raw(
 		curve: Curve,
@@ -299,6 +298,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		))
 	}
 
+	#[allow(dead_code)]
 	pub fn create_circuit(
 		curve: Curve,
 		arbitrary_input: AnchorConstraintDataInput<E::Fr>,

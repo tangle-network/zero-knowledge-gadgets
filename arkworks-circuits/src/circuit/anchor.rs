@@ -100,10 +100,8 @@ where
 			&leaf_public_var,
 			&leaf_hasher,
 		)?;
-		let anchor_nullifier = AnchorLeafGadget::<F, HG>::create_nullifier(
-			&leaf_private_var,
-			&tree_hasher,
-		)?;
+		let anchor_nullifier =
+			AnchorLeafGadget::<F, HG>::create_nullifier(&leaf_private_var, &tree_hasher)?;
 		let root_var = path_var.root_hash(&anchor_leaf, &tree_hasher)?;
 		// Check if target root is in set
 		let set_gadget = SetGadget::new(roots_var);

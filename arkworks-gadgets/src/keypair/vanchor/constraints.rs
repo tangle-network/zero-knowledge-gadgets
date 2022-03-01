@@ -25,10 +25,7 @@ impl<F: PrimeField, PHG: FieldHasherGadget<F>, SHG: FieldHasherGadget<F>> Keypai
 		})
 	}
 
-	pub fn public_key(
-		&self,
-		h: &PHG,
-	) -> Result<FpVar<F>, SynthesisError> {
+	pub fn public_key(&self, h: &PHG) -> Result<FpVar<F>, SynthesisError> {
 		h.hash(&[self.private_key.clone()])
 	}
 
@@ -38,16 +35,17 @@ impl<F: PrimeField, PHG: FieldHasherGadget<F>, SHG: FieldHasherGadget<F>> Keypai
 		index: &FpVar<F>,
 		h_w4: &SHG,
 	) -> Result<FpVar<F>, SynthesisError> {
-		h_w4.hash(&[
-			self.private_key.clone(),
-			commitment.clone(),
-			index.clone(),
-		])
+		h_w4.hash(&[self.private_key.clone(), commitment.clone(), index.clone()])
 	}
 }
 
-impl<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>,  PHG: FieldHasherGadget<F>, SHG: FieldHasherGadget<F>> AllocVar<Keypair<F, PH, SH>, F>
-	for KeypairVar<F, PHG, SHG>
+impl<
+		F: PrimeField,
+		PH: FieldHasher<F>,
+		SH: FieldHasher<F>,
+		PHG: FieldHasherGadget<F>,
+		SHG: FieldHasherGadget<F>,
+	> AllocVar<Keypair<F, PH, SH>, F> for KeypairVar<F, PHG, SHG>
 {
 	fn new_variable<T: Borrow<Keypair<F, PH, SH>>>(
 		into_ns: impl Into<Namespace<F>>,
@@ -66,11 +64,13 @@ mod test {
 	use crate::{
 		ark_std::Zero,
 		poseidon::{
-			CRH, field_hasher_constraints::{PoseidonGadget, PoseidonParametersVar}, field_hasher::Poseidon,
+			field_hasher::Poseidon,
+			field_hasher_constraints::{PoseidonGadget, PoseidonParametersVar},
+			CRH,
 		},
 	};
-	use ark_ed_on_bn254::Fq;
 	use ark_crypto_primitives::crh::{constraints::CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
+	use ark_ed_on_bn254::Fq;
 	use ark_ff::to_bytes;
 	use ark_r1cs_std::{
 		alloc::{AllocVar, AllocationMode},
@@ -103,7 +103,9 @@ mod test {
 			AllocationMode::Constant,
 		)
 		.unwrap();
-		let hasher_gadget = PoseidonGadget::<Fq> { params: params_var.clone() };
+		let hasher_gadget = PoseidonGadget::<Fq> {
+			params: params_var.clone(),
+		};
 
 		let pubkey_var = hasher_gadget.hash(&[privkey_var]).unwrap();
 		let privkey_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(private_key)).unwrap();
@@ -147,7 +149,9 @@ mod test {
 			AllocationMode::Constant,
 		)
 		.unwrap();
-		let hasher_gadget = PoseidonGadget::<Fq> { params: params_var.clone() };
+		let hasher_gadget = PoseidonGadget::<Fq> {
+			params: params_var.clone(),
+		};
 		let privkey_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(private_key)).unwrap();
 		let commitment_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(commitment)).unwrap();
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();

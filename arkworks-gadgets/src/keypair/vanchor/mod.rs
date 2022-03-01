@@ -1,5 +1,5 @@
-use ark_crypto_primitives::{Error};
-use ark_ff::{PrimeField};
+use ark_crypto_primitives::Error;
+use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
 use arkworks_utils::poseidon::PoseidonError;
 
@@ -27,17 +27,8 @@ impl<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> Keypair<F, PH, SH> {
 	}
 
 	// Computes the signature = hash(privKey, commitment, pathIndices)
-	pub fn signature(
-		&self,
-		commitment: &F,
-		index: &F,
-		h_w4: &SH,
-	) -> Result<F, PoseidonError> {
-		h_w4.hash(&[
-			self.private_key.clone(),
-			commitment.clone(),
-			index.clone(),
-		])
+	pub fn signature(&self, commitment: &F, index: &F, h_w4: &SH) -> Result<F, PoseidonError> {
+		h_w4.hash(&[self.private_key.clone(), commitment.clone(), index.clone()])
 	}
 }
 
@@ -51,7 +42,8 @@ impl<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> Clone for Keypair<F,
 #[cfg(test)]
 mod test {
 	use crate::{
-		ark_std::{UniformRand, Zero}, poseidon::field_hasher::{Poseidon, FieldHasher},
+		ark_std::{UniformRand, Zero},
+		poseidon::field_hasher::{FieldHasher, Poseidon},
 	};
 
 	use ark_ed_on_bn254::Fq;

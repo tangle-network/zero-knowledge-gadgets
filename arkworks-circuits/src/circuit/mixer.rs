@@ -76,14 +76,10 @@ where
 		let path_var = PathVar::<F, HG, N>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
-		let mixer_leaf_hash: FpVar<F> = hasher.hash_two(
-			&leaf_private_var.secret,
-			&leaf_private_var.nullifier,
-		)?;
-		let mixer_nullifier_hash = hasher.hash_two(
-			&leaf_private_var.nullifier,
-			&leaf_private_var.nullifier,
-		)?;
+		let mixer_leaf_hash: FpVar<F> =
+			hasher.hash_two(&leaf_private_var.secret, &leaf_private_var.nullifier)?;
+		let mixer_nullifier_hash =
+			hasher.hash_two(&leaf_private_var.nullifier, &leaf_private_var.nullifier)?;
 
 		let is_member = path_var.check_membership(&root_var, &mixer_leaf_hash, &hasher)?;
 		// Constraining arbitrary inputs

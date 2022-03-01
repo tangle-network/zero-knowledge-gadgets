@@ -3,7 +3,7 @@ use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_ff::{PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_snark::SNARK;
-use ark_std::{marker::PhantomData, test_rng};
+use ark_std::test_rng;
 use arkworks_circuits::circuit::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	leaf::anchor::{Private, Public},
@@ -16,18 +16,14 @@ use super::AnchorR1CSProver;
 pub const HEIGHT: usize = 30;
 pub const ANCHOR_CT: usize = 2;
 
-pub type AnchorR1CSProver_Bn254_Poseidon_30 = AnchorR1CSProver<Bn254, HEIGHT, ANCHOR_CT>;
+#[allow(non_camel_case_types)]
+type AnchorR1CSProver_Bn254_Poseidon_30 = AnchorR1CSProver<Bn254, HEIGHT, ANCHOR_CT>;
 pub const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
 #[test]
 fn setup_random_anchor() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let params4 = setup_params_x5_4::<Bn254Fr>(curve);
-	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
-	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
 
 	let (circuit, .., public_inputs) =
 		AnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng).unwrap();
@@ -43,9 +39,7 @@ fn setup_and_prove_anchor_groth16() {
 	let curve = Curve::Bn254;
 
 	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
-	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
@@ -119,9 +113,7 @@ fn should_fail_with_invalid_public_inputs() {
 	let curve = Curve::Bn254;
 
 	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
-	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
@@ -188,11 +180,6 @@ fn should_fail_with_invalid_set() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let params4 = setup_params_x5_4::<Bn254Fr>(curve);
-	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
-	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
-
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let recipient = Bn254Fr::rand(rng);
@@ -245,9 +232,7 @@ fn should_fail_with_invalid_leaf() {
 	let curve = Curve::Bn254;
 
 	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let params4 = setup_params_x5_4::<Bn254Fr>(curve);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
-	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);

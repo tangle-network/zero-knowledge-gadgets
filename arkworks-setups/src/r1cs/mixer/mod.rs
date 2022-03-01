@@ -1,32 +1,23 @@
-use std::ptr::null;
-
 use crate::common::{MixerLeaf, MixerProof};
-use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
-use ark_serialize::CanonicalSerializeHashExt;
 use ark_std::{
-	collections::BTreeMap,
 	marker::PhantomData,
-	rand::{CryptoRng, Rng, RngCore},
+	rand::{CryptoRng, RngCore},
 	vec::Vec,
 	UniformRand,
 };
 use arkworks_circuits::circuit::mixer::MixerCircuit;
 use arkworks_gadgets::poseidon::{
-	constraints::CRHGadget,
 	field_hasher::{FieldHasher, Poseidon},
-	field_hasher_constraints::{FieldHasherGadget, PoseidonGadget},
-	CRH,
+	field_hasher_constraints::PoseidonGadget,
 };
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5, Curve};
+use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 use arkworks_gadgets::{
-	arbitrary::mixer_data::Input as MixerDataInput,
-	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
-	leaf::mixer::Private,
-	merkle_tree::simple_merkle::{Path, SparseMerkleTree},
+	arbitrary::mixer_data::Input as MixerDataInput, leaf::mixer::Private,
+	merkle_tree::simple_merkle::Path,
 };
 
 use crate::common::prove_unchecked;
@@ -103,6 +94,7 @@ struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
 }
 
 impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
+	#[allow(dead_code)]
 	pub fn setup_random_circuit<R: CryptoRng + RngCore>(
 		curve: Curve,
 		default_leaf: [u8; 32],
@@ -157,6 +149,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		Ok((mc, leaf_value, nullifier_hash, root, public_inputs))
 	}
 
+	#[allow(dead_code)]
 	pub fn setup_circuit_with_privates(
 		curve: Curve,
 		secret: E::Fr,
@@ -208,6 +201,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	}
 
 	#[allow(clippy::too_many_arguments)]
+	#[allow(dead_code)]
 	pub fn setup_circuit_with_privates_raw(
 		curve: Curve,
 		secret: Vec<u8>,
@@ -270,6 +264,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		))
 	}
 
+	#[allow(dead_code)]
 	pub fn create_circuit(
 		curve: Curve,
 		arbitrary_input: MixerConstraintDataInput<E::Fr>,

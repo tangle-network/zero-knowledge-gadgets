@@ -20,7 +20,8 @@ use arkworks_gadgets::{
 		Private as LeafPrivateInputs, Public as LeafPublicInputs,
 	},
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
-	set::constraints::SetGadget, poseidon::field_hasher_constraints::FieldHasherGadget,
+	poseidon::field_hasher_constraints::FieldHasherGadget,
+	set::constraints::SetGadget,
 };
 
 #[derive(Clone)]
@@ -237,7 +238,8 @@ impl<
 		const N_INS: usize,
 		const N_OUTS: usize,
 		const ANCHOR_CT: usize,
-	> ConstraintSynthesizer<F> for VAnchorCircuit<F, HG, KHG, LHG, NHG, HEIGHT, N_INS, N_OUTS, ANCHOR_CT>
+	> ConstraintSynthesizer<F>
+	for VAnchorCircuit<F, HG, KHG, LHG, NHG, HEIGHT, N_INS, N_OUTS, ANCHOR_CT>
 where
 	F: PrimeField,
 	HG: FieldHasherGadget<F>,

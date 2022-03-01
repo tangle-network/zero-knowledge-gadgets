@@ -47,7 +47,6 @@ pub struct VAnchorProof {
 	pub public_inputs_raw: Vec<Vec<u8>>,
 }
 
-
 pub struct AnchorProof {
 	pub proof: Vec<u8>,
 	pub leaf_raw: Vec<u8>,

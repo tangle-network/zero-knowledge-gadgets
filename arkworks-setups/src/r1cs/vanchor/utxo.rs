@@ -1,8 +1,11 @@
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use ark_std::rand::RngCore;
-use arkworks_gadgets::{poseidon::field_hasher::Poseidon, leaf::vanchor::{Private, Public, VAnchorLeaf}, keypair::vanchor::Keypair};
-use ark_std::{error::Error as ArkError};
+use ark_std::{error::Error as ArkError, rand::RngCore};
+use arkworks_gadgets::{
+	keypair::vanchor::Keypair,
+	leaf::vanchor::{Private, Public, VAnchorLeaf},
+	poseidon::field_hasher::Poseidon,
+};
 
 #[derive(Debug)]
 pub enum UtxoError {
@@ -66,7 +69,7 @@ impl<F: PrimeField> Utxo<F> {
 			let signature = keypair.signature(&leaf, &i, hasher4)?;
 
 			let nullifier =
-				VAnchorLeaf::<_, Poseidon<F>>::create_nullifier(&signature, &leaf, &i,  &hasher4)?;
+				VAnchorLeaf::<_, Poseidon<F>>::create_nullifier(&signature, &leaf, &i, &hasher4)?;
 
 			Some(nullifier)
 		} else {
