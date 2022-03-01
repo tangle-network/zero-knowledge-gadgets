@@ -779,11 +779,11 @@ mod test {
 		// Preprocess circuit
 		verifier.preprocess(&ck).unwrap();
 
-		// The arbitrary data is stored at index 5 of the public input vector:
-		assert_eq!(arbitrary_data, public_inputs[5]);
+		// The arbitrary data is stored at index 6 of the public input vector:
+		assert_eq!(arbitrary_data, public_inputs[6]);
 		// Modify the arbitrary data so that prover/verifier disagree
-		public_inputs[5].double_in_place();
-
+		public_inputs[6].double_in_place();
+		
 		// Verify proof
 		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
 		match res {
