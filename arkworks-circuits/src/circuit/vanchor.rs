@@ -6,10 +6,6 @@ use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::{cmp::Ordering::Less, marker::PhantomData};
 use arkworks_gadgets::{
-	arbitrary::vanchor_data::{
-		constraints::VAnchorArbitraryDataVar as ArbitraryInputVar,
-		VAnchorArbitraryData as ArbitraryInput,
-	},
 	keypair::vanchor::{constraints::KeypairVar, Keypair},
 	leaf::vanchor::{
 		constraints::{
@@ -36,7 +32,7 @@ pub struct VAnchorCircuit<
 	const M: usize,
 > {
 	public_amount: F,
-	ext_data_hash: ArbitraryInput<F>,
+	ext_data_hash: F,
 
 	leaf_private_inputs: Vec<LeafPrivateInputs<F>>, // amount, blinding
 	keypair_inputs: Vec<Keypair<F, H>>,
@@ -84,7 +80,7 @@ where
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
 		public_amount: F,
-		ext_data_hash: ArbitraryInput<F>,
+		ext_data_hash: F,
 		leaf_private_inputs: Vec<LeafPrivateInputs<F>>,
 		keypair_inputs: Vec<Keypair<F, H>>,
 		leaf_public_input: LeafPublicInputs<F>,
@@ -344,7 +340,7 @@ where
 		// Generating vars
 		// Public inputs
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
-		let arbitrary_input_var = ArbitraryInputVar::new_input(cs.clone(), || Ok(ext_data_hash))?;
+		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(ext_data_hash))?;
 		let in_nullifier_var = Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(nullifier_hash))?;
 		let output_commitment_var =
 			Vec::<HG::OutputVar>::new_input(cs.clone(), || Ok(output_commitment))?;
@@ -406,7 +402,7 @@ where
 		Self::verify_input_invariant(&public_amount_var, &sum_ins_var, &sum_outs_var)?;
 
 		// optional safety constraint to make sure extDataHash cannot be changed
-		arbitrary_input_var.constrain()?;
+		let _ = &arbitrary_input_var * &arbitrary_input_var;
 
 		Ok(())
 	}

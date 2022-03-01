@@ -9,7 +9,6 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::{
-	arbitrary::{self, anchor_data::Input as AnchorDataInput},
 	leaf::anchor::{
 		constraints::AnchorLeafGadget, AnchorLeaf, Private as LeafPrivate, Public as LeafPublic,
 	},
@@ -19,8 +18,6 @@ use arkworks_utils::{
 	poseidon::PoseidonParameters,
 	utils::common::{setup_params_x5_3, setup_params_x5_4, Curve},
 };
-
-pub type AnchorConstraintDataInput<F> = AnchorDataInput<F>;
 
 pub type Leaf_x5<F> = AnchorLeaf<F, PoseidonCRH_x5_4<F>>;
 
@@ -184,16 +181,6 @@ pub struct AnchorProverSetup<F: PrimeField, const M: usize, const N: usize> {
 impl<F: PrimeField, const M: usize, const N: usize> AnchorProverSetup<F, M, N> {
 	pub fn new(params3: PoseidonParameters<F>, params4: PoseidonParameters<F>) -> Self {
 		Self { params3, params4 }
-	}
-
-	pub fn setup_arbitrary_data(
-		recipient: F,
-		relayer: F,
-		fee: F,
-		refund: F,
-		commitment: F,
-	) -> AnchorConstraintDataInput<F> {
-		AnchorConstraintDataInput::new(recipient, relayer, fee, refund, commitment)
 	}
 
 	#[allow(clippy::too_many_arguments)]

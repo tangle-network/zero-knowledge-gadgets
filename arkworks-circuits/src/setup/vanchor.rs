@@ -10,7 +10,6 @@ use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
 use ark_std::{error::Error as ArkError, rand::RngCore, rc::Rc, string::ToString, vec::Vec};
 use arkworks_gadgets::{
-	arbitrary::vanchor_data::VAnchorArbitraryData,
 	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private as LeafPrivateInput, Public as LeafPublicInput, VAnchorLeaf as Leaf},
 	merkle_tree::Path,
@@ -280,12 +279,10 @@ impl<
 			let (in_path, _) = self.setup_tree(&in_leaves[i], in_indices[i])?;
 			in_paths.push(in_path)
 		}
-		// Arbitrary data
-		let arbitrary_data = Self::setup_arbitrary_data(ext_data_hash);
 
 		let circuit = self.setup_circuit(
 			public_amount,
-			arbitrary_data,
+			ext_data_hash,
 			in_utxos.clone(),
 			in_indices_f,
 			in_paths,
@@ -311,7 +308,7 @@ impl<
 	pub fn setup_circuit(
 		self,
 		public_amount: F,
-		arbitrary_data: VAnchorArbitraryData<F>,
+		arbitrary_data: F,
 		// Input transactions
 		in_utxos: [Utxo<F>; INS],
 		// Data related to tree
@@ -473,10 +470,6 @@ impl<
 			ext_data_hash,
 		))
 	}
-
-	pub fn setup_arbitrary_data(ext_data: F) -> VAnchorArbitraryData<F> {
-		VAnchorArbitraryData::new(ext_data)
-	}
 }
 
 // const TREE_DEPTH: usize = 30;
@@ -484,9 +477,3 @@ impl<
 // const INS: usize = 2;
 // const OUTS: usize = 2;
 pub type VAnchorProverBn2542x2 = VAnchorProverSetup<Bn254Fr, 30, 2, 2, 2>;
-
-// For backwards compatability
-// TODO: remove later
-pub fn setup_vanchor_arbitrary_data<F: PrimeField>(ext_data: F) -> VAnchorArbitraryData<F> {
-	VAnchorArbitraryData::new(ext_data)
-}
