@@ -27,9 +27,10 @@ ark-snark = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
+crypto_box = { version = "0.7.1" }
 
 [dev-dependencies]
-arkworks-utils = { path = "../arkworks-utils",  version = "0.4.20", default-features = false, features = ["default_poseidon"] }
+arkworks-utils = { path = "../arkworks-utils",  version = "0.4.20", default-features = false, features = ["default_poseidon", "default_mimc"] }
 
 # curves
 ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
