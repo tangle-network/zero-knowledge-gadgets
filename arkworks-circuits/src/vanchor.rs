@@ -175,10 +175,10 @@ where
 		let limit_var: FpVar<F> = FpVar::<F>::new_constant(cs.clone(), limit)?;
 
 		// Hashers
-		let tree_hasher = HG::from_native(&mut cs.clone(), self.tree_hasher);
-		let keypair_hasher = HG::from_native(&mut cs.clone(), self.keypair_hasher);
-		let leaf_hasher = HG::from_native(&mut cs.clone(), self.leaf_hasher);
-		let nullifier_hasher = HG::from_native(&mut cs.clone(), self.nullifier_hasher);
+		let tree_hasher = HG::from_native(&mut cs.clone(), self.tree_hasher)?;
+		let keypair_hasher = HG::from_native(&mut cs.clone(), self.keypair_hasher)?;
+		let leaf_hasher = HG::from_native(&mut cs.clone(), self.leaf_hasher)?;
+		let nullifier_hasher = HG::from_native(&mut cs.clone(), self.nullifier_hasher)?;
 
 		// Private inputs
 		let in_amounts_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_amounts))?;

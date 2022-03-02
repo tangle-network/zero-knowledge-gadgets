@@ -74,8 +74,8 @@ where
 		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Hashers
-		let hasher3_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher3);
-		let hasher4_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher4);
+		let hasher3_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher3)?;
+		let hasher4_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher4)?;
 
 		// Private inputs
 		let secret_var = FpVar::<F>::new_witness(cs.clone(), || Ok(secret))?;

@@ -63,7 +63,7 @@ where
 		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Hashers
-		let hasher: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher);
+		let hasher: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher)?;
 
 		// Private inputs
 		let secret_var = FpVar::<F>::new_witness(cs.clone(), || Ok(secret))?;
