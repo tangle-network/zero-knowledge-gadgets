@@ -123,12 +123,10 @@ where
 #[cfg(test)]
 mod test {
 	use super::MixerCircuit;
-	use crate::{poseidon::poseidon::PoseidonGadget, utils::gadget_tester};
-	use ark_bn254::{Bn254, Fr as Bn254Fr};
+	use crate::{poseidon::poseidon::PoseidonGadget, utils::prove_then_verify};
+	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
-	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::test_rng;
 	use arkworks_gadgets::{
 		ark_std::UniformRand,
@@ -136,10 +134,7 @@ mod test {
 		poseidon::field_hasher::{FieldHasher, Poseidon},
 	};
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
-	use plonk_core::{
-		prelude::*,
-		proof_system::{Prover, Verifier},
-	};
+	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
 
@@ -191,8 +186,16 @@ mod test {
 			poseidon_native,
 		);
 
-		let res = gadget_tester::<Bn254, JubjubParameters, _>(&mut mixer, 1 << 17);
-		assert!(res.is_ok(), "{:?}", res.err().unwrap());
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			None,
+		);
+		match res {
+			Ok(()) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+		};
 	}
 
 	#[test]
@@ -228,7 +231,6 @@ mod test {
 		)
 		.unwrap();
 		let root = tree.root();
-		let bad_root = root.double();
 
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
@@ -239,57 +241,24 @@ mod test {
 			nullifier,
 			nullifier_hash,
 			path,
-			bad_root,
+			root,
 			arbitrary_data,
 			poseidon_native,
 		);
 
-		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = mixer.gadget(&mut composer);
-		let public_inputs = composer.construct_dense_pi_vec();
+		// Use a different root for the verifier
+		let verifier_public_inputs = vec![nullifier_hash, root.double(), arbitrary_data];
 
-		// Go through proof generation/verification
-		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
-		let proof = {
-			// Create a prover struct
-			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
-					b"mixer",
-				);
-			prover.key_transcript(b"key", b"additional seed information");
-			// Add gadgets
-			let _ = mixer.gadget(prover.mut_cs());
-			// Commit Key (being lazy with error)
-			let (ck, _) =
-				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-					.unwrap();
-			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
-			// Compute Proof
-			prover.prove(&ck).unwrap()
-		};
-
-		// Verifier's view
-
-		// Create a Verifier object
-		let mut verifier = Verifier::new(b"mixer");
-		verifier.key_transcript(b"key", b"additional seed information");
-		// Add gadgets
-		let _ = mixer.gadget(verifier.mut_cs());
-		// Compute Commit and Verifier key
-		let (ck, vk) =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-				.unwrap();
-		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
-
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			Some(verifier_public_inputs),
+		);
 		match res {
-			Error::ProofVerificationError => (),
-			err => panic!("Unexpected error: {:?}", err),
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
 		};
 	}
 
@@ -344,52 +313,16 @@ mod test {
 			poseidon_native,
 		);
 
-		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = mixer.gadget(&mut composer);
-		let public_inputs = composer.construct_dense_pi_vec();
-
-		// Go through proof generation/verification
-		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
-		let proof = {
-			// Create a prover struct
-			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
-					b"mixer",
-				);
-			prover.key_transcript(b"key", b"additional seed information");
-			// Add gadgets
-			let _ = mixer.gadget(prover.mut_cs());
-			// Commit Key (being lazy with error)
-			let (ck, _) =
-				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-					.unwrap();
-			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
-			// Compute Proof
-			prover.prove(&ck).unwrap()
-		};
-
-		// Verifier's view
-
-		// Create a Verifier object
-		let mut verifier = Verifier::new(b"mixer");
-		verifier.key_transcript(b"key", b"additional seed information");
-		// Add gadgets
-		let _ = mixer.gadget(verifier.mut_cs());
-		// Compute Commit and Verifier key
-		let (ck, vk) =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-				.unwrap();
-		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
-
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			None, // No need to give verifier different public data
+		);
 		match res {
-			Error::ProofVerificationError => (),
-			err => panic!("Unexpected error: {:?}", err),
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
 		};
 	}
 
@@ -430,7 +363,7 @@ mod test {
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
 
-		// An incorrect secret value to use below
+		// Use a bad nullifier value:
 		let bad_nullifier = nullifier.double();
 
 		// Create MixerCircuit
@@ -444,52 +377,16 @@ mod test {
 			poseidon_native,
 		);
 
-		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = mixer.gadget(&mut composer);
-		let public_inputs = composer.construct_dense_pi_vec();
-
-		// Go through proof generation/verification
-		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
-		let proof = {
-			// Create a prover struct
-			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
-					b"mixer",
-				);
-			prover.key_transcript(b"key", b"additional seed information");
-			// Add gadgets
-			let _ = mixer.gadget(prover.mut_cs());
-			// Commit Key (being lazy with error)
-			let (ck, _) =
-				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-					.unwrap();
-			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
-			// Compute Proof
-			prover.prove(&ck).unwrap()
-		};
-
-		// Verifier's view
-
-		// Create a Verifier object
-		let mut verifier = Verifier::new(b"mixer");
-		verifier.key_transcript(b"key", b"additional seed information");
-		// Add gadgets
-		let _ = mixer.gadget(verifier.mut_cs());
-		// Compute Commit and Verifier key
-		let (ck, vk) =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-				.unwrap();
-		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
-
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			None, // No need to give verifier different public inputs
+		);
 		match res {
-			Error::ProofVerificationError => (),
-			err => panic!("Unexpected error: {:?}", err),
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
 		};
 	}
 
@@ -541,52 +438,16 @@ mod test {
 			poseidon_native,
 		);
 
-		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = mixer.gadget(&mut composer);
-		let public_inputs = composer.construct_dense_pi_vec();
-
-		// Go through proof generation/verification
-		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
-		let proof = {
-			// Create a prover struct
-			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
-					b"mixer",
-				);
-			prover.key_transcript(b"key", b"additional seed information");
-			// Add gadgets
-			let _ = mixer.gadget(prover.mut_cs());
-			// Commit Key (being lazy with error)
-			let (ck, _) =
-				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-					.unwrap();
-			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
-			// Compute Proof
-			prover.prove(&ck).unwrap()
-		};
-
-		// Verifier's view
-
-		// Create a Verifier object
-		let mut verifier = Verifier::new(b"mixer");
-		verifier.key_transcript(b"key", b"additional seed information");
-		// Add gadgets
-		let _ = mixer.gadget(verifier.mut_cs());
-		// Compute Commit and Verifier key
-		let (ck, vk) =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-				.unwrap();
-		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
-
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			None, // No need to give verifier different public inputs
+		);
 		match res {
-			Error::ProofVerificationError => (),
-			err => panic!("Unexpected error: {:?}", err),
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
 		};
 	}
 
@@ -627,66 +488,29 @@ mod test {
 		// Path
 		let path = tree.generate_membership_proof(last_index as u64);
 
-		// Incorrect nullifier hash to use below
-		let bad_nullifier_hash = nullifier_hash.double();
-
 		// Create MixerCircuit
 		let mut mixer = MixerCircuit::<Fq, JubjubParameters, PoseidonGadget, HEIGHT>::new(
 			secret,
 			nullifier,
-			bad_nullifier_hash,
+			nullifier_hash,
 			path,
 			root,
 			arbitrary_data,
 			poseidon_native,
 		);
 
-		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = mixer.gadget(&mut composer);
-		let public_inputs = composer.construct_dense_pi_vec();
-
-		// Go through proof generation/verification
-		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
-		let proof = {
-			// Create a prover struct
-			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
-					b"mixer",
-				);
-			prover.key_transcript(b"key", b"additional seed information");
-			// Add gadgets
-			let _ = mixer.gadget(prover.mut_cs());
-			// Commit Key (being lazy with error)
-			let (ck, _) =
-				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-					.unwrap();
-			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
-			// Compute Proof
-			prover.prove(&ck).unwrap()
-		};
-
-		// Verifier's view
-
-		// Create a Verifier object
-		let mut verifier = Verifier::new(b"mixer");
-		verifier.key_transcript(b"key", b"additional seed information");
-		// Add gadgets
-		let _ = mixer.gadget(verifier.mut_cs());
-		// Compute Commit and Verifier key
-		let (ck, vk) =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-				.unwrap();
-		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
-
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// Give the verifier a different nullifier hash
+		let verifier_public_inputs = vec![nullifier_hash.double(), root, arbitrary_data];
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			Some(verifier_public_inputs),
+		);
 		match res {
-			Error::ProofVerificationError => (),
-			err => panic!("Unexpected error: {:?}", err),
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
 		};
 	}
 
@@ -738,57 +562,18 @@ mod test {
 			poseidon_native,
 		);
 
-		// Fill a composer to extract the public_inputs
-		let mut composer = StandardComposer::<Fq, JubjubParameters>::new();
-		let _ = mixer.gadget(&mut composer);
-		let mut public_inputs = composer.construct_dense_pi_vec();
-
-		// Go through proof generation/verification
-		let u_params: UniversalParams<Bn254> =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 18, None, rng).unwrap();
-		let proof = {
-			// Create a prover struct
-			let mut prover =
-				Prover::<Fq, JubjubParameters, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>::new(
-					b"mixer",
-				);
-			prover.key_transcript(b"key", b"additional seed information");
-			// Add gadgets
-			let _ = mixer.gadget(prover.mut_cs());
-			// Commit Key (being lazy with error)
-			let (ck, _) =
-				SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-					.unwrap();
-			// Preprocess circuit
-			let _ = prover.preprocess(&ck);
-			// Compute Proof
-			prover.prove(&ck).unwrap()
-		};
-
-		// Verifier's view
-
-		// Create a Verifier object
-		let mut verifier = Verifier::new(b"mixer");
-		verifier.key_transcript(b"key", b"additional seed information");
-		// Add gadgets
-		let _ = mixer.gadget(verifier.mut_cs());
-		// Compute Commit and Verifier key
-		let (ck, vk) =
-			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::trim(&u_params, 1 << 18, 0, None)
-				.unwrap();
-		// Preprocess circuit
-		verifier.preprocess(&ck).unwrap();
-
-		// The arbitrary data is stored at index 5 of the public input vector:
-		assert_eq!(arbitrary_data, public_inputs[5]);
-		// Modify the arbitrary data so that prover/verifier disagree
-		public_inputs[5].double_in_place();
-
-		// Verify proof
-		let res = verifier.verify(&proof, &vk, &public_inputs).unwrap_err();
+		// Give the verifier different arbitrary data
+		let verifier_public_inputs = vec![nullifier_hash, root, arbitrary_data.double()];
+		// Prove then verify
+		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
+			&mut |c| mixer.gadget(c),
+			1 << 17,
+			Some(verifier_public_inputs),
+		);
 		match res {
-			Error::ProofVerificationError => (),
-			err => panic!("Unexpected error: {:?}", err),
+			Err(Error::ProofVerificationError) => (),
+			Err(err) => panic!("Unexpected error: {:?}", err),
+			Ok(()) => panic!("Proof was successfully verified when error was expected"),
 		};
 	}
 }

@@ -167,6 +167,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(smt)
 	}
 
+	/// This returns the Merkle tree root
 	pub fn root(&self) -> F {
 		self.tree
 			.get(&0)

@@ -1,6 +1,7 @@
 use crate::Vec;
 
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
+use ark_ec::TEModelParameters;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -20,6 +21,7 @@ use arkworks_gadgets::{
 	merkle_tree::{constraints::PathVar, Config as MerkleConfig, Path},
 	set::constraints::SetGadget,
 };
+use arkworks_utils::poseidon::PoseidonParameters;
 
 pub struct VAnchorCircuit<
 	F: PrimeField,
