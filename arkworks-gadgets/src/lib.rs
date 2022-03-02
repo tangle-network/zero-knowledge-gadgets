@@ -10,7 +10,6 @@ pub mod identity;
 pub mod keypair;
 pub mod leaf;
 pub mod merkle_tree;
-pub mod mimc;
 pub mod poseidon;
 pub mod set;
 

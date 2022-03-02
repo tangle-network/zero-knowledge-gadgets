@@ -5,6 +5,10 @@ use arkworks_utils::poseidon::{PoseidonError, PoseidonParameters};
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+
+#[cfg(feature = "r1cs")]
+pub mod field_hasher_constraints;
+
 pub mod field_hasher;
 
 #[derive(Debug, Clone, Copy)]

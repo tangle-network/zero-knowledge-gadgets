@@ -1,9 +1,12 @@
 use super::{Private, Public};
-use crate::Vec;
+use crate::{
+	poseidon::{field_hasher::FieldHasher, field_hasher_constraints::FieldHasherGadget},
+	Vec,
+};
 use ark_crypto_primitives::{crh::CRHGadget, CRH};
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
-use ark_relations::r1cs::{Namespace, SynthesisError};
+use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use core::borrow::Borrow;
 
@@ -38,40 +41,33 @@ impl<F: PrimeField> PrivateVar<F> {
 	}
 }
 
-pub struct VAnchorLeafGadget<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> {
+pub struct VAnchorLeafGadget<F: PrimeField, HG: FieldHasherGadget<F>> {
 	field: PhantomData<F>,
-	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
 
-impl<F: PrimeField, H: CRH, HG: CRHGadget<H, F>> VAnchorLeafGadget<F, H, HG> {
-	pub fn create_leaf<BG: ToBytesGadget<F>>(
+impl<F: PrimeField, HG: FieldHasherGadget<F>> VAnchorLeafGadget<F, HG> {
+	pub fn create_leaf(
 		private: &PrivateVar<F>,
 		public: &PublicVar<F>,
-		public_key: &BG,
-		h_w5: &HG::ParametersVar,
-	) -> Result<HG::OutputVar, SynthesisError> {
-		let pubkey = public_key;
-
-		let mut bytes = Vec::new();
-		bytes.extend(public.chain_id.to_bytes()?);
-		bytes.extend(private.amount.to_bytes()?);
-		bytes.extend(pubkey.to_bytes()?);
-		bytes.extend(private.blinding.to_bytes()?);
-		HG::evaluate(h_w5, &bytes)
+		public_key: &FpVar<F>,
+		h_w5: &HG,
+	) -> Result<FpVar<F>, SynthesisError> {
+		h_w5.hash(&[
+			public.chain_id.clone(),
+			private.amount.clone(),
+			public_key.clone(),
+			private.blinding.clone(),
+		])
 	}
 
-	pub fn create_nullifier<BG: ToBytesGadget<F>>(
-		signature: &BG,
-		commitment: &HG::OutputVar,
-		h_w4: &HG::ParametersVar,
+	pub fn create_nullifier(
+		signature: &FpVar<F>,
+		commitment: &FpVar<F>,
 		index: &FpVar<F>,
-	) -> Result<HG::OutputVar, SynthesisError> {
-		let mut bytes = Vec::new();
-		bytes.extend(commitment.to_bytes()?);
-		bytes.extend(index.to_bytes()?);
-		bytes.extend(signature.to_bytes()?);
-		HG::evaluate(h_w4, &bytes)
+		h_w4: &HG,
+	) -> Result<FpVar<F>, SynthesisError> {
+		h_w4.hash(&[commitment.clone(), index.clone(), signature.clone()])
 	}
 }
 
@@ -115,7 +111,8 @@ mod test {
 		ark_std::{One, UniformRand},
 		leaf::vanchor::VAnchorLeaf,
 		poseidon::{
-			constraints::{CRHGadget, PoseidonParametersVar},
+			field_hasher::{FieldHasher, Poseidon},
+			field_hasher_constraints::{PoseidonGadget, PoseidonParametersVar},
 			CRH,
 		},
 	};
@@ -123,20 +120,14 @@ mod test {
 	//use ark_bls12_381::Fq;
 	use ark_bn254::Fq;
 
-	use ark_crypto_primitives::crh::{CRHGadget as CRHGadgetTrait, CRH as CRHTrait};
-	use ark_ff::to_bytes;
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::test_rng;
 	use arkworks_utils::utils::common::{
 		setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
 	};
 
-	type PoseidonCRH = CRH<Fq>;
-
-	type PoseidonCRHGadget = CRHGadget<Fq>;
-
-	type Leaf = VAnchorLeaf<Fq, PoseidonCRH>;
-	type LeafGadget = VAnchorLeafGadget<Fq, PoseidonCRH, PoseidonCRHGadget>;
+	type Leaf = VAnchorLeaf<Fq, Poseidon<Fq>>;
+	type LeafGadget = VAnchorLeafGadget<Fq, PoseidonGadget<Fq>>;
 	#[test]
 	fn should_crate_new_leaf_constraints() {
 		let rng = &mut test_rng();
@@ -147,15 +138,16 @@ mod test {
 
 		let params5_2 = setup_params_x5_2(curve);
 		let params5_5 = setup_params_x5_5(curve);
+		let hasher2 = Poseidon::<Fq>::new(params5_2.clone());
+		let hasher5 = Poseidon::<Fq>::new(params5_5.clone());
 
 		let chain_id = Fq::one();
 		let index = Fq::one();
 		let public = Public::new(chain_id);
 		let secrets = Private::generate(rng);
 		let private_key = Fq::rand(rng);
-		let privkey = to_bytes![private_key].unwrap();
-		let public_key = PoseidonCRH::evaluate(&params5_2, &privkey).unwrap();
-		let leaf = Leaf::create_leaf(&secrets, &public, &public_key, &params5_5).unwrap();
+		let public_key = hasher2.hash(&[private_key]).unwrap();
+		let leaf = Leaf::create_leaf(&secrets, &public, &public_key, &hasher5).unwrap();
 
 		// Constraints version
 		let index_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(index)).unwrap();
@@ -174,13 +166,19 @@ mod test {
 			AllocationMode::Constant,
 		)
 		.unwrap();
+		let hasher_gadget2 = PoseidonGadget::<Fq> {
+			params: params_var5_2,
+		};
+		let hasher_gadget5 = PoseidonGadget::<Fq> {
+			params: params_var5_5,
+		};
 
 		let mut bytes = Vec::new();
 		bytes.extend(private_key_var.to_bytes().unwrap());
-		let public_key_var = PoseidonCRHGadget::evaluate(&params_var5_2, &bytes).unwrap();
+		let public_key_var = hasher_gadget2.hash(&[private_key_var.clone()]).unwrap();
 
 		let leaf_var =
-			LeafGadget::create_leaf(&secrets_var, &public_var, &public_key_var, &params_var5_5)
+			LeafGadget::create_leaf(&secrets_var, &public_var, &public_key_var, &hasher_gadget5)
 				.unwrap();
 
 		// Check equality
@@ -192,19 +190,23 @@ mod test {
 		// Test Nullifier
 		// Native version
 		let params5_4 = setup_params_x5_4(curve);
+		let hasher4 = Poseidon::<Fq>::new(params5_4.clone());
 		let params_var5_4 = PoseidonParametersVar::new_variable(
 			cs.clone(),
 			|| Ok(&params5_4),
 			AllocationMode::Constant,
 		)
 		.unwrap();
+		let hasher_gadget4 = PoseidonGadget::<Fq> {
+			params: params_var5_4,
+		};
 		let signature = Fq::rand(rng);
-		let nullifier = Leaf::create_nullifier(&signature, &leaf, &params5_4, &index).unwrap();
+		let nullifier = Leaf::create_nullifier(&signature, &leaf, &index, &hasher4).unwrap();
 
 		// Constraints version
 		let signature_var = FpVar::<Fq>::new_witness(cs.clone(), || Ok(&signature)).unwrap();
 		let nullifier_var =
-			LeafGadget::create_nullifier(&signature_var, &leaf_var, &params_var5_4, &index_var)
+			LeafGadget::create_nullifier(&signature_var, &leaf_var, &index_var, &hasher_gadget4)
 				.unwrap();
 
 		// Check equality

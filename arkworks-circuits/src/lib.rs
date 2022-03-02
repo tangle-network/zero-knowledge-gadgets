@@ -6,7 +6,7 @@ pub extern crate ark_std;
 use ark_std::boxed::Box;
 pub(crate) use ark_std::vec::Vec;
 pub mod circuit;
-pub mod setup;
+// pub mod setup;
 
 pub type Error = Box<dyn ark_std::error::Error>;
 

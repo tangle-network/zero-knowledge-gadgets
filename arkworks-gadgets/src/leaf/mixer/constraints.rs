@@ -9,8 +9,8 @@ use core::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct PrivateVar<F: PrimeField> {
-	secret: FpVar<F>,
-	nullifier: FpVar<F>,
+	pub secret: FpVar<F>,
+	pub nullifier: FpVar<F>,
 }
 
 impl<F: PrimeField> PrivateVar<F> {

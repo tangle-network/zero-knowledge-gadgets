@@ -10,43 +10,29 @@ use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
 use arkworks_circuits::circuit::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	leaf::anchor::{AnchorLeaf, Private as LeafPrivate, Public as LeafPublic},
-	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-	poseidon::{constraints::CRHGadget, CRH},
+	merkle_tree::simple_merkle::SparseMerkleTree,
+	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
 
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_5};
+use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, setup_params_x5_5};
 use blake2::Blake2s;
 
 macro_rules! setup_circuit {
 	($test_field:ty) => {{
-		const M: usize = 4;
-		const N: usize = 30;
+		const ANCHOR_CT: usize = 4;
+		const HEIGHT: usize = 30;
+		const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
-		type PoseidonCRH = CRH<$test_field>;
-		type PoseidonCRHGadget = CRHGadget<$test_field>;
+		type Leaf = AnchorLeaf<$test_field, Poseidon<$test_field>>;
 
-		type Leaf = AnchorLeaf<$test_field, PoseidonCRH>;
-
-		#[derive(Clone, PartialEq)]
-		struct AnchorTreeConfig;
-		impl MerkleConfig for AnchorTreeConfig {
-			type H = PoseidonCRH;
-			type LeafH = PoseidonCRH;
-
-			const HEIGHT: u8 = N as _;
-		}
-
-		type AnchorTree = SparseMerkleTree<AnchorTreeConfig>;
+		type AnchorTree = SparseMerkleTree<$test_field, PoseidonGadget<$test_field>, HEIGHT>;
 
 		type Circuit = AnchorCircuit<
 			$test_field,
-			PoseidonCRH,
-			PoseidonCRHGadget,
-			AnchorTreeConfig,
-			PoseidonCRHGadget,
-			PoseidonCRHGadget,
-			N,
-			M,
+			PoseidonGadget<$test_field>,
+			PoseidonGadget<$test_field>,
+			HEIGHT,
+			ANCHOR_CT,
 		>;
 
 		let rng = &mut test_rng();
@@ -58,10 +44,14 @@ macro_rules! setup_circuit {
 		let leaf_public = LeafPublic::new(chain_id);
 
 		// Round params for the poseidon in leaf creation gadget
-		let params5 = setup_params_x5_5(curve);
+		let params4 = setup_params_x5_4(curve);
+		let leaf_hasher = Poseidon::<$test_field>::new(params4);
+
+		let params3 = setup_params_x5_3(curve);
+		let nullifier_hasher = Poseidon::<$test_field>::new(params3);
 		// Creating the leaf
-		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &params5).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &params5).unwrap();
+		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &leaf_hasher).unwrap();
+		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &nullifier_hasher).unwrap();
 
 		// Arbitrary data
 		let arbitrary_input = <$test_field>::rand(rng);
@@ -75,10 +65,14 @@ macro_rules! setup_circuit {
 			leaf_hash,
 			<$test_field>::rand(rng),
 		];
-		let inner_params = Rc::new(params3.clone());
-		let leaf_params = inner_params.clone();
+		let tree_hasher = Poseidon::<$test_field>::new(params3);
 		// Making the merkle tree
-		let mt = AnchorTree::new_sequential(inner_params, leaf_params, &leaves).unwrap();
+		let mt = SparseMerkleTree::<$test_field, Poseidon<$test_field>, HEIGHT>::new_sequential(
+			&leaves,
+			&tree_hasher,
+			&DEFAULT_LEAF,
+		)
+		.unwrap();
 		// Getting the proof path
 		let path = mt.generate_membership_proof(2);
 		let root = mt.root();
@@ -86,16 +80,17 @@ macro_rules! setup_circuit {
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
 			<$test_field>::rand(rng),
-			root.clone().inner(),
+			root.clone(),
 		];
 		let mc = Circuit::new(
 			arbitrary_input.clone(),
 			leaf_private,
 			leaf_public,
 			roots.clone(),
-			params5,
 			path,
 			nullifier_hash,
+			tree_hasher,
+			leaf_hasher,
 		);
 		let mut public_inputs = Vec::new();
 		public_inputs.push(chain_id);
@@ -231,5 +226,5 @@ fn main() {
 	// Sonic
 	benchmark_marlin_sonic(nc, nv, num_iter);
 	// IPA
-	// benchmark_marlin_ipa_pc(nc, nv, num_iter);
+	benchmark_marlin_ipa_pc(nc, nv, num_iter);
 }
