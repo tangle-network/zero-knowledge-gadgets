@@ -8,7 +8,7 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_circuits::circuit::mixer::MixerCircuit;
+use arkworks_circuits::mixer::MixerCircuit;
 use arkworks_gadgets::poseidon::{
 	field_hasher::{FieldHasher, Poseidon},
 	field_hasher_constraints::PoseidonGadget,

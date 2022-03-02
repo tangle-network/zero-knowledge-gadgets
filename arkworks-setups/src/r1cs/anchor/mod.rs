@@ -8,7 +8,7 @@ use ark_std::{
 	vec::Vec,
 	UniformRand, Zero,
 };
-use arkworks_circuits::circuit::anchor::AnchorCircuit;
+use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	leaf::anchor::{Private, Public},
 	merkle_tree::simple_merkle::Path,

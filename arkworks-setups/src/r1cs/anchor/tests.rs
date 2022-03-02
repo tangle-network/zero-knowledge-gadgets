@@ -4,7 +4,7 @@ use ark_ff::{PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_snark::SNARK;
 use ark_std::test_rng;
-use arkworks_circuits::circuit::anchor::AnchorCircuit;
+use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	leaf::anchor::{Private, Public},
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},

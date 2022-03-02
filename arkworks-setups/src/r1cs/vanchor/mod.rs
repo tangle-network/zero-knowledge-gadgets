@@ -9,7 +9,7 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_circuits::circuit::vanchor::VAnchorCircuit;
+use arkworks_circuits::vanchor::VAnchorCircuit;
 use arkworks_gadgets::{
 	keypair::vanchor::Keypair,
 	leaf::vanchor::{Private, Public},

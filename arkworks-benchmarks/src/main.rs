@@ -7,14 +7,14 @@ use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
-use arkworks_circuits::circuit::anchor::AnchorCircuit;
+use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
 	leaf::anchor::{AnchorLeaf, Private as LeafPrivate, Public as LeafPublic},
 	merkle_tree::simple_merkle::SparseMerkleTree,
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
 
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, setup_params_x5_5};
+use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4};
 use blake2::Blake2s;
 
 macro_rules! setup_circuit {
@@ -24,8 +24,6 @@ macro_rules! setup_circuit {
 		const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
 		type Leaf = AnchorLeaf<$test_field, Poseidon<$test_field>>;
-
-		type AnchorTree = SparseMerkleTree<$test_field, PoseidonGadget<$test_field>, HEIGHT>;
 
 		type Circuit = AnchorCircuit<
 			$test_field,
