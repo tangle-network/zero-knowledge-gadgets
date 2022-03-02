@@ -17,11 +17,17 @@ use core::{
 
 use super::field_hasher::{FieldHasher, Poseidon};
 
-pub trait FieldHasherGadget<F: PrimeField> where Self: Sized {
+pub trait FieldHasherGadget<F: PrimeField>
+where
+	Self: Sized,
+{
 	type Native: Debug + Clone + FieldHasher<F>;
 
 	// For easy conversion from native version
-	fn from_native(cs: &mut ConstraintSystemRef<F>, native: Self::Native) -> Result<Self, SynthesisError>;
+	fn from_native(
+		cs: &mut ConstraintSystemRef<F>,
+		native: Self::Native,
+	) -> Result<Self, SynthesisError>;
 	fn hash(&self, inputs: &[FpVar<F>]) -> Result<FpVar<F>, SynthesisError>;
 	fn hash_two(&self, left: &FpVar<F>, right: &FpVar<F>) -> Result<FpVar<F>, SynthesisError>;
 }
@@ -124,8 +130,15 @@ impl<F: PrimeField> PoseidonGadget<F> {
 impl<F: PrimeField> FieldHasherGadget<F> for PoseidonGadget<F> {
 	type Native = Poseidon<F>;
 
-	fn from_native(cs: &mut ConstraintSystemRef<F>, native: Self::Native) -> Result<Self, SynthesisError> {
-		let params = PoseidonParametersVar::new_variable(cs.clone(), || Ok(native.params), AllocationMode::Constant)?;
+	fn from_native(
+		cs: &mut ConstraintSystemRef<F>,
+		native: Self::Native,
+	) -> Result<Self, SynthesisError> {
+		let params = PoseidonParametersVar::new_variable(
+			cs.clone(),
+			|| Ok(native.params),
+			AllocationMode::Constant,
+		)?;
 		Ok(Self { params })
 	}
 
