@@ -4,7 +4,6 @@ use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use arkworks_gadgets::{
-	keypair::vanchor::{constraints::KeypairVar, Keypair},
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
 	poseidon::field_hasher_constraints::FieldHasherGadget,
 	set::constraints::SetGadget,
@@ -28,7 +27,7 @@ pub struct VAnchorCircuit<
 
 	in_amounts: Vec<F>,
 	in_blindings: Vec<F>,
-	in_keypair_inputs: Vec<Keypair<F, KHG::Native, NHG::Native>>,
+	in_private_keys: Vec<F>,
 	in_chain_id: F,
 	root_set: [F; ANCHOR_CT],
 
@@ -72,7 +71,7 @@ where
 		ext_data_hash: F,
 		in_amounts: Vec<F>,
 		in_blindings: Vec<F>,
-		in_keypair_inputs: Vec<Keypair<F, KHG::Native, NHG::Native>>,
+		in_private_keys: Vec<F>,
 		in_chain_id: F,
 		root_set: [F; ANCHOR_CT],
 		paths: Vec<Path<F, HG::Native, HEIGHT>>,
@@ -93,7 +92,7 @@ where
 			ext_data_hash,
 			in_amounts,
 			in_blindings,
-			in_keypair_inputs,
+			in_private_keys,
 			in_chain_id,
 			root_set,
 			paths,
@@ -115,7 +114,7 @@ where
 	pub fn verify_input_var(
 		in_amounts_var: &[FpVar<F>],
 		in_blindings_var: &[FpVar<F>],
-		in_keypair_var: &[KeypairVar<F, KHG, NHG>],
+		in_private_keys: &[FpVar<F>],
 		in_chain_id_var: &FpVar<F>,
 		in_path_indices_var: &[FpVar<F>],
 		in_path_elements_var: &[PathVar<F, HG, HEIGHT>],
@@ -130,7 +129,7 @@ where
 
 		for tx in 0..N_INS {
 			// Computing the public key
-			let pub_key = in_keypair_var[tx].public_key(keypair_hasher)?;
+			let pub_key = keypair_hasher.hash(&[in_private_keys[tx].clone()])?;
 			// Computing the hash
 			let in_leaf = leaf_hasher.hash(&[
 				in_chain_id_var.clone(),
@@ -140,11 +139,7 @@ where
 			])?;
 			// End of computing the hash
 
-			let signature = in_keypair_var[tx].signature(
-				&in_leaf.clone(),
-				&in_path_indices_var[tx],
-				nullifier_hasher,
-			)?;
+			let signature = nullifier_hasher.hash(&[in_private_keys[tx].clone(), in_leaf.clone(), in_path_indices_var[tx].clone()])?;
 			// Nullifier
 			let nullifier_hash = nullifier_hasher.hash(&[
 				in_leaf.clone(),
@@ -247,7 +242,7 @@ where
 		let in_amounts = self.in_amounts;
 		let in_blindings = self.in_blindings;
 		let in_chain_id = self.in_chain_id;
-		let keypair_inputs = self.in_keypair_inputs;
+		let in_private_keys = self.in_private_keys;
 		let out_chain_ids = self.out_chain_ids;
 		let root_set = self.root_set;
 		let paths = self.paths;
@@ -293,8 +288,8 @@ where
 		// Private inputs
 		let in_amounts_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_amounts))?;
 		let in_blindings_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_blindings))?;
-		let in_keypair_var =
-			Vec::<KeypairVar<F, KHG, NHG>>::new_witness(cs.clone(), || Ok(keypair_inputs))?;
+		let in_private_keys_var =
+			Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_private_keys))?;
 		let in_path_elements_var =
 			Vec::<PathVar<F, HG, HEIGHT>>::new_witness(cs.clone(), || Ok(paths))?;
 		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices))?;
@@ -310,7 +305,7 @@ where
 		let sum_ins_var = Self::verify_input_var(
 			&in_amounts_var,
 			&in_blindings_var,
-			&in_keypair_var,
+			&in_private_keys_var,
 			&in_chain_id,
 			&in_path_indices_var,
 			&in_path_elements_var,

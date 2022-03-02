@@ -11,7 +11,6 @@ use ark_std::{
 };
 use arkworks_circuits::vanchor::VAnchorCircuit;
 use arkworks_gadgets::{
-	keypair::vanchor::Keypair,
 	merkle_tree::simple_merkle::Path,
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
@@ -269,10 +268,10 @@ impl<
 			.iter()
 			.map(|x| x.blinding.clone())
 			.collect::<Vec<E::Fr>>();
-		let in_keypair_inputs = in_utxos
+		let in_private_keys = in_utxos
 			.iter()
-			.map(|x| x.keypair.clone())
-			.collect::<Vec<Keypair<E::Fr, Poseidon<E::Fr>, Poseidon<E::Fr>>>>();
+			.map(|x| x.keypair.private_key.clone())
+			.collect::<Vec<E::Fr>>();
 		let in_nullifiers: Result<Vec<E::Fr>, Error> =
 			in_utxos.iter().map(|x| x.get_nullifier()).collect();
 
@@ -312,7 +311,7 @@ impl<
 			arbitrary_data,
 			in_amounts,
 			in_blinding,
-			in_keypair_inputs,
+			in_private_keys,
 			chain_id,
 			public_root_set,
 			in_paths,

@@ -1,12 +1,7 @@
-use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
 use arkworks_utils::poseidon::PoseidonError;
-
-use crate::poseidon::field_hasher::FieldHasher;
-
-#[cfg(feature = "r1cs")]
-pub mod constraints;
+use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 
 #[derive(Default, Debug, Copy)]
 pub struct Keypair<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> {
@@ -41,13 +36,10 @@ impl<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> Clone for Keypair<F,
 
 #[cfg(test)]
 mod test {
-	use crate::{
-		ark_std::{UniformRand, Zero},
-		poseidon::field_hasher::{FieldHasher, Poseidon},
-	};
+	use ark_std::{UniformRand, Zero};
+	use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::to_bytes;
 	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
 
 	use ark_std::test_rng;

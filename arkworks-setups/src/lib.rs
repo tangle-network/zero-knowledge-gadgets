@@ -13,6 +13,7 @@ use utxo::Utxo;
 
 pub mod common;
 pub mod utxo;
+pub mod keypair;
 
 #[cfg(feature = "r1cs")]
 pub mod r1cs;
