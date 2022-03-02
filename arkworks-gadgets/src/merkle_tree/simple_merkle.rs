@@ -30,7 +30,7 @@ impl ark_std::error::Error for MerkleError {}
 #[derive(Clone)]
 pub struct Path<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	pub path: [(F, F); N],
-	_marker: PhantomData<H>,
+	pub _marker: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
@@ -167,6 +167,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(smt)
 	}
 
+	/// This returns the Merkle tree root
 	pub fn root(&self) -> F {
 		self.tree
 			.get(&0)

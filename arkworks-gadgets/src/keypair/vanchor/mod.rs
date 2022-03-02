@@ -215,7 +215,7 @@ mod test {
 
 		let msg = vec![1, 2, 3];
 		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
-		let plaintext = keypair.decypt(&encrypted_data).unwrap();
+		let plaintext = keypair.decrypt(&encrypted_data).unwrap();
 
 		assert_eq!(plaintext, msg);
 	}

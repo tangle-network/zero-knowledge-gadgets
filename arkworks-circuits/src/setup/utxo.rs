@@ -122,7 +122,7 @@ impl<F: PrimeField> Utxo<F> {
 
 	pub fn decrypt(&self, data: &EncryptedData) -> Result<(Vec<u8>, Vec<u8>), Error> {
 		// Decrypting the message
-		let plaintext = self.keypair.decypt(data)?;
+		let plaintext = self.keypair.decrypt(data)?;
 
 		// First 32 bytes is amount
 		// Second 32 bytes is blinding
