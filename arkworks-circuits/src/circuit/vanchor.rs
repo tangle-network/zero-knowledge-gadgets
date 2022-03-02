@@ -1,6 +1,5 @@
 use crate::Vec;
 
-use core::cmp::Ordering::Less;
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -16,6 +15,7 @@ use arkworks_gadgets::{
 	poseidon::field_hasher_constraints::FieldHasherGadget,
 	set::constraints::SetGadget,
 };
+use core::cmp::Ordering::Less;
 
 #[derive(Clone)]
 pub struct VAnchorCircuit<

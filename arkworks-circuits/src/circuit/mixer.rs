@@ -2,14 +2,9 @@ use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use arkworks_gadgets::{
-	leaf::mixer::{
-		constraints::{PrivateVar as LeafPrivateVar},
-		Private as LeafPrivate,
-	},
+	leaf::mixer::{constraints::PrivateVar as LeafPrivateVar, Private as LeafPrivate},
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
-	poseidon::{
-		field_hasher_constraints::{FieldHasherGadget},
-	},
+	poseidon::field_hasher_constraints::FieldHasherGadget,
 };
 
 #[derive(Clone)]

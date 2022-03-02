@@ -97,12 +97,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs = Self::construct_public_inputs(
-			chain_id_f,
-			nullifier_hash,
-			root_set,
-			arbitrary_input,
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id_f, nullifier_hash, root_set, arbitrary_input);
 
 		Ok((
 			mc,
@@ -169,12 +165,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs = Self::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots,
-			arbitrary_input
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id, nullifier_hash, roots, arbitrary_input);
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
 	}
 
@@ -211,7 +203,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			.iter()
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
 			.collect();
-		
+
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
 		arbitrary_data_bytes.extend(&relayer);
@@ -236,7 +228,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			index,
 			roots_set,
 			arbitrary_input,
-			default_leaf
+			default_leaf,
 		)?;
 
 		let leaf_raw = leaf.into_repr().to_bytes_le();
@@ -356,11 +348,6 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
 			.collect();
 		let root_set_f: [E::Fr; ANCHOR_CT] = root_set.map(|x| E::Fr::from_le_bytes_mod_order(&x));
-		let recipient_f = E::Fr::from_le_bytes_mod_order(&recipient);
-		let relayer_f = E::Fr::from_le_bytes_mod_order(&relayer);
-		let fee_f = E::Fr::from(fee);
-		let refund_f = E::Fr::from(refund);
-		let commitment_f = E::Fr::from_le_bytes_mod_order(&commitment);
 		// Create the arbitrary input data
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
@@ -403,12 +390,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs = Self::construct_public_inputs(
-			chain_id_f,
-			nullifier_f,
-			root_set_f,
-			arbitrary_input
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id_f, nullifier_f, root_set_f, arbitrary_input);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;

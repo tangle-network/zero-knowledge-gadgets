@@ -7,9 +7,8 @@ use ark_std::{
 	vec::Vec,
 };
 
-use arkworks_gadgets::{merkle_tree::simple_merkle::Path, poseidon::field_hasher::Poseidon};
 use arkworks_utils::utils::common::Curve;
-use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorLeaf, VAnchorProof};
+use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
 use r1cs::vanchor::utxo::Utxo;
 
 pub mod common;

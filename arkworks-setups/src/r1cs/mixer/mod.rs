@@ -15,10 +15,7 @@ use arkworks_gadgets::poseidon::{
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
-use arkworks_gadgets::{
-	leaf::mixer::Private,
-	merkle_tree::simple_merkle::Path,
-};
+use arkworks_gadgets::{leaf::mixer::Private, merkle_tree::simple_merkle::Path};
 
 use crate::common::*;
 
@@ -27,7 +24,7 @@ mod tests;
 
 use crate::MixerProver;
 
-use super::{create_merkle_tree, setup_tree_and_create_path, SMT};
+use super::setup_tree_and_create_path;
 
 pub fn create_leaf<F: PrimeField, H: FieldHasher<F>>(
 	hasher: &H,
@@ -124,8 +121,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 			nullifier_hash,
 			poseidon,
 		);
-		let public_inputs =
-			construct_public_inputs(nullifier_hash, root, arbitrary_input);
+		let public_inputs = construct_public_inputs(nullifier_hash, root, arbitrary_input);
 
 		Ok((mc, leaf_value, nullifier_hash, root, public_inputs))
 	}
@@ -172,8 +168,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 			nullifier_hash,
 			poseidon,
 		);
-		let public_inputs =
-			construct_public_inputs(nullifier_hash, root, arbitrary_input);
+		let public_inputs = construct_public_inputs(nullifier_hash, root, arbitrary_input);
 		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
@@ -351,8 +346,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 			nullifier_f,
 			poseidon,
 		);
-		let public_inputs =
-			construct_public_inputs(nullifier_f, root, arbitrary_input);
+		let public_inputs = construct_public_inputs(nullifier_f, root, arbitrary_input);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;

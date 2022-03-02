@@ -18,7 +18,7 @@ use crate::{
 	common::{
 		prove, prove_unchecked, setup_keys, setup_keys_unchecked, verify, verify_unchecked_raw,
 	},
-	r1cs::{mixer::setup_arbitrary_data, setup_tree_and_create_path},
+	r1cs::setup_tree_and_create_path,
 	MixerProver,
 };
 
@@ -46,10 +46,7 @@ fn setup_and_prove_mixer_groth16_2() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let recipient = Bn254Fr::one();
-	let relayer = Bn254Fr::zero();
-	let fee = Bn254Fr::zero();
-	let refund = Bn254Fr::zero();
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();
@@ -64,10 +61,7 @@ fn setup_and_prove_mixer_groth16_2() {
 			nullifier,
 			&leaves,
 			index,
-			recipient,
-			relayer,
-			fee,
-			refund,
+			arbitrary_input,
 			DEFAULT_LEAF,
 		)
 		.unwrap();
@@ -78,14 +72,10 @@ fn setup_and_prove_mixer_groth16_2() {
 	assert!(
 		res,
 		"Failed to verify  Proof, here is the inputs:
-        recipient = {},
-        relayer = {},
-        fee = {},
-        refund = {},
         public_inputs = {:?},
         proof = {:?},
         ",
-		recipient, relayer, fee, refund, public_inputs, proof
+		public_inputs, proof
 	);
 }
 
@@ -94,10 +84,7 @@ fn should_fail_with_invalid_public_inputs() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let recipient = Bn254Fr::one();
-	let relayer = Bn254Fr::zero();
-	let fee = Bn254Fr::zero();
-	let refund = Bn254Fr::zero();
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();
@@ -112,10 +99,7 @@ fn should_fail_with_invalid_public_inputs() {
 			nullifier,
 			&leaves,
 			index,
-			recipient,
-			relayer,
-			fee,
-			refund,
+			arbitrary_input,
 			DEFAULT_LEAF,
 		)
 		.unwrap();
@@ -136,10 +120,7 @@ fn should_fail_with_invalid_root() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let recipient = Bn254Fr::one();
-	let relayer = Bn254Fr::zero();
-	let fee = Bn254Fr::zero();
-	let refund = Bn254Fr::zero();
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();
@@ -148,7 +129,6 @@ fn should_fail_with_invalid_root() {
 	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 
-	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 	let bad_root = Bn254Fr::rand(rng);
 
 	let index = 0;
@@ -158,10 +138,7 @@ fn should_fail_with_invalid_root() {
 		nullifier,
 		&leaves,
 		index,
-		recipient,
-		relayer,
-		fee,
-		refund,
+		arbitrary_input,
 		DEFAULT_LEAF,
 	)
 	.unwrap();
@@ -169,10 +146,7 @@ fn should_fail_with_invalid_root() {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(nullifier_hash);
 	public_inputs.push(bad_root);
-	public_inputs.push(arbitrary_input.recipient);
-	public_inputs.push(arbitrary_input.relayer);
-	public_inputs.push(arbitrary_input.fee);
-	public_inputs.push(arbitrary_input.refund);
+	public_inputs.push(arbitrary_input);
 
 	let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 	let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -186,10 +160,7 @@ fn should_fail_with_invalid_leaf() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let recipient = Bn254Fr::one();
-	let relayer = Bn254Fr::zero();
-	let fee = Bn254Fr::zero();
-	let refund = Bn254Fr::zero();
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
@@ -202,7 +173,6 @@ fn should_fail_with_invalid_leaf() {
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
-	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
 		hasher,
 		&leaves,
@@ -219,10 +189,7 @@ fn should_fail_with_invalid_leaf() {
 		nullifier,
 		&[invalid_leaf_value],
 		index,
-		recipient,
-		relayer,
-		fee,
-		refund,
+		arbitrary_input,
 		DEFAULT_LEAF,
 	)
 	.unwrap();
@@ -230,10 +197,7 @@ fn should_fail_with_invalid_leaf() {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(nullifier_hash);
 	public_inputs.push(root);
-	public_inputs.push(arbitrary_input.recipient);
-	public_inputs.push(arbitrary_input.relayer);
-	public_inputs.push(arbitrary_input.fee);
-	public_inputs.push(arbitrary_input.refund);
+	public_inputs.push(arbitrary_input);
 
 	let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 	let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -247,10 +211,7 @@ fn should_fail_with_invalid_leaf_2() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let recipient = Bn254Fr::one();
-	let relayer = Bn254Fr::zero();
-	let fee = Bn254Fr::zero();
-	let refund = Bn254Fr::zero();
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
@@ -263,8 +224,6 @@ fn should_fail_with_invalid_leaf_2() {
 	let leaf_private = Private::new(secret, nullifier);
 	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let invalid_leaf_value = Bn254Fr::rand(rng);
-
-	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 
 	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
 		hasher,
@@ -287,10 +246,7 @@ fn should_fail_with_invalid_leaf_2() {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(nullifier_hash);
 	public_inputs.push(root);
-	public_inputs.push(arbitrary_input.recipient);
-	public_inputs.push(arbitrary_input.relayer);
-	public_inputs.push(arbitrary_input.fee);
-	public_inputs.push(arbitrary_input.refund);
+	public_inputs.push(arbitrary_input);
 
 	let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 	let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
@@ -304,10 +260,7 @@ fn should_fail_with_invalid_nullifier() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let recipient = Bn254Fr::one();
-	let relayer = Bn254Fr::zero();
-	let fee = Bn254Fr::zero();
-	let refund = Bn254Fr::zero();
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
@@ -317,8 +270,6 @@ fn should_fail_with_invalid_nullifier() {
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let leaf_value = Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
-
-	let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
 
 	// Invalid nullifier
 	let leaf_private = Private::new(secret, Bn254Fr::rand(rng));
@@ -343,10 +294,7 @@ fn should_fail_with_invalid_nullifier() {
 	let mut public_inputs = Vec::new();
 	public_inputs.push(nullifier_hash);
 	public_inputs.push(root);
-	public_inputs.push(arbitrary_input.recipient);
-	public_inputs.push(arbitrary_input.relayer);
-	public_inputs.push(arbitrary_input.fee);
-	public_inputs.push(arbitrary_input.refund);
+	public_inputs.push(arbitrary_input);
 
 	let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
 	let proof = prove::<Bn254, _, _>(circuit, &pk, rng).unwrap();
