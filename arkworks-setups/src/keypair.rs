@@ -1,7 +1,7 @@
 use ark_ff::PrimeField;
 use ark_std::marker::PhantomData;
-use arkworks_utils::poseidon::PoseidonError;
 use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
+use arkworks_utils::poseidon::PoseidonError;
 
 #[derive(Default, Debug, Copy)]
 pub struct Keypair<F: PrimeField, PH: FieldHasher<F>, SH: FieldHasher<F>> {

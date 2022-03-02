@@ -139,7 +139,11 @@ where
 			])?;
 			// End of computing the hash
 
-			let signature = nullifier_hasher.hash(&[in_private_keys[tx].clone(), in_leaf.clone(), in_path_indices_var[tx].clone()])?;
+			let signature = nullifier_hasher.hash(&[
+				in_private_keys[tx].clone(),
+				in_leaf.clone(),
+				in_path_indices_var[tx].clone(),
+			])?;
 			// Nullifier
 			let nullifier_hash = nullifier_hasher.hash(&[
 				in_leaf.clone(),
@@ -288,8 +292,7 @@ where
 		// Private inputs
 		let in_amounts_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_amounts))?;
 		let in_blindings_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_blindings))?;
-		let in_private_keys_var =
-			Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_private_keys))?;
+		let in_private_keys_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_private_keys))?;
 		let in_path_elements_var =
 			Vec::<PathVar<F, HG, HEIGHT>>::new_witness(cs.clone(), || Ok(paths))?;
 		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices))?;
