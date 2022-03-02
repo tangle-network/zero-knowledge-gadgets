@@ -3,7 +3,7 @@ use ark_ff::PrimeField;
 use ark_std::{error::Error as ArkError, rand::RngCore};
 use arkworks_gadgets::{
 	keypair::vanchor::Keypair,
-	poseidon::field_hasher::{Poseidon, FieldHasher},
+	poseidon::field_hasher::{FieldHasher, Poseidon},
 };
 
 #[derive(Debug)]

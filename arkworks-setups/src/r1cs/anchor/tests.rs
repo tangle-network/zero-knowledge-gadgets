@@ -5,8 +5,8 @@ use ark_groth16::Groth16;
 use ark_snark::SNARK;
 use ark_std::test_rng;
 use arkworks_circuits::anchor::AnchorCircuit;
-use arkworks_gadgets::{
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+use arkworks_gadgets::poseidon::{
+	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 

@@ -132,7 +132,12 @@ where
 			// Computing the public key
 			let pub_key = in_keypair_var[tx].public_key(keypair_hasher)?;
 			// Computing the hash
-			let in_leaf = leaf_hasher.hash(&[in_chain_id_var.clone(), in_amounts_var[tx].clone(), pub_key, in_blindings_var[tx].clone()])?;
+			let in_leaf = leaf_hasher.hash(&[
+				in_chain_id_var.clone(),
+				in_amounts_var[tx].clone(),
+				pub_key,
+				in_blindings_var[tx].clone(),
+			])?;
 			// End of computing the hash
 
 			let signature = in_keypair_var[tx].signature(
@@ -141,7 +146,11 @@ where
 				nullifier_hasher,
 			)?;
 			// Nullifier
-			let nullifier_hash = nullifier_hasher.hash(&[in_leaf.clone(), in_path_indices_var[tx].clone(), signature])?;
+			let nullifier_hash = nullifier_hasher.hash(&[
+				in_leaf.clone(),
+				in_path_indices_var[tx].clone(),
+				signature,
+			])?;
 
 			nullifier_hash.enforce_equal(&in_nullifier_var[tx])?;
 
@@ -172,7 +181,12 @@ where
 
 		for tx in 0..N_OUTS {
 			// Computing the hash
-			let leaf = leaf_hasher.hash(&[out_chain_ids_var[tx].clone(), out_amounts_var[tx].clone(), out_pubkey_var[tx].clone(), out_blindings_var[tx].clone()])?;
+			let leaf = leaf_hasher.hash(&[
+				out_chain_ids_var[tx].clone(),
+				out_amounts_var[tx].clone(),
+				out_pubkey_var[tx].clone(),
+				out_blindings_var[tx].clone(),
+			])?;
 			// End of computing the hash
 			let out_amount_var = &out_amounts_var[tx];
 			leaf.enforce_equal(&out_commitment_var[tx])?;
@@ -259,8 +273,7 @@ where
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(ext_data_hash))?;
 		let in_nullifier_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(nullifier_hash))?;
-		let out_commitment_var =
-			Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(out_commitment))?;
+		let out_commitment_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(out_commitment))?;
 		let in_chain_id = FpVar::<F>::new_input(cs.clone(), || Ok(in_chain_id))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 

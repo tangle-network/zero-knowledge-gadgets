@@ -83,8 +83,7 @@ where
 		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(arbitrary_input))?;
 
 		// Hashers
-		let hasher3_gadget: HG =
-			FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher3);
+		let hasher3_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher3);
 		let hasher4_gadget: LHG =
 			FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher4);
 
@@ -94,7 +93,8 @@ where
 		let path_var = PathVar::<F, HG, N>::new_witness(cs.clone(), || Ok(path))?;
 
 		// Creating the leaf and checking the membership inside the tree
-		let anchor_leaf = hasher4_gadget.hash(&[chain_id_var, secret_var, nullifier_var.clone()])?;
+		let anchor_leaf =
+			hasher4_gadget.hash(&[chain_id_var, secret_var, nullifier_var.clone()])?;
 		let anchor_nullifier = hasher3_gadget.hash_two(&nullifier_var, &nullifier_var)?;
 		let root_var = path_var.root_hash(&anchor_leaf, &hasher3_gadget)?;
 		// Check if target root is in set
