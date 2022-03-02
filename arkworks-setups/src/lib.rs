@@ -11,8 +11,8 @@ use arkworks_utils::utils::common::Curve;
 use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
 use utxo::Utxo;
 
-pub mod utxo;
 pub mod common;
+pub mod utxo;
 
 #[cfg(feature = "r1cs")]
 pub mod r1cs;
