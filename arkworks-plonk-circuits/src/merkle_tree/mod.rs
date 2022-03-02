@@ -584,7 +584,6 @@ mod test {
 			)
 			.unwrap();
 			let path = smt.generate_membership_proof(0);
-			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
 
 			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
 			let root_var = composer.zero_var();

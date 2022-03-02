@@ -1,10 +1,14 @@
-use ark_std::collections::BTreeMap;
+use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
-use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
-use arkworks_gadgets::merkle_tree::simple_merkle::SparseMerkleTree;
+use ark_std::collections::BTreeMap;
+use arkworks_gadgets::{
+	merkle_tree::simple_merkle::{Path, SparseMerkleTree},
+	poseidon::{field_hasher::FieldHasher, field_hasher_constraints::FieldHasherGadget},
+};
 
-pub mod mixer;
 pub mod anchor;
+pub mod mixer;
+pub mod vanchor;
 
 pub type SMT<F, H, const HEIGHT: usize> = SparseMerkleTree<F, H, HEIGHT>;
 
@@ -21,4 +25,17 @@ pub fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 	let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, default_leaf).unwrap();
 
 	smt
+}
+
+pub fn setup_tree_and_create_path<F: PrimeField, HG: FieldHasherGadget<F>, const HEIGHT: usize>(
+	hasher: HG::Native,
+	leaves: &[F],
+	index: u64,
+	default_leaf: &[u8],
+) -> Result<(SMT<F, HG::Native, HEIGHT>, Path<F, HG::Native, HEIGHT>), Error> {
+	// Making the merkle tree
+	let smt = create_merkle_tree::<F, HG::Native, HEIGHT>(hasher, leaves, default_leaf);
+	// Getting the proof path
+	let path = smt.generate_membership_proof(index);
+	Ok((smt, path))
 }
