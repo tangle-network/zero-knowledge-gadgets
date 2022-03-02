@@ -92,7 +92,8 @@ trait VAnchorProver<
 	const ANCHOR_CT: usize,
 	const INS: usize,
 	const OUTS: usize,
-> {
+>
+{
 	fn create_leaf_with_privates(
 		curve: Curve,
 		chain_id: u64,

@@ -2,7 +2,6 @@ use crate::{common::*, r1cs::vanchor::utxo::Utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
-use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -13,7 +12,10 @@ use ark_std::{
 use arkworks_circuits::vanchor::VAnchorCircuit;
 use arkworks_gadgets::{
 	merkle_tree::simple_merkle::Path,
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+	poseidon::{
+		field_hasher::{FieldHasher, Poseidon},
+		field_hasher_constraints::PoseidonGadget,
+	},
 };
 use arkworks_utils::utils::common::{
 	setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
@@ -475,6 +477,6 @@ impl<
 			&leaf_hasher,
 			rng,
 		)?;
-		Ok(utxo)        
-    }
+		Ok(utxo)
+	}
 }

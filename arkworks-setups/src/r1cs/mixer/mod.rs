@@ -351,8 +351,12 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		curve: Curve,
 		rng: &mut R,
 	) -> Result<MixerLeaf, Error> {
-        let secret = E::Fr::rand(rng);
+		let secret = E::Fr::rand(rng);
 		let nullifier = E::Fr::rand(rng);
-		Self::create_leaf_with_privates(curve, secret.into_repr().to_bytes_le(), nullifier.into_repr().to_bytes_le())
-    }
+		Self::create_leaf_with_privates(
+			curve,
+			secret.into_repr().to_bytes_le(),
+			nullifier.into_repr().to_bytes_le(),
+		)
+	}
 }

@@ -44,12 +44,8 @@ fn setup_and_prove_anchor_groth16() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64,
-		rng,
-	)
-	.unwrap();
+	let leaf =
+		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
@@ -105,12 +101,8 @@ fn should_fail_with_invalid_public_inputs() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64,
-		rng,
-	)
-	.unwrap();
+	let leaf =
+		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
@@ -160,12 +152,8 @@ fn should_fail_with_invalid_set() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64,
-		rng,
-	)
-	.unwrap();
+	let leaf =
+		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
@@ -204,12 +192,8 @@ fn should_fail_with_invalid_leaf() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64,
-		rng,
-	)
-	.unwrap();
+	let leaf =
+		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::rand(rng)];
@@ -259,12 +243,8 @@ fn should_fail_with_invalid_nullifier_hash() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64,
-		rng,
-	)
-	.unwrap();
+	let leaf =
+		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];

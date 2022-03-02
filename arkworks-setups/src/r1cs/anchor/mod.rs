@@ -399,8 +399,13 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		chain_id: u64,
 		rng: &mut R,
 	) -> Result<AnchorLeaf, Error> {
-        let secret = E::Fr::rand(rng);
+		let secret = E::Fr::rand(rng);
 		let nullifier = E::Fr::rand(rng);
-		Self::create_leaf_with_privates(curve, chain_id, secret.into_repr().to_bytes_le(), nullifier.into_repr().to_bytes_le())
-    }
+		Self::create_leaf_with_privates(
+			curve,
+			chain_id,
+			secret.into_repr().to_bytes_le(),
+			nullifier.into_repr().to_bytes_le(),
+		)
+	}
 }

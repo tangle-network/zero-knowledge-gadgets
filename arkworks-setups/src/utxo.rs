@@ -54,17 +54,9 @@ impl<F: PrimeField> Utxo<F> {
 		let nullifier = if index.is_some() {
 			let i = F::from(index.unwrap());
 
-			let signature = hasher4.hash(&[
-				private_key,
-				leaf.clone(),
-				i,
-			])?;
+			let signature = hasher4.hash(&[private_key, leaf.clone(), i])?;
 			// Nullifier
-			let nullifier = hasher4.hash(&[
-				leaf,
-				i,
-				signature,
-			])?;
+			let nullifier = hasher4.hash(&[leaf, i, signature])?;
 
 			Some(nullifier)
 		} else {
@@ -100,17 +92,9 @@ impl<F: PrimeField> Utxo<F> {
 		let nullifier = if index.is_some() {
 			let i = F::from(index.unwrap());
 
-			let signature = hasher4.hash(&[
-				private_key,
-				leaf.clone(),
-				i,
-			])?;
+			let signature = hasher4.hash(&[private_key, leaf.clone(), i])?;
 			// Nullifier
-			let nullifier = hasher4.hash(&[
-				leaf,
-				i,
-				signature,
-			])?;
+			let nullifier = hasher4.hash(&[leaf, i, signature])?;
 
 			Some(nullifier)
 		} else {

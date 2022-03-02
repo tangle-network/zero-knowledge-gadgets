@@ -53,12 +53,11 @@ where
 	}
 }
 
-
 /// Implementation of the `ConstraintSynthesizer` trait for the `AnchorCircuit`
 /// https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
-/// 
-/// This is the main function that is called by the `R1CS` library to generate the constraints
-/// for the `AnchorCircuit`.
+///
+/// This is the main function that is called by the `R1CS` library to generate
+/// the constraints for the `AnchorCircuit`.
 impl<F, HG, const N: usize, const M: usize> ConstraintSynthesizer<F> for AnchorCircuit<F, HG, N, M>
 where
 	F: PrimeField,
