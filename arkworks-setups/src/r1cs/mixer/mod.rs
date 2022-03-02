@@ -15,7 +15,7 @@ use arkworks_gadgets::poseidon::{
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
-use arkworks_gadgets::{leaf::mixer::Private, merkle_tree::simple_merkle::Path};
+use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 
 use crate::common::*;
 
@@ -25,22 +25,6 @@ mod tests;
 use crate::MixerProver;
 
 use super::setup_tree_and_create_path;
-
-pub fn create_leaf<F: PrimeField, H: FieldHasher<F>>(
-	hasher: &H,
-	private: &Private<F>,
-) -> Result<F, Error> {
-	let leaf = hasher.hash_two(&private.secret(), &private.nullifier())?;
-	Ok(leaf)
-}
-
-pub fn create_nullifier<F: PrimeField, H: FieldHasher<F>>(
-	hasher: &H,
-	private: &Private<F>,
-) -> Result<F, Error> {
-	let nullifier_hash = hasher.hash_two(&private.nullifier(), &private.nullifier())?;
-	Ok(nullifier_hash)
-}
 
 pub fn construct_public_inputs<F: PrimeField>(
 	nullifier_hash: F,
@@ -99,10 +83,10 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		// Generate the leaf
 		let leaf = Self::create_leaf_with_privates(curve, None, None, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
-		let leaf_private = Private::new(
-			E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes),
-			E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes),
-		);
+
+		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
+		let nullifier = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
@@ -115,7 +99,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
-			leaf_private,
+			secret,
+			nullifier,
 			path,
 			root,
 			nullifier_hash,
@@ -149,9 +134,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		let params3 = setup_params_x5_3(curve);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Setup inputs
-		let leaf_private: Private<E::Fr> = Private::new(secret, nullifier);
-		let leaf = create_leaf(&poseidon, &leaf_private)?;
-		let nullifier_hash = create_nullifier(&poseidon, &leaf_private)?;
+		let leaf = poseidon.hash_two(&secret, &nullifier)?;
+		let nullifier_hash = poseidon.hash_two(&nullifier, &nullifier)?;
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
 			poseidon.clone(),
 			&leaves,
@@ -162,7 +146,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
-			leaf_private,
+			secret,
+			nullifier,
 			path,
 			root,
 			nullifier_hash,
@@ -241,7 +226,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	pub fn create_circuit(
 		curve: Curve,
 		arbitrary_input: E::Fr,
-		leaf_private: Private<E::Fr>,
+		secret: E::Fr,
+		nullifier: E::Fr,
 		path: Path<E::Fr, Poseidon<E::Fr>, HEIGHT>,
 		root: E::Fr,
 		nullifier_hash: E::Fr,
@@ -252,7 +238,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		// Setup circuit
 		let mc = MixerCircuit::new(
 			arbitrary_input,
-			leaf_private,
+			secret,
+			nullifier,
 			path,
 			root,
 			nullifier_hash,
@@ -280,9 +267,9 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 
 		let params3 = setup_params_x5_3(curve);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
-		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
-		let leaf_field_element = create_leaf(&poseidon, &private)?;
-		let nullifier_hash_field_element = create_nullifier(&poseidon, &private)?;
+		let leaf_field_element = poseidon.hash_two(&secret_field_elt, &nullifier_field_elt)?;
+		let nullifier_hash_field_element =
+			poseidon.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(MixerLeaf {
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
@@ -337,10 +324,10 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		)?;
 		let root = tree.root();
 
-		let leaf_private = Private::new(secret_f, nullifier_f);
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
-			leaf_private,
+			secret_f,
+			nullifier_f,
 			path,
 			root,
 			nullifier_f,

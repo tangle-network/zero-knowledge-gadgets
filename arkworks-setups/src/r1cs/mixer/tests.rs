@@ -1,12 +1,13 @@
+use std::ptr::null;
+
 use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_serialize::CanonicalDeserialize;
 use ark_snark::SNARK;
 use ark_std::{test_rng, vec::Vec, One, Zero};
-use arkworks_gadgets::{
-	leaf::mixer::Private,
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+use arkworks_gadgets::poseidon::{
+	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
@@ -221,7 +222,6 @@ fn should_fail_with_invalid_leaf_2() {
 
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaf_private = Private::new(secret, nullifier);
 	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
@@ -237,7 +237,8 @@ fn should_fail_with_invalid_leaf_2() {
 	let circuit = MixerR1CSProver_Bn254_Poseidon_30::create_circuit(
 		curve,
 		arbitrary_input.clone(),
-		leaf_private,
+		secret,
+		nullifier,
 		path,
 		root,
 		nullifier_hash,
@@ -268,11 +269,11 @@ fn should_fail_with_invalid_nullifier() {
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(curve, None, None, rng)
 		.unwrap();
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::rand(rng);
 	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let leaf_value = Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
 
 	// Invalid nullifier
-	let leaf_private = Private::new(secret, Bn254Fr::rand(rng));
 	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
 		hasher,
 		&[leaf_value],
@@ -285,7 +286,8 @@ fn should_fail_with_invalid_nullifier() {
 	let circuit = MixerR1CSProver_Bn254_Poseidon_30::create_circuit(
 		curve,
 		arbitrary_input.clone(),
-		leaf_private,
+		secret,
+		nullifier,
 		path,
 		root,
 		nullifier_hash,
