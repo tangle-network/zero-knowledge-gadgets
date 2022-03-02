@@ -6,13 +6,8 @@ pub extern crate ark_std;
 use ark_std::boxed::Box;
 pub(crate) use ark_std::vec::Vec;
 
-pub mod arbitrary;
-
 pub mod identity;
-pub mod keypair;
-pub mod leaf;
 pub mod merkle_tree;
-pub mod mimc;
 pub mod poseidon;
 pub mod set;
 

@@ -1,30 +1,22 @@
 [package]
-name = "arkworks-circuits"
+name = "arkworks-setups"
 version = "0.5.0"
-authors = ["Webb Developers"]
-edition = "2018"
-description = "Webb protocol's circuit's using zero-knowledge gadgets written using Arkworks"
-license = "MIT/Apache-2.0"
-repository = "https://github.com/webb-tools/arkworks-gadgets"
-homepage = "https://webb.tools"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arkworks-circuits = { path = "../arkworks-circuits", version = "0.5.0", default-features = false }
 arkworks-utils = { path = "../arkworks-utils", version = "0.5.0", features = ["r1cs", "default_poseidon"], default-features = false }
 arkworks-gadgets = { path = "../arkworks-gadgets", version = "0.5.0", features = ["r1cs"], default-features = false }
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
+ark-groth16 = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
 ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
 
-ark-marlin = {version = "^0.3.0", default-features = false }
-ark-groth16 = {version = "^0.3.0", default-features = false }
-blake2 = { version = "0.9", default-features = false }
-ark-poly-commit = { version = "^0.3.0", default-features = false }
-ark-poly = { version = "^0.3.0", default-features = false }
 ark-snark = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
@@ -36,28 +28,33 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
-ethabi = { version = "15.0.0", default-features = false }
 hex-literal = { version = "0.3.4" }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
-default = ["std"]
+default = ["std", "r1cs"]
+r1cs = []
+plonk = []
 std = [
+  "ark-crypto-primitives/std",
   "ark-std/std",
-  "arkworks-utils/std",
+  "ark-r1cs-std/std",
+  "ark-ec/std",
+  "ark-ff/std",
+  "ark-groth16/std",
+  "arkworks-circuits/std",
   "arkworks-gadgets/std",
+  "arkworks-utils/std",
 ]
 parallel = [
   "ark-crypto-primitives/parallel",
-  "ark-ff/parallel",
   "ark-std/parallel",
   "ark-r1cs-std/parallel",
-  "ark-marlin/parallel",
-  "ark-groth16/parallel",
-  "ark-poly-commit/parallel",
-  "ark-poly/parallel",
   "ark-ec/parallel",
+  "ark-groth16/parallel",
   "ark-ff/parallel",
-  "ark-std/parallel",
+  "arkworks-circuits/parallel",
+  "arkworks-gadgets/parallel",
+  "arkworks-utils/parallel",
 ]
 

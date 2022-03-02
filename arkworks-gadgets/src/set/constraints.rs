@@ -28,7 +28,8 @@ impl<F: PrimeField> SetGadget<F> {
 		}
 
 		// Checking the membership
-		let mut product = FpVar::new_witness(target.cs(), || Ok(F::one()))?;
+		let mut product =
+			FpVar::<F>::new_variable(target.cs(), || Ok(F::one()), AllocationMode::Constant)?;
 		for diff in diffs.iter() {
 			product *= diff;
 		}

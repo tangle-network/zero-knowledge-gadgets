@@ -1,9 +1,7 @@
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::vec::Vec;
-use plonk_core::{
-	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
-};
+use plonk_core::{constraint_system::StandardComposer, prelude::Variable};
 
 /// A function whose output is 1 if `member` belongs to `set`
 /// and 0 otherwise.  Contraints are added to a StandardComposer

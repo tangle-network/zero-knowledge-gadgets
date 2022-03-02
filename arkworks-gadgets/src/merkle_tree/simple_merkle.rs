@@ -245,7 +245,7 @@ fn convert_index_to_last_level(index: u64, height: usize) -> u64 {
 mod test {
 	use super::{gen_empty_hashes, SparseMerkleTree};
 	use crate::poseidon::field_hasher::{FieldHasher, Poseidon};
-	use ark_bls12_381::Fq;
+	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{BigInteger, PrimeField, UniformRand};
 	use ark_std::{collections::BTreeMap, test_rng};
 	use arkworks_utils::utils::{
@@ -254,6 +254,7 @@ mod test {
 	};
 
 	type BLSHash = Poseidon<Fq>;
+	use ark_bn254::Fr as Bn254Fr;
 
 	//helper to change leaves array to BTreeMap and then create SMT
 	fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
@@ -346,82 +347,6 @@ mod test {
 
 		assert_eq!(res, desired_res);
 	}
-
-	// Backwards-compatibility tests:
-	use crate::{
-		identity::CRH as IdentityCRH,
-		merkle_tree::{Config, SparseMerkleTree as OldSparseMerkleTree},
-		poseidon::CRH as PoseidonCRH,
-	};
-	use ark_crypto_primitives::crh::CRH;
-	use ark_ff::ToBytes;
-	use ark_std::rc::Rc;
-
-	type SMTCRH = PoseidonCRH<Fq>;
-	type IdCRH = IdentityCRH<Fq>;
-
-	#[derive(Clone, Debug, Eq, PartialEq)]
-	struct SMTConfig;
-	impl Config for SMTConfig {
-		type H = SMTCRH;
-		type LeafH = IdCRH;
-
-		const HEIGHT: u8 = 3;
-	}
-
-	// Helper function to create a Merkle tree in the old way:
-	fn create_old_merkle_tree<L: Default + ToBytes + Copy, C: Config>(
-		inner_params: Rc<<C::H as CRH>::Parameters>,
-		leaf_params: Rc<<C::LeafH as CRH>::Parameters>,
-		leaves: &[L],
-	) -> OldSparseMerkleTree<C> {
-		let pairs: BTreeMap<u32, L> = leaves
-			.iter()
-			.enumerate()
-			.map(|(i, l)| (i as u32, *l))
-			.collect();
-		let smt = OldSparseMerkleTree::<C>::new(inner_params, leaf_params, &pairs).unwrap();
-
-		smt
-	}
-
-	#[test]
-	fn should_create_trees_with_same_root_poseidon() {
-		// Common to both
-		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
-
-		let params = setup_params_x5_3(curve);
-
-		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
-
-		// Specific to old method
-		let inner_params = Rc::new(params.clone());
-		let leaf_params = Rc::new(());
-
-		let old_smt = create_old_merkle_tree::<Fq, SMTConfig>(
-			inner_params.clone(),
-			leaf_params.clone(),
-			&leaves.to_vec(),
-		);
-
-		let old_root = old_smt.root().inner();
-
-		// Now generate tree in new method
-
-		let poseidon = Poseidon::new(params.clone());
-		let default_leaf = [0u8; 0];
-		const HEIGHT: usize = 3;
-
-		let smt =
-			create_merkle_tree::<Fq, BLSHash, HEIGHT>(poseidon.clone(), &leaves, &default_leaf);
-
-		let root = smt.root();
-
-		assert_eq!(root, old_root);
-	}
-
-	use ark_bn254::Fr as Bn254Fr;
 
 	#[test]
 	fn compare_with_solidity_empty_hashes() {
