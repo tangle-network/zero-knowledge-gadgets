@@ -78,20 +78,7 @@ impl<
 		curve: Curve,
 		default_leaf: [u8; 32],
 		rng: &mut R,
-	) -> Result<
-		VAnchorCircuit<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			INS,
-			OUTS,
-			ANCHOR_CT,
-		>,
-		Error,
-	> {
+	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
 		let public_amount = E::Fr::rand(rng);
 		let ext_data_hash = E::Fr::rand(rng);
 		let in_root_set = [E::Fr::rand(rng); ANCHOR_CT];
@@ -159,17 +146,7 @@ impl<
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
-			VAnchorCircuit<
-				E::Fr,
-				PoseidonGadget<E::Fr>,
-				PoseidonGadget<E::Fr>,
-				PoseidonGadget<E::Fr>,
-				PoseidonGadget<E::Fr>,
-				HEIGHT,
-				INS,
-				OUTS,
-				ANCHOR_CT,
-			>,
+			VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>,
 			Vec<E::Fr>,
 		),
 		Error,
@@ -246,20 +223,7 @@ impl<
 		tree_hasher: Poseidon<E::Fr>,
 		nullifier_hasher: Poseidon<E::Fr>,
 		leaf_hasher: Poseidon<E::Fr>,
-	) -> Result<
-		VAnchorCircuit<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			INS,
-			OUTS,
-			ANCHOR_CT,
-		>,
-		Error,
-	> {
+	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
 		let in_amounts = in_utxos
 			.iter()
 			.map(|x| x.amount.clone())
@@ -296,37 +260,28 @@ impl<
 			.map(|x| x.chain_id.clone())
 			.collect::<Vec<E::Fr>>();
 
-		let circuit = VAnchorCircuit::<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			INS,
-			OUTS,
-			ANCHOR_CT,
-		>::new(
-			public_amount,
-			arbitrary_data,
-			in_amounts,
-			in_blinding,
-			in_private_keys,
-			chain_id,
-			public_root_set,
-			in_paths,
-			in_indicies.to_vec(),
-			in_nullifiers?,
-			out_commitments,
-			out_amounts,
-			out_blindings,
-			out_chain_ids,
-			out_pub_keys?,
-			tree_hasher,
-			keypair_hasher,
-			leaf_hasher,
-			nullifier_hasher,
-		);
+		let circuit =
+			VAnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>::new(
+				public_amount,
+				arbitrary_data,
+				in_amounts,
+				in_blinding,
+				in_private_keys,
+				chain_id,
+				public_root_set,
+				in_paths,
+				in_indicies.to_vec(),
+				in_nullifiers?,
+				out_commitments,
+				out_amounts,
+				out_blindings,
+				out_chain_ids,
+				out_pub_keys?,
+				tree_hasher,
+				keypair_hasher,
+				leaf_hasher,
+				nullifier_hasher,
+			);
 
 		Ok(circuit)
 	}

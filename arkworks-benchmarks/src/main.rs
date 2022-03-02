@@ -25,13 +25,7 @@ macro_rules! setup_circuit {
 		const HEIGHT: usize = 30;
 		const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
-		type Circuit = AnchorCircuit<
-			$test_field,
-			PoseidonGadget<$test_field>,
-			PoseidonGadget<$test_field>,
-			HEIGHT,
-			ANCHOR_CT,
-		>;
+		type Circuit = AnchorCircuit<$test_field, PoseidonGadget<$test_field>, HEIGHT, ANCHOR_CT>;
 
 		let rng = &mut test_rng();
 		let curve = arkworks_utils::utils::common::Curve::Bn254;

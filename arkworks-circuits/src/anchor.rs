@@ -9,13 +9,7 @@ use arkworks_gadgets::{
 };
 
 #[derive(Clone)]
-pub struct AnchorCircuit<
-	F: PrimeField,
-	HG: FieldHasherGadget<F>,
-	LHG: FieldHasherGadget<F>,
-	const N: usize,
-	const M: usize,
-> {
+pub struct AnchorCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize, const M: usize> {
 	arbitrary_input: F,
 	secret: F,
 	nullifier: F,
@@ -24,14 +18,13 @@ pub struct AnchorCircuit<
 	path: Path<F, HG::Native, N>,
 	nullifier_hash: F,
 	hasher3: HG::Native,
-	hasher4: LHG::Native,
+	hasher4: HG::Native,
 }
 
-impl<F, HG, LHG, const N: usize, const M: usize> AnchorCircuit<F, HG, LHG, N, M>
+impl<F, HG, const N: usize, const M: usize> AnchorCircuit<F, HG, N, M>
 where
 	F: PrimeField,
 	HG: FieldHasherGadget<F>,
-	LHG: FieldHasherGadget<F>,
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
@@ -43,7 +36,7 @@ where
 		path: Path<F, HG::Native, N>,
 		nullifier_hash: F,
 		hasher3: HG::Native,
-		hasher4: LHG::Native,
+		hasher4: HG::Native,
 	) -> Self {
 		Self {
 			arbitrary_input,
@@ -59,12 +52,10 @@ where
 	}
 }
 
-impl<F, HG, LHG, const N: usize, const M: usize> ConstraintSynthesizer<F>
-	for AnchorCircuit<F, HG, LHG, N, M>
+impl<F, HG, const N: usize, const M: usize> ConstraintSynthesizer<F> for AnchorCircuit<F, HG, N, M>
 where
 	F: PrimeField,
 	HG: FieldHasherGadget<F>,
-	LHG: FieldHasherGadget<F>,
 {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let arbitrary_input = self.arbitrary_input;
@@ -84,8 +75,7 @@ where
 
 		// Hashers
 		let hasher3_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher3);
-		let hasher4_gadget: LHG =
-			FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher4);
+		let hasher4_gadget: HG = FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.hasher4);
 
 		// Private inputs
 		let secret_var = FpVar::<F>::new_witness(cs.clone(), || Ok(secret))?;

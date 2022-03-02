@@ -24,7 +24,7 @@ use super::setup_tree_and_create_path;
 mod tests;
 
 pub type PoseidonAnchorCircuit<F, const N: usize, const M: usize> =
-	AnchorCircuit<F, PoseidonGadget<F>, PoseidonGadget<F>, N, M>;
+	AnchorCircuit<F, PoseidonGadget<F>, N, M>;
 
 struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
 	engine: PhantomData<E>,
@@ -53,7 +53,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		rng: &mut R,
 	) -> Result<
 		(
-			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
+			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
 			E::Fr,
 			E::Fr,
 			Vec<E::Fr>,
@@ -124,7 +124,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
-			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
+			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
 			E::Fr,
 			E::Fr,
 			Vec<E::Fr>,
@@ -181,7 +181,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
-			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
+			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
 			Vec<u8>,
 			Vec<u8>,
 			Vec<Vec<u8>>,
@@ -251,7 +251,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		path: Path<E::Fr, Poseidon<E::Fr>, HEIGHT>,
 		root_set: [E::Fr; ANCHOR_CT],
 		nullifier_hash: E::Fr,
-	) -> AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT> {
+	) -> AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT> {
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
@@ -365,13 +365,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
-		let mc = AnchorCircuit::<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			ANCHOR_CT,
-		>::new(
+		let mc = AnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>::new(
 			arbitrary_input,
 			secret_f,
 			nullifier_f,

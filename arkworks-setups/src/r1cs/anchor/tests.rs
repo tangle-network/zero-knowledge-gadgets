@@ -292,13 +292,7 @@ fn should_fail_with_invalid_nullifier_hash() {
 	let mut roots_new = [Bn254Fr::from(0u64); ANCHOR_CT];
 	roots_new[0] = tree.root();
 
-	let mc = AnchorCircuit::<
-		Bn254Fr,
-		PoseidonGadget<Bn254Fr>,
-		PoseidonGadget<Bn254Fr>,
-		HEIGHT,
-		ANCHOR_CT,
-	>::new(
+	let mc = AnchorCircuit::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::new(
 		arbitrary_input.clone(),
 		secret,
 		nullifier,
