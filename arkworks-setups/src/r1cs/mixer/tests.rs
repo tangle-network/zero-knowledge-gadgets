@@ -1,5 +1,3 @@
-use std::ptr::null;
-
 use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
