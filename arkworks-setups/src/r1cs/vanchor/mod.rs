@@ -21,8 +21,7 @@ use arkworks_utils::utils::common::{
 };
 
 use super::{setup_tree_and_create_path, SMT};
-
-pub mod utxo;
+use crate::utxo;
 
 #[cfg(test)]
 mod tests;

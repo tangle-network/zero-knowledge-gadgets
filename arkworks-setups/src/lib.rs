@@ -9,8 +9,9 @@ use ark_std::{
 
 use arkworks_utils::utils::common::Curve;
 use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
-use r1cs::vanchor::utxo::Utxo;
+use utxo::Utxo;
 
+pub mod utxo;
 pub mod common;
 
 #[cfg(feature = "r1cs")]
