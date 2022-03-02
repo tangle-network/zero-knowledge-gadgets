@@ -299,7 +299,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		};
 		let chain_id_elt = E::Fr::from(chain_id);
 		let leaf_field_element =
-			leaf_hasher.hash(&[chain_id_elt, secret_field_elt, nullifier_field_elt])?;
+			leaf_hasher.hash(&[chain_id_elt, nullifier_field_elt, secret_field_elt])?;
 		let nullifier_hash_field_element =
 			tree_hasher.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(AnchorLeaf {
