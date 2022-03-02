@@ -5,12 +5,6 @@ use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use arkworks_gadgets::{
 	keypair::vanchor::{constraints::KeypairVar, Keypair},
-	leaf::vanchor::{
-		constraints::{
-			PrivateVar as LeafPrivateInputsVar, PublicVar as LeafPublicInputsVar, VAnchorLeafGadget,
-		},
-		Private as LeafPrivateInputs, Public as LeafPublicInputs,
-	},
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
 	poseidon::field_hasher_constraints::FieldHasherGadget,
 	set::constraints::SetGadget,
@@ -32,18 +26,20 @@ pub struct VAnchorCircuit<
 	public_amount: F,
 	ext_data_hash: F,
 
-	leaf_private_inputs: Vec<LeafPrivateInputs<F>>, // amount, blinding
-	keypair_inputs: Vec<Keypair<F, KHG::Native, NHG::Native>>,
-	leaf_public_input: LeafPublicInputs<F>, // chain_id
+	in_amounts: Vec<F>,
+	in_blindings: Vec<F>,
+	in_keypair_inputs: Vec<Keypair<F, KHG::Native, NHG::Native>>,
+	in_chain_id: F,
 	root_set: [F; ANCHOR_CT],
 
 	paths: Vec<Path<F, HG::Native, HEIGHT>>,
 	indices: Vec<F>,
 	nullifier_hash: Vec<F>,
 
-	output_commitment: Vec<F>,
-	out_leaf_private: Vec<LeafPrivateInputs<F>>,
-	out_leaf_public: Vec<LeafPublicInputs<F>>,
+	out_commitment: Vec<F>,
+	out_amounts: Vec<F>,
+	out_blindings: Vec<F>,
+	out_chain_ids: Vec<F>,
 	out_pubkey: Vec<F>,
 
 	tree_hasher: HG::Native,
@@ -74,16 +70,18 @@ where
 	pub fn new(
 		public_amount: F,
 		ext_data_hash: F,
-		leaf_private_inputs: Vec<LeafPrivateInputs<F>>,
-		keypair_inputs: Vec<Keypair<F, KHG::Native, NHG::Native>>,
-		leaf_public_input: LeafPublicInputs<F>,
+		in_amounts: Vec<F>,
+		in_blindings: Vec<F>,
+		in_keypair_inputs: Vec<Keypair<F, KHG::Native, NHG::Native>>,
+		in_chain_id: F,
 		root_set: [F; ANCHOR_CT],
 		paths: Vec<Path<F, HG::Native, HEIGHT>>,
 		indices: Vec<F>,
 		nullifier_hash: Vec<F>,
-		output_commitment: Vec<F>,
-		out_leaf_private: Vec<LeafPrivateInputs<F>>,
-		out_leaf_public: Vec<LeafPublicInputs<F>>,
+		out_commitment: Vec<F>,
+		out_amounts: Vec<F>,
+		out_blindings: Vec<F>,
+		out_chain_ids: Vec<F>,
 		out_pubkey: Vec<F>,
 		tree_hasher: HG::Native,
 		keypair_hasher: KHG::Native,
@@ -93,16 +91,18 @@ where
 		Self {
 			public_amount,
 			ext_data_hash,
-			leaf_private_inputs,
-			keypair_inputs,
-			leaf_public_input,
+			in_amounts,
+			in_blindings,
+			in_keypair_inputs,
+			in_chain_id,
 			root_set,
 			paths,
 			indices,
 			nullifier_hash,
-			output_commitment,
-			out_leaf_private,
-			out_leaf_public,
+			out_commitment,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
 			out_pubkey,
 			tree_hasher,
 			keypair_hasher,
@@ -113,9 +113,10 @@ where
 
 	#[allow(clippy::too_many_arguments)]
 	pub fn verify_input_var(
-		leaf_private_var: &[LeafPrivateInputsVar<F>],
-		inkeypair_var: &[KeypairVar<F, KHG, NHG>],
-		leaf_public_input_var: &LeafPublicInputsVar<F>,
+		in_amounts_var: &[FpVar<F>],
+		in_blindings_var: &[FpVar<F>],
+		in_keypair_var: &[KeypairVar<F, KHG, NHG>],
+		in_chain_id_var: &FpVar<F>,
 		in_path_indices_var: &[FpVar<F>],
 		in_path_elements_var: &[PathVar<F, HG, HEIGHT>],
 		in_nullifier_var: &[FpVar<F>],
@@ -129,34 +130,24 @@ where
 
 		for tx in 0..N_INS {
 			// Computing the public key
-			let pub_key = inkeypair_var[tx].public_key(keypair_hasher)?;
+			let pub_key = in_keypair_var[tx].public_key(keypair_hasher)?;
 			// Computing the hash
-			let in_utxo_hasher_var = VAnchorLeafGadget::<F, LHG>::create_leaf(
-				&leaf_private_var[tx],
-				leaf_public_input_var,
-				&pub_key,
-				leaf_hasher,
-			)?;
+			let in_leaf = leaf_hasher.hash(&[in_chain_id_var.clone(), in_amounts_var[tx].clone(), pub_key, in_blindings_var[tx].clone()])?;
 			// End of computing the hash
 
-			let signature = inkeypair_var[tx].signature(
-				&in_utxo_hasher_var,
+			let signature = in_keypair_var[tx].signature(
+				&in_leaf.clone(),
 				&in_path_indices_var[tx],
 				nullifier_hasher,
 			)?;
 			// Nullifier
-			let nullifier_hash = VAnchorLeafGadget::<F, NHG>::create_nullifier(
-				&signature,
-				&in_utxo_hasher_var,
-				&in_path_indices_var[tx],
-				nullifier_hasher,
-			)?;
+			let nullifier_hash = nullifier_hasher.hash(&[in_leaf.clone(), in_path_indices_var[tx].clone(), signature])?;
 
 			nullifier_hash.enforce_equal(&in_nullifier_var[tx])?;
 
 			// Add the roots and diffs signals to the vanchor circuit
-			let roothash = &in_path_elements_var[tx].root_hash(&in_utxo_hasher_var, tree_hasher)?;
-			let in_amount_tx = &leaf_private_var[tx].amount;
+			let roothash = &in_path_elements_var[tx].root_hash(&in_leaf, tree_hasher)?;
+			let in_amount_tx = &in_amounts_var[tx];
 
 			// Check membership if in_amount is non zero
 			let check = set_gadget.check_membership_enabled(&roothash, in_amount_tx)?;
@@ -169,9 +160,10 @@ where
 
 	// Verify correctness of transaction outputs
 	pub fn verify_output_var(
-		output_commitment_var: &[FpVar<F>],
-		leaf_private_var: &[LeafPrivateInputsVar<F>],
-		leaf_public_var: &[LeafPublicInputsVar<F>],
+		out_commitment_var: &[FpVar<F>],
+		out_amounts_var: &[FpVar<F>],
+		out_blindings_var: &[FpVar<F>],
+		out_chain_ids_var: &[FpVar<F>],
 		out_pubkey_var: &[FpVar<F>],
 		limit_var: &FpVar<F>,
 		leaf_hasher: &LHG,
@@ -180,15 +172,10 @@ where
 
 		for tx in 0..N_OUTS {
 			// Computing the hash
-			let out_utxo_hasher_var = VAnchorLeafGadget::<F, LHG>::create_leaf(
-				&leaf_private_var[tx],
-				&leaf_public_var[tx],
-				&out_pubkey_var[tx],
-				leaf_hasher,
-			)?;
+			let leaf = leaf_hasher.hash(&[out_chain_ids_var[tx].clone(), out_amounts_var[tx].clone(), out_pubkey_var[tx].clone(), out_blindings_var[tx].clone()])?;
 			// End of computing the hash
-			let out_amount_var = &leaf_private_var[tx].amount;
-			out_utxo_hasher_var.enforce_equal(&output_commitment_var[tx])?;
+			let out_amount_var = &out_amounts_var[tx];
+			leaf.enforce_equal(&out_commitment_var[tx])?;
 
 			// Check that amount is less than 2^248 in the field (to prevent overflow)
 			out_amount_var.enforce_cmp_unchecked(limit_var, Less, false)?;
@@ -243,17 +230,19 @@ where
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let public_amount = self.public_amount;
 		let ext_data_hash = self.ext_data_hash;
-		let leaf_private = self.leaf_private_inputs; // amount, blinding
-		let keypair_inputs = self.keypair_inputs;
-		let leaf_public_input = self.leaf_public_input; // chain id
+		let in_amounts = self.in_amounts;
+		let in_blindings = self.in_blindings;
+		let in_chain_id = self.in_chain_id;
+		let keypair_inputs = self.in_keypair_inputs;
+		let out_chain_ids = self.out_chain_ids;
 		let root_set = self.root_set;
 		let paths = self.paths;
 		let indices = self.indices;
 		let nullifier_hash = self.nullifier_hash;
 
-		let output_commitment = self.output_commitment;
-		let out_leaf_private = self.out_leaf_private;
-		let out_leaf_public = self.out_leaf_public;
+		let out_commitment = self.out_commitment;
+		let out_amounts = self.out_amounts;
+		let out_blindings = self.out_blindings;
 		let out_pubkey = self.out_pubkey;
 
 		// TODO: move outside the circuit
@@ -270,10 +259,9 @@ where
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
 		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(ext_data_hash))?;
 		let in_nullifier_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(nullifier_hash))?;
-		let output_commitment_var =
-			Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(output_commitment))?;
-		let leaf_public_input_var =
-			LeafPublicInputsVar::new_input(cs.clone(), || Ok(leaf_public_input))?;
+		let out_commitment_var =
+			Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(out_commitment))?;
+		let in_chain_id = FpVar::<F>::new_input(cs.clone(), || Ok(in_chain_id))?;
 		let root_set_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 
 		// Constants
@@ -290,27 +278,27 @@ where
 			FieldHasherGadget::<F>::from_native(&mut cs.clone(), self.nullifier_hasher);
 
 		// Private inputs
-		let leaf_private_var =
-			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(leaf_private))?;
-		let inkeypair_var =
+		let in_amounts_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_amounts))?;
+		let in_blindings_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(in_blindings))?;
+		let in_keypair_var =
 			Vec::<KeypairVar<F, KHG, NHG>>::new_witness(cs.clone(), || Ok(keypair_inputs))?;
 		let in_path_elements_var =
 			Vec::<PathVar<F, HG, HEIGHT>>::new_witness(cs.clone(), || Ok(paths))?;
 		let in_path_indices_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(indices))?;
 
 		// Outputs
-		let out_leaf_private_var =
-			Vec::<LeafPrivateInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_private))?;
-		let out_leaf_public_var =
-			Vec::<LeafPublicInputsVar<F>>::new_witness(cs.clone(), || Ok(out_leaf_public))?;
+		let out_amounts_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_amounts))?;
+		let out_blindings_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_blindings))?;
+		let out_chain_ids_var = Vec::<FpVar<F>>::new_witness(cs.clone(), || Ok(out_chain_ids))?;
 		let out_pubkey_var = Vec::<FpVar<F>>::new_witness(cs, || Ok(out_pubkey))?;
 
 		let set_gadget = SetGadget::new(root_set_var);
 		// verify correctness of transaction inputs
 		let sum_ins_var = Self::verify_input_var(
-			&leaf_private_var,
-			&inkeypair_var,
-			&leaf_public_input_var,
+			&in_amounts_var,
+			&in_blindings_var,
+			&in_keypair_var,
+			&in_chain_id,
 			&in_path_indices_var,
 			&in_path_elements_var,
 			&in_nullifier_var,
@@ -323,9 +311,10 @@ where
 
 		// verify correctness of transaction outputs
 		let sum_outs_var = Self::verify_output_var(
-			&output_commitment_var,
-			&out_leaf_private_var,
-			&out_leaf_public_var,
+			&out_commitment_var,
+			&out_amounts_var,
+			&out_blindings_var,
+			&out_chain_ids_var,
 			&out_pubkey_var,
 			&limit_var,
 			&leaf_hasher,

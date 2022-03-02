@@ -6,7 +6,6 @@ use ark_snark::SNARK;
 use ark_std::test_rng;
 use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	leaf::anchor::{Private, Public},
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
@@ -276,10 +275,8 @@ fn should_fail_with_invalid_nullifier_hash() {
 		rng,
 	)
 	.unwrap();
-	let leaf_public = Public::new(chain_id);
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaf_private = Private::new(secret, nullifier);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 
 	let nullifier_hash = Bn254Fr::rand(rng);
@@ -303,8 +300,9 @@ fn should_fail_with_invalid_nullifier_hash() {
 		ANCHOR_CT,
 	>::new(
 		arbitrary_input.clone(),
-		leaf_private,
-		leaf_public,
+		secret,
+		nullifier,
+		chain_id,
 		roots_new,
 		path,
 		nullifier_hash,

@@ -7,9 +7,9 @@ use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
+use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	leaf::anchor::{AnchorLeaf, Private as LeafPrivate, Public as LeafPublic},
 	merkle_tree::simple_merkle::SparseMerkleTree,
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
@@ -23,8 +23,6 @@ macro_rules! setup_circuit {
 		const HEIGHT: usize = 30;
 		const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
-		type Leaf = AnchorLeaf<$test_field, Poseidon<$test_field>>;
-
 		type Circuit = AnchorCircuit<
 			$test_field,
 			PoseidonGadget<$test_field>,
@@ -36,10 +34,10 @@ macro_rules! setup_circuit {
 		let rng = &mut test_rng();
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
 		// Secret inputs for the leaf
-		let leaf_private = LeafPrivate::generate(rng);
+		let secret = <$test_field>::rand(rng);
+		let nullifier = <$test_field>::rand(rng);
 		// Public inputs for the leaf
 		let chain_id = <$test_field>::one();
-		let leaf_public = LeafPublic::new(chain_id);
 
 		// Round params for the poseidon in leaf creation gadget
 		let params4 = setup_params_x5_4(curve);
@@ -48,8 +46,8 @@ macro_rules! setup_circuit {
 		let params3 = setup_params_x5_3(curve);
 		let nullifier_hasher = Poseidon::<$test_field>::new(params3);
 		// Creating the leaf
-		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &leaf_hasher).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &nullifier_hasher).unwrap();
+		let leaf_hash = leaf_hasher.hash(&[chain_id, secret, nullifier]).unwrap();
+		let nullifier_hash = nullifier_hasher.hash_two(&nullifier, &nullifier).unwrap();
 
 		// Arbitrary data
 		let arbitrary_input = <$test_field>::rand(rng);
@@ -82,8 +80,9 @@ macro_rules! setup_circuit {
 		];
 		let mc = Circuit::new(
 			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id,
 			roots.clone(),
 			path,
 			nullifier_hash,

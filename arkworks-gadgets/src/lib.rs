@@ -8,7 +8,6 @@ pub(crate) use ark_std::vec::Vec;
 
 pub mod identity;
 pub mod keypair;
-pub mod leaf;
 pub mod merkle_tree;
 pub mod poseidon;
 pub mod set;

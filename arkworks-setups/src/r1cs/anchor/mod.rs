@@ -10,9 +10,8 @@ use ark_std::{
 };
 use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	leaf::anchor::{Private, Public},
 	merkle_tree::simple_merkle::Path,
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+	poseidon::{field_hasher::{Poseidon, FieldHasher}, field_hasher_constraints::PoseidonGadget},
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 
@@ -71,11 +70,10 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		// Generate the leaf
 		let leaf = Self::create_leaf_with_privates(curve, chain_id, None, None, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
-		let leaf_public = Public::new(chain_id_f);
-		let leaf_private = Private::new(
-			E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes),
-			E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes),
-		);
+
+		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
+		let nullifier = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
@@ -89,8 +87,9 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let mc = AnchorCircuit::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id_f,
 			root_set,
 			path,
 			nullifier_hash,
@@ -130,24 +129,14 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		),
 		Error,
 	> {
-		use arkworks_gadgets::leaf::anchor;
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 		// Setup inputs
-		let leaf_public = Public::new(chain_id);
-		let leaf_private: Private<E::Fr> = Private::new(secret, nullifier);
-		let leaf = anchor::AnchorLeaf::<E::Fr, Poseidon<E::Fr>>::create_leaf(
-			&leaf_private,
-			&leaf_public,
-			&leaf_hasher,
-		)?;
-		let nullifier_hash = anchor::AnchorLeaf::<E::Fr, Poseidon<E::Fr>>::create_nullifier(
-			&leaf_private,
-			&tree_hasher.clone(),
-		)?;
+		let leaf = leaf_hasher.hash(&[chain_id, secret, nullifier])?;
+		let nullifier_hash = tree_hasher.hash_two(&nullifier, &nullifier)?;
 		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
 			tree_hasher.clone(),
 			&leaves,
@@ -157,8 +146,9 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let mc = AnchorCircuit::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id,
 			roots,
 			path,
 			nullifier_hash,
@@ -252,8 +242,9 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	pub fn create_circuit(
 		curve: Curve,
 		arbitrary_input: E::Fr,
-		leaf_private: Private<E::Fr>,
-		leaf_public: Public<E::Fr>,
+		secret: E::Fr,
+		nullifier: E::Fr,
+		chain_id: E::Fr,
 		path: Path<E::Fr, Poseidon<E::Fr>, HEIGHT>,
 		root_set: [E::Fr; ANCHOR_CT],
 		nullifier_hash: E::Fr,
@@ -266,8 +257,9 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let mc = AnchorCircuit::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id,
 			root_set,
 			path,
 			nullifier_hash,
@@ -288,7 +280,6 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		nullifier: Option<Vec<u8>>,
 		rng: &mut R,
 	) -> Result<AnchorLeaf, Error> {
-		use arkworks_gadgets::leaf::anchor;
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
@@ -304,11 +295,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			None => E::Fr::rand(rng),
 		};
 		let chain_id_elt = E::Fr::from(chain_id);
-		let public = Public::new(chain_id_elt);
-		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
-		let leaf_field_element = anchor::AnchorLeaf::create_leaf(&private, &public, &leaf_hasher)?;
-		let nullifier_hash_field_element =
-			anchor::AnchorLeaf::create_nullifier(&private, &tree_hasher)?;
+		let leaf_field_element = leaf_hasher.hash(&[chain_id_elt, secret_field_elt, nullifier_field_elt])?;
+		let nullifier_hash_field_element = tree_hasher.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(AnchorLeaf {
 			chain_id_bytes: chain_id.to_be_bytes().to_vec(),
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
@@ -372,8 +360,6 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
-		let leaf_public = Public::new(chain_id_f);
-		let leaf_private = Private::new(secret_f, nullifier_f);
 		let mc = AnchorCircuit::<
 			E::Fr,
 			PoseidonGadget<E::Fr>,
@@ -382,8 +368,9 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			ANCHOR_CT,
 		>::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret_f,
+			nullifier_f,
+			chain_id_f,
 			root_set_f,
 			path,
 			nullifier_f,

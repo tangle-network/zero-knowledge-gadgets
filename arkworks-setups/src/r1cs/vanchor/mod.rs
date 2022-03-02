@@ -12,7 +12,6 @@ use ark_std::{
 use arkworks_circuits::vanchor::VAnchorCircuit;
 use arkworks_gadgets::{
 	keypair::vanchor::Keypair,
-	leaf::vanchor::{Private, Public},
 	merkle_tree::simple_merkle::Path,
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
@@ -221,7 +220,7 @@ impl<
 			.map(|x| x.commitment)
 			.collect::<Vec<E::Fr>>();
 		let public_inputs = Self::construct_public_inputs(
-			in_utxos[0].leaf_public.chain_id,
+			in_utxos[0].chain_id,
 			public_amount,
 			in_root_set.to_vec(),
 			in_nullifiers?,
@@ -262,10 +261,14 @@ impl<
 		>,
 		Error,
 	> {
-		let in_leaf_private_inputs = in_utxos
+		let in_amounts = in_utxos
 			.iter()
-			.map(|x| x.leaf_private.clone())
-			.collect::<Vec<Private<E::Fr>>>();
+			.map(|x| x.amount.clone())
+			.collect::<Vec<E::Fr>>();
+		let in_blinding = in_utxos
+			.iter()
+			.map(|x| x.blinding.clone())
+			.collect::<Vec<E::Fr>>();
 		let in_keypair_inputs = in_utxos
 			.iter()
 			.map(|x| x.keypair.clone())
@@ -281,16 +284,19 @@ impl<
 			.iter()
 			.map(|x| x.commitment)
 			.collect::<Vec<E::Fr>>();
-		let out_leaf_private = out_utxos
+		let out_amounts = out_utxos
 			.iter()
-			.map(|x| x.leaf_private.clone())
-			.collect::<Vec<Private<E::Fr>>>();
-		let out_leaf_public = out_utxos
+			.map(|x| x.amount.clone())
+			.collect::<Vec<E::Fr>>();
+		let out_blindings = out_utxos
 			.iter()
-			.map(|x| x.leaf_public.clone())
-			.collect::<Vec<Public<E::Fr>>>();
+			.map(|x| x.blinding.clone())
+			.collect::<Vec<E::Fr>>();
+		let out_chain_ids = out_utxos
+			.iter()
+			.map(|x| x.chain_id.clone())
+			.collect::<Vec<E::Fr>>();
 
-		let public_chain_id_input = Public::new(chain_id);
 		let circuit = VAnchorCircuit::<
 			E::Fr,
 			PoseidonGadget<E::Fr>,
@@ -304,16 +310,18 @@ impl<
 		>::new(
 			public_amount,
 			arbitrary_data,
-			in_leaf_private_inputs,
+			in_amounts,
+			in_blinding,
 			in_keypair_inputs,
-			public_chain_id_input,
+			chain_id,
 			public_root_set,
 			in_paths,
 			in_indicies.to_vec(),
 			in_nullifiers?,
 			out_commitments,
-			out_leaf_private,
-			out_leaf_public,
+			out_amounts,
+			out_blindings,
+			out_chain_ids,
 			out_pub_keys?,
 			tree_hasher,
 			keypair_hasher,
