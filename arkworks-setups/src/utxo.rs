@@ -1,11 +1,8 @@
+use super::keypair::Keypair;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
 use ark_std::{error::Error as ArkError, rand::RngCore};
-use arkworks_gadgets::{
-	keypair::vanchor::Keypair,
-	leaf::vanchor::{Private, Public, VAnchorLeaf},
-	poseidon::field_hasher::Poseidon,
-};
+use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 
 #[derive(Debug)]
 pub enum UtxoError {
@@ -28,9 +25,8 @@ pub struct Utxo<F: PrimeField> {
 	pub chain_id_raw: u64,
 	pub chain_id: F,
 	pub amount: F,
+	pub blinding: F,
 	pub keypair: Keypair<F, Poseidon<F>, Poseidon<F>>,
-	pub leaf_private: Private<F>,
-	pub leaf_public: Public<F>,
 	pub index: Option<u64>,
 	pub nullifier: Option<F>,
 	pub commitment: F,
@@ -50,26 +46,18 @@ impl<F: PrimeField> Utxo<F> {
 	) -> Result<Self, Error> {
 		let chain_id = F::from(chain_id_raw);
 		let blinding = blinding.unwrap_or(F::rand(rng));
-		let private_input = Private::<F>::new(amount, blinding);
-		let public_input = Public::<F>::new(chain_id);
 
 		let keypair = Keypair::new(private_key.unwrap_or(F::rand(rng)));
 		let pub_key = keypair.public_key(hasher2)?;
 
-		let leaf = VAnchorLeaf::<F, Poseidon<F>>::create_leaf(
-			&private_input,
-			&public_input,
-			&pub_key,
-			&hasher5,
-		)?;
+		let leaf = hasher5.hash(&[chain_id, amount, pub_key, blinding])?;
 
 		let nullifier = if index.is_some() {
 			let i = F::from(index.unwrap());
 
 			let signature = keypair.signature(&leaf, &i, hasher4)?;
 
-			let nullifier =
-				VAnchorLeaf::<_, Poseidon<F>>::create_nullifier(&signature, &leaf, &i, &hasher4)?;
+			let nullifier = hasher4.hash(&[leaf, i, signature])?;
 
 			Some(nullifier)
 		} else {
@@ -81,8 +69,7 @@ impl<F: PrimeField> Utxo<F> {
 			chain_id,
 			amount,
 			keypair,
-			leaf_private: private_input,
-			leaf_public: public_input,
+			blinding,
 			index,
 			nullifier,
 			commitment: leaf,

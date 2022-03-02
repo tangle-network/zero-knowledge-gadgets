@@ -177,7 +177,7 @@ mod test {
 		let hasher = Poseidon::<Fq> { params: params3 };
 
 		let mut cs = ConstraintSystem::<Fq>::new_ref();
-		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone());
+		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone()).unwrap();
 
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
 		let smt = SMT::new_sequential(&leaves, &hasher, &DEFAULT_LEAF).unwrap();
@@ -206,7 +206,7 @@ mod test {
 
 		let index = 2;
 		let mut cs = ConstraintSystem::<Fq>::new_ref();
-		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone());
+		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone()).unwrap();
 
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
 		let smt = SMT::new_sequential(&leaves, &hasher, &DEFAULT_LEAF).unwrap();
@@ -241,7 +241,7 @@ mod test {
 		let index = 2;
 
 		let mut cs = ConstraintSystem::<Fq>::new_ref();
-		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone());
+		let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone()).unwrap();
 
 		let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
 		let smt = SMT::new_sequential(&leaves, &hasher, &DEFAULT_LEAF).unwrap();

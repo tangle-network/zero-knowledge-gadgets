@@ -1,8 +1,5 @@
 use crate::{mimc::Rounds as MiMCRounds, poseidon::PoseidonParameters};
-use ark_crypto_primitives::{Error, SNARK};
-use ark_ec::PairingEngine;
 use ark_ff::fields::PrimeField;
-use ark_groth16::{Groth16, Proof, VerifyingKey};
 
 #[allow(non_camel_case_types)]
 #[derive(Default, Clone)]

@@ -9,11 +9,8 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_circuits::circuit::vanchor::VAnchorCircuit;
+use arkworks_circuits::vanchor::VAnchorCircuit;
 use arkworks_gadgets::{
-	arbitrary::vanchor_data::VAnchorArbitraryData,
-	keypair::vanchor::Keypair,
-	leaf::vanchor::{Private, Public},
 	merkle_tree::simple_merkle::Path,
 	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
 };
@@ -22,8 +19,7 @@ use arkworks_utils::utils::common::{
 };
 
 use super::{setup_tree_and_create_path, SMT};
-
-pub mod utxo;
+use crate::utxo;
 
 #[cfg(test)]
 mod tests;
@@ -82,20 +78,7 @@ impl<
 		curve: Curve,
 		default_leaf: [u8; 32],
 		rng: &mut R,
-	) -> Result<
-		VAnchorCircuit<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			INS,
-			OUTS,
-			ANCHOR_CT,
-		>,
-		Error,
-	> {
+	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
 		let public_amount = E::Fr::rand(rng);
 		let ext_data_hash = E::Fr::rand(rng);
 		let in_root_set = [E::Fr::rand(rng); ANCHOR_CT];
@@ -163,17 +146,7 @@ impl<
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
-			VAnchorCircuit<
-				E::Fr,
-				PoseidonGadget<E::Fr>,
-				PoseidonGadget<E::Fr>,
-				PoseidonGadget<E::Fr>,
-				PoseidonGadget<E::Fr>,
-				HEIGHT,
-				INS,
-				OUTS,
-				ANCHOR_CT,
-			>,
+			VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>,
 			Vec<E::Fr>,
 		),
 		Error,
@@ -200,12 +173,11 @@ impl<
 			in_paths.push(path)
 		}
 		// Arbitrary data
-		let arbitrary_data = VAnchorArbitraryData::new(ext_data_hash);
 
 		let circuit = Self::setup_circuit(
 			chain_id,
 			public_amount,
-			arbitrary_data,
+			ext_data_hash,
 			in_utxos.clone(),
 			in_indices_f,
 			in_paths,
@@ -224,7 +196,7 @@ impl<
 			.map(|x| x.commitment)
 			.collect::<Vec<E::Fr>>();
 		let public_inputs = Self::construct_public_inputs(
-			in_utxos[0].leaf_public.chain_id,
+			in_utxos[0].chain_id,
 			public_amount,
 			in_root_set.to_vec(),
 			in_nullifiers?,
@@ -238,7 +210,7 @@ impl<
 	pub fn setup_circuit(
 		chain_id: E::Fr,
 		public_amount: E::Fr,
-		arbitrary_data: VAnchorArbitraryData<E::Fr>,
+		arbitrary_data: E::Fr,
 		// Input transactions
 		in_utxos: [Utxo<E::Fr>; INS],
 		// Data related to tree
@@ -251,28 +223,19 @@ impl<
 		tree_hasher: Poseidon<E::Fr>,
 		nullifier_hasher: Poseidon<E::Fr>,
 		leaf_hasher: Poseidon<E::Fr>,
-	) -> Result<
-		VAnchorCircuit<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			INS,
-			OUTS,
-			ANCHOR_CT,
-		>,
-		Error,
-	> {
-		let in_leaf_private_inputs = in_utxos
+	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
+		let in_amounts = in_utxos
 			.iter()
-			.map(|x| x.leaf_private.clone())
-			.collect::<Vec<Private<E::Fr>>>();
-		let in_keypair_inputs = in_utxos
+			.map(|x| x.amount.clone())
+			.collect::<Vec<E::Fr>>();
+		let in_blinding = in_utxos
 			.iter()
-			.map(|x| x.keypair.clone())
-			.collect::<Vec<Keypair<E::Fr, Poseidon<E::Fr>, Poseidon<E::Fr>>>>();
+			.map(|x| x.blinding.clone())
+			.collect::<Vec<E::Fr>>();
+		let in_private_keys = in_utxos
+			.iter()
+			.map(|x| x.keypair.private_key.clone())
+			.collect::<Vec<E::Fr>>();
 		let in_nullifiers: Result<Vec<E::Fr>, Error> =
 			in_utxos.iter().map(|x| x.get_nullifier()).collect();
 
@@ -284,45 +247,41 @@ impl<
 			.iter()
 			.map(|x| x.commitment)
 			.collect::<Vec<E::Fr>>();
-		let out_leaf_private = out_utxos
+		let out_amounts = out_utxos
 			.iter()
-			.map(|x| x.leaf_private.clone())
-			.collect::<Vec<Private<E::Fr>>>();
-		let out_leaf_public = out_utxos
+			.map(|x| x.amount.clone())
+			.collect::<Vec<E::Fr>>();
+		let out_blindings = out_utxos
 			.iter()
-			.map(|x| x.leaf_public.clone())
-			.collect::<Vec<Public<E::Fr>>>();
+			.map(|x| x.blinding.clone())
+			.collect::<Vec<E::Fr>>();
+		let out_chain_ids = out_utxos
+			.iter()
+			.map(|x| x.chain_id.clone())
+			.collect::<Vec<E::Fr>>();
 
-		let public_chain_id_input = Public::new(chain_id);
-		let circuit = VAnchorCircuit::<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			INS,
-			OUTS,
-			ANCHOR_CT,
-		>::new(
-			public_amount,
-			arbitrary_data,
-			in_leaf_private_inputs,
-			in_keypair_inputs,
-			public_chain_id_input,
-			public_root_set,
-			in_paths,
-			in_indicies.to_vec(),
-			in_nullifiers?,
-			out_commitments,
-			out_leaf_private,
-			out_leaf_public,
-			out_pub_keys?,
-			tree_hasher,
-			keypair_hasher,
-			leaf_hasher,
-			nullifier_hasher,
-		);
+		let circuit =
+			VAnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>::new(
+				public_amount,
+				arbitrary_data,
+				in_amounts,
+				in_blinding,
+				in_private_keys,
+				chain_id,
+				public_root_set,
+				in_paths,
+				in_indicies.to_vec(),
+				in_nullifiers?,
+				out_commitments,
+				out_amounts,
+				out_blindings,
+				out_chain_ids,
+				out_pub_keys?,
+				tree_hasher,
+				keypair_hasher,
+				leaf_hasher,
+				nullifier_hasher,
+			);
 
 		Ok(circuit)
 	}
@@ -426,7 +385,6 @@ impl<
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public_amount_elt = E::Fr::from(public_amount);
 		let ext_data_hash_elt = E::Fr::from_le_bytes_mod_order(&ext_data_hash);
-		let arbitrary_data = VAnchorArbitraryData::new(ext_data_hash_elt);
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
 
@@ -463,7 +421,7 @@ impl<
 		let circuit = Self::setup_circuit(
 			chain_id_elt,
 			public_amount_elt,
-			arbitrary_data,
+			ext_data_hash_elt,
 			in_utxos.clone(),
 			in_indices.map(|elt| E::Fr::from(elt)),
 			in_paths,

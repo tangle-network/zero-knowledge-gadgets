@@ -7,12 +7,13 @@ use ark_std::{
 	vec::Vec,
 };
 
-use arkworks_gadgets::{merkle_tree::simple_merkle::Path, poseidon::field_hasher::Poseidon};
 use arkworks_utils::utils::common::Curve;
-use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorLeaf, VAnchorProof};
-use r1cs::vanchor::utxo::Utxo;
+use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
+use utxo::Utxo;
 
 pub mod common;
+pub mod keypair;
+pub mod utxo;
 
 #[cfg(feature = "r1cs")]
 pub mod r1cs;

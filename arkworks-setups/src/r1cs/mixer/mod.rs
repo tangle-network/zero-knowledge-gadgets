@@ -8,63 +8,30 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_circuits::circuit::mixer::MixerCircuit;
+use arkworks_circuits::mixer::MixerCircuit;
 use arkworks_gadgets::poseidon::{
 	field_hasher::{FieldHasher, Poseidon},
 	field_hasher_constraints::PoseidonGadget,
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
-use arkworks_gadgets::{
-	arbitrary::mixer_data::Input as MixerDataInput, leaf::mixer::Private,
-	merkle_tree::simple_merkle::Path,
-};
+use arkworks_gadgets::merkle_tree::simple_merkle::Path;
 
-use crate::common::prove_unchecked;
+use crate::common::*;
 
 #[cfg(test)]
 mod tests;
 
 use crate::MixerProver;
 
-use super::{create_merkle_tree, setup_tree_and_create_path, SMT};
-
-pub fn create_leaf<F: PrimeField, H: FieldHasher<F>>(
-	hasher: &H,
-	private: &Private<F>,
-) -> Result<F, Error> {
-	let leaf = hasher.hash_two(&private.secret(), &private.nullifier())?;
-	Ok(leaf)
-}
-
-pub fn create_nullifier<F: PrimeField, H: FieldHasher<F>>(
-	hasher: &H,
-	private: &Private<F>,
-) -> Result<F, Error> {
-	let nullifier_hash = hasher.hash_two(&private.nullifier(), &private.nullifier())?;
-	Ok(nullifier_hash)
-}
-
-pub type MixerConstraintDataInput<F> = MixerDataInput<F>;
-
-pub fn setup_arbitrary_data<F: PrimeField>(
-	recipient: F,
-	relayer: F,
-	fee: F,
-	refund: F,
-) -> MixerConstraintDataInput<F> {
-	MixerConstraintDataInput::new(recipient, relayer, fee, refund)
-}
+use super::setup_tree_and_create_path;
 
 pub fn construct_public_inputs<F: PrimeField>(
 	nullifier_hash: F,
 	root: F,
-	recipient: F,
-	relayer: F,
-	fee: F,
-	refund: F,
+	arbitrary_input: F,
 ) -> Vec<F> {
-	vec![nullifier_hash, root, recipient, relayer, fee, refund]
+	vec![nullifier_hash, root, arbitrary_input]
 }
 
 pub fn deconstruct_public_inputs<F: PrimeField>(
@@ -112,19 +79,14 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		let params3 = setup_params_x5_3(curve);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 
-		let recipient = E::Fr::rand(rng);
-		let relayer = E::Fr::rand(rng);
-		let fee = E::Fr::rand(rng);
-		let refund = E::Fr::rand(rng);
-		// Create the arbitrary input data
-		let arbitrary_input = setup_arbitrary_data::<E::Fr>(recipient, relayer, fee, refund);
+		let arbitrary_input = E::Fr::rand(rng);
 		// Generate the leaf
 		let leaf = Self::create_leaf_with_privates(curve, None, None, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
-		let leaf_private = Private::new(
-			E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes),
-			E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes),
-		);
+
+		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
+		let nullifier = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
@@ -137,14 +99,14 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
-			leaf_private,
+			secret,
+			nullifier,
 			path,
 			root,
 			nullifier_hash,
 			poseidon,
 		);
-		let public_inputs =
-			construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
+		let public_inputs = construct_public_inputs(nullifier_hash, root, arbitrary_input);
 
 		Ok((mc, leaf_value, nullifier_hash, root, public_inputs))
 	}
@@ -156,10 +118,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		nullifier: E::Fr,
 		leaves: &[E::Fr],
 		index: u64,
-		recipient: E::Fr,
-		relayer: E::Fr,
-		fee: E::Fr,
-		refund: E::Fr,
+		arbitrary_input: E::Fr,
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
@@ -175,10 +134,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		let params3 = setup_params_x5_3(curve);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Setup inputs
-		let arbitrary_input = setup_arbitrary_data(recipient, relayer, fee, refund);
-		let leaf_private: Private<E::Fr> = Private::new(secret, nullifier);
-		let leaf = create_leaf(&poseidon, &leaf_private)?;
-		let nullifier_hash = create_nullifier(&poseidon, &leaf_private)?;
+		let leaf = poseidon.hash_two(&secret, &nullifier)?;
+		let nullifier_hash = poseidon.hash_two(&nullifier, &nullifier)?;
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
 			poseidon.clone(),
 			&leaves,
@@ -189,14 +146,14 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
-			leaf_private,
+			secret,
+			nullifier,
 			path,
 			root,
 			nullifier_hash,
 			poseidon,
 		);
-		let public_inputs =
-			construct_public_inputs(nullifier_hash, root, recipient, relayer, fee, refund);
+		let public_inputs = construct_public_inputs(nullifier_hash, root, arbitrary_input);
 		Ok((mc, leaf, nullifier_hash, root, public_inputs))
 	}
 
@@ -229,10 +186,14 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 			.iter()
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
 			.collect();
-		let recipient_f = E::Fr::from_le_bytes_mod_order(&recipient);
-		let relayer_f = E::Fr::from_le_bytes_mod_order(&relayer);
-		let fee_f = E::Fr::from(fee);
-		let refund_f = E::Fr::from(refund);
+
+		let mut arbitrary_data_bytes = Vec::new();
+		arbitrary_data_bytes.extend(&recipient);
+		arbitrary_data_bytes.extend(&relayer);
+		arbitrary_data_bytes.extend(fee.to_le_bytes());
+		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
+		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 
 		let (mc, leaf, nullifier_hash, root, public_inputs) = Self::setup_circuit_with_privates(
 			curve,
@@ -240,10 +201,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 			nullifier_f,
 			&leaves_f,
 			index,
-			recipient_f,
-			relayer_f,
-			fee_f,
-			refund_f,
+			arbitrary_input,
 			default_leaf,
 		)?;
 
@@ -267,8 +225,9 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	#[allow(dead_code)]
 	pub fn create_circuit(
 		curve: Curve,
-		arbitrary_input: MixerConstraintDataInput<E::Fr>,
-		leaf_private: Private<E::Fr>,
+		arbitrary_input: E::Fr,
+		secret: E::Fr,
+		nullifier: E::Fr,
 		path: Path<E::Fr, Poseidon<E::Fr>, HEIGHT>,
 		root: E::Fr,
 		nullifier_hash: E::Fr,
@@ -279,7 +238,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		// Setup circuit
 		let mc = MixerCircuit::new(
 			arbitrary_input,
-			leaf_private,
+			secret,
+			nullifier,
 			path,
 			root,
 			nullifier_hash,
@@ -307,9 +267,9 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 
 		let params3 = setup_params_x5_3(curve);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
-		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
-		let leaf_field_element = create_leaf(&poseidon, &private)?;
-		let nullifier_hash_field_element = create_nullifier(&poseidon, &private)?;
+		let leaf_field_element = poseidon.hash_two(&secret_field_elt, &nullifier_field_elt)?;
+		let nullifier_hash_field_element =
+			poseidon.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(MixerLeaf {
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
@@ -341,13 +301,14 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 			.iter()
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
 			.collect();
-		let recipient_f = E::Fr::from_le_bytes_mod_order(&recipient);
-		let relayer_f = E::Fr::from_le_bytes_mod_order(&relayer);
-		let fee_f = E::Fr::from(fee);
-		let refund_f = E::Fr::from(refund);
-		// Create the arbitrary input data
-		let arbitrary_input =
-			setup_arbitrary_data::<E::Fr>(recipient_f, relayer_f, fee_f, refund_f);
+
+		let mut arbitrary_data_bytes = Vec::new();
+		arbitrary_data_bytes.extend(&recipient);
+		arbitrary_data_bytes.extend(&relayer);
+		arbitrary_data_bytes.extend(fee.to_le_bytes());
+		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
+		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
 		let MixerLeaf {
 			leaf_bytes,
@@ -363,17 +324,16 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		)?;
 		let root = tree.root();
 
-		let leaf_private = Private::new(secret_f, nullifier_f);
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
-			leaf_private,
+			secret_f,
+			nullifier_f,
 			path,
 			root,
 			nullifier_f,
 			poseidon,
 		);
-		let public_inputs =
-			construct_public_inputs(nullifier_f, root, recipient_f, relayer_f, fee_f, refund_f);
+		let public_inputs = construct_public_inputs(nullifier_f, root, arbitrary_input);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;

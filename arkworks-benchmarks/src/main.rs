@@ -7,15 +7,16 @@ use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, rc::Rc, test_rng, time::Instant, vec::Vec};
-use arkworks_circuits::circuit::anchor::AnchorCircuit;
+use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	arbitrary::anchor_data::Input as AnchorDataInput,
-	leaf::anchor::{AnchorLeaf, Private as LeafPrivate, Public as LeafPublic},
 	merkle_tree::simple_merkle::SparseMerkleTree,
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+	poseidon::{
+		field_hasher::{FieldHasher, Poseidon},
+		field_hasher_constraints::PoseidonGadget,
+	},
 };
 
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, setup_params_x5_5};
+use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4};
 use blake2::Blake2s;
 
 macro_rules! setup_circuit {
@@ -24,25 +25,15 @@ macro_rules! setup_circuit {
 		const HEIGHT: usize = 30;
 		const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
-		type Leaf = AnchorLeaf<$test_field, Poseidon<$test_field>>;
-
-		type AnchorTree = SparseMerkleTree<$test_field, PoseidonGadget<$test_field>, HEIGHT>;
-
-		type Circuit = AnchorCircuit<
-			$test_field,
-			PoseidonGadget<$test_field>,
-			PoseidonGadget<$test_field>,
-			HEIGHT,
-			ANCHOR_CT,
-		>;
+		type Circuit = AnchorCircuit<$test_field, PoseidonGadget<$test_field>, HEIGHT, ANCHOR_CT>;
 
 		let rng = &mut test_rng();
 		let curve = arkworks_utils::utils::common::Curve::Bn254;
 		// Secret inputs for the leaf
-		let leaf_private = LeafPrivate::generate(rng);
+		let secret = <$test_field>::rand(rng);
+		let nullifier = <$test_field>::rand(rng);
 		// Public inputs for the leaf
 		let chain_id = <$test_field>::one();
-		let leaf_public = LeafPublic::new(chain_id);
 
 		// Round params for the poseidon in leaf creation gadget
 		let params4 = setup_params_x5_4(curve);
@@ -51,16 +42,11 @@ macro_rules! setup_circuit {
 		let params3 = setup_params_x5_3(curve);
 		let nullifier_hasher = Poseidon::<$test_field>::new(params3);
 		// Creating the leaf
-		let leaf_hash = Leaf::create_leaf(&leaf_private, &leaf_public, &leaf_hasher).unwrap();
-		let nullifier_hash = Leaf::create_nullifier(&leaf_private, &nullifier_hasher).unwrap();
+		let leaf_hash = leaf_hasher.hash(&[chain_id, secret, nullifier]).unwrap();
+		let nullifier_hash = nullifier_hasher.hash_two(&nullifier, &nullifier).unwrap();
 
-		let fee = <$test_field>::rand(rng);
-		let refund = <$test_field>::rand(rng);
-		let recipient = <$test_field>::rand(rng);
-		let relayer = <$test_field>::rand(rng);
-		let commitment = <$test_field>::rand(rng);
 		// Arbitrary data
-		let arbitrary_input = AnchorDataInput::new(recipient, relayer, fee, refund, commitment);
+		let arbitrary_input = <$test_field>::rand(rng);
 
 		// Making params for poseidon in merkle tree
 
@@ -90,8 +76,9 @@ macro_rules! setup_circuit {
 		];
 		let mc = Circuit::new(
 			arbitrary_input.clone(),
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id,
 			roots.clone(),
 			path,
 			nullifier_hash,
@@ -102,11 +89,7 @@ macro_rules! setup_circuit {
 		public_inputs.push(chain_id);
 		public_inputs.push(nullifier_hash);
 		public_inputs.extend(roots.to_vec());
-		public_inputs.push(arbitrary_input.recipient);
-		public_inputs.push(arbitrary_input.relayer);
-		public_inputs.push(arbitrary_input.fee);
-		public_inputs.push(arbitrary_input.refund);
-		public_inputs.push(arbitrary_input.commitment);
+		public_inputs.push(arbitrary_input);
 		(public_inputs, mc)
 	}};
 }

@@ -8,12 +8,13 @@ use ark_std::{
 	vec::Vec,
 	UniformRand, Zero,
 };
-use arkworks_circuits::circuit::anchor::AnchorCircuit;
+use arkworks_circuits::anchor::AnchorCircuit;
 use arkworks_gadgets::{
-	arbitrary::anchor_data::Input as AnchorDataInput,
-	leaf::anchor::{Private, Public},
 	merkle_tree::simple_merkle::Path,
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+	poseidon::{
+		field_hasher::{FieldHasher, Poseidon},
+		field_hasher_constraints::PoseidonGadget,
+	},
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 
@@ -22,9 +23,8 @@ use super::setup_tree_and_create_path;
 #[cfg(test)]
 mod tests;
 
-pub type AnchorConstraintDataInput<F> = AnchorDataInput<F>;
 pub type PoseidonAnchorCircuit<F, const N: usize, const M: usize> =
-	AnchorCircuit<F, PoseidonGadget<F>, PoseidonGadget<F>, N, M>;
+	AnchorCircuit<F, PoseidonGadget<F>, N, M>;
 
 struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
 	engine: PhantomData<E>,
@@ -38,26 +38,12 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		chain_id: E::Fr,
 		nullifier_hash: E::Fr,
 		roots: [E::Fr; ANCHOR_CT],
-		recipient: E::Fr,
-		relayer: E::Fr,
-		fee: E::Fr,
-		refund: E::Fr,
-		commitment: E::Fr,
+		arbitrary_input: E::Fr,
 	) -> Vec<E::Fr> {
 		let mut pub_ins = vec![chain_id, nullifier_hash];
 		pub_ins.extend(roots.to_vec());
-		pub_ins.extend(vec![recipient, relayer, fee, refund, commitment]);
+		pub_ins.push(arbitrary_input);
 		pub_ins
-	}
-
-	pub fn setup_arbitrary_data(
-		recipient: E::Fr,
-		relayer: E::Fr,
-		fee: E::Fr,
-		refund: E::Fr,
-		commitment: E::Fr,
-	) -> AnchorConstraintDataInput<E::Fr> {
-		AnchorConstraintDataInput::new(recipient, relayer, fee, refund, commitment)
 	}
 
 	#[allow(dead_code)]
@@ -67,7 +53,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		rng: &mut R,
 	) -> Result<
 		(
-			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
+			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
 			E::Fr,
 			E::Fr,
 			Vec<E::Fr>,
@@ -75,19 +61,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		),
 		Error,
 	> {
-		let recipient = E::Fr::rand(rng);
-		let relayer = E::Fr::rand(rng);
-		let fee = E::Fr::rand(rng);
-		let refund = E::Fr::rand(rng);
-		let commitment = E::Fr::rand(rng);
-		// Create the arbitrary input data
-		let arbitrary_input = AnchorConstraintDataInput::<E::Fr> {
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
-		};
+		let arbitrary_input = E::Fr::rand(rng);
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
@@ -99,11 +73,10 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		// Generate the leaf
 		let leaf = Self::create_leaf_with_privates(curve, chain_id, None, None, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
-		let leaf_public = Public::new(chain_id_f);
-		let leaf_private = Private::new(
-			E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes),
-			E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes),
-		);
+
+		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
+		let nullifier = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
@@ -117,24 +90,17 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let mc = AnchorCircuit::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id_f,
 			root_set,
 			path,
 			nullifier_hash,
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs = Self::construct_public_inputs(
-			chain_id_f,
-			nullifier_hash,
-			root_set,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id_f, nullifier_hash, root_set, arbitrary_input);
 
 		Ok((
 			mc,
@@ -154,15 +120,11 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		leaves: &[E::Fr],
 		index: u64,
 		roots: [E::Fr; ANCHOR_CT],
-		recipient: E::Fr,
-		relayer: E::Fr,
-		fee: E::Fr,
-		refund: E::Fr,
-		commitment: E::Fr,
+		arbitrary_input: E::Fr,
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
-			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
+			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
 			E::Fr,
 			E::Fr,
 			Vec<E::Fr>,
@@ -170,26 +132,14 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		),
 		Error,
 	> {
-		use arkworks_gadgets::leaf::anchor;
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 		// Setup inputs
-		let arbitrary_input =
-			Self::setup_arbitrary_data(recipient, relayer, fee, refund, commitment);
-		let leaf_public = Public::new(chain_id);
-		let leaf_private: Private<E::Fr> = Private::new(secret, nullifier);
-		let leaf = anchor::AnchorLeaf::<E::Fr, Poseidon<E::Fr>>::create_leaf(
-			&leaf_private,
-			&leaf_public,
-			&leaf_hasher,
-		)?;
-		let nullifier_hash = anchor::AnchorLeaf::<E::Fr, Poseidon<E::Fr>>::create_nullifier(
-			&leaf_private,
-			&tree_hasher.clone(),
-		)?;
+		let leaf = leaf_hasher.hash(&[chain_id, secret, nullifier])?;
+		let nullifier_hash = tree_hasher.hash_two(&nullifier, &nullifier)?;
 		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
 			tree_hasher.clone(),
 			&leaves,
@@ -199,24 +149,17 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let mc = AnchorCircuit::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id,
 			roots,
 			path,
 			nullifier_hash,
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs = Self::construct_public_inputs(
-			chain_id,
-			nullifier_hash,
-			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id, nullifier_hash, roots, arbitrary_input);
 		Ok((mc, leaf, nullifier_hash, roots.to_vec(), public_inputs))
 	}
 
@@ -238,7 +181,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		default_leaf: [u8; 32],
 	) -> Result<
 		(
-			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
+			AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>,
 			Vec<u8>,
 			Vec<u8>,
 			Vec<Vec<u8>>,
@@ -253,11 +196,15 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			.iter()
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
 			.collect();
-		let recipient_f = E::Fr::from_le_bytes_mod_order(&recipient);
-		let relayer_f = E::Fr::from_le_bytes_mod_order(&relayer);
-		let fee_f = E::Fr::from(fee);
-		let refund_f = E::Fr::from(refund);
-		let commitment_f = E::Fr::from_le_bytes_mod_order(&commitment);
+
+		let mut arbitrary_data_bytes = Vec::new();
+		arbitrary_data_bytes.extend(&recipient);
+		arbitrary_data_bytes.extend(&relayer);
+		arbitrary_data_bytes.extend(fee.to_le_bytes());
+		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		arbitrary_data_bytes.extend(&commitment);
+		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
+		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		let roots_set: [E::Fr; ANCHOR_CT] = roots
 			.iter()
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
@@ -273,11 +220,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			&leaves_f,
 			index,
 			roots_set,
-			recipient_f,
-			relayer_f,
-			fee_f,
-			refund_f,
-			commitment_f,
+			arbitrary_input,
 			default_leaf,
 		)?;
 
@@ -301,13 +244,14 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	#[allow(dead_code)]
 	pub fn create_circuit(
 		curve: Curve,
-		arbitrary_input: AnchorConstraintDataInput<E::Fr>,
-		leaf_private: Private<E::Fr>,
-		leaf_public: Public<E::Fr>,
+		arbitrary_input: E::Fr,
+		secret: E::Fr,
+		nullifier: E::Fr,
+		chain_id: E::Fr,
 		path: Path<E::Fr, Poseidon<E::Fr>, HEIGHT>,
 		root_set: [E::Fr; ANCHOR_CT],
 		nullifier_hash: E::Fr,
-	) -> AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT> {
+	) -> AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT> {
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
@@ -316,8 +260,9 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let mc = AnchorCircuit::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret,
+			nullifier,
+			chain_id,
 			root_set,
 			path,
 			nullifier_hash,
@@ -338,7 +283,6 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		nullifier: Option<Vec<u8>>,
 		rng: &mut R,
 	) -> Result<AnchorLeaf, Error> {
-		use arkworks_gadgets::leaf::anchor;
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
 		let params4 = setup_params_x5_4::<E::Fr>(curve);
@@ -354,11 +298,10 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			None => E::Fr::rand(rng),
 		};
 		let chain_id_elt = E::Fr::from(chain_id);
-		let public = Public::new(chain_id_elt);
-		let private: Private<E::Fr> = Private::new(secret_field_elt, nullifier_field_elt);
-		let leaf_field_element = anchor::AnchorLeaf::create_leaf(&private, &public, &leaf_hasher)?;
+		let leaf_field_element =
+			leaf_hasher.hash(&[chain_id_elt, secret_field_elt, nullifier_field_elt])?;
 		let nullifier_hash_field_element =
-			anchor::AnchorLeaf::create_nullifier(&private, &tree_hasher)?;
+			tree_hasher.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(AnchorLeaf {
 			chain_id_bytes: chain_id.to_be_bytes().to_vec(),
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
@@ -398,14 +341,15 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			.map(|x| E::Fr::from_le_bytes_mod_order(x))
 			.collect();
 		let root_set_f: [E::Fr; ANCHOR_CT] = root_set.map(|x| E::Fr::from_le_bytes_mod_order(&x));
-		let recipient_f = E::Fr::from_le_bytes_mod_order(&recipient);
-		let relayer_f = E::Fr::from_le_bytes_mod_order(&relayer);
-		let fee_f = E::Fr::from(fee);
-		let refund_f = E::Fr::from(refund);
-		let commitment_f = E::Fr::from_le_bytes_mod_order(&commitment);
 		// Create the arbitrary input data
-		let arbitrary_input =
-			Self::setup_arbitrary_data(recipient_f, relayer_f, fee_f, refund_f, commitment_f);
+		let mut arbitrary_data_bytes = Vec::new();
+		arbitrary_data_bytes.extend(&recipient);
+		arbitrary_data_bytes.extend(&relayer);
+		arbitrary_data_bytes.extend(fee.to_le_bytes());
+		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		arbitrary_data_bytes.extend(&commitment);
+		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
+		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
 		let AnchorLeaf {
 			leaf_bytes,
@@ -421,34 +365,19 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
-		let leaf_public = Public::new(chain_id_f);
-		let leaf_private = Private::new(secret_f, nullifier_f);
-		let mc = AnchorCircuit::<
-			E::Fr,
-			PoseidonGadget<E::Fr>,
-			PoseidonGadget<E::Fr>,
-			HEIGHT,
-			ANCHOR_CT,
-		>::new(
+		let mc = AnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>::new(
 			arbitrary_input,
-			leaf_private,
-			leaf_public,
+			secret_f,
+			nullifier_f,
+			chain_id_f,
 			root_set_f,
 			path,
 			nullifier_f,
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs = Self::construct_public_inputs(
-			chain_id_f,
-			nullifier_f,
-			root_set_f,
-			recipient_f,
-			relayer_f,
-			fee_f,
-			refund_f,
-			commitment_f,
-		);
+		let public_inputs =
+			Self::construct_public_inputs(chain_id_f, nullifier_f, root_set_f, arbitrary_input);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;

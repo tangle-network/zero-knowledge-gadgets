@@ -4,10 +4,9 @@ use ark_ff::{PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_snark::SNARK;
 use ark_std::test_rng;
-use arkworks_circuits::circuit::anchor::AnchorCircuit;
-use arkworks_gadgets::{
-	leaf::anchor::{Private, Public},
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+use arkworks_circuits::anchor::AnchorCircuit;
+use arkworks_gadgets::poseidon::{
+	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
 };
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 
@@ -43,11 +42,7 @@ fn setup_and_prove_anchor_groth16() {
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
-	let recipient = Bn254Fr::rand(rng);
-	let relayer = Bn254Fr::rand(rng);
-	let fee = Bn254Fr::rand(rng);
-	let refund = Bn254Fr::rand(rng);
-	let commitment = Bn254Fr::rand(rng);
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
 		curve,
@@ -81,11 +76,7 @@ fn setup_and_prove_anchor_groth16() {
 			&leaves,
 			index,
 			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input,
 			DEFAULT_LEAF,
 		)
 		.unwrap();
@@ -96,14 +87,11 @@ fn setup_and_prove_anchor_groth16() {
 	assert!(
 		res,
 		"Failed to verify  Proof, here is the inputs:
-        recipient = {},
-        relayer = {},
-        fee = {},
-        refund = {},
+        arbitrary_input = {:?},
         public_inputs = {:?},
         proof = {:?},
         ",
-		recipient, relayer, fee, refund, public_inputs, proof
+		arbitrary_input, public_inputs, proof
 	);
 }
 
@@ -117,11 +105,7 @@ fn should_fail_with_invalid_public_inputs() {
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
-	let recipient = Bn254Fr::rand(rng);
-	let relayer = Bn254Fr::rand(rng);
-	let fee = Bn254Fr::rand(rng);
-	let refund = Bn254Fr::rand(rng);
-	let commitment = Bn254Fr::rand(rng);
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
 		curve,
@@ -155,11 +139,7 @@ fn should_fail_with_invalid_public_inputs() {
 			&leaves,
 			index,
 			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input,
 			DEFAULT_LEAF,
 		)
 		.unwrap();
@@ -182,11 +162,7 @@ fn should_fail_with_invalid_set() {
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
-	let recipient = Bn254Fr::rand(rng);
-	let relayer = Bn254Fr::rand(rng);
-	let fee = Bn254Fr::rand(rng);
-	let refund = Bn254Fr::rand(rng);
-	let commitment = Bn254Fr::rand(rng);
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
 		curve,
@@ -211,11 +187,7 @@ fn should_fail_with_invalid_set() {
 			&leaves,
 			index,
 			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input,
 			DEFAULT_LEAF,
 		)
 		.unwrap();
@@ -236,11 +208,7 @@ fn should_fail_with_invalid_leaf() {
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
-	let recipient = Bn254Fr::rand(rng);
-	let relayer = Bn254Fr::rand(rng);
-	let fee = Bn254Fr::rand(rng);
-	let refund = Bn254Fr::rand(rng);
-	let commitment = Bn254Fr::rand(rng);
+	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
 		curve,
@@ -274,11 +242,7 @@ fn should_fail_with_invalid_leaf() {
 			&leaves,
 			index,
 			roots,
-			recipient,
-			relayer,
-			fee,
-			refund,
-			commitment,
+			arbitrary_input,
 			DEFAULT_LEAF,
 		)
 		.unwrap();
@@ -301,15 +265,8 @@ fn should_fail_with_invalid_nullifier_hash() {
 
 	let chain_id_u64 = 1u64;
 	let chain_id = Bn254Fr::from(chain_id_u64);
-	let relayer = Bn254Fr::rand(rng);
-	let recipient = Bn254Fr::rand(rng);
-	let fee = Bn254Fr::rand(rng);
-	let refund = Bn254Fr::rand(rng);
-	let commitment = Bn254Fr::rand(rng);
+	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let arbitrary_input = AnchorR1CSProver_Bn254_Poseidon_30::setup_arbitrary_data(
-		recipient, relayer, fee, refund, commitment,
-	);
 	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
 		curve,
 		chain_id_u64,
@@ -318,10 +275,8 @@ fn should_fail_with_invalid_nullifier_hash() {
 		rng,
 	)
 	.unwrap();
-	let leaf_public = Public::new(chain_id);
 	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaf_private = Private::new(secret, nullifier);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 
 	let nullifier_hash = Bn254Fr::rand(rng);
@@ -337,16 +292,11 @@ fn should_fail_with_invalid_nullifier_hash() {
 	let mut roots_new = [Bn254Fr::from(0u64); ANCHOR_CT];
 	roots_new[0] = tree.root();
 
-	let mc = AnchorCircuit::<
-		Bn254Fr,
-		PoseidonGadget<Bn254Fr>,
-		PoseidonGadget<Bn254Fr>,
-		HEIGHT,
-		ANCHOR_CT,
-	>::new(
+	let mc = AnchorCircuit::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::new(
 		arbitrary_input.clone(),
-		leaf_private,
-		leaf_public,
+		secret,
+		nullifier,
+		chain_id,
 		roots_new,
 		path,
 		nullifier_hash,
@@ -357,11 +307,7 @@ fn should_fail_with_invalid_nullifier_hash() {
 		chain_id,
 		nullifier_hash,
 		roots_new,
-		recipient,
-		relayer,
-		fee,
-		refund,
-		commitment,
+		arbitrary_input,
 	);
 
 	let (pk, vk) = setup_keys::<Bn254, _, _>(mc.clone(), rng).unwrap();

@@ -5,15 +5,10 @@ use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
 use ark_relations::r1cs::ConstraintSynthesizer;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{
-	marker::PhantomData,
 	rand::{CryptoRng, RngCore},
 	vec::Vec,
 };
-use arkworks_gadgets::{
-	identity::{constraints::CRHGadget as IdentityCRHGadget, CRH as IdentityCRH},
-	merkle_tree::{Config as MerkleConfig, SparseMerkleTree},
-	poseidon::{constraints::CRHGadget, field_hasher_constraints::FieldHasherGadget, CRH},
-};
+use tiny_keccak::{Hasher, Keccak};
 
 pub struct VAnchorLeaf {
 	pub chain_id_bytes: Vec<u8>,
@@ -169,4 +164,13 @@ pub fn verify_groth16<E: PairingEngine>(
 ) -> Result<bool, Error> {
 	let res = Groth16::<E>::verify(vk, public_inputs, proof)?;
 	Ok(res)
+}
+
+pub fn keccak_256(input: &[u8]) -> Vec<u8> {
+	let mut keccak = Keccak::v256();
+	keccak.update(&input);
+
+	let mut output = Vec::new();
+	keccak.finalize(&mut output);
+	output
 }
