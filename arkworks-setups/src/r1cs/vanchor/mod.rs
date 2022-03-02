@@ -2,6 +2,7 @@ use crate::{common::*, r1cs::vanchor::utxo::Utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
+use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -96,9 +97,8 @@ impl<
 			chain_id,
 			amount,
 			Some(index),
-			Some(secret_key.into_repr().to_bytes_le()),
-			Some(blinding.into_repr().to_bytes_le()),
-			rng,
+			secret_key.into_repr().to_bytes_le(),
+			blinding.into_repr().to_bytes_le(),
 		)?;
 		let in_utxos: [Utxo<E::Fr>; INS] = [0; INS].map(|_| in_utxo.clone());
 
@@ -107,9 +107,8 @@ impl<
 			chain_id,
 			amount,
 			None,
-			Some(secret_key.into_repr().to_bytes_le()),
-			Some(blinding.into_repr().to_bytes_le()),
-			rng,
+			secret_key.into_repr().to_bytes_le(),
+			blinding.into_repr().to_bytes_le(),
 		)?;
 		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
 
@@ -234,14 +233,14 @@ impl<
 			.collect::<Vec<E::Fr>>();
 		let in_private_keys = in_utxos
 			.iter()
-			.map(|x| x.keypair.private_key.clone())
+			.map(|x| x.private_key.clone())
 			.collect::<Vec<E::Fr>>();
 		let in_nullifiers: Result<Vec<E::Fr>, Error> =
 			in_utxos.iter().map(|x| x.get_nullifier()).collect();
 
 		let out_pub_keys: Result<Vec<E::Fr>, _> = out_utxos
 			.iter()
-			.map(|x| x.keypair.public_key(&keypair_hasher))
+			.map(|x| keypair_hasher.hash(&[x.private_key]))
 			.collect();
 		let out_commitments = out_utxos
 			.iter()
@@ -313,14 +312,13 @@ impl<
 	> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 	for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 {
-	fn create_utxo<R: RngCore>(
+	fn create_utxo(
 		curve: Curve,
 		chain_id: u64,
 		amount: u128,
 		index: Option<u64>,
-		private_key: Option<Vec<u8>>,
-		blinding: Option<Vec<u8>>,
-		rng: &mut R,
+		private_key: Vec<u8>,
+		blinding: Vec<u8>,
 	) -> Result<Utxo<E::Fr>, Error> {
 		// Initialize hashers
 		let params2 = setup_params_x5_2::<E::Fr>(curve);
@@ -330,27 +328,18 @@ impl<
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 
-		let private_key_elt: E::Fr = match private_key {
-			Some(private_key) => E::Fr::from_le_bytes_mod_order(&private_key),
-			None => E::Fr::rand(rng),
-		};
-		let blinding_field_elt: E::Fr = match blinding {
-			Some(blinding) => E::Fr::from_le_bytes_mod_order(&blinding),
-			None => E::Fr::rand(rng),
-		};
-
+		let private_key_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&private_key);
+		let blinding_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&blinding);
 		let amount_elt = E::Fr::from(amount);
-
-		let utxo = Utxo::new(
+		let utxo = Utxo::new_with_privates(
 			chain_id,
 			amount_elt,
 			index,
-			Some(private_key_elt),
-			Some(blinding_field_elt),
+			private_key_elt,
+			blinding_field_elt,
 			&keypair_hasher,
 			&nullifier_hasher,
 			&leaf_hasher,
-			rng,
 		)?;
 		Ok(utxo)
 	}
@@ -458,4 +447,34 @@ impl<
 			proof,
 		})
 	}
+
+	fn create_random_utxo<R: RngCore + CryptoRng>(
+		curve: Curve,
+		chain_id: u64,
+		amount: u128,
+		index: Option<u64>,
+		rng: &mut R,
+	) -> Result<Utxo<<E as PairingEngine>::Fr>, Error> {
+		// Initialize hashers
+		let params2 = setup_params_x5_2::<E::Fr>(curve);
+		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
+		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
+		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
+
+		let amount_elt = E::Fr::from(amount);
+		let utxo = Utxo::new(
+			chain_id,
+			amount_elt,
+			index,
+			None,
+			None,
+			&keypair_hasher,
+			&nullifier_hasher,
+			&leaf_hasher,
+			rng,
+		)?;
+		Ok(utxo)        
+    }
 }

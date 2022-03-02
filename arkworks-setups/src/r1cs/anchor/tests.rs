@@ -44,11 +44,9 @@ fn setup_and_prove_anchor_groth16() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
+	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
 		curve,
 		chain_id_u64,
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -107,11 +105,9 @@ fn should_fail_with_invalid_public_inputs() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
+	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
 		curve,
 		chain_id_u64,
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -164,11 +160,9 @@ fn should_fail_with_invalid_set() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
+	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
 		curve,
 		chain_id_u64,
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -210,11 +204,9 @@ fn should_fail_with_invalid_leaf() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
+	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
 		curve,
 		chain_id_u64,
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -267,11 +259,9 @@ fn should_fail_with_invalid_nullifier_hash() {
 	let chain_id = Bn254Fr::from(chain_id_u64);
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_leaf_with_privates(
+	let leaf = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
 		curve,
 		chain_id_u64,
-		None,
-		None,
 		rng,
 	)
 	.unwrap();

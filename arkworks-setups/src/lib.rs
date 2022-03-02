@@ -24,10 +24,14 @@ pub mod plonk;
 trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
 	// For creating leaves where we supply the secret and the nullifier, for
 	// generating new values, pass None
-	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+	fn create_leaf_with_privates(
 		curve: Curve,
-		secret: Option<Vec<u8>>,
-		nullifier: Option<Vec<u8>>,
+		secret: Vec<u8>,
+		nullifier: Vec<u8>,
+	) -> Result<MixerLeaf, Error>;
+	/// Create random leaf
+	fn create_random_leaf<R: RngCore + CryptoRng>(
+		curve: Curve,
 		rng: &mut R,
 	) -> Result<MixerLeaf, Error>;
 	// For making proofs
@@ -50,11 +54,16 @@ trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
 trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
 	// For creating leaves where we supply the chain_id, secret and the nullifier,
 	// for generating new values, pass None
-	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+	fn create_leaf_with_privates(
 		curve: Curve,
 		chain_id: u64,
-		secret: Option<Vec<u8>>,
-		nullifier: Option<Vec<u8>>,
+		secret: Vec<u8>,
+		nullifier: Vec<u8>,
+	) -> Result<AnchorLeaf, Error>;
+	/// Create random leaf
+	fn create_random_leaf<R: RngCore + CryptoRng>(
+		curve: Curve,
+		chain_id: u64,
 		rng: &mut R,
 	) -> Result<AnchorLeaf, Error>;
 	// For making proofs
@@ -83,32 +92,45 @@ trait VAnchorProver<
 	const ANCHOR_CT: usize,
 	const INS: usize,
 	const OUTS: usize,
->
-{
-	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+> {
+	fn create_leaf_with_privates(
 		curve: Curve,
 		chain_id: u64,
 		amount: u128,
 		index: Option<u64>,
-		private_key: Option<Vec<u8>>,
-		blinding: Option<Vec<u8>>,
+		private_key: Vec<u8>,
+		blinding: Vec<u8>,
+	) -> Result<Utxo<E::Fr>, Error> {
+		Self::create_utxo(curve, chain_id, amount, index, private_key, blinding)
+	}
+	/// Create random leaf
+	fn create_random_leaf<R: RngCore + CryptoRng>(
+		curve: Curve,
+		chain_id: u64,
+		amount: u128,
+		index: Option<u64>,
 		rng: &mut R,
 	) -> Result<Utxo<E::Fr>, Error> {
-		Self::create_utxo(curve, chain_id, amount, index, private_key, blinding, rng)
+		Self::create_random_utxo(curve, chain_id, amount, index, rng)
 	}
-	// For creating fresh utxo, or create a new one by passing values for secret key
-	// and blinding
-	fn create_utxo<R: RngCore>(
+	/// For creating UTXO from all the secrets already generated
+	fn create_utxo(
 		curve: Curve,
 		chain_id: u64,
 		amount: u128,
 		index: Option<u64>,
-		private_key: Option<Vec<u8>>,
-		blinding: Option<Vec<u8>>,
+		private_key: Vec<u8>,
+		blinding: Vec<u8>,
+	) -> Result<Utxo<E::Fr>, Error>;
+	/// For creating UTXO from all the secrets already generated
+	fn create_random_utxo<R: RngCore + CryptoRng>(
+		curve: Curve,
+		chain_id: u64,
+		amount: u128,
+		index: Option<u64>,
 		rng: &mut R,
 	) -> Result<Utxo<E::Fr>, Error>;
-
-	// For making proofs
+	/// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,

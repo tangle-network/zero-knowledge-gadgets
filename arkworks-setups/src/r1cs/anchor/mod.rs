@@ -71,7 +71,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let chain_id = 1u64;
 		let chain_id_f = E::Fr::from(chain_id);
 		// Generate the leaf
-		let leaf = Self::create_leaf_with_privates(curve, chain_id, None, None, rng)?;
+		let leaf = Self::create_random_leaf(curve, chain_id, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
 
 		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
@@ -276,12 +276,11 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	AnchorProver<E, HEIGHT, ANCHOR_CT> for AnchorR1CSProver<E, HEIGHT, ANCHOR_CT>
 {
-	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+	fn create_leaf_with_privates(
 		curve: Curve,
 		chain_id: u64,
-		secret: Option<Vec<u8>>,
-		nullifier: Option<Vec<u8>>,
-		rng: &mut R,
+		secret: Vec<u8>,
+		nullifier: Vec<u8>,
 	) -> Result<AnchorLeaf, Error> {
 		// Initialize hashers
 		let params3 = setup_params_x5_3::<E::Fr>(curve);
@@ -289,14 +288,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 
-		let secret_field_elt: E::Fr = match secret {
-			Some(secret) => E::Fr::from_le_bytes_mod_order(&secret),
-			None => E::Fr::rand(rng),
-		};
-		let nullifier_field_elt: E::Fr = match nullifier {
-			Some(nullifier) => E::Fr::from_le_bytes_mod_order(&nullifier),
-			None => E::Fr::rand(rng),
-		};
+		let secret_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&secret);
+		let nullifier_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&nullifier);
 		let chain_id_elt = E::Fr::from(chain_id);
 		let leaf_field_element =
 			leaf_hasher.hash(&[chain_id_elt, nullifier_field_elt, secret_field_elt])?;
@@ -355,7 +348,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..
-		} = Self::create_leaf_with_privates(curve, chain_id, Some(secret), Some(nullifier), rng)?;
+		} = Self::create_leaf_with_privates(curve, chain_id, secret, nullifier)?;
 		// Setup the tree and generate the path
 		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
 			tree_hasher.clone(),
@@ -400,4 +393,14 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			proof,
 		})
 	}
+
+	fn create_random_leaf<R: RngCore + CryptoRng>(
+		curve: Curve,
+		chain_id: u64,
+		rng: &mut R,
+	) -> Result<AnchorLeaf, Error> {
+        let secret = E::Fr::rand(rng);
+		let nullifier = E::Fr::rand(rng);
+		Self::create_leaf_with_privates(curve, chain_id, secret.into_repr().to_bytes_le(), nullifier.into_repr().to_bytes_le())
+    }
 }

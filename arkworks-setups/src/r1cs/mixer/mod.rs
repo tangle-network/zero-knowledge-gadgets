@@ -81,7 +81,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 
 		let arbitrary_input = E::Fr::rand(rng);
 		// Generate the leaf
-		let leaf = Self::create_leaf_with_privates(curve, None, None, rng)?;
+		let leaf = Self::create_random_leaf(curve, rng)?;
 		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
 
 		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
@@ -250,20 +250,13 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 }
 
 impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CSProver<E, HEIGHT> {
-	fn create_leaf_with_privates<R: RngCore + CryptoRng>(
+	fn create_leaf_with_privates(
 		curve: Curve,
-		secret: Option<Vec<u8>>,
-		nullifier: Option<Vec<u8>>,
-		rng: &mut R,
+		secret: Vec<u8>,
+		nullifier: Vec<u8>,
 	) -> Result<MixerLeaf, Error> {
-		let secret_field_elt: E::Fr = match secret {
-			Some(secret) => E::Fr::from_le_bytes_mod_order(&secret),
-			None => E::Fr::rand(rng),
-		};
-		let nullifier_field_elt: E::Fr = match nullifier {
-			Some(nullifier) => E::Fr::from_le_bytes_mod_order(&nullifier),
-			None => E::Fr::rand(rng),
-		};
+		let secret_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&secret);
+		let nullifier_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&nullifier);
 
 		let params3 = setup_params_x5_3(curve);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
@@ -314,7 +307,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..
-		} = Self::create_leaf_with_privates(curve, Some(secret), Some(nullifier), rng)?;
+		} = Self::create_leaf_with_privates(curve, secret, nullifier)?;
 		// Setup the tree and generate the path
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
 			poseidon.clone(),
@@ -353,4 +346,13 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 			proof,
 		})
 	}
+
+	fn create_random_leaf<R: RngCore + CryptoRng>(
+		curve: Curve,
+		rng: &mut R,
+	) -> Result<MixerLeaf, Error> {
+        let secret = E::Fr::rand(rng);
+		let nullifier = E::Fr::rand(rng);
+		Self::create_leaf_with_privates(curve, secret.into_repr().to_bytes_le(), nullifier.into_repr().to_bytes_le())
+    }
 }
