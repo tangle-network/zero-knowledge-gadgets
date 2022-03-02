@@ -4,6 +4,7 @@ use ark_relations::{
 	r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
 };
 
+/// Defines DummyCircuit to show how the interfaces should be used
 #[derive(Copy)]
 struct DummyCircuit<F: PrimeField> {
 	pub a: Option<F>,
@@ -12,6 +13,7 @@ struct DummyCircuit<F: PrimeField> {
 	pub num_constraints: usize,
 }
 
+/// constructor for DummyCircuit
 impl<F: PrimeField> Clone for DummyCircuit<F> {
 	fn clone(&self) -> Self {
 		DummyCircuit {
@@ -23,10 +25,18 @@ impl<F: PrimeField> Clone for DummyCircuit<F> {
 	}
 }
 
+/// Implements R1CS constraint generation for MixerCircuit
+/// TODO add link to basic.rs for example implementation of
+/// ConstraintSynthesizer
+///
+/// witnesses are private inputs to the circuit
+/// inputs are public inputs to the circuit
 impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
+		// witnesses are private values
 		let a = cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;
 		let b = cs.new_witness_variable(|| self.b.ok_or(SynthesisError::AssignmentMissing))?;
+		// inputs are PUBLIC values
 		let c = cs.new_input_variable(|| {
 			let a = self.a.ok_or(SynthesisError::AssignmentMissing)?;
 			let b = self.b.ok_or(SynthesisError::AssignmentMissing)?;

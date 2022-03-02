@@ -5,6 +5,13 @@ use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, uint8::UInt8};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::marker::PhantomData;
 
+/// Defines a PoseidonCircuit struct that hold all the information thats needed
+/// to verify the following statement:
+///
+/// * Hash(a, b) == c
+///
+/// Needs to implement ConstraintSynthesizer and a
+/// constructor to generate proper constraints
 #[derive(Copy)]
 struct PoseidonCircuit<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> {
 	pub a: F,
@@ -14,6 +21,8 @@ struct PoseidonCircuit<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> {
 	hasher: PhantomData<H>,
 	hasher_gadget: PhantomData<HG>,
 }
+
+/// Constructor for PoseidonCircuit
 #[allow(dead_code)]
 impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> PoseidonCircuit<F, H, HG> {
 	pub fn new(a: F, b: F, c: H::Output, params: H::Parameters) -> Self {
@@ -41,6 +50,9 @@ impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> Clone for PoseidonCir
 	}
 }
 
+/// Implements R1CS constraint generation for PoseidonCircuit
+/// TODO add link to basic.rs for example implementation of
+/// ConstraintSynthesizer
 impl<F: PrimeField, H: CRHTrait, HG: CRHTraitGadget<H, F>> ConstraintSynthesizer<F>
 	for PoseidonCircuit<F, H, HG>
 {

@@ -6,17 +6,31 @@ use arkworks_gadgets::{
 	poseidon::field_hasher_constraints::FieldHasherGadget,
 };
 
+/// Defines a MixerCircuit struct that hold all the information thats needed to
+/// verify the following statement:
+/// TODO check commitment order
+/// * Alice knows a witness tuple (secret, nullifier, merklePath) such that with
+/// public input
+/// * root_set Hash(secret, nullifier) is inside a merkle tree.
+///
+/// Needs to implement ConstraintSynthesizer and a
+/// constructor to generate proper constraints
 #[derive(Clone)]
 pub struct MixerCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize> {
+	// Represents the hash of recepient + relayer + fee + refunds + commitment
 	arbitrary_input: F,
 	secret: F,
 	nullifier: F,
+	// Merkle path to transaction
 	path: Path<F, HG::Native, N>,
+	// Merkle root with transaction in it
 	root: F,
+	// Nullifier hash to prevent double spending
 	nullifier_hash: F,
 	hasher: HG::Native,
 }
 
+/// Constructor for a MixerCiruit
 impl<F, HG, const N: usize> MixerCircuit<F, HG, N>
 where
 	F: PrimeField,
@@ -43,6 +57,9 @@ where
 	}
 }
 
+/// Implements R1CS constraint generation for MixerCircuit
+/// TODO add link to basic.rs for example implementation of
+/// ConstraintSynthesizer
 impl<F, HG, const N: usize> ConstraintSynthesizer<F> for MixerCircuit<F, HG, N>
 where
 	F: PrimeField,

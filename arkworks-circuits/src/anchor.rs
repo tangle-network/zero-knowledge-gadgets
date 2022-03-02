@@ -1,26 +1,43 @@
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
-use ark_std::{vec::Vec};
+use ark_std::vec::Vec;
 use arkworks_gadgets::{
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
 	poseidon::field_hasher_constraints::FieldHasherGadget,
 	set::constraints::SetGadget,
 };
 
+/// Defines a AnchorCircuit struct that hold all the information thats needed to
+/// verify the following statement:
+/// TODO check commitment order
+/// * Alice knows a witness tuple (secret, nullifier, merklePath) such that with
+/// public inputs chain_id  
+/// * Hash(chain_id, secret, nullifier) is
+/// inside a transaction in a one-of-many merkle tree.
+///
+/// Needs to implement ConstraintSynthesizer and a
+/// constructor to generate proper constraints
 #[derive(Clone)]
 pub struct AnchorCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize, const M: usize> {
+	// Represents the hash of recepient + relayer + fee + refunds + commitment
 	arbitrary_input: F,
 	secret: F,
 	nullifier: F,
+	// source chain_id
 	chain_id: F,
+	// Merkle root set to use on one-of-many proof
 	root_set: [F; M],
+	// Merkle path to transaction
 	path: Path<F, HG::Native, N>,
 	nullifier_hash: F,
+	// 3 input poseidon hasher
 	hasher3: HG::Native,
+	// 4 input poseidon hasher
 	hasher4: HG::Native,
 }
 
+/// Constructor for a AnchorCiruit
 impl<F, HG, const N: usize, const M: usize> AnchorCircuit<F, HG, N, M>
 where
 	F: PrimeField,
@@ -52,6 +69,9 @@ where
 	}
 }
 
+/// Implements R1CS constraint generation for AnchorCircuit
+/// TODO add link to basic.rs for example implementation of
+/// ConstraintSynthesizer
 impl<F, HG, const N: usize, const M: usize> ConstraintSynthesizer<F> for AnchorCircuit<F, HG, N, M>
 where
 	F: PrimeField,

@@ -10,18 +10,23 @@ use ark_std::{
 };
 use tiny_keccak::{Hasher, Keccak};
 
+/// Defines a leaf for the VAnchor contract
 pub struct VAnchorLeaf {
 	pub chain_id_bytes: Vec<u8>,
 	pub amount: u128,
-	pub public_key_bytes: Vec<u8>,
 	pub blinding_bytes: Vec<u8>,
+	// TODO check if this should actually be here
+	pub public_key_bytes: Vec<u8>,
+	// TODO check if this should actually be here
 	pub index: u32,
+	// TODO check if this should actually be here
 	pub private_key_bytes: Vec<u8>,
 	pub nullifier_bytes: Vec<u8>,
 	pub leaf_bytes: Vec<u8>,
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
+/// Defines a leaf for the Anchor contract
 pub struct AnchorLeaf {
 	pub chain_id_bytes: Vec<u8>,
 	pub secret_bytes: Vec<u8>,
@@ -30,6 +35,7 @@ pub struct AnchorLeaf {
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
+/// Defines a leaf for the Mixer contract
 pub struct MixerLeaf {
 	pub secret_bytes: Vec<u8>,
 	pub nullifier_bytes: Vec<u8>,
@@ -37,11 +43,14 @@ pub struct MixerLeaf {
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
+/// Defines a proof for the VAnchor contract
 pub struct VAnchorProof {
 	pub proof: Vec<u8>,
 	pub public_inputs_raw: Vec<Vec<u8>>,
+	// TODO check why this has less parameters than the others
 }
 
+/// Defines a proof for the Anchor contract
 pub struct AnchorProof {
 	pub proof: Vec<u8>,
 	pub leaf_raw: Vec<u8>,
@@ -50,6 +59,7 @@ pub struct AnchorProof {
 	pub public_inputs_raw: Vec<Vec<u8>>,
 }
 
+/// Defines a proof for the Anchor contract
 pub struct MixerProof {
 	pub proof: Vec<u8>,
 	pub leaf_raw: Vec<u8>,
@@ -63,6 +73,9 @@ pub struct Keys {
 	pub vk: Vec<u8>,
 }
 
+/// Set's up the safe version of the circuit specific setup required by
+/// Groth16. This performs validity checks and should only be used if the
+/// input is from unknown source
 pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng, C: ConstraintSynthesizer<E::Fr>>(
 	circuit: C,
 	rng: &mut R,
@@ -76,6 +89,9 @@ pub fn setup_keys<E: PairingEngine, R: RngCore + CryptoRng, C: ConstraintSynthes
 	Ok((pk_bytes, vk_bytes))
 }
 
+/// Set's up the trusting version of the circuit specific setup required by
+/// Groth16. This doesn't perform validity checks and should only be used if the
+/// input is trustable
 pub fn setup_keys_unchecked<
 	E: PairingEngine,
 	R: RngCore + CryptoRng,
@@ -93,6 +109,7 @@ pub fn setup_keys_unchecked<
 	Ok((pk_bytes, vk_bytes))
 }
 
+/// Set's up the safe version of the proof generation for Groth16.
 pub fn prove<E: PairingEngine, R: RngCore + CryptoRng, C: ConstraintSynthesizer<E::Fr>>(
 	circuit: C,
 	pk_bytes: &[u8],
@@ -106,6 +123,9 @@ pub fn prove<E: PairingEngine, R: RngCore + CryptoRng, C: ConstraintSynthesizer<
 	Ok(proof_bytes)
 }
 
+/// Set's up the trusting version of the proof generation for Groth16.
+/// This doesn't perform validity checks and should only be used if the
+/// input is trustable
 pub fn prove_unchecked<
 	E: PairingEngine,
 	R: RngCore + CryptoRng,
@@ -123,6 +143,7 @@ pub fn prove_unchecked<
 	Ok(proof_bytes)
 }
 
+/// Set's up the safe version of the proof verification for Groth16.
 pub fn verify<E: PairingEngine>(
 	public_inputs: &[E::Fr],
 	vk_bytes: &[u8],
@@ -133,6 +154,9 @@ pub fn verify<E: PairingEngine>(
 	verify_groth16(&vk, &public_inputs, &proof)
 }
 
+/// Set's up the trusting version of the proof verification for Groth16.
+/// This doesn't perform validity checks and should only be used if the
+/// input is trustable
 pub fn verify_unchecked<E: PairingEngine>(
 	public_inputs: &[E::Fr],
 	vk_unchecked_bytes: &[u8],
