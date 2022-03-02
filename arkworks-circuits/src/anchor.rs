@@ -1,7 +1,7 @@
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
-use ark_std::{vec::Vec};
+use ark_std::vec::Vec;
 use arkworks_gadgets::{
 	merkle_tree::{simple_merkle::Path, simple_merkle_constraints::PathVar},
 	poseidon::field_hasher_constraints::FieldHasherGadget,
