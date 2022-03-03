@@ -8,7 +8,7 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 
 #[derive(Debug)]
 pub enum UtxoError {
