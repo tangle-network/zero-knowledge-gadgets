@@ -1,3 +1,4 @@
+use crate::keypair::{EncryptedData, Keypair};
 use ark_crypto_primitives::Error;
 use ark_ff::{to_bytes, PrimeField};
 use ark_std::{
@@ -6,7 +7,6 @@ use ark_std::{
 	string::ToString,
 	vec::Vec,
 };
-use crate::keypair::{EncryptedData, Keypair};
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 
 #[derive(Debug)]

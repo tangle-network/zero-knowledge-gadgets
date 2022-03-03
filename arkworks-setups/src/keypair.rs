@@ -1,3 +1,4 @@
+use ark_crypto_primitives::Error;
 use ark_ff::{to_bytes, PrimeField};
 use ark_std::{
 	convert::TryInto,
@@ -7,11 +8,10 @@ use ark_std::{
 	string::ToString,
 	vec::Vec,
 };
-use ark_crypto_primitives::Error;
 use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
-
+use codec::{Decode, Encode};
 use crypto_box::{
-	aead::{generic_array::GenericArray, Aead, Payload},
+	aead::{generic_array::GenericArray, Aead, AeadCore, Payload},
 	generate_nonce, ChaChaBox, PublicKey, SecretKey,
 };
 
@@ -20,6 +20,8 @@ pub enum KeypairError {
 	EncryptionFailed,
 	DecryptionFailed,
 	SecretKeyParseFailed,
+	DecodeFailed,
+	EncodeFailed,
 }
 
 impl core::fmt::Display for KeypairError {
@@ -28,6 +30,8 @@ impl core::fmt::Display for KeypairError {
 			KeypairError::EncryptionFailed => "Data encryption failed".to_string(),
 			KeypairError::DecryptionFailed => "Data decryption failed".to_string(),
 			KeypairError::SecretKeyParseFailed => "Failed to parse secret key".to_string(),
+			KeypairError::DecodeFailed => "Failed to decode encrypted data".to_string(),
+			KeypairError::EncodeFailed => "Failed to encode encrypted data".to_string(),
 		};
 		write!(f, "{}", msg)
 	}
@@ -35,10 +39,68 @@ impl core::fmt::Display for KeypairError {
 
 impl ArkError for KeypairError {}
 
+type NonceSize = <ChaChaBox as AeadCore>::NonceSize;
+type Nonce = GenericArray<u8, NonceSize>;
 pub struct EncryptedData {
-	pub nonce: Vec<u8>,
-	pub ephemeral_pk: Vec<u8>,
+	pub nonce: Nonce,
+	pub ephemeral_pk: PublicKey,
 	pub cypher_text: Vec<u8>,
+}
+
+impl Decode for EncryptedData {
+	fn decode<I: codec::Input>(input: &mut I) -> Result<Self, codec::Error> {
+		// Getting the size of Nonce
+		const NONCE_LEN: usize = core::mem::size_of::<Nonce>();
+		// Getting the size of pub key
+		const PUB_KEY_LEN: usize = core::mem::size_of::<PublicKey>();
+		let mut nonce_data = [0u8; NONCE_LEN];
+		let mut ephemeral_pk_data = [0u8; PUB_KEY_LEN];
+
+		// Reading the data for nonce and public key
+		input.read(&mut nonce_data)?;
+		input.read(&mut ephemeral_pk_data)?;
+
+		// Getting the length of the remaining data
+		let remaining_len: usize = input.remaining_len()?.unwrap_or(0usize);
+		let mut cypher_text_data = vec![0u8; remaining_len];
+
+		// Use the remaining data as cypher text
+		input.read(&mut cypher_text_data)?;
+
+		let nonce: Nonce = *GenericArray::<u8, NonceSize>::from_slice(&nonce_data);
+		let ephemeral_pk: PublicKey = PublicKey::from(ephemeral_pk_data);
+		let cypher_text = cypher_text_data.to_vec();
+
+		Ok(Self {
+			nonce,
+			ephemeral_pk,
+			cypher_text,
+		})
+	}
+}
+
+impl Encode for EncryptedData {
+	fn encode(&self) -> Vec<u8> {
+		const NONCE_LEN: usize = core::mem::size_of::<Nonce>();
+		const PUB_KEY_LEN: usize = core::mem::size_of::<PublicKey>();
+
+		// Initialize return array
+		let mut ret = vec![0u8; self.encoded_size()];
+
+		// Populate it with data
+		ret[0..NONCE_LEN].copy_from_slice(&self.nonce.as_slice());
+		ret[NONCE_LEN..(NONCE_LEN + PUB_KEY_LEN)].copy_from_slice(self.ephemeral_pk.as_bytes());
+		ret[(NONCE_LEN + PUB_KEY_LEN)..].copy_from_slice(&self.cypher_text);
+
+		ret
+	}
+
+	fn encoded_size(&self) -> usize {
+		const NONCE_LEN: usize = core::mem::size_of::<Nonce>();
+		const PUB_KEY_LEN: usize = core::mem::size_of::<PublicKey>();
+		let cypher_text_len = self.cypher_text.len();
+		NONCE_LEN + PUB_KEY_LEN + cypher_text_len
+	}
 }
 
 #[derive(Default, Debug, Copy)]
@@ -48,8 +110,8 @@ pub struct Keypair<F: PrimeField, H: FieldHasher<F>> {
 }
 
 impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
-    pub fn new(secret_key: F) -> Self {
-    Self {
+	pub fn new(secret_key: F) -> Self {
+		Self {
 			secret_key,
 			_h: PhantomData,
 		}
@@ -57,18 +119,13 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 
 	pub fn public_key(&self, hasher2: &H) -> Result<F, Error> {
 		let res = hasher2.hash(&[self.secret_key])?;
-        Ok(res)
+		Ok(res)
 	}
 
 	// Computes the signature = hash(privKey, commitment, pathIndices)
-	pub fn signature(
-		&self,
-		commitment: &F,
-		index: &F,
-		hasher4: &H,
-	) -> Result<F, Error> {
-        let res = hasher4.hash(&[self.secret_key.clone(), commitment.clone(), index.clone()])?;
-        Ok(res)
+	pub fn signature(&self, commitment: &F, index: &F, hasher4: &H) -> Result<F, Error> {
+		let res = hasher4.hash(&[self.secret_key.clone(), commitment.clone(), index.clone()])?;
+		Ok(res)
 	}
 
 	pub fn encrypt<R: RngCore + CryptoRng>(
@@ -105,9 +162,9 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 			.map_err::<KeypairError, _>(|_| KeypairError::EncryptionFailed.into())?;
 
 		Ok(EncryptedData {
-			nonce: nonce.as_slice().to_vec(),
+			nonce,
 			cypher_text: ct,
-			ephemeral_pk: ephemeral_pk.as_bytes().to_vec(),
+			ephemeral_pk,
 		})
 	}
 
@@ -121,13 +178,7 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 		let secret_key = SecretKey::from(sc_bytes);
 
 		// Making ephemeral public key from the encryption data
-		let eph_bytes = &encrypted_data.ephemeral_pk[..];
-		let ephemeral_pk_bytes: [u8; 32] = eph_bytes
-			.try_into()
-			.map_err(|_| KeypairError::DecryptionFailed)?;
-		let ephemeral_pk = PublicKey::from(ephemeral_pk_bytes);
-
-		let my_box = ChaChaBox::new(&ephemeral_pk, &secret_key);
+		let my_box = ChaChaBox::new(&encrypted_data.ephemeral_pk, &secret_key);
 
 		// Converting nonce into proper type
 		let nonce = GenericArray::from_slice(&encrypted_data.nonce);
@@ -152,12 +203,13 @@ impl<F: PrimeField, H: FieldHasher<F>> Clone for Keypair<F, H> {
 
 #[cfg(test)]
 mod test {
-    use ark_std::{UniformRand, Zero};
 	use ark_bn254::Fq;
-	use arkworks_gadgets::poseidon::field_hasher::{Poseidon, FieldHasher};
+	use ark_std::{test_rng, UniformRand, Zero};
+	use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
 	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
+	use codec::{Decode, Encode};
 
-	use ark_std::test_rng;
+	use crate::keypair::EncryptedData;
 
 	use super::Keypair;
 
@@ -206,6 +258,22 @@ mod test {
 		let msg = vec![1, 2, 3];
 		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
 		let plaintext = keypair.decrypt(&encrypted_data).unwrap();
+
+		assert_eq!(plaintext, msg);
+	}
+
+	#[test]
+	fn should_encode_decode_encrypted_data() {
+		let rng = &mut test_rng();
+
+		let private_key = Fq::rand(rng);
+		let keypair = Keypair::<Fq, Poseidon<Fq>>::new(private_key.clone());
+
+		let msg = vec![1, 2, 3];
+		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
+		let encoded_ed = encrypted_data.encode();
+		let decoded_ed = EncryptedData::decode(&mut &encoded_ed[..]).unwrap();
+		let plaintext = keypair.decrypt(&decoded_ed).unwrap();
 
 		assert_eq!(plaintext, msg);
 	}
