@@ -12,6 +12,7 @@ use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
 use utxo::Utxo;
 
 pub mod common;
+pub mod keypair;
 pub mod utxo;
 
 #[cfg(feature = "r1cs")]
