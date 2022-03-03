@@ -10,13 +10,23 @@ use arkworks_gadgets::{
 };
 use core::cmp::Ordering::Less;
 
-/// Defines a VAnchorCircuit struct that hold all the information thats needed to
-/// verify the following statement:
-/// TODO Check commitment order
-/// * Alice knows a witness tuple (secret, nullifier, publicAmount, merklePath) such that with
-/// public inputs chain_id 
-/// * root_set Hash(chain_id, secret, publicAmount, nullifier) is
+/// Defines a VAnchorCircuit struct that hold all the information thats needed
+/// to verify the following statement:
+/// * Alice knows a witness tuple (in_amounts, in_blindings, in_private_keys,
+///   in_path_elements, in_path_indices)
+///
+/// * public inputs are: (public_amount, arbitrary_input, in_nullifier,
+///   out_commitment, in_chain_id, root_set)
+///
+/// Prove that Hash(chain_id, secret, publicAmount, nullifier) is
 /// inside a one-of-many merkle tree.
+///
+/// The Commitment is hashed in the following order
+/// commitment = hash(chainID, amount, pubKey, blinding)
+///
+/// The nullifier is hashed in the following order
+/// nullifier = hash(commitment, merklePath, sign(privKey, commitment,
+/// merklePath))
 ///
 /// Needs to implement ConstraintSynthesizer and a
 /// constructor to generate proper constraints
@@ -82,7 +92,7 @@ where
 		out_commitment: Vec<F>,
 		out_amounts: Vec<F>,
 		out_blindings: Vec<F>,
-		out_chAnchorCircuit<ain_ids: Vec<F>,
+		out_chain_ids: Vec<F>,
 		out_pubkey: Vec<F>,
 		tree_hasher: HG::Native,
 		keypair_hasher: HG::Native,
@@ -123,7 +133,8 @@ where
 		Ok(())
 	}
 
-	/// Verify utxo integrity. Checking if input_amount + public input == output_amount
+	/// Verify utxo integrity. Checking if input_amount + public input ==
+	/// output_amount
 	pub fn verify_input_invariant(
 		public_amount_var: &FpVar<F>,
 		sum_ins_var: &FpVar<F>,
@@ -136,7 +147,8 @@ where
 }
 
 /// Implements R1CS constraint generation for VAnchorCircuit
-/// TODO add link to basic.rs for example implementation of ConstraintSynthesizer
+/// TODO add link to basic.rs for example implementation of
+/// ConstraintSynthesizer
 impl<
 		F,
 		HG,
