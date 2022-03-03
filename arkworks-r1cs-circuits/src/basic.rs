@@ -1,9 +1,11 @@
+//! Dummy example to show how interfaces should be used
 use ark_ff::PrimeField;
 use ark_relations::{
 	lc,
 	r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
 };
 
+/// Defines `DummyCircuit`
 #[derive(Copy)]
 struct DummyCircuit<F: PrimeField> {
 	pub a: Option<F>,
@@ -12,6 +14,7 @@ struct DummyCircuit<F: PrimeField> {
 	pub num_constraints: usize,
 }
 
+/// constructor for DummyCircuit
 impl<F: PrimeField> Clone for DummyCircuit<F> {
 	fn clone(&self) -> Self {
 		DummyCircuit {
@@ -23,6 +26,11 @@ impl<F: PrimeField> Clone for DummyCircuit<F> {
 	}
 }
 
+/// Implementation of the `ConstraintSynthesizer` trait for the `DummyCircuit`
+/// https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
+///
+/// This is the main function that is called by the `R1CS` library to generate
+/// the constraints for the `DummyCircuit`.
 impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let a = cs.new_witness_variable(|| self.a.ok_or(SynthesisError::AssignmentMissing))?;

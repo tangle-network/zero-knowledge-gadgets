@@ -1,3 +1,22 @@
+//! VAnchor is the variable deposit/withdraw/transfer shielded pool
+//! It supports join split transactions, meaning you can take unspent deposits
+//! in the pool and join them together, split them, and any combination
+//! of the two.
+
+//! The inputs to the VAnchor are unspent outputs we want to spend (we are
+//! spending the inputs), and we create outputs which are new, unspent UTXOs. We
+//! create commitments for each output and these are inserted into merkle trees.
+
+//! The VAnchor is also a bridged system. It takes as a public input
+//! a set of merkle roots that it will use to verify the membership
+//! of unspent deposits within. The VAnchor prevents double-spending
+//! through the use of a public input chain identifier `chain_id`.
+
+//! We will take inputs and do a merkle tree reconstruction for each input.
+//! Then we will verify that the reconstructed root from each input's
+//! membership path is within a set of public merkle roots.
+//!
+//! This is the Groth16 version of the VAnchor implementation.
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -6,6 +25,16 @@ use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 use core::cmp::Ordering::Less;
 
+/// Defines a VAnchorCircuit struct that hold all the information thats needed
+/// to verify the following statements:
+/// * Alice knows a witness tuple `(in_amounts, in_blindings, in_private_keys,
+///   in_path_elements, in_path_indices)` and a commitment_hash `Hash(chain_id,
+///   amount, pub_key, blinding)` stored in one of the valid VAnchor merkle
+///   trees
+/// * The VAnchor contract hasn't seen this nullifier_hash before.
+///
+/// Needs to implement ConstraintSynthesizer and a
+/// constructor to generate proper constraints
 #[derive(Clone)]
 pub struct VAnchorCircuit<
 	F: PrimeField,
@@ -40,6 +69,7 @@ pub struct VAnchorCircuit<
 	nullifier_hasher: HG::Native,
 }
 
+/// Constructor for VAnchorCircuit
 impl<
 		F,
 		HG,

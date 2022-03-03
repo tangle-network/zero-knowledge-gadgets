@@ -1,8 +1,18 @@
+//! Poseidon hasher circuit to prove Hash(a, b) == c
+//!
+//! This is the Groth16 setup implementation of Poseidon
 use ark_ff::PrimeField;
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, fields::fp::FpVar};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use arkworks_r1cs_gadgets::poseidon::FieldHasherGadget;
 
+/// Defines a `PoseidonCircuit` struct that hold all the information thats
+/// needed to verify the following statement:
+///
+/// * `Hash(a, b) == c`
+///
+/// Needs to implement `ConstraintSynthesizer` and a
+/// constructor to generate proper constraints
 #[derive(Copy)]
 struct PoseidonCircuit<F: PrimeField, HG: FieldHasherGadget<F>> {
 	pub a: F,
@@ -10,6 +20,8 @@ struct PoseidonCircuit<F: PrimeField, HG: FieldHasherGadget<F>> {
 	pub c: F,
 	hasher: HG::Native,
 }
+
+/// Constructor for PoseidonCircuit
 #[allow(dead_code)]
 impl<F: PrimeField, HG: FieldHasherGadget<F>> PoseidonCircuit<F, HG> {
 	pub fn new(a: F, b: F, c: F, hasher: HG::Native) -> Self {
@@ -28,6 +40,11 @@ impl<F: PrimeField, HG: FieldHasherGadget<F>> Clone for PoseidonCircuit<F, HG> {
 	}
 }
 
+/// Implementation of the `ConstraintSynthesizer` trait for the
+/// `PoseidonCircuit` https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
+///
+/// This is the main function that is called by the `R1CS` library to generate
+/// the constraints for the `PoseidonCircuit`.
 impl<F: PrimeField, HG: FieldHasherGadget<F>> ConstraintSynthesizer<F> for PoseidonCircuit<F, HG> {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let a = FpVar::new_witness(cs.clone(), || Ok(self.a))?;

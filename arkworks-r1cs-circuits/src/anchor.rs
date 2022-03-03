@@ -1,3 +1,11 @@
+//! Anchor is the fixed deposit/withdraw pool.
+//! It allows for users to deposit tokens on one chain and withdraw in another
+//! one without a link from the deposit to the withdrawal.
+
+//! We wil take inputs and do a merkle tree reconstruction for each node in the
+//! path and check if the reconstructed root is inside the current root set.
+//!
+//! This is the Groth16 setup implementation of Anchor
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -5,16 +13,34 @@ use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 
+/// Defines a `AnchorCircuit` struct that hold all the information thats needed
+/// to verify the following statements:
+/// * Alice knows a witness tuple `(secret, nullifier, merklePath)`
+/// and a commitment `Hash(chain_id, nullifier, secret)` stored in one of the
+/// Anchor merkle trees,
+/// * The Anchor contract hasn't seen this `nullifier_hash` before.
+///
+/// Needs to implement `ConstraintSynthesizer` and a
+/// constructor to generate proper constraints
 #[derive(Clone)]
 pub struct AnchorCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize, const M: usize> {
+	// Represents the hash of
+	// recepient + relayer + fee + refunds + commitment
 	arbitrary_input: F,
+	// secret
 	secret: F,
+	// nullifier to prevent double spending
 	nullifier: F,
+	// source chain_id
 	chain_id: F,
+	// Merkle root set to use on one-of-many proof
 	root_set: [F; M],
+	// Merkle path to transaction
 	path: Path<F, HG::Native, N>,
 	nullifier_hash: F,
+	// 3 input hasher
 	hasher3: HG::Native,
+	// 4 input hasher
 	hasher4: HG::Native,
 }
 

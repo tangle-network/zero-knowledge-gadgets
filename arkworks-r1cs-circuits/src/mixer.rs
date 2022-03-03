@@ -1,20 +1,46 @@
+//! Mixer is a fixed deposit/withdraw pool.
+//! This is the simplest circuit in arkworks-circuits.
+//! It implements a on-chain mixer contract that allows for users to deposit
+//! tokens using one wallet and withdraw using another one. This system uses
+//! zero-knowledge proofs so no private information about the user gets leaked.
+//!
+//! Will take inputs and do a merkle tree reconstruction for each node in the
+//! path to check if the reconstructed root matches current merkle root.
+//!
+//! This is the Groth16 setup implementation of the Mixer
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget};
 
+/// Defines a `MixerCircuit` struct that hold all the information thats needed
+/// to verify the following statement:
+
+/// * Alice knows a witness tuple `(secret, nullifier, merklePath)` and a
+///   commitment `Hash(secret, nullifier)` that is stored in the merkle tree.
+///
+/// Needs to implement `ConstraintSynthesizer` and a
+/// constructor to generate proper constraints
 #[derive(Clone)]
 pub struct MixerCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize> {
+	// Represents the hash of recepient + relayer + fee + refunds + commitment
 	arbitrary_input: F,
+	// Secret
 	secret: F,
+	// Nullifier to prevent double spending
 	nullifier: F,
+	// Merkle path to transaction
 	path: Path<F, HG::Native, N>,
+	// Merkle root with transaction in it
 	root: F,
+	// Nullifier hash to prevent double spending
 	nullifier_hash: F,
+	// Hasher to be used inside the circuit
 	hasher: HG::Native,
 }
 
+/// Constructor for MixerCircuit
 impl<F, HG, const N: usize> MixerCircuit<F, HG, N>
 where
 	F: PrimeField,
@@ -40,7 +66,11 @@ where
 		}
 	}
 }
-
+/// Implementation of the `ConstraintSynthesizer` trait for the `MixerCircuit`
+/// https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
+///
+/// This is the main function that is called by the `R1CS` library to generate
+/// the constraints for the `AnchorCircuit`.
 impl<F, HG, const N: usize> ConstraintSynthesizer<F> for MixerCircuit<F, HG, N>
 where
 	F: PrimeField,
