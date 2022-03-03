@@ -38,6 +38,9 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
+ethabi = { version = "15.0.0", default-features = false }
+hex-literal = { version = "0.3.4" }
+
 [features]
 default = ["std"]
 std = [
