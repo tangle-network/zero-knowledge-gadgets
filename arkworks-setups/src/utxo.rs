@@ -13,12 +13,14 @@ use codec::{Decode, Encode};
 #[derive(Debug)]
 pub enum UtxoError {
 	NullifierNotCalculated,
+	EncryptedDataDecodeError,
 }
 
 impl core::fmt::Display for UtxoError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		let msg = match self {
 			UtxoError::NullifierNotCalculated => "Nullifier not calculated".to_string(),
+			UtxoError::EncryptedDataDecodeError => "Failed to decode encrypted data".to_string(),
 		};
 		write!(f, "{}", msg)
 	}
@@ -140,7 +142,7 @@ impl<F: PrimeField> Utxo<F> {
 
 	pub fn decrypt(&self, data: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
 		let decoded_ed = EncryptedData::decode(&mut &data[..])
-			.map_err(|_| String::from("Failed to decode encrypted data"))?;
+			.map_err(|_| UtxoError::EncryptedDataDecodeError)?;
 		// Decrypting the message
 		let plaintext = self.keypair.decrypt(&decoded_ed)?;
 
