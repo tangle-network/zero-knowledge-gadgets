@@ -26,7 +26,7 @@ impl core::fmt::Display for MerkleError {
 
 impl ark_std::error::Error for MerkleError {}
 
-// Path
+/// Merkle path. Identifies individual transaction with N tuples from the tree.
 #[derive(Clone)]
 pub struct Path<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	pub path: [(F, F); N],
@@ -86,10 +86,10 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 	}
 }
 
-// Merkle sparse tree
-// We wanted the "default" or "empty" leaf to be specified as a constant in
-// the struct's trait bounds but arrays are not allowed as constants.  Instead
-// all constructor functions take in a default/empty leaf argument.
+/// Merkle sparse tree
+/// We wanted the "default" or "empty" leaf to be specified as a constant in
+/// the struct's trait bounds but arrays are not allowed as constants.  Instead
+/// all constructor functions take in a default/empty leaf argument.
 pub struct SparseMerkleTree<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	/// data of the tree
 	pub tree: BTreeMap<u64, F>,
@@ -135,6 +135,12 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(())
 	}
 
+	/// Constructor for SparseMerkleTree. Takes in an array of leaves, a hasher
+	/// and an empty_leaf.
+	/// Although used in the constructor, empty_leaf is a value needed to use
+	/// many of the functions on the MerkleTree itself. This is done because
+	/// having the default_leaf baked into a struct has proven to be difficult
+	/// and cause some bugs.
 	pub fn new(leaves: &BTreeMap<u32, F>, hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		// Ensure the tree can hold this many leaves
 		let last_level_size = leaves.len().next_power_of_two();
@@ -156,6 +162,8 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(smt)
 	}
 
+	/// Generates new sequential tree from leaves. All leaves will be put as is
+	/// on the vector order.
 	pub fn new_sequential(leaves: &[F], hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		let pairs: BTreeMap<u32, F> = leaves
 			.iter()
@@ -191,16 +199,8 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 
 			let empty_hash = &self.empty_hashes[level];
 
-			let current = self
-				.tree
-				.get(&current_node)
-				.cloned()
-				.unwrap_or_else(|| empty_hash.clone());
-			let sibling = self
-				.tree
-				.get(&sibling_node)
-				.cloned()
-				.unwrap_or_else(|| empty_hash.clone());
+			let current = self.tree.get(&current_node).cloned().unwrap_or(*empty_hash);
+			let sibling = self.tree.get(&sibling_node).cloned().unwrap_or(*empty_hash);
 
 			if is_left_child(current_node) {
 				path[level] = (current, sibling);
@@ -218,6 +218,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 	}
 }
 
+/// Generate hashes for empty tree
 pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 	hasher: &H,
 	default_leaf: &[u8],
@@ -237,6 +238,7 @@ pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 	Ok(empty_hashes)
 }
 
+/// Generate hashes for empty tree
 fn convert_index_to_last_level(index: u64, height: usize) -> u64 {
 	index + (1u64 << height) - 1
 }

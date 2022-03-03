@@ -31,6 +31,7 @@ type LeafNode<P> = <<P as Config>::LeafH as CRH>::Output;
 type InnerParameters<P> = <<P as Config>::H as CRH>::Parameters;
 type LeafParameters<P> = <<P as Config>::LeafH as CRH>::Parameters;
 
+/// Represent an individual node of the merkle tree.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Node<P: Config> {
 	Leaf(LeafNode<P>),
@@ -70,8 +71,12 @@ pub struct Path<P: Config, const N: usize> {
 	inner_params: Rc<InnerParameters<P>>,
 }
 
+/// Implements Path struct to hold merkle paths. Path is used when an entity
+/// wants to show that some transaction is inside the merkle tree.
 impl<P: Config + PartialEq, const N: usize> Path<P, N> {
-	/// verify the lookup proof, just checking the membership
+	/// Verifies whether root_hash matches calculated root_hash using current
+	/// Path If it matches, transaction is stored in the merkle tree and the
+	/// path is a valid path to an existing MerkleTree
 	pub fn check_membership<L: ToBytes>(
 		&self,
 		root_hash: &Node<P>,
@@ -106,7 +111,7 @@ impl<P: Config + PartialEq, const N: usize> Path<P, N> {
 		Ok(index)
 	}
 
-	/// Return hash of root computed by the path
+	/// Return hash of root computed with current Path
 	pub fn root_hash<L: ToBytes>(&self, leaf: &L) -> Result<Node<P>, Error> {
 		if self.path.len() != P::HEIGHT as usize {
 			panic!("path.len !=  P::HEIGHT");
@@ -158,6 +163,7 @@ impl<P: Config> SparseMerkleTree<P> {
 		}
 	}
 
+	/// Insert a batch of transactions into SparseMerkleTree
 	pub fn insert_batch<L: Default + ToBytes>(
 		&mut self,
 		leaves: &BTreeMap<u32, L>,
@@ -225,6 +231,8 @@ impl<P: Config> SparseMerkleTree<P> {
 		Ok(smt)
 	}
 
+	/// Generates new sequencial merkle tree from a list of leaves and
+	/// SparseMerkleTree parameters
 	pub fn new_sequential<L: Default + ToBytes + Clone>(
 		inner_params: Rc<InnerParameters<P>>,
 		leaf_params: Rc<LeafParameters<P>>,
@@ -375,6 +383,7 @@ fn hash_leaf<P: Config, L: ToBytes>(
 	Ok(Node::Leaf(leaf))
 }
 
+/// Returns the hash of an empty leaf.
 fn hash_empty<P: Config>(parameters: &<P::LeafH as CRH>::Parameters) -> Result<Node<P>, Error> {
 	let res = <P::LeafH as CRH>::evaluate(parameters, &vec![
 		0u8;
@@ -384,6 +393,7 @@ fn hash_empty<P: Config>(parameters: &<P::LeafH as CRH>::Parameters) -> Result<N
 	Ok(Node::Leaf(res))
 }
 
+/// Returns the hash of an empty tree.
 pub fn gen_empty_hashes<P: Config>(
 	leaf_params: &LeafParameters<P>,
 	inner_params: &InnerParameters<P>,
@@ -409,10 +419,7 @@ mod test {
 	use ark_crypto_primitives::crh::CRH;
 	use ark_ff::{ToBytes, UniformRand};
 	use ark_std::{borrow::Borrow, collections::BTreeMap, rc::Rc, test_rng};
-	use arkworks_utils::{
-		mimc::MiMCParameters,
-		utils::common::{setup_params_x5_3, Curve},
-	};
+	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 	type SMTCRH = PoseidonCRH<Fq>;
 

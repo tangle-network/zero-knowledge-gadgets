@@ -11,6 +11,7 @@ use ark_r1cs_std::{
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{borrow::Borrow, rc::Rc};
 
+/// Gadgets for one Node of the Merkle Tree
 #[derive(Debug)]
 pub enum NodeVar<F, P, HG, LHG>
 where
@@ -23,6 +24,7 @@ where
 	Inner(HG::OutputVar),
 }
 
+/// Clone implementation for one Node of the Merkle Tree
 impl<F, P, HG, LHG> Clone for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
@@ -38,6 +40,7 @@ where
 	}
 }
 
+/// CondSelectGadget implementation for one Node of the Merkle Tree
 impl<F, P, HG, LHG> CondSelectGadget<F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
@@ -62,6 +65,7 @@ where
 	}
 }
 
+/// EqGadget implementation for one Node of the Merkle Tree
 impl<F, P, HG, LHG> EqGadget<F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
@@ -78,6 +82,7 @@ where
 	}
 }
 
+/// ToBytesGadget implementation for one Node of the Merkle Tree
 impl<F, P, HG, LHG> ToBytesGadget<F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
@@ -93,6 +98,7 @@ where
 	}
 }
 
+/// AllocVar implementation for one Node of the Merkle Tree
 impl<F, P, HG, LHG> AllocVar<Node<P>, F> for NodeVar<F, P, HG, LHG>
 where
 	F: PrimeField,
@@ -138,7 +144,8 @@ where
 	HG: CRHGadget<P::H, F>,
 	LHG: CRHGadget<P::LeafH, F>,
 {
-	/// conditionally check a lookup proof (does not enforce index consistency)
+	/// Check whether transaction path is in merkle root.
+	/// Doesn't enfoce index consistency.
 	pub fn check_membership<L: ToBytesGadget<F>>(
 		&self,
 		root: &NodeVar<F, P, HG, LHG>,
@@ -149,6 +156,10 @@ where
 		root.is_eq(&computed_root)
 	}
 
+	/// Check whether leaf is in merkle root. Returns NodeVar corresponding to
+	/// TODO Check if this is true
+	/// MerkleRoot if successful and SynthesisError if any of
+	/// the path element hashes differ from merkle tree
 	pub fn root_hash<L: ToBytesGadget<F>>(
 		&self,
 		leaf: &L,
@@ -189,6 +200,7 @@ where
 		Ok(previous_hash)
 	}
 
+	/// Gets leaf indice from merkle tree
 	pub fn get_index<L: ToBytesGadget<F>>(
 		&self,
 		root: &NodeVar<F, P, HG, LHG>,
@@ -226,6 +238,7 @@ where
 	}
 }
 
+/// Hasher gadget for hashing merkle leaf nodes
 pub(crate) fn hash_leaf_gadget<F, P, HG, LHG, L>(
 	leaf_params: &LHG::ParametersVar,
 	leaf: &L,
@@ -243,6 +256,7 @@ where
 	)?))
 }
 
+/// Hasher gadget for hashing merkle inner nodes
 pub(crate) fn hash_inner_node_gadget<F, P, HG, LHG>(
 	inner_params: &HG::ParametersVar,
 	left_child: &NodeVar<F, P, HG, LHG>,
