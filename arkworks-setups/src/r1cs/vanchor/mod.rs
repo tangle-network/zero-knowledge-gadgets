@@ -9,9 +9,11 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
+use arkworks_native_gadgets::{
+	merkle_tree::Path,
+	poseidon::{FieldHasher, Poseidon},
+};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
-use arkworks_native_gadgets::merkle_tree::Path;
-use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::utils::common::{
 	setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,

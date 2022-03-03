@@ -14,18 +14,3 @@ members = [
     "arkworks-setups",
     "arkworks-utils",
 ]
-
-# exclude = [
-#     "arkworks-benchmarks",
-
-#     "arkworks-native-gadgets",
-#     # R1CS gadgets + circuits
-#     "arkworks-r1cs-circuits",
-#     "arkworks-r1cs-gadgets",
-#     # Plonk gadgets + circuits
-#     "arkworks-plonk-circuits",
-#     "arkworks-plonk-gadgets",
-#     # Utils and setups
-#     "arkworks-setups",
-#     "arkworks-utils",
-# ]

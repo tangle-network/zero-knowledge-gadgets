@@ -13,14 +13,17 @@ arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
-ark-groth16 = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
 ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
-
-ark-snark = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
+ark-groth16 = { version = "^0.3.0", default-features = false }
+
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+
+[dev-dependencies]
+ark-snark = { version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
 # curves
@@ -30,7 +33,6 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "cu
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
 hex-literal = { version = "0.3.4" }
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
 default = ["std", "r1cs"]

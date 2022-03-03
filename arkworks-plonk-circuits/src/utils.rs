@@ -182,11 +182,7 @@ where
 // TODO: Include a more minimal example to show how it's used
 #[cfg(test)]
 mod test {
-	use crate::{
-		mixer::MixerCircuit,
-		utils::prove_then_verify,
-	};
-	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
+	use crate::{mixer::MixerCircuit, utils::prove_then_verify};
 	use ark_bn254::Bn254;
 	use ark_ec::{PairingEngine, TEModelParameters};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
@@ -196,6 +192,7 @@ mod test {
 		merkle_tree::SparseMerkleTree,
 		poseidon::{FieldHasher, Poseidon},
 	};
+	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 	use plonk_core::prelude::*;
 

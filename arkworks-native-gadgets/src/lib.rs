@@ -6,8 +6,8 @@ pub extern crate ark_std;
 use ark_std::boxed::Box;
 
 pub mod merkle_tree;
-pub mod poseidon;
 pub mod mimc;
+pub mod poseidon;
 
 pub type Error = Box<dyn ark_std::error::Error>;
 

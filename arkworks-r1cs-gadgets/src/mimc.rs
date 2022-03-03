@@ -1,5 +1,3 @@
-use arkworks_native_gadgets::mimc::{Rounds, CRH};
-use arkworks_utils::mimc::MiMCParameters;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -10,7 +8,8 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
-use arkworks_utils::utils::to_field_var_elements;
+use arkworks_native_gadgets::mimc::{Rounds, CRH};
+use arkworks_utils::{mimc::MiMCParameters, utils::to_field_var_elements};
 use core::borrow::Borrow;
 
 #[derive(Clone)]

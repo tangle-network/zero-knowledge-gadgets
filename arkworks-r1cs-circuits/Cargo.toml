@@ -21,6 +21,7 @@ ark-std = { version = "^0.3.0", default-features = false }
 ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
 
+[dev-dependencies]
 ark-marlin = {version = "^0.3.0", default-features = false }
 ark-groth16 = {version = "^0.3.0", default-features = false }
 blake2 = { version = "0.9", default-features = false }
@@ -36,10 +37,6 @@ ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features =
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
-
-ethabi = { version = "15.0.0", default-features = false }
-hex-literal = { version = "0.3.4" }
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 
 [features]
 default = ["std"]

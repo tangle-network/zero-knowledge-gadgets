@@ -1,5 +1,3 @@
-use arkworks_native_gadgets::merkle_tree::Path;
-use arkworks_native_gadgets::poseidon::FieldHasher;
 use crate::poseidon::FieldHasherGadget;
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -7,6 +5,7 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{borrow::Borrow, marker::PhantomData};
+use arkworks_native_gadgets::{merkle_tree::Path, poseidon::FieldHasher};
 use core::convert::TryInto;
 
 /// Gadgets for one Merkle tree path
@@ -143,9 +142,8 @@ where
 #[cfg(test)]
 mod test {
 	use super::PathVar;
-	use arkworks_native_gadgets::merkle_tree::SparseMerkleTree;
-	use arkworks_native_gadgets::poseidon::Poseidon;
 	use crate::poseidon::{FieldHasherGadget, PoseidonGadget};
+	use arkworks_native_gadgets::{merkle_tree::SparseMerkleTree, poseidon::Poseidon};
 
 	use ark_ed_on_bn254::Fq;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};

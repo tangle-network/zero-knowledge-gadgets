@@ -4,8 +4,8 @@ use ark_ff::{PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_snark::SNARK;
 use ark_std::test_rng;
-use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_native_gadgets::poseidon::Poseidon;
+use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 

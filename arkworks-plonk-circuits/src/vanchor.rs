@@ -17,13 +17,13 @@
 // membership path is within a set of public merkle roots.
 
 use crate::utils::add_public_input_variable;
-use arkworks_plonk_gadgets::merkle_tree::PathGadget;
-use arkworks_plonk_gadgets::poseidon::FieldHasherGadget;
-use arkworks_plonk_gadgets::set::check_set_membership_is_enabled;
-use ark_ec::{models::TEModelParameters};
+use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
-use ark_std::{vec::Vec};
-use arkworks_native_gadgets::{merkle_tree::Path};
+use ark_std::vec::Vec;
+use arkworks_native_gadgets::merkle_tree::Path;
+use arkworks_plonk_gadgets::{
+	merkle_tree::PathGadget, poseidon::FieldHasherGadget, set::check_set_membership_is_enabled,
+};
 use plonk_core::{
 	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
 };
@@ -300,7 +300,6 @@ mod test {
 
 	use super::VariableAnchorCircuit;
 	use crate::utils::prove_then_verify;
-	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
@@ -309,6 +308,7 @@ mod test {
 		merkle_tree::{Path, SparseMerkleTree},
 		poseidon::{FieldHasher, Poseidon},
 	};
+	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
 	use arkworks_utils::utils::common::{
 		setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
 	};

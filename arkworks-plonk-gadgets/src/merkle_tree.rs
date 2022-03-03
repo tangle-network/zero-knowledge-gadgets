@@ -133,10 +133,7 @@ mod test {
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::{test_rng, UniformRand};
-	use arkworks_native_gadgets::{
-		merkle_tree::SparseMerkleTree,
-		poseidon::Poseidon,
-	};
+	use arkworks_native_gadgets::{merkle_tree::SparseMerkleTree, poseidon::Poseidon};
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 	use plonk_core::prelude::*;
 

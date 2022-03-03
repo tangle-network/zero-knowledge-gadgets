@@ -3,9 +3,7 @@ use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
-use arkworks_r1cs_gadgets::merkle_tree::PathVar;
-use arkworks_r1cs_gadgets::poseidon::FieldHasherGadget;
-use arkworks_r1cs_gadgets::set::SetGadget;
+use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 
 #[derive(Clone)]
 pub struct AnchorCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize, const M: usize> {

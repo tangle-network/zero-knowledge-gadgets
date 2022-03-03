@@ -1,14 +1,11 @@
-use arkworks_plonk_gadgets::{
-	merkle_tree::PathGadget,
-	poseidon::FieldHasherGadget, set::check_set_membership,
-};
-use arkworks_native_gadgets::merkle_tree::Path;
-use ark_ec::{models::TEModelParameters};
-use ark_ff::PrimeField;
-use plonk_core::{
-	circuit::Circuit, constraint_system::StandardComposer, error::Error,
-};
 use crate::utils::add_public_input_variable;
+use ark_ec::models::TEModelParameters;
+use ark_ff::PrimeField;
+use arkworks_native_gadgets::merkle_tree::Path;
+use arkworks_plonk_gadgets::{
+	merkle_tree::PathGadget, poseidon::FieldHasherGadget, set::check_set_membership,
+};
+use plonk_core::{circuit::Circuit, constraint_system::StandardComposer, error::Error};
 
 pub struct AnchorCircuit<
 	F: PrimeField,
@@ -118,7 +115,6 @@ where
 mod test {
 	use super::AnchorCircuit;
 	use crate::utils::prove_then_verify;
-	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
@@ -128,6 +124,7 @@ mod test {
 		merkle_tree::SparseMerkleTree,
 		poseidon::{FieldHasher, Poseidon},
 	};
+	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
 	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 	use plonk_core::prelude::*;
 

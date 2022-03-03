@@ -7,9 +7,11 @@ use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_pc::SonicKZG10};
 use ark_std::{self, test_rng, time::Instant, vec::Vec};
+use arkworks_native_gadgets::{
+	merkle_tree::SparseMerkleTree,
+	poseidon::{FieldHasher, Poseidon},
+};
 use arkworks_r1cs_circuits::anchor::AnchorCircuit;
-use arkworks_native_gadgets::merkle_tree::SparseMerkleTree;
-use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4};

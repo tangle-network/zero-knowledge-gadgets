@@ -11,7 +11,6 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = { path = "../arkworks-utils",  version = "0.5.0" }
 arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.0", default-features = false }
 arkworks-plonk-gadgets = { path = "../arkworks-plonk-gadgets", version = "0.1.0", default-features = false }
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
@@ -23,12 +22,15 @@ plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "pose
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
-ark-serialize = {version = "^0.3.0", default-features = false }
 
+[dev-dependencies]
+arkworks-utils = { path = "../arkworks-utils",  version = "0.5.0" }
 # curves
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
+
+ark-serialize = {version = "^0.3.0", default-features = false }
 
 [features]
 default = ["std"]

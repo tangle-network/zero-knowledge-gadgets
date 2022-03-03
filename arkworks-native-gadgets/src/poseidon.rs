@@ -74,13 +74,10 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 
 #[cfg(test)]
 mod test {
-	use ark_std::vec::Vec;
+	use crate::poseidon::{FieldHasher, Poseidon};
 	use ark_ed_on_bn254::Fq;
-	use ark_ff::fields::Field;
-	use ark_std::One;
-	use ark_ff::PrimeField;
-	use crate::poseidon::Poseidon;
-	use crate::poseidon::FieldHasher;
+	use ark_ff::{fields::Field, PrimeField};
+	use ark_std::{vec::Vec, One};
 
 	use arkworks_utils::utils::{
 		common::{

@@ -1,9 +1,11 @@
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
 use ark_std::collections::BTreeMap;
-use arkworks_native_gadgets::merkle_tree::{Path, SparseMerkleTree};
+use arkworks_native_gadgets::{
+	merkle_tree::{Path, SparseMerkleTree},
+	poseidon::FieldHasher,
+};
 use arkworks_r1cs_gadgets::poseidon::FieldHasherGadget;
-use arkworks_native_gadgets::poseidon::FieldHasher;
 
 pub mod anchor;
 pub mod mixer;
