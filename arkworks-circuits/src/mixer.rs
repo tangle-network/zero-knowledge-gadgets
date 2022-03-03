@@ -1,3 +1,14 @@
+//! Mixer is a fixed deposit/withdraw pool.
+//! This is the simplest circuit in arkworks-circuits.
+//! It implements a on-chain mixer contract that allows for users to deposit
+//! tokens using one wallet and withdraw using another one. This system uses
+//! zero-knowledge proofs so no private information about the user gets leaked.
+//!
+//! We wil take inputs and do a merkle tree reconstruction for each node in the
+//! TODO Check if we use last root or last x historical roots.
+//! path and check if the reconstructed root matches merkle current root.
+//!
+//! This is the Groth16 setup implementation of the Mixer
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};

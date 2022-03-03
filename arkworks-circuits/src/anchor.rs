@@ -1,3 +1,11 @@
+//! Anchor is the fixed deposit/withdraw pool.
+//! It allows for users to deposit tokens on one chain and withdraw in another
+//! one without a link from the deposit to the withdrawal.
+
+//! We wil take inputs and do a merkle tree reconstruction for each node in the
+//! path and check if the reconstructed root is inside the current root set.
+//!
+//! This is the Groth16 setup implementation of Anchor
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -9,12 +17,11 @@ use arkworks_gadgets::{
 };
 
 /// Defines a AnchorCircuit struct that hold all the information thats needed to
-/// verify the following statement:
-/// TODO check commitment order
-/// * Alice knows a witness tuple (secret, nullifier, merklePath) such that with
-/// public inputs chain_id  
-/// * Hash(chain_id, secret, nullifier) is
-/// inside a transaction in a one-of-many merkle tree.
+/// verify the following statements:
+/// * Alice knows a witness tuple (secret, nullifier, merklePath)
+/// and a commitment Hash(chain_id, nullifier, secret) stored in one of the
+/// Anchor merkle trees,
+/// * The Anchor contract hasn't seen this nullifier_hash before.
 ///
 /// Needs to implement ConstraintSynthesizer and a
 /// constructor to generate proper constraints

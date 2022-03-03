@@ -1,3 +1,22 @@
+//! VAnchor is the variable deposit/withdraw/transfer shielded pool
+//! It supports join split transactions, meaning you can take unspent deposits
+//! in the pool and join them together, split them, and any combination
+//! of the two.
+
+//! The inputs to the VAnchor are unspent outputs we want to spend (we are
+//! spending the inputs), and we create outputs which are new, unspent UTXOs. We
+//! create commitments for each output and these are inserted into merkle trees.
+
+//! The VAnchor is also a bridged system. It takes as a public input
+//! a set of merkle roots that it will use to verify the membership
+//! of unspent deposits within. The VAnchor prevents double-spending
+//! through the use of a public input chain identifier `chain_id`.
+
+//! We will take inputs and do a merkle tree reconstruction for each input.
+//! Then we will verify that the reconstructed root from each input's
+//! membership path is within a set of public merkle roots.
+//!
+//! This is the Groth16 version of the VAnchor implementation.
 use crate::Vec;
 
 use ark_ff::fields::PrimeField;
@@ -11,22 +30,12 @@ use arkworks_gadgets::{
 use core::cmp::Ordering::Less;
 
 /// Defines a VAnchorCircuit struct that hold all the information thats needed
-/// to verify the following statement:
-/// * Alice knows a witness tuple (in_amounts, in_blindings, in_private_keys,
-///   in_path_elements, in_path_indices)
-///
-/// * public inputs are: (public_amount, arbitrary_input, in_nullifier,
-///   out_commitment, in_chain_id, root_set)
-///
-/// Prove that Hash(chain_id, secret, publicAmount, nullifier) is
-/// inside a one-of-many merkle tree.
-///
-/// The Commitment is hashed in the following order
-/// commitment = hash(chainID, amount, pubKey, blinding)
-///
-/// The nullifier is hashed in the following order
-/// nullifier = hash(commitment, merklePath, sign(privKey, commitment,
-/// merklePath))
+/// to verify the following statements:
+/// * Alice knows a witness tuple `(in_amounts, in_blindings, in_private_keys,
+///   in_path_elements, in_path_indices)` and a commitment_hash `Hash(chain_id,
+///   amount, pub_key, blinding)` stored in one of the valid VAnchor merkle
+///   trees
+/// * The VAnchor contract hasn't seen this nullifier_hash before.
 ///
 /// Needs to implement ConstraintSynthesizer and a
 /// constructor to generate proper constraints
