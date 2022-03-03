@@ -114,21 +114,24 @@ impl<F: PrimeField> Utxo<F> {
 
 	pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R) -> Result<EncryptedData, Error> {
 		// We are encrypting the amount and the blinding
-		let msg = to_bytes![self.leaf_private.amount, self.leaf_private.blinding]?;
+		let msg = to_bytes![self.leaf_public.chain_id, self.leaf_private.amount, self.leaf_private.blinding]?;
 		// Encrypting the message
 		let enc_data = self.keypair.encrypt(&msg, rng)?;
 		Ok(enc_data)
 	}
 
-	pub fn decrypt(&self, data: &EncryptedData) -> Result<(Vec<u8>, Vec<u8>), Error> {
+	pub fn decrypt(&self, data: &EncryptedData) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
 		// Decrypting the message
 		let plaintext = self.keypair.decrypt(data)?;
 
-		// First 32 bytes is amount
-		// Second 32 bytes is blinding
-		let amount = plaintext[..32].to_vec();
-		let blinding = plaintext[32..64].to_vec();
-		Ok((amount, blinding))
+		// First 32 bytes is chain id
+		let chain_id = plaintext[..32].to_vec();
+		// Second 32 bytes is amount
+		let amount = plaintext[32..64].to_vec();
+		// Third 32 bytes is blinding
+		let blinding = plaintext[64..96].to_vec();
+
+		Ok((chain_id, amount, blinding))
 	}
 }
 
@@ -169,8 +172,9 @@ mod test {
 		.unwrap();
 
 		let encrypted_data = utxo.encrypt(rng).unwrap();
-		let (amount_bytes, blinding_bytes) = utxo.decrypt(&encrypted_data).unwrap();
+		let (chain_id_bytes, amount_bytes, blinding_bytes) = utxo.decrypt(&encrypted_data).unwrap();
 
+		assert_eq!(chain_id_bytes, chain_id.into_repr().to_bytes_le());
 		assert_eq!(amount_bytes, amount.into_repr().to_bytes_le());
 		assert_eq!(blinding_bytes, blinding.into_repr().to_bytes_le());
 	}

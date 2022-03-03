@@ -39,8 +39,8 @@ impl ArkError for KeypairError {}
 
 pub struct EncryptedData {
 	pub nonce: Vec<u8>,
-	pub cypher_text: Vec<u8>,
 	pub ephemeral_pk: Vec<u8>,
+	pub cypher_text: Vec<u8>,
 }
 
 #[derive(Default, Debug, Copy)]
