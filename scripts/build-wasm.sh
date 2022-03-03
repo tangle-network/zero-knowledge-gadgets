@@ -4,4 +4,6 @@ cargo build \
 --no-default-features \
 --workspace \
 --exclude arkworks-circom-verifier \
---exclude arkworks-plonk-circuits
+--exclude arkworks-benchmarks \
+--exclude arkworks-plonk-circuits \
+--exclude arkworks-plonk-gadgets

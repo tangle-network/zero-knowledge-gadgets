@@ -4,14 +4,18 @@
 cargo build -p arkworks-plonk-circuits --release --no-default-features && \
 cargo build -p arkworks-plonk-circuits --release && \
 
-# Arkworks Circuits
-cargo build -p arkworks-circuits --release --no-default-features && \
-cargo build -p arkworks-circuits --release --all-features && \
+# PLONK gadgets
+cargo build -p arkworks-plonk-gadgets --release --no-default-features && \
+cargo build -p arkworks-plonk-gadgets --release && \
 
-# Arkworks Gadgets
-cargo build -p arkworks-gadgets --release --no-default-features && \
-cargo build -p arkworks-gadgets --release --no-default-features --features r1cs && \
-cargo build -p arkworks-gadgets --release --all-features && \
+# R1CS Circuits
+cargo build -p arkworks-r1cs-circuits --release --no-default-features && \
+cargo build -p arkworks-r1cs-circuits --release --all-features && \
+
+# R1CS Gadgets
+cargo build -p arkworks-r1cs-gadgets --release --no-default-features && \
+cargo build -p arkworks-r1cs-gadgets --release --no-default-features --features r1cs && \
+cargo build -p arkworks-r1cs-gadgets --release --all-features && \
 
 # Arkworks Utils
 cargo build -p arkworks-utils --release --no-default-features && \

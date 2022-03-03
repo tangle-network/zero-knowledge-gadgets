@@ -4,7 +4,7 @@ use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, fields::fp::FpVar, prelude::*, select::CondSelectGadget,
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
-use ark_std::{borrow::Borrow, marker::PhantomData};
+use ark_std::{borrow::Borrow, marker::PhantomData, vec::Vec};
 use arkworks_native_gadgets::{merkle_tree::Path, poseidon::FieldHasher};
 use core::convert::TryInto;
 

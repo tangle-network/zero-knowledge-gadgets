@@ -1,6 +1,7 @@
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 use core::cmp::Ordering::Less;
