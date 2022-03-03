@@ -8,6 +8,7 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
+use codec::{Encode, Decode};
 
 #[derive(Debug)]
 pub enum UtxoError {
@@ -128,17 +129,20 @@ impl<F: PrimeField> Utxo<F> {
 			.ok_or(UtxoError::NullifierNotCalculated.into())
 	}
 
-	pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R) -> Result<EncryptedData, Error> {
+	pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R) -> Result<Vec<u8>, Error> {
 		// We are encrypting the amount and the blinding
 		let msg = to_bytes![self.chain_id, self.amount, self.blinding]?;
 		// Encrypting the message
 		let enc_data = self.keypair.encrypt(&msg, rng)?;
-		Ok(enc_data)
+		
+		Ok(enc_data.encode())
 	}
 
-	pub fn decrypt(&self, data: &EncryptedData) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
+	pub fn decrypt(&self, data: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
+
+		let decoded_ed = EncryptedData::decode(&mut &data[..]).map_err(|_| String::from("Failed to decode encrypted data"))?;
 		// Decrypting the message
-		let plaintext = self.keypair.decrypt(data)?;
+		let plaintext = self.keypair.decrypt(&decoded_ed)?;
 
 		// First 32 bytes is chain id
 		let chain_id = plaintext[..32].to_vec();
@@ -154,6 +158,7 @@ impl<F: PrimeField> Utxo<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use ark_std::UniformRand;
 	use ark_bn254::Fr as BnFr;
 	use ark_ff::BigInteger;
 	use ark_std::test_rng;
@@ -175,8 +180,8 @@ mod test {
 
 		let chain_id_raw = 0u64;
 		let chain_id = BnFr::from(chain_id_raw);
-		let amount = BnFr::from(5u64);
-		let blinding = BnFr::from(10u32);
+		let amount = BnFr::rand(rng);
+		let blinding = BnFr::rand(rng);
 		// let utxo
 		let utxo = Utxo::new(
 			chain_id_raw,
