@@ -8,7 +8,7 @@ use ark_std::{
 	vec::Vec,
 };
 use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
-use codec::{Encode, Decode};
+use codec::{Decode, Encode};
 
 #[derive(Debug)]
 pub enum UtxoError {
@@ -134,13 +134,13 @@ impl<F: PrimeField> Utxo<F> {
 		let msg = to_bytes![self.chain_id, self.amount, self.blinding]?;
 		// Encrypting the message
 		let enc_data = self.keypair.encrypt(&msg, rng)?;
-		
+
 		Ok(enc_data.encode())
 	}
 
 	pub fn decrypt(&self, data: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
-
-		let decoded_ed = EncryptedData::decode(&mut &data[..]).map_err(|_| String::from("Failed to decode encrypted data"))?;
+		let decoded_ed = EncryptedData::decode(&mut &data[..])
+			.map_err(|_| String::from("Failed to decode encrypted data"))?;
 		// Decrypting the message
 		let plaintext = self.keypair.decrypt(&decoded_ed)?;
 
@@ -158,10 +158,9 @@ impl<F: PrimeField> Utxo<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use ark_std::UniformRand;
 	use ark_bn254::Fr as BnFr;
 	use ark_ff::BigInteger;
-	use ark_std::test_rng;
+	use ark_std::{test_rng, UniformRand};
 	use arkworks_utils::utils::common::{
 		setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
 	};
