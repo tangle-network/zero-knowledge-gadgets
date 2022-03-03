@@ -8,14 +8,10 @@ use ark_std::{
 	vec::Vec,
 	UniformRand, Zero,
 };
-use arkworks_circuits::anchor::AnchorCircuit;
-use arkworks_gadgets::{
-	merkle_tree::simple_merkle::Path,
-	poseidon::{
-		field_hasher::{FieldHasher, Poseidon},
-		field_hasher_constraints::PoseidonGadget,
-	},
-};
+use arkworks_r1cs_circuits::anchor::AnchorCircuit;
+use arkworks_native_gadgets::merkle_tree::Path;
+use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
 
 use super::setup_tree_and_create_path;

@@ -3,9 +3,8 @@ use ark_std::vec;
 use crate::{common::*, r1cs::setup_tree_and_create_path};
 use ark_serialize::CanonicalDeserialize;
 use ark_std::{One, Zero};
-use arkworks_gadgets::poseidon::{
-	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
-};
+use arkworks_native_gadgets::poseidon::Poseidon;
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 use ark_bn254::{Bn254, Fr as BnFr};

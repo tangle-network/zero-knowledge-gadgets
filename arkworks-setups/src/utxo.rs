@@ -1,7 +1,7 @@
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
 use ark_std::{error::Error as ArkError, rand::RngCore};
-use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
+use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
 
 #[derive(Debug)]
 pub enum UtxoError {

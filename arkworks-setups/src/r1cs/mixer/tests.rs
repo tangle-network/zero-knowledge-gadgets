@@ -4,9 +4,8 @@ use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_serialize::CanonicalDeserialize;
 use ark_snark::SNARK;
 use ark_std::{test_rng, vec::Vec, One, Zero};
-use arkworks_gadgets::poseidon::{
-	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
-};
+use arkworks_native_gadgets::poseidon::Poseidon;
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
 
 // merkle proof path legth

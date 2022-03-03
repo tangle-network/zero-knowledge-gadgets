@@ -156,32 +156,48 @@ pub(crate) fn prove_then_verify<
 	Ok(())
 }
 
+/// Add a variable to a circuit and constrain it to a public input value that
+/// is expected to be different in each instance of the circuit.
+pub fn add_public_input_variable<F, P>(composer: &mut StandardComposer<F, P>, value: F) -> Variable
+where
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+{
+	let variable = composer.add_input(value);
+	composer.poly_gate(
+		variable,
+		variable,
+		variable,
+		F::zero(),
+		-F::one(),
+		F::zero(),
+		F::zero(),
+		F::zero(),
+		Some(value),
+	);
+	variable
+}
+
 // I used the MixerCircuit to test the new helper function:
 // TODO: Include a more minimal example to show how it's used
 #[cfg(test)]
 mod test {
 	use crate::{
 		mixer::MixerCircuit,
-		poseidon::poseidon::PoseidonGadget,
-		utils::{gadget_tester, prove_then_verify},
+		utils::prove_then_verify,
 	};
+	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
 	use ark_bn254::Bn254;
 	use ark_ec::{PairingEngine, TEModelParameters};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::Field;
-	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
-	use ark_std::test_rng;
-	use arkworks_gadgets::{
-		ark_std::UniformRand,
-		merkle_tree::simple_merkle::SparseMerkleTree,
-		poseidon::field_hasher::{FieldHasher, Poseidon},
+	use ark_std::{test_rng, UniformRand};
+	use arkworks_native_gadgets::{
+		merkle_tree::SparseMerkleTree,
+		poseidon::{FieldHasher, Poseidon},
 	};
 	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
-	use plonk_core::{
-		prelude::*,
-		proof_system::{Prover, Verifier},
-	};
+	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
 

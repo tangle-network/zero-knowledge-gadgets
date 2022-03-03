@@ -1,5 +1,5 @@
 [package]
-name = "arkworks-benchmarks"
+name = "arkworks-r1cs-gadgets"
 version = "0.5.0"
 authors = ["Webb Developers"]
 edition = "2018"
@@ -11,11 +11,8 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = { path = "../arkworks-utils", version = "0.5.0" }
-arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "0.5.0" }
-arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.0" }
-arkworks-r1cs-circuits = { path = "../arkworks-r1cs-circuits", version = "0.5.0" }
-
+arkworks-utils = { path = "../arkworks-utils",  version = "0.5.0", default-features = false }
+arkworks-native-gadgets = { path = "../arkworks-native-gadgets",  version = "0.5.0", default-features = false }
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
@@ -32,9 +29,32 @@ ark-ec = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
+[dev-dependencies]
+arkworks-utils = { path = "../arkworks-utils",  version = "0.5.0", default-features = false, features = ["default_poseidon", "default_mimc"] }
+
 # curves
 ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
+[features]
+default = ["std", "r1cs"]
+r1cs = ["arkworks-utils/r1cs"]
+std = [
+  "ark-std/std",
+  "arkworks-utils/std",
+]
+parallel = [
+  "ark-crypto-primitives/parallel",
+  "ark-ff/parallel",
+  "ark-std/parallel",
+  "ark-r1cs-std/parallel",
+  "ark-marlin/parallel",
+  "ark-groth16/parallel",
+  "ark-poly-commit/parallel",
+  "ark-poly/parallel",
+  "ark-ec/parallel",
+  "ark-ff/parallel",
+  "ark-std/parallel",
+]

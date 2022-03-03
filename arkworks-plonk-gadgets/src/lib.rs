@@ -3,7 +3,6 @@
 #[macro_use]
 pub extern crate ark_std;
 
-pub mod anchor;
-pub mod mixer;
-pub mod utils;
-pub mod vanchor;
+pub mod merkle_tree;
+pub mod poseidon;
+pub mod set;
