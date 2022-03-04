@@ -35,7 +35,8 @@ use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, s
 /// * Alice knows a witness tuple `(secret, nullifier, merklePath)`
 /// and a commitment `Hash(chain_id, nullifier, secret)` stored in one of the
 /// Anchor merkle trees,
-/// * The Anchor smart contract / end-user application hasn't seen this `nullifier_hash` before.
+/// * The Anchor smart contract / end-user application hasn't seen this
+///   `nullifier_hash` before.
 ///
 /// Needs to implement `ConstraintSynthesizer` and a
 /// constructor to generate proper constraints
