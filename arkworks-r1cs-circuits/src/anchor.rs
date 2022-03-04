@@ -1,4 +1,4 @@
-//! Anchor is the fixed deposit/withdraw pool.
+//! The Anchor is a cross-chain fixed sized deposit/withdraw shielded pool.
 //! It allows for users to deposit tokens on one chain and withdraw in another
 //! one without a link from the deposit to the withdrawal.
 
