@@ -1,8 +1,8 @@
-//! Anchor is the fixed deposit/withdraw pool.
+//! The Anchor is a cross-chain fixed sized deposit/withdraw shielded pool.
 //! It allows for users to deposit tokens on one chain and withdraw in another
 //! one without a link from the deposit to the withdrawal.
 
-//! We wil take inputs and do a merkle tree reconstruction for each node in the
+//! We will take inputs and do a merkle tree reconstruction for each node in the
 //! path and check if the reconstructed root is inside the current root set.
 //!
 //! This is the Groth16 setup implementation of Anchor
@@ -13,7 +13,7 @@ use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 
-/// Defines a `AnchorCircuit` struct that hold all the information thats needed
+/// Defines an `AnchorCircuit` struct that hold all the information thats needed
 /// to verify the following statements:
 /// * Alice knows a witness tuple `(secret, nullifier, merklePath)`
 /// and a commitment `Hash(chain_id, nullifier, secret)` stored in one of the
