@@ -34,9 +34,6 @@ ark-snark = { version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 
 # curves
-ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
-ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
-ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 hex-literal = { version = "0.3.4" }
 
@@ -45,15 +42,20 @@ default = ["std"]
 r1cs = []
 plonk = []
 std = [
-  "codec/std",
-  "ark-crypto-primitives/std",
-  "ark-std/std",
-  "ark-r1cs-std/std",
-  "ark-ec/std",
-  "ark-ff/std",
-  "ark-groth16/std",
   "arkworks-r1cs-circuits/std",
   "arkworks-r1cs-gadgets/std",
+  "arkworks-native-gadgets/std",
+  "ark-crypto-primitives/std",
+  "ark-ff/std",
+  "ark-std/std",
+  "ark-r1cs-std/std",
+  "ark-relations/std",
+  "ark-ec/std",
+  "ark-groth16/std",
+  "ark-serialize/std",
+  "arkworks-utils/std",
+  "ark-bn254/std",
+  "codec/std",
 ]
 parallel = [
   "ark-crypto-primitives/parallel",

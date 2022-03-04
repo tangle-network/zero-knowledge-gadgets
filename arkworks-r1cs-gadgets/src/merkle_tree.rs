@@ -186,7 +186,7 @@ mod test {
 	#[test]
 	fn should_verify_path() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
+		let curve = Curve::Bn254;
 
 		let params3 = setup_params(curve, 5, 3);
 		let hasher = Poseidon::<Fq> { params: params3 };
@@ -214,7 +214,7 @@ mod test {
 	#[test]
 	fn should_verify_index() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
+		let curve = Curve::Bn254;
 
 		let params3 = setup_params(curve, 5, 3);
 		let hasher = Poseidon::<Fq> { params: params3 };
@@ -248,7 +248,7 @@ mod test {
 	#[test]
 	fn get_index_should_fail() {
 		let rng = &mut test_rng();
-		let curve = Curve::Bls381;
+		let curve = Curve::Bn254;
 
 		let params3 = setup_params(curve, 5, 3);
 		let hasher = Poseidon::<Fq> { params: params3 };

@@ -26,17 +26,13 @@ ark-groth16 = {version = "^0.3.0", default-features = false }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
 ark-snark = { version = "^0.3.0", default-features = false }
-ark-ec = { version = "^0.3.0", default-features = false }
-ark-serialize = {version = "^0.3.0", default-features = false }
 
 blake2 = { version = "0.9", default-features = false }
 digest = { version = "0.9" }
 
 # curves
-ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
-ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
 [dev-dependencies.arkworks-utils]
 path = "../arkworks-utils"
@@ -49,18 +45,21 @@ default = ["std"]
 std = [
   "ark-std/std",
   "arkworks-r1cs-gadgets/std",
+  "arkworks-native-gadgets/std",
+  "ark-crypto-primitives/std",
+  "ark-ff/std",
+  "ark-r1cs-std/std",
+  "ark-relations/std",
+  "ark-marlin/std",
+  "ark-groth16/std",
+  "ark-poly/std",
+  "ark-ed-on-bn254/std",
+  "ark-bls12-381/std"
 ]
 parallel = [
   "ark-crypto-primitives/parallel",
   "ark-ff/parallel",
   "ark-std/parallel",
   "ark-r1cs-std/parallel",
-  "ark-marlin/parallel",
-  "ark-groth16/parallel",
-  "ark-poly-commit/parallel",
-  "ark-poly/parallel",
-  "ark-ec/parallel",
-  "ark-ff/parallel",
-  "ark-std/parallel",
 ]
 

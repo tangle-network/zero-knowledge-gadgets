@@ -308,7 +308,6 @@ dependencies = [
 name = "arkworks-native-gadgets"
 version = "0.5.0"
 dependencies = [
- "ark-bls12-381",
  "ark-bn254",
  "ark-crypto-primitives",
  "ark-ed-on-bls12-381",
@@ -322,7 +321,6 @@ dependencies = [
 name = "arkworks-plonk-circuits"
 version = "0.1.0"
 dependencies = [
- "ark-bls12-381",
  "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
@@ -343,7 +341,6 @@ dependencies = [
 name = "arkworks-plonk-gadgets"
 version = "0.1.0"
 dependencies = [
- "ark-bls12-381",
  "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
@@ -364,10 +361,7 @@ name = "arkworks-r1cs-circuits"
 version = "0.5.0"
 dependencies = [
  "ark-bls12-381",
- "ark-bn254",
  "ark-crypto-primitives",
- "ark-ec",
- "ark-ed-on-bls12-381",
  "ark-ed-on-bn254",
  "ark-ff",
  "ark-groth16",
@@ -376,7 +370,6 @@ dependencies = [
  "ark-poly-commit",
  "ark-r1cs-std",
  "ark-relations",
- "ark-serialize",
  "ark-snark",
  "ark-std",
  "arkworks-native-gadgets",
@@ -391,10 +384,8 @@ name = "arkworks-r1cs-gadgets"
 version = "0.5.0"
 dependencies = [
  "ark-bls12-381",
- "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
- "ark-ed-on-bls12-381",
  "ark-ed-on-bn254",
  "ark-ff",
  "ark-groth16",
@@ -417,12 +408,9 @@ dependencies = [
 name = "arkworks-setups"
 version = "0.5.0"
 dependencies = [
- "ark-bls12-381",
  "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
- "ark-ed-on-bls12-381",
- "ark-ed-on-bn254",
  "ark-ff",
  "ark-groth16",
  "ark-r1cs-std",
