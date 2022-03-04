@@ -4,13 +4,12 @@ use ark_ff::{PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_snark::SNARK;
 use ark_std::test_rng;
-use arkworks_circuits::anchor::AnchorCircuit;
-use arkworks_gadgets::poseidon::{
-	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
-};
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
+use arkworks_native_gadgets::poseidon::Poseidon;
+use arkworks_r1cs_circuits::anchor::AnchorCircuit;
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
+use arkworks_utils::Curve;
 
-use super::AnchorR1CSProver;
+use super::{setup_params, AnchorR1CSProver};
 
 pub const HEIGHT: usize = 30;
 pub const ANCHOR_CT: usize = 2;
@@ -37,7 +36,7 @@ fn setup_and_prove_anchor_groth16() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let chain_id_u64 = 1u64;
@@ -94,7 +93,7 @@ fn should_fail_with_invalid_public_inputs() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let chain_id_u64 = 1u64;
@@ -185,7 +184,7 @@ fn should_fail_with_invalid_leaf() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let chain_id_u64 = 1u64;
@@ -234,8 +233,8 @@ fn should_fail_with_invalid_nullifier_hash() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
-	let params4 = setup_params_x5_4::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
+	let params4 = setup_params::<Bn254Fr>(curve, 5, 4);
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
 	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
 

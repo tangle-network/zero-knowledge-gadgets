@@ -8,7 +8,7 @@ use ark_std::{
 	string::ToString,
 	vec::Vec,
 };
-use arkworks_gadgets::poseidon::field_hasher::FieldHasher;
+use arkworks_native_gadgets::poseidon::FieldHasher;
 use codec::{Decode, Encode};
 use crypto_box::{
 	aead::{generic_array::GenericArray, Aead, AeadCore, Payload},
@@ -203,10 +203,11 @@ impl<F: PrimeField, H: FieldHasher<F>> Clone for Keypair<F, H> {
 
 #[cfg(test)]
 mod test {
+	use crate::common::setup_params;
 	use ark_bn254::Fq;
 	use ark_std::{test_rng, UniformRand, Zero};
-	use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
-	use arkworks_utils::utils::common::{setup_params_x5_2, setup_params_x5_4, Curve};
+	use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
+	use arkworks_utils::Curve;
 	use codec::{Decode, Encode};
 
 	use crate::keypair::EncryptedData;
@@ -218,7 +219,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_2(curve);
+		let params = setup_params(curve, 5, 2);
 		let hasher = Poseidon::<Fq>::new(params.clone());
 		let private_key = Fq::rand(rng);
 
@@ -236,7 +237,7 @@ mod test {
 		let private_key = Fq::rand(rng);
 		let curve = Curve::Bn254;
 
-		let params4 = setup_params_x5_4(curve);
+		let params4 = setup_params(curve, 5, 4);
 		let hasher = Poseidon::<Fq>::new(params4.clone());
 		let commitment = Fq::rand(rng);
 

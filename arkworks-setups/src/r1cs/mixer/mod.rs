@@ -8,15 +8,15 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_circuits::mixer::MixerCircuit;
-use arkworks_gadgets::poseidon::{
-	field_hasher::{FieldHasher, Poseidon},
-	field_hasher_constraints::PoseidonGadget,
+use arkworks_native_gadgets::{
+	merkle_tree::Path,
+	poseidon::{FieldHasher, Poseidon},
 };
-use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+use arkworks_r1cs_circuits::mixer::MixerCircuit;
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
+use arkworks_utils::Curve;
 
-use arkworks_gadgets::merkle_tree::simple_merkle::Path;
-
+use super::setup_params;
 use crate::common::*;
 
 #[cfg(test)]
@@ -76,7 +76,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		),
 		Error,
 	> {
-		let params3 = setup_params_x5_3(curve);
+		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 
 		let arbitrary_input = E::Fr::rand(rng);
@@ -131,7 +131,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		Error,
 	> {
 		// Initialize hasher
-		let params3 = setup_params_x5_3(curve);
+		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Setup inputs
 		let leaf = poseidon.hash_two(&secret, &nullifier)?;
@@ -233,7 +233,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		nullifier_hash: E::Fr,
 	) -> MixerCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT> {
 		// Initialize hasher
-		let params3 = setup_params_x5_3(curve);
+		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Setup circuit
 		let mc = MixerCircuit::new(
@@ -258,7 +258,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		let secret_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&secret);
 		let nullifier_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&nullifier);
 
-		let params3 = setup_params_x5_3(curve);
+		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		let leaf_field_element = poseidon.hash_two(&secret_field_elt, &nullifier_field_elt)?;
 		let nullifier_hash_field_element =
@@ -285,7 +285,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		default_leaf: [u8; 32],
 		rng: &mut R,
 	) -> Result<MixerProof, Error> {
-		let params3 = setup_params_x5_3(curve);
+		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Get field element version of all the data
 		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);

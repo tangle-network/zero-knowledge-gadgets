@@ -156,41 +156,74 @@ pub(crate) fn prove_then_verify<
 	Ok(())
 }
 
+/// Add a variable to a circuit and constrain it to a public input value that
+/// is expected to be different in each instance of the circuit.
+pub fn add_public_input_variable<F, P>(composer: &mut StandardComposer<F, P>, value: F) -> Variable
+where
+	F: PrimeField,
+	P: TEModelParameters<BaseField = F>,
+{
+	let variable = composer.add_input(value);
+	composer.poly_gate(
+		variable,
+		variable,
+		variable,
+		F::zero(),
+		-F::one(),
+		F::zero(),
+		F::zero(),
+		F::zero(),
+		Some(value),
+	);
+	variable
+}
+
 // I used the MixerCircuit to test the new helper function:
 // TODO: Include a more minimal example to show how it's used
 #[cfg(test)]
 mod test {
-	use crate::{
-		mixer::MixerCircuit,
-		poseidon::poseidon::PoseidonGadget,
-		utils::{gadget_tester, prove_then_verify},
-	};
+	use crate::{mixer::MixerCircuit, utils::prove_then_verify};
 	use ark_bn254::Bn254;
 	use ark_ec::{PairingEngine, TEModelParameters};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-	use ark_ff::Field;
-	use ark_poly::polynomial::univariate::DensePolynomial;
-	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
-	use ark_std::test_rng;
-	use arkworks_gadgets::{
-		ark_std::UniformRand,
-		merkle_tree::simple_merkle::SparseMerkleTree,
-		poseidon::field_hasher::{FieldHasher, Poseidon},
+	use ark_ff::{Field, PrimeField};
+	use ark_std::{test_rng, UniformRand};
+	use arkworks_native_gadgets::{
+		merkle_tree::SparseMerkleTree,
+		poseidon::{sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters},
 	};
-	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
-	use plonk_core::{
-		prelude::*,
-		proof_system::{Prover, Verifier},
+	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
 	};
+	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
+
+	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+
+		let mds_f = bytes_matrix_to_f(&pos_data.mds);
+		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+
+		let pos = PoseidonParameters {
+			mds_matrix: mds_f,
+			round_keys: rounds_f,
+			full_rounds: pos_data.full_rounds,
+			partial_rounds: pos_data.partial_rounds,
+			sbox: PoseidonSbox(pos_data.exp),
+			width: pos_data.width,
+		};
+
+		pos
+	}
 
 	#[test]
 	fn check_new_gadget_tester_on_success() {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon_native = PoseidonBn254 { params };
 
 		// Randomly generated secrets
@@ -251,7 +284,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon_native = PoseidonBn254 { params };
 
 		// Randomly generated secrets

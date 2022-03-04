@@ -7,7 +7,7 @@ use ark_std::{
 	vec::Vec,
 };
 
-use arkworks_utils::utils::common::Curve;
+use arkworks_utils::Curve;
 use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
 use utxo::Utxo;
 

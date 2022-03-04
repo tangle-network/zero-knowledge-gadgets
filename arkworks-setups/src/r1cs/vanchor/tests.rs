@@ -3,10 +3,9 @@ use ark_std::vec;
 use crate::{common::*, r1cs::setup_tree_and_create_path};
 use ark_serialize::CanonicalDeserialize;
 use ark_std::{One, Zero};
-use arkworks_gadgets::poseidon::{
-	field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget,
-};
-use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+use arkworks_native_gadgets::poseidon::Poseidon;
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
+use arkworks_utils::Curve;
 
 use ark_bn254::{Bn254, Fr as BnFr};
 use ark_ff::UniformRand;
@@ -15,7 +14,7 @@ use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_snark::SNARK;
 use ark_std::{str::FromStr, test_rng};
 
-use super::VAnchorR1CSProver;
+use super::{setup_params, VAnchorR1CSProver};
 
 const HEIGHT: usize = 30;
 const ANCHOR_CT: usize = 2;
@@ -30,7 +29,7 @@ const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 fn should_create_proof_for_random_circuit() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	// Set up a random circuit and make pk/vk pair
@@ -141,7 +140,7 @@ fn should_create_proof_for_random_circuit() {
 fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	let public_amount = BnFr::from(10u32);
@@ -335,7 +334,7 @@ fn should_fail_with_invalid_root() {
 fn should_fail_with_invalid_nullifier() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	let public_amount = BnFr::from(10u32);
@@ -445,7 +444,7 @@ fn should_fail_with_invalid_nullifier() {
 fn should_fail_with_same_nullifier() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	let public_amount = BnFr::from(0u32);
@@ -542,7 +541,7 @@ fn should_fail_with_same_nullifier() {
 fn should_fail_with_inconsistent_input_output_values() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	let public_amount = BnFr::from(10u32);
@@ -648,7 +647,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 fn should_fail_with_big_amount() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	// 2^248
@@ -759,7 +758,7 @@ fn should_fail_with_big_amount() {
 fn should_fail_with_invalid_public_input() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
-	let params3 = setup_params_x5_3::<BnFr>(curve);
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
 	let public_amount = BnFr::from(0u32);

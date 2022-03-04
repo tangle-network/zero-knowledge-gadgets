@@ -9,16 +9,15 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_circuits::vanchor::VAnchorCircuit;
-use arkworks_gadgets::{
-	merkle_tree::simple_merkle::Path,
-	poseidon::{field_hasher::Poseidon, field_hasher_constraints::PoseidonGadget},
+use arkworks_native_gadgets::{
+	merkle_tree::Path,
+	poseidon::{FieldHasher, Poseidon},
 };
-use arkworks_utils::utils::common::{
-	setup_params_x5_2, setup_params_x5_3, setup_params_x5_4, setup_params_x5_5, Curve,
-};
+use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
+use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
+use arkworks_utils::Curve;
 
-use super::{setup_tree_and_create_path, SMT};
+use super::{setup_params, setup_tree_and_create_path, SMT};
 use crate::utxo;
 
 #[cfg(test)]
@@ -54,9 +53,9 @@ impl<
 		rng: &mut R,
 	) -> Result<Utxo<E::Fr>, Error> {
 		// Initialize hashers
-		let params2 = setup_params_x5_2::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
-		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let params2 = setup_params::<E::Fr>(curve, 5, 2);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
@@ -150,10 +149,10 @@ impl<
 		Error,
 	> {
 		// Initialize hashers
-		let params2 = setup_params_x5_2::<E::Fr>(curve);
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
-		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let params2 = setup_params::<E::Fr>(curve, 5, 2);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
@@ -320,9 +319,9 @@ impl<
 		blinding: Vec<u8>,
 	) -> Result<Utxo<E::Fr>, Error> {
 		// Initialize hashers
-		let params2 = setup_params_x5_2::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
-		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let params2 = setup_params::<E::Fr>(curve, 5, 2);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
@@ -361,10 +360,10 @@ impl<
 		rng: &mut R,
 	) -> Result<VAnchorProof, Error> {
 		// Initialize hashers
-		let params2 = setup_params_x5_2::<E::Fr>(curve);
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
-		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let params2 = setup_params::<E::Fr>(curve, 5, 2);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
@@ -455,9 +454,9 @@ impl<
 		rng: &mut R,
 	) -> Result<Utxo<<E as PairingEngine>::Fr>, Error> {
 		// Initialize hashers
-		let params2 = setup_params_x5_2::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
-		let params5 = setup_params_x5_5::<E::Fr>(curve);
+		let params2 = setup_params::<E::Fr>(curve, 5, 2);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };

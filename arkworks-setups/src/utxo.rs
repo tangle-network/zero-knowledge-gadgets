@@ -7,18 +7,20 @@ use ark_std::{
 	string::ToString,
 	vec::Vec,
 };
-use arkworks_gadgets::poseidon::field_hasher::{FieldHasher, Poseidon};
+use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
 use codec::{Decode, Encode};
 
 #[derive(Debug)]
 pub enum UtxoError {
 	NullifierNotCalculated,
+	EncryptedDataDecodeError,
 }
 
 impl core::fmt::Display for UtxoError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		let msg = match self {
 			UtxoError::NullifierNotCalculated => "Nullifier not calculated".to_string(),
+			UtxoError::EncryptedDataDecodeError => "Failed to decode encrypted data".to_string(),
 		};
 		write!(f, "{}", msg)
 	}
@@ -140,7 +142,7 @@ impl<F: PrimeField> Utxo<F> {
 
 	pub fn decrypt(&self, data: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
 		let decoded_ed = EncryptedData::decode(&mut &data[..])
-			.map_err(|_| String::from("Failed to decode encrypted data"))?;
+			.map_err(|_| UtxoError::EncryptedDataDecodeError)?;
 		// Decrypting the message
 		let plaintext = self.keypair.decrypt(&decoded_ed)?;
 
@@ -158,19 +160,18 @@ impl<F: PrimeField> Utxo<F> {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::common::setup_params;
 	use ark_bn254::Fr as BnFr;
 	use ark_ff::BigInteger;
 	use ark_std::{test_rng, UniformRand};
-	use arkworks_utils::utils::common::{
-		setup_params_x5_2, setup_params_x5_4, setup_params_x5_5, Curve,
-	};
+	use arkworks_utils::Curve;
 
 	#[test]
 	fn test_encrypt() {
 		let curve = Curve::Bn254;
-		let params2 = setup_params_x5_2::<BnFr>(curve);
-		let params4 = setup_params_x5_4::<BnFr>(curve);
-		let params5 = setup_params_x5_5::<BnFr>(curve);
+		let params2 = setup_params::<BnFr>(curve, 5, 2);
+		let params4 = setup_params::<BnFr>(curve, 5, 4);
+		let params5 = setup_params::<BnFr>(curve, 5, 5);
 		let poseidon2 = Poseidon::new(params2);
 		let poseidon4 = Poseidon::new(params4);
 		let poseidon5 = Poseidon::new(params5);
