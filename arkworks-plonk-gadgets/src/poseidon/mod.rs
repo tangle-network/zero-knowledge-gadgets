@@ -1,11 +1,11 @@
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec, vec::Vec};
-use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
+use arkworks_native_gadgets::poseidon::{sbox::PoseidonSbox, FieldHasher, Poseidon};
 use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 pub mod sbox;
-use sbox::{PoseidonSbox, SboxConstraints};
+use sbox::SboxConstraints;
 
 #[derive(Debug, Default)]
 pub struct PoseidonParametersVar {
@@ -66,15 +66,13 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 			mds_matrix_var.push(temp);
 		}
 
-		let sbox_gadget = PoseidonSbox::Exponentiation(native.params.sbox.0 as usize);
-
 		let params_var = PoseidonParametersVar {
 			round_keys: round_keys_var,
 			mds_matrix: mds_matrix_var,
 			full_rounds: native.params.full_rounds,
 			partial_rounds: native.params.partial_rounds,
 			width: native.params.width,
-			sbox: sbox_gadget,
+			sbox: native.params.sbox,
 		};
 		PoseidonGadget { params: params_var }
 	}
@@ -168,18 +166,32 @@ mod tests {
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::{test_rng, One};
-	use arkworks_native_gadgets::poseidon::FieldHasher;
+	use arkworks_native_gadgets::poseidon::{sbox::PoseidonSbox, FieldHasher, PoseidonParameters};
 	use arkworks_utils::{
-		poseidon::{sbox::PoseidonSbox as UtilsPoseidonSbox, PoseidonParameters},
-		utils::{
-			common::{setup_params_x5_3, Curve},
-			parse_matrix, parse_vec,
-		},
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
 	};
 	use plonk_core::prelude::*;
 	use plonk_hashing::poseidon::poseidon_ref::{NativeSpecRef, PoseidonRef};
 
 	type PoseidonHasher = arkworks_native_gadgets::poseidon::Poseidon<Fq>;
+
+	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+
+		let mds_f = bytes_matrix_to_f(&pos_data.mds);
+		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+
+		let pos = PoseidonParameters {
+			mds_matrix: mds_f,
+			round_keys: rounds_f,
+			full_rounds: pos_data.full_rounds,
+			partial_rounds: pos_data.partial_rounds,
+			sbox: PoseidonSbox(pos_data.exp),
+			width: pos_data.width,
+		};
+
+		pos
+	}
 
 	// Use it in a circuit
 	struct TestCircuit<
@@ -216,16 +228,16 @@ mod tests {
 	}
 	#[test]
 	fn should_verify_plonk_poseidon_x5_3() {
-		let curve = arkworks_utils::utils::common::Curve::Bn254;
+		let curve = Curve::Bn254;
 
 		// Get poseidon parameters for this curve:
-		let util_params = setup_params_x5_3(curve);
+		let util_params = setup_params(curve, 5, 3);
 		let params = PoseidonParameters {
 			round_keys: util_params.clone().round_keys,
 			mds_matrix: util_params.clone().mds_matrix,
 			full_rounds: util_params.clone().full_rounds,
 			partial_rounds: util_params.clone().partial_rounds,
-			sbox: UtilsPoseidonSbox(5),
+			sbox: PoseidonSbox(5),
 			width: util_params.clone().width,
 		};
 		let poseidon_hasher = PoseidonHasher::new(params);
@@ -274,14 +286,16 @@ mod tests {
 
 	#[test]
 	fn should_verify_against_zk_garage_non_optimized_poseidon() {
-		// Webb's Poseidon hash using field hasher
-		let util_params = setup_params_x5_3(Curve::Bn254);
+		let curve = Curve::Bn254;
+
+		// Get poseidon parameters for this curve:
+		let util_params = setup_params(curve, 5, 3);
 		let params = PoseidonParameters {
 			round_keys: util_params.clone().round_keys,
 			mds_matrix: util_params.clone().mds_matrix,
 			full_rounds: util_params.clone().full_rounds,
 			partial_rounds: util_params.clone().partial_rounds,
-			sbox: UtilsPoseidonSbox(5),
+			sbox: PoseidonSbox(5),
 			width: util_params.clone().width,
 		};
 		let poseidon_hasher = PoseidonHasher::new(params);
@@ -301,16 +315,11 @@ mod tests {
 		use plonk_hashing::poseidon::constants::PoseidonConstants;
 		const ARITY: usize = 2;
 		const WIDTH: usize = ARITY + 1;
-		let rounds = arkworks_utils::utils::bn254_x5_3::ROUND_CONSTS;
-		let mds = arkworks_utils::utils::bn254_x5_3::MDS_ENTRIES;
 		// Fill in Webb's Poseidon constants by hand
-		let round_constants = parse_vec::<Bn254Fr>(rounds.to_vec());
+		let round_constants = util_params.round_keys.clone();
 		// It is essential to transpose the matrix! Webb uses left matrix mult, this
 		// implementation uses right !!!
-		let mds_matrix = Matrix::from(parse_matrix::<Bn254Fr>(
-			mds.iter().map(|x| x.to_vec()).collect::<Vec<_>>(),
-		))
-		.transpose();
+		let mds_matrix = Matrix::from(util_params.mds_matrix).transpose();
 		let domain_tag = Bn254Fr::from(0u32); // circom used 0 as the domain tag
 		let full_rounds = 8usize;
 		let half_full_rounds = 4usize;

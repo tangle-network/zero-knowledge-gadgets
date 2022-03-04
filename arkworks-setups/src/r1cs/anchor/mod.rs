@@ -14,9 +14,9 @@ use arkworks_native_gadgets::{
 };
 use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
+use arkworks_utils::Curve;
 
-use super::setup_tree_and_create_path;
+use super::{setup_params, setup_tree_and_create_path};
 
 #[cfg(test)]
 mod tests;
@@ -61,8 +61,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	> {
 		let arbitrary_input = E::Fr::rand(rng);
 		// Initialize hashers
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 		// Create random chain_id public input
@@ -131,8 +131,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		Error,
 	> {
 		// Initialize hashers
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 		// Setup inputs
@@ -251,8 +251,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		nullifier_hash: E::Fr,
 	) -> AnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT> {
 		// Initialize hashers
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 
@@ -281,8 +281,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		nullifier: Vec<u8>,
 	) -> Result<AnchorLeaf, Error> {
 		// Initialize hashers
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 
@@ -320,8 +320,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		rng: &mut R,
 	) -> Result<AnchorProof, Error> {
 		// Initialize hashers
-		let params3 = setup_params_x5_3::<E::Fr>(curve);
-		let params4 = setup_params_x5_4::<E::Fr>(curve);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 		// Get field element version of all the data
