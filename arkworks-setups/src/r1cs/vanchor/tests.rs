@@ -14,7 +14,7 @@ use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_snark::SNARK;
 use ark_std::{str::FromStr, test_rng};
 
-use super::{VAnchorR1CSProver, setup_params};
+use super::{setup_params, VAnchorR1CSProver};
 
 const HEIGHT: usize = 30;
 const ANCHOR_CT: usize = 2;

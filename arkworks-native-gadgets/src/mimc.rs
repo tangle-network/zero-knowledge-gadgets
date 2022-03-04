@@ -219,8 +219,7 @@ mod test {
 	use super::*;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
-	use arkworks_utils::mimc_params::setup_mimc_params;
-	use arkworks_utils::{bytes_vec_to_f, Curve};
+	use arkworks_utils::{bytes_vec_to_f, mimc_params::setup_mimc_params, Curve};
 
 	#[derive(Default, Clone)]
 	struct MiMCRounds220;
@@ -241,7 +240,7 @@ mod test {
 			num_inputs: mimc_data.width as usize,
 			num_outputs: mimc_data.width as usize,
 			rounds: mimc_data.rounds as usize,
-			round_keys: constants_f
+			round_keys: constants_f,
 		};
 
 		mimc_p

@@ -16,8 +16,8 @@ use arkworks_r1cs_circuits::mixer::MixerCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use crate::common::*;
 use super::setup_params;
+use crate::common::*;
 
 #[cfg(test)]
 mod tests;

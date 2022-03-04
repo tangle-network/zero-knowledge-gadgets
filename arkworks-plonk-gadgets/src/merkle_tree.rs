@@ -133,11 +133,13 @@ mod test {
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::{test_rng, UniformRand};
-	use arkworks_native_gadgets::{merkle_tree::SparseMerkleTree, poseidon::Poseidon};
-	use arkworks_utils::Curve;
-	use arkworks_utils::{bytes_vec_to_f, bytes_matrix_to_f};
-	use arkworks_utils::poseidon_params::{setup_poseidon_params};
-	use arkworks_native_gadgets::poseidon::{PoseidonParameters, sbox::PoseidonSbox};
+	use arkworks_native_gadgets::{
+		merkle_tree::SparseMerkleTree,
+		poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+	};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
@@ -154,7 +156,7 @@ mod test {
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
-			width: pos_data.width
+			width: pos_data.width,
 		};
 
 		pos

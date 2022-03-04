@@ -9,7 +9,7 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::{AnchorR1CSProver, setup_params};
+use super::{setup_params, AnchorR1CSProver};
 
 pub const HEIGHT: usize = 30;
 pub const ANCHOR_CT: usize = 2;

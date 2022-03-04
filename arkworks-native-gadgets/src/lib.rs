@@ -1,9 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ff::PrimeField;
-use ark_ff::BigInteger;
-use ark_std::boxed::Box;
-use ark_std::vec::Vec;
+use ark_ff::{BigInteger, PrimeField};
+use ark_std::{boxed::Box, vec::Vec};
 
 #[macro_use]
 pub extern crate ark_std;

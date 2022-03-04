@@ -1,3 +1,4 @@
+use super::setup_params;
 use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
@@ -7,7 +8,6 @@ use ark_std::{test_rng, vec::Vec, One, Zero};
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
-use super::setup_params;
 
 // merkle proof path legth
 // TreeConfig_x5, x7 HEIGHT is hardcoded to 30

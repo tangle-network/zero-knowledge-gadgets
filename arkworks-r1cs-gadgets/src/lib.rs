@@ -11,14 +11,9 @@ pub mod mimc;
 pub mod poseidon;
 pub mod set;
 
-use ark_ff::BigInteger;
-use ark_ff::PrimeField;
-use ark_relations::r1cs::{SynthesisError};
-use ark_r1cs_std::{
-	fields::{fp::FpVar},
-	prelude::*,
-	uint8::UInt8,
-};
+use ark_ff::{BigInteger, PrimeField};
+use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
+use ark_relations::r1cs::SynthesisError;
 
 pub fn to_field_var_elements<F: PrimeField>(
 	bytes: &[UInt8<F>],

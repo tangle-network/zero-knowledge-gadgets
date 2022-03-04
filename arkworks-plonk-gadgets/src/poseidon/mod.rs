@@ -1,7 +1,7 @@
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec, vec::Vec};
-use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon, sbox::PoseidonSbox};
+use arkworks_native_gadgets::poseidon::{sbox::PoseidonSbox, FieldHasher, Poseidon};
 use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 pub mod sbox;
@@ -166,11 +166,10 @@ mod tests {
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::{test_rng, One};
-	use arkworks_native_gadgets::poseidon::FieldHasher;
-	use arkworks_utils::Curve;
-	use arkworks_utils::{bytes_vec_to_f, bytes_matrix_to_f};
-	use arkworks_utils::poseidon_params::{setup_poseidon_params};
-	use arkworks_native_gadgets::poseidon::{PoseidonParameters, sbox::PoseidonSbox};
+	use arkworks_native_gadgets::poseidon::{sbox::PoseidonSbox, FieldHasher, PoseidonParameters};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use plonk_core::prelude::*;
 	use plonk_hashing::poseidon::poseidon_ref::{NativeSpecRef, PoseidonRef};
 
@@ -188,7 +187,7 @@ mod tests {
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
-			width: pos_data.width
+			width: pos_data.width,
 		};
 
 		pos
@@ -320,8 +319,7 @@ mod tests {
 		let round_constants = util_params.round_keys.clone();
 		// It is essential to transpose the matrix! Webb uses left matrix mult, this
 		// implementation uses right !!!
-		let mds_matrix = Matrix::from(util_params.mds_matrix)
-		.transpose();
+		let mds_matrix = Matrix::from(util_params.mds_matrix).transpose();
 		let domain_tag = Bn254Fr::from(0u32); // circom used 0 as the domain tag
 		let full_rounds = 8usize;
 		let half_full_rounds = 4usize;

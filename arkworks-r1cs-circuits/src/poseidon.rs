@@ -53,11 +53,13 @@ mod test {
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::marlin_pc::MarlinKZG10;
 	use ark_std::UniformRand;
-	use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon, PoseidonParameters, sbox::PoseidonSbox};
+	use arkworks_native_gadgets::poseidon::{
+		sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters,
+	};
 	use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
-	use arkworks_utils::Curve;
-	use arkworks_utils::{bytes_vec_to_f, bytes_matrix_to_f};
-	use arkworks_utils::poseidon_params::{setup_poseidon_params};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use blake2::Blake2s;
 	type PoseidonC = PoseidonCircuit<BlsFr, PoseidonGadget<BlsFr>>;
 
@@ -73,7 +75,7 @@ mod test {
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
-			width: pos_data.width
+			width: pos_data.width,
 		};
 
 		pos

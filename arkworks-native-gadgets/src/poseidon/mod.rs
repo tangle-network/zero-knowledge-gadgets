@@ -1,11 +1,9 @@
-use ark_ff::PrimeField;
-use ark_std::{error::Error as ArkError, rand::Rng, vec::Vec, io::Read};
 use ark_crypto_primitives::Error;
+use ark_ff::{BigInteger, PrimeField};
+use ark_std::{error::Error as ArkError, io::Read, rand::Rng, string::ToString, vec::Vec};
 use sbox::PoseidonSbox;
-use ark_ff::BigInteger;
-use ark_std::string::ToString;
 
-use super::{to_field_elements, from_field_elements};
+use super::{from_field_elements, to_field_elements};
 
 pub mod sbox;
 
@@ -235,9 +233,9 @@ pub mod test {
 	use ark_ff::{fields::Field, PrimeField};
 	use ark_std::{vec::Vec, One};
 
-	use arkworks_utils::Curve;
-	use arkworks_utils::{parse_vec, bytes_vec_to_f, bytes_matrix_to_f};
-	use arkworks_utils::poseidon_params::{setup_poseidon_params};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, parse_vec, poseidon_params::setup_poseidon_params, Curve,
+	};
 
 	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
 		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
@@ -251,7 +249,7 @@ pub mod test {
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
-			width: pos_data.width
+			width: pos_data.width,
 		};
 
 		pos
@@ -270,9 +268,12 @@ pub mod test {
 		// const { poseidon } = require('circomlib');
 		// console.log(poseidon([1, 2]).toString(16));
 		// ```
-		let res: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a",
-		]).unwrap());
+		let res: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x115cc0f5e7d690413df64c6b9662e9cf2a3617f2743245519e19607a4417189a",
+			])
+			.unwrap(),
+		);
 		let left_input = Fq::one();
 		let right_input = Fq::one().double();
 		let poseidon_res = poseidon.hash_two(&left_input, &right_input).unwrap();
@@ -315,9 +316,12 @@ pub mod test {
 			0x17, 0xb8, 0x1d, 0x49, 0x41, 0x4b, 0x82, 0xe5, 0x6a, 0x2e, 0xc0, 0x18, 0xf7, 0xa5,
 			0x5c, 0x3f, 0x30, 0x0b,
 		]);
-		let res: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x0a13ad844d3487ad3dbaf3876760eb971283d48333fa5a9e97e6ee422af9554b",
-		]).unwrap());
+		let res: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x0a13ad844d3487ad3dbaf3876760eb971283d48333fa5a9e97e6ee422af9554b",
+			])
+			.unwrap(),
+		);
 		let poseidon_res = poseidon.hash_two(&left_input, &right_input).unwrap();
 		assert_eq!(res[0], poseidon_res, "{} != {}", res[0], poseidon_res);
 	}
@@ -334,13 +338,19 @@ pub mod test {
 		let poseidon4 = Poseidon::new(parameters4);
 		let poseidon5 = Poseidon::new(parameters5);
 
-		let expected_public_key: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
-		]).unwrap());
+		let expected_public_key: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x07a1f74bf9feda741e1e9099012079df28b504fc7a19a02288435b8e02ae21fa",
+			])
+			.unwrap(),
+		);
 
-		let private_key: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0xb2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046",
-		]).unwrap());
+		let private_key: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0xb2ac10dccfb5a5712d632464a359668bb513e80e9d145ab5a88381de83af1046",
+			])
+			.unwrap(),
+		);
 		// let input = private_key[0];
 
 		let computed_public_key = poseidon2.hash(&private_key).unwrap();
@@ -352,19 +362,31 @@ pub mod test {
 			expected_public_key[0], computed_public_key
 		);
 
-		let chain_id: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x0000000000000000000000000000000000000000000000000000000000007a69",
-		]).unwrap());
-		let amount: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x0000000000000000000000000000000000000000000000000000000000989680",
-		]).unwrap());
-		let blinding: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x00a668ba0dcb34960aca597f433d0d3289c753046afa26d97e1613148c05f2c0",
-		]).unwrap());
+		let chain_id: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x0000000000000000000000000000000000000000000000000000000000007a69",
+			])
+			.unwrap(),
+		);
+		let amount: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x0000000000000000000000000000000000000000000000000000000000989680",
+			])
+			.unwrap(),
+		);
+		let blinding: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x00a668ba0dcb34960aca597f433d0d3289c753046afa26d97e1613148c05f2c0",
+			])
+			.unwrap(),
+		);
 
-		let expected_leaf: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x15206d966a7fb3e3fbbb7f4d7b623ca1c7c9b5c6e6d0a3348df428189441a1e4",
-		]).unwrap());
+		let expected_leaf: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x15206d966a7fb3e3fbbb7f4d7b623ca1c7c9b5c6e6d0a3348df428189441a1e4",
+			])
+			.unwrap(),
+		);
 		let mut input = vec![chain_id[0]];
 		input.push(amount[0]);
 		input.push(expected_public_key[0]);
@@ -377,12 +399,18 @@ pub mod test {
 			expected_leaf[0], computed_leaf
 		);
 
-		let path_index: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x0000000000000000000000000000000000000000000000000000000000000000",
-		]).unwrap());
-		let expected_nullifier: Vec<Fq> = bytes_vec_to_f(&parse_vec(vec![
-			"0x21423c7374ce5b3574f04f92243449359ae3865bb8e34cb2b7b5e4187ba01fca",
-		]).unwrap());
+		let path_index: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x0000000000000000000000000000000000000000000000000000000000000000",
+			])
+			.unwrap(),
+		);
+		let expected_nullifier: Vec<Fq> = bytes_vec_to_f(
+			&parse_vec(vec![
+				"0x21423c7374ce5b3574f04f92243449359ae3865bb8e34cb2b7b5e4187ba01fca",
+			])
+			.unwrap(),
+		);
 		let mut input = vec![expected_leaf[0]];
 		input.push(path_index[0]);
 		input.push(private_key[0]);

@@ -1,11 +1,11 @@
-use super::{Curve, Bytes, FromHexError, parse_vec};
+use super::{parse_vec, Bytes, Curve, FromHexError};
 
 pub use ark_std::vec::Vec;
 
 pub struct MimcData {
 	pub constants: Vec<Bytes>,
 	pub rounds: u16,
-	pub width: u8
+	pub width: u8,
 }
 
 impl MimcData {
@@ -13,7 +13,7 @@ impl MimcData {
 		Self {
 			constants,
 			rounds,
-			width
+			width,
 		}
 	}
 }
@@ -26,7 +26,7 @@ pub fn setup_mimc_params(curve: Curve, rounds: u16, width: u8) -> Result<MimcDat
 			pub mod ed_on_bn254_220;
 			use ed_on_bn254_220::{CONSTANTS, MIMC_ROUNDS, WIDTH};
 			get_mimc_data(CONSTANTS, MIMC_ROUNDS, WIDTH)
-		},
+		}
 		_ => unimplemented!(),
 	}
 }

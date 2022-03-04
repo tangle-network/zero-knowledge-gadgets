@@ -19,7 +19,6 @@ plonk-core = { version = "^0.8", git = "https://github.com/ZK-Garage/plonk", fea
 ark-ec = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies]
-
 plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }

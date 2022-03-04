@@ -6,8 +6,9 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::{fmt::Debug, vec::Vec};
-use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon, sbox::{PoseidonSbox},
-PoseidonParameters};
+use arkworks_native_gadgets::poseidon::{
+	sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters,
+};
 
 use core::{
 	borrow::Borrow,

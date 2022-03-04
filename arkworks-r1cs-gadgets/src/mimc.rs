@@ -1,3 +1,4 @@
+use super::to_field_var_elements;
 use ark_crypto_primitives::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
@@ -8,9 +9,8 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
-use arkworks_native_gadgets::mimc::{Rounds, CRH, MiMCParameters};
+use arkworks_native_gadgets::mimc::{MiMCParameters, Rounds, CRH};
 use core::borrow::Borrow;
-use super::to_field_var_elements;
 
 #[derive(Clone)]
 pub struct MiMCParametersVar<F: PrimeField> {
@@ -198,8 +198,7 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
-	use arkworks_utils::mimc_params::setup_mimc_params;
-	use arkworks_utils::{bytes_vec_to_f, Curve};
+	use arkworks_utils::{bytes_vec_to_f, mimc_params::setup_mimc_params, Curve};
 
 	#[derive(Default, Clone)]
 	struct MiMCRounds220_2;
@@ -232,7 +231,7 @@ mod test {
 			num_inputs: mimc_data.width as usize,
 			num_outputs: mimc_data.width as usize,
 			rounds: mimc_data.rounds as usize,
-			round_keys: constants_f
+			round_keys: constants_f,
 		};
 
 		mimc_p

@@ -301,12 +301,11 @@ fn parent(index: u64) -> Option<u64> {
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, SparseMerkleTree};
-	use crate::poseidon::{FieldHasher, Poseidon, test::setup_params};
+	use crate::poseidon::{test::setup_params, FieldHasher, Poseidon};
 	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{BigInteger, PrimeField, UniformRand};
 	use ark_std::{collections::BTreeMap, test_rng};
-	use arkworks_utils::Curve;
-	use arkworks_utils::{parse_vec, bytes_vec_to_f};
+	use arkworks_utils::{bytes_vec_to_f, parse_vec, Curve};
 
 	type BLSHash = Poseidon<Fq>;
 	use ark_bn254::Fr as Bn254Fr;
@@ -440,7 +439,8 @@ mod test {
 			"0x1f15585f8947e378bcf8bd918716799da909acdb944c57150b1eb4565fda8aa0",
 			"0x1eb064b21055ac6a350cf41eb30e4ce2cb19680217df3a243617c2838185ad06",
 		];
-		let solidity_empty_hashes: Vec<Bn254Fr> = bytes_vec_to_f(&parse_vec(solidity_empty_hashes_hex).unwrap());
+		let solidity_empty_hashes: Vec<Bn254Fr> =
+			bytes_vec_to_f(&parse_vec(solidity_empty_hashes_hex).unwrap());
 
 		// Generate again with this module's functions
 		let curve = Curve::Bn254;
@@ -449,7 +449,8 @@ mod test {
 
 		let default_leaf_hex =
 			vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
-		let default_leaf_scalar: Vec<Bn254Fr> = bytes_vec_to_f(&parse_vec(default_leaf_hex).unwrap());
+		let default_leaf_scalar: Vec<Bn254Fr> =
+			bytes_vec_to_f(&parse_vec(default_leaf_hex).unwrap());
 		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_le();
 		let empty_hashes =
 			gen_empty_hashes::<Bn254Fr, _, 32usize>(&poseidon, &default_leaf_vec[..]).unwrap();

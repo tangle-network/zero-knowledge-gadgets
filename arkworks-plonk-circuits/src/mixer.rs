@@ -103,19 +103,17 @@ mod test {
 	use crate::utils::prove_then_verify;
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-	use ark_ff::Field;
-	use ark_ff::PrimeField;
+	use ark_ff::{Field, PrimeField};
 	use ark_std::test_rng;
 	use arkworks_native_gadgets::{
 		ark_std::UniformRand,
 		merkle_tree::SparseMerkleTree,
-		poseidon::{FieldHasher, Poseidon},
+		poseidon::{sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters},
 	};
-	use arkworks_utils::Curve;
-	use arkworks_utils::{bytes_vec_to_f, bytes_matrix_to_f};
-	use arkworks_utils::poseidon_params::{setup_poseidon_params};
-	use arkworks_native_gadgets::poseidon::{PoseidonParameters, sbox::PoseidonSbox};
 	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
@@ -132,7 +130,7 @@ mod test {
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
-			width: pos_data.width
+			width: pos_data.width,
 		};
 
 		pos

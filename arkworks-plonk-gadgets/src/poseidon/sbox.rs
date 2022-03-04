@@ -1,7 +1,7 @@
 use ark_ec::TEModelParameters;
 use ark_ff::PrimeField;
-use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 use arkworks_native_gadgets::poseidon::sbox::PoseidonSbox;
+use plonk_core::{constraint_system::StandardComposer, error::Error, prelude::Variable};
 
 pub trait SboxConstraints {
 	fn synthesize_sbox<F: PrimeField, P: TEModelParameters<BaseField = F>>(

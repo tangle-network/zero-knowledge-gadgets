@@ -16,7 +16,7 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::{setup_tree_and_create_path, setup_params};
+use super::{setup_params, setup_tree_and_create_path};
 
 #[cfg(test)]
 mod tests;

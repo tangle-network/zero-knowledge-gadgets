@@ -38,7 +38,6 @@ ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features =
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
-
 hex-literal = { version = "0.3.4" }
 
 [features]

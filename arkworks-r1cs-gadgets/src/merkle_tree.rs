@@ -143,16 +143,19 @@ where
 mod test {
 	use super::PathVar;
 	use crate::poseidon::{FieldHasherGadget, PoseidonGadget};
-	use arkworks_native_gadgets::{merkle_tree::SparseMerkleTree, poseidon::{Poseidon, PoseidonParameters, sbox::PoseidonSbox}};
+	use arkworks_native_gadgets::{
+		merkle_tree::SparseMerkleTree,
+		poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+	};
 
-	use ark_ff::PrimeField;
 	use ark_ed_on_bn254::Fq;
+	use ark_ff::PrimeField;
 	use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, R1CSVar};
 	use ark_relations::r1cs::ConstraintSystem;
 	use ark_std::{test_rng, UniformRand};
-	use arkworks_utils::Curve;
-	use arkworks_utils::{bytes_vec_to_f, bytes_matrix_to_f};
-	use arkworks_utils::poseidon_params::{setup_poseidon_params};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 
 	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
 		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
@@ -166,7 +169,7 @@ mod test {
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
-			width: pos_data.width
+			width: pos_data.width,
 		};
 
 		pos

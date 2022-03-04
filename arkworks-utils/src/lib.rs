@@ -3,9 +3,9 @@
 #[macro_use]
 extern crate ark_std;
 
-pub use hex::FromHexError;
-pub use ark_std::vec::Vec;
 use ark_ff::PrimeField;
+pub use ark_std::vec::Vec;
+pub use hex::FromHexError;
 
 pub mod mimc_params;
 pub mod poseidon_params;
@@ -43,7 +43,10 @@ pub fn parse_matrix(mds_entries: Vec<Vec<&str>>) -> Result<Vec<Vec<Bytes>>, From
 }
 
 pub fn bytes_vec_to_f<F: PrimeField>(bytes_vec: &Vec<Vec<u8>>) -> Vec<F> {
-	bytes_vec.iter().map(|x| F::from_be_bytes_mod_order(x)).collect()
+	bytes_vec
+		.iter()
+		.map(|x| F::from_be_bytes_mod_order(x))
+		.collect()
 }
 
 pub fn bytes_matrix_to_f<F: PrimeField>(bytes_matrix: &Vec<Vec<Vec<u8>>>) -> Vec<Vec<F>> {
