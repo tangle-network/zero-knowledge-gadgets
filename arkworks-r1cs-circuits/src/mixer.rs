@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Mixer is a fixed deposit/withdraw pool.
+//! The Mixer is a fixed sized deposit/withdraw shielded pool.
 //! This is the simplest circuit in arkworks-circuits.
 //! It implements a on-chain mixer contract that allows for users to deposit
 //! tokens using one wallet and withdraw using another one. This system uses
