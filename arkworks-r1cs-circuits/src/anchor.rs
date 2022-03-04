@@ -1,6 +1,23 @@
+// This file is part of Webb.
+
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! The Anchor is a cross-chain fixed sized deposit/withdraw shielded pool.
 //! It allows for users to deposit tokens on one chain and withdraw in another
-//! one without a link from the deposit to the withdrawal.
+//! one without linking the deposit to the withdrawal.
 
 //! We will take inputs and do a merkle tree reconstruction for each node in the
 //! path and check if the reconstructed root is inside the current root set.
