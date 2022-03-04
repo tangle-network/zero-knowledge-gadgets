@@ -6,13 +6,6 @@ use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, fields::fp::FpVar};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use arkworks_r1cs_gadgets::poseidon::FieldHasherGadget;
 
-/// Defines a `PoseidonCircuit` struct that hold all the information thats
-/// needed to verify the following statement:
-///
-/// * `Hash(a, b) == c`
-///
-/// Needs to implement `ConstraintSynthesizer` and a
-/// constructor to generate proper constraints
 #[derive(Copy)]
 struct PoseidonCircuit<F: PrimeField, HG: FieldHasherGadget<F>> {
 	pub a: F,
@@ -70,11 +63,33 @@ mod test {
 	use ark_poly::univariate::DensePolynomial;
 	use ark_poly_commit::marlin_pc::MarlinKZG10;
 	use ark_std::UniformRand;
-	use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
+	use arkworks_native_gadgets::poseidon::{
+		sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters,
+	};
 	use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
-	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use blake2::Blake2s;
 	type PoseidonC = PoseidonCircuit<BlsFr, PoseidonGadget<BlsFr>>;
+
+	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+
+		let mds_f = bytes_matrix_to_f(&pos_data.mds);
+		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+
+		let pos = PoseidonParameters {
+			mds_matrix: mds_f,
+			round_keys: rounds_f,
+			full_rounds: pos_data.full_rounds,
+			partial_rounds: pos_data.partial_rounds,
+			sbox: PoseidonSbox(pos_data.exp),
+			width: pos_data.width,
+		};
+
+		pos
+	}
 
 	#[test]
 	fn should_verify_poseidon_circuit() {
@@ -83,7 +98,7 @@ mod test {
 
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
-		let parameters = setup_params_x5_3(curve);
+		let parameters = setup_params(curve, 5, 3);
 		let hasher = Poseidon::<BlsFr>::new(parameters);
 
 		let c = hasher.hash(&[a, b]).unwrap();
@@ -109,7 +124,7 @@ mod test {
 
 		let a = BlsFr::rand(rng);
 		let b = BlsFr::rand(rng);
-		let parameters = setup_params_x5_3(curve);
+		let parameters = setup_params(curve, 5, 3);
 		let hasher = Poseidon::<BlsFr>::new(parameters);
 		let c = hasher.hash(&[a, b]).unwrap();
 		let circuit = PoseidonC::new(a, b, c, hasher);

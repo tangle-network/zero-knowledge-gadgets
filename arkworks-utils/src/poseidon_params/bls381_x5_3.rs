@@ -1,10 +1,3 @@
-use super::parse_matrix;
-use crate::{
-	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
-	utils::parse_vec,
-	Vec,
-};
-use ark_ff::PrimeField;
 // https://github.com/webb-tools/bulletproof-gadgets/tree/main/src/crypto_constants/data/poseidon
 
 // Parameter for:
@@ -21,9 +14,9 @@ use ark_ff::PrimeField;
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 57;
 pub const WIDTH: u8 = 3;
-pub const SBOX: PoseidonSbox = PoseidonSbox(5);
+pub const EXPONENTIATION: i8 = 5;
 
-pub const ROUND_CONSTS: [&str; 195] = [
+pub const ROUND_CONSTS: &[&str] = &[
 	"0x6c4ffa723eaf1a7bf74905cc7dae4ca9ff4a2c3bc81d42e09540d1f250910880",
 	"0x54dd837eccf180c92c2f53a3476e45a156ab69a403b6b9fdfd8dd970fddcdd9a",
 	"0x64f56d735286c35f0e7d0a29680d49d54fb924adccf8962eeee225bf9423a85e",
@@ -220,33 +213,20 @@ pub const ROUND_CONSTS: [&str; 195] = [
 	"0x5caab387eb997f774f64151ed21abfa5364a83c6f065d92bd9c92f2719b8e80b",
 	"0x57b33094aeff828377897b56e1c432978d07c668ef25a36bc5e2e835aaeff725",
 ];
-pub const MDS_ENTRIES: [[&str; 3]; 3] = [
-	[
+pub const MDS_ENTRIES: &[&[&str]] = &[
+	&[
 		"0x3d955d6c02fe4d7cb500e12f2b55eff668a7b4386bd27413766713c93f2acfcd",
 		"0x3798866f4e6058035dcf8addb2cf1771fac234bcc8fc05d6676e77e797f224bf",
 		"0x2c51456a7bf2467eac813649f3f25ea896eac27c5da020dae54a6e640278fda2",
 	],
-	[
+	&[
 		"0x20088ca07bbcd7490a0218ebc0ecb31d0ea34840e2dc2d33a1a5adfecff83b43",
 		"0x1d04ba0915e7807c968ea4b1cb2d610c7f9a16b4033f02ebacbb948c86a988c3",
 		"0x5387ccd5729d7acbd09d96714d1d18bbd0eeaefb2ddee3d2ef573c9c7f953307",
 	],
-	[
+	&[
 		"0x1e208f585a72558534281562cad89659b428ec61433293a8d7f0f0e38a6726ac",
 		"0x0455ebf862f0b60f69698e97d36e8aafd4d107cae2b61be1858b23a3363642e0",
 		"0x569e2c206119e89455852059f707370e2c1fc9721f6c50991cedbbf782daef54",
 	],
 ];
-
-pub fn get_rounds_poseidon_bls381_x5_3<F: PrimeField>() -> Vec<F> {
-	parse_vec(ROUND_CONSTS.to_vec())
-}
-pub fn get_mds_poseidon_bls381_x5_3<F: PrimeField>() -> Vec<Vec<F>> {
-	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
-}
-
-pub fn get_poseidon_bls381_x5_3<F: PrimeField>() -> PoseidonParameters<F> {
-	let rounds = get_rounds_poseidon_bls381_x5_3();
-	let mds = get_mds_poseidon_bls381_x5_3();
-	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
-}

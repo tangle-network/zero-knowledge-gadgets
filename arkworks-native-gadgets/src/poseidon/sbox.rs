@@ -1,9 +1,6 @@
 use super::PoseidonError;
 use ark_ff::PrimeField;
 
-#[cfg(feature = "r1cs")]
-pub mod constraints;
-
 /// An S-Box that can be used with Poseidon.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct PoseidonSbox(pub i8);

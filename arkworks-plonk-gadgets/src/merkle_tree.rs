@@ -133,11 +133,34 @@ mod test {
 	use ark_poly::polynomial::univariate::DensePolynomial;
 	use ark_poly_commit::{kzg10::UniversalParams, sonic_pc::SonicKZG10, PolynomialCommitment};
 	use ark_std::{test_rng, UniformRand};
-	use arkworks_native_gadgets::{merkle_tree::SparseMerkleTree, poseidon::Poseidon};
-	use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+	use arkworks_native_gadgets::{
+		merkle_tree::SparseMerkleTree,
+		poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+	};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use plonk_core::prelude::*;
 
 	type PoseidonBn254 = Poseidon<Fq>;
+
+	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+
+		let mds_f = bytes_matrix_to_f(&pos_data.mds);
+		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+
+		let pos = PoseidonParameters {
+			mds_matrix: mds_f,
+			round_keys: rounds_f,
+			full_rounds: pos_data.full_rounds,
+			partial_rounds: pos_data.partial_rounds,
+			sbox: PoseidonSbox(pos_data.exp),
+			width: pos_data.width,
+		};
+
+		pos
+	}
 
 	struct TestCircuit<
 		'a,
@@ -194,7 +217,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon = PoseidonBn254 { params };
 
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -289,7 +312,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon = PoseidonBn254 { params };
 
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -400,7 +423,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon = PoseidonBn254 { params };
 
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -504,7 +527,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon = PoseidonBn254 { params };
 
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -604,7 +627,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bn254;
 
-		let params = setup_params_x5_3(curve);
+		let params = setup_params(curve, 5, 3);
 		let poseidon = PoseidonBn254 { params };
 
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];

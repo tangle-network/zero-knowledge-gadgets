@@ -117,16 +117,36 @@ mod test {
 	use crate::utils::prove_then_verify;
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-	use ark_ff::Field;
+	use ark_ff::{Field, PrimeField};
 	use ark_std::test_rng;
 	use arkworks_native_gadgets::{
 		ark_std::UniformRand,
 		merkle_tree::SparseMerkleTree,
-		poseidon::{FieldHasher, Poseidon},
+		poseidon::{sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters},
 	};
 	use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
-	use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4, Curve};
+	use arkworks_utils::{
+		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+	};
 	use plonk_core::prelude::*;
+
+	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+
+		let mds_f = bytes_matrix_to_f(&pos_data.mds);
+		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+
+		let pos = PoseidonParameters {
+			mds_matrix: mds_f,
+			round_keys: rounds_f,
+			full_rounds: pos_data.full_rounds,
+			partial_rounds: pos_data.partial_rounds,
+			sbox: PoseidonSbox(pos_data.exp),
+			width: pos_data.width,
+		};
+
+		pos
+	}
 
 	type PoseidonBn254 = Poseidon<Fq>;
 	const BRIDGE_SIZE: usize = 2;
@@ -138,8 +158,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -216,8 +236,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -298,8 +318,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -380,8 +400,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -459,8 +479,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -556,8 +576,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -645,8 +665,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};
@@ -734,8 +754,8 @@ mod test {
 
 		// These poseidon hashers are named after their WIDTH, not ARITY.
 		// So `poseidon_native_three` is for hashing 2 elements together, not 3.
-		let params_three = setup_params_x5_3(curve);
-		let params_four = setup_params_x5_4(curve);
+		let params_three = setup_params(curve, 5, 3);
+		let params_four = setup_params(curve, 5, 4);
 		let poseidon_native_three = PoseidonBn254 {
 			params: params_three,
 		};

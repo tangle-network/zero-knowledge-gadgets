@@ -1,1 +1,1 @@
-cargo test --release --features test
+cargo test --release

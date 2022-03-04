@@ -1,8 +1,6 @@
 [workspace]
 
 members = [
-    "arkworks-benchmarks",
-
     "arkworks-native-gadgets",
     # R1CS gadgets + circuits
     "arkworks-r1cs-circuits",
@@ -14,3 +12,5 @@ members = [
     "arkworks-setups",
     "arkworks-utils",
 ]
+
+exclude = ["arkworks-bencharks", "arkworks-circom-verifier", "arkworks-utils"]

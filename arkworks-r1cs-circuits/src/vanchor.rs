@@ -1,22 +1,3 @@
-//! VAnchor is the variable deposit/withdraw/transfer shielded pool
-//! It supports join split transactions, meaning you can take unspent deposits
-//! in the pool and join them together, split them, and any combination
-//! of the two.
-
-//! The inputs to the VAnchor are unspent outputs we want to spend (we are
-//! spending the inputs), and we create outputs which are new, unspent UTXOs. We
-//! create commitments for each output and these are inserted into merkle trees.
-
-//! The VAnchor is also a bridged system. It takes as a public input
-//! a set of merkle roots that it will use to verify the membership
-//! of unspent deposits within. The VAnchor prevents double-spending
-//! through the use of a public input chain identifier `chain_id`.
-
-//! We will take inputs and do a merkle tree reconstruction for each input.
-//! Then we will verify that the reconstructed root from each input's
-//! membership path is within a set of public merkle roots.
-//!
-//! This is the Groth16 version of the VAnchor implementation.
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
