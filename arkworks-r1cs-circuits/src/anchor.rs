@@ -1,3 +1,28 @@
+// This file is part of Webb.
+
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! The Anchor is a cross-chain fixed sized deposit/withdraw shielded pool.
+//! It allows for users to deposit tokens on one chain and withdraw in another
+//! one without linking the deposit to the withdrawal.
+
+//! We will take inputs and do a merkle tree reconstruction for each node in the
+//! path and check if the reconstructed root is inside the current root set.
+//!
+//! This is the Groth16 setup implementation of Anchor
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -5,16 +30,35 @@ use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 
+/// Defines an `AnchorCircuit` struct that hold all the information thats needed
+/// to verify the following statements:
+/// * Alice knows a witness tuple `(secret, nullifier, merklePath)`
+/// and a commitment `Hash(chain_id, nullifier, secret)` stored in one of the
+/// Anchor merkle trees,
+/// * The Anchor smart contract / end-user application hasn't seen this
+///   `nullifier_hash` before.
+///
+/// Needs to implement `ConstraintSynthesizer` and a
+/// constructor to generate proper constraints
 #[derive(Clone)]
 pub struct AnchorCircuit<F: PrimeField, HG: FieldHasherGadget<F>, const N: usize, const M: usize> {
+	// Represents the hash of
+	// recepient + relayer + fee + refunds + commitment
 	arbitrary_input: F,
+	// secret
 	secret: F,
+	// nullifier to prevent double spending
 	nullifier: F,
+	// source chain_id
 	chain_id: F,
+	// Merkle root set to use on one-of-many proof
 	root_set: [F; M],
+	// Merkle path to transaction
 	path: Path<F, HG::Native, N>,
 	nullifier_hash: F,
+	// 3 input hasher
 	hasher3: HG::Native,
+	// 4 input hasher
 	hasher4: HG::Native,
 }
 
