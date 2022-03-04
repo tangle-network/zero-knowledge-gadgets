@@ -65,7 +65,6 @@ parallel = [
   "ark-groth16/parallel",
   "ark-poly-commit/parallel",
   "ark-poly/parallel",
-  "ark-ec/parallel",
   "ark-ff/parallel",
   "ark-std/parallel",
 ]
