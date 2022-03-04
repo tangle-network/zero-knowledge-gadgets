@@ -1,3 +1,32 @@
+//! This file provides a native implementation of the sparse Merkle tree data
+//! structure. In this case "native" just means that it has not been converted
+//! to a zero-knowledge circuit or gadget: it is just a program.
+//!
+//! A sparse Merkle tree is a type of Merkle tree, but it is much easier to
+//! prove non-membership in a sparse Merkle tree than in an arbitrary Merkle
+//! tree. For an explanation of sparse Merkle trees, see:
+//! https://medium.com/@kelvinfichter/whats-a-sparse-merkle-tree-acda70aeb837
+//!
+//! In this file we define the "Path" and "SparseMerkleTree" structs.
+//! These depend on your choice of a prime field F, a field hasher over F
+//! (any hash function that maps F^2 to F will do, e.g. the poseidon hash
+//! function of width 3 where an input of zero is used for padding), and the
+//! height N of the sparse Merkle tree.
+//!
+//! The path corresponding to a given leaf node is stored as an N-tuple of pairs
+//! of field elements. Each pair consists of a node lying on the path from the
+//! leaf node to the root, and that node's sibling.  For example, suppose
+//!
+//!           a
+//!         /   \
+//!        b     c
+//!       / \   / \
+//!      d   e f   g
+//!
+//! is our sparse Merkle tree, and `a` through `g` are field elements stored at
+//! the nodes. Then the merkle proof path `e-b-a` from leaf `e` to root `a` is
+//! stored as `[(d,e), (b,c)]`
+
 use crate::poseidon::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
