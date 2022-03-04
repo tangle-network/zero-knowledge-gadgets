@@ -1,6 +1,6 @@
 //! The Anchor is a cross-chain fixed sized deposit/withdraw shielded pool.
 //! It allows for users to deposit tokens on one chain and withdraw in another
-//! one without a link from the deposit to the withdrawal.
+//! one without linking the deposit to the withdrawal.
 
 //! We will take inputs and do a merkle tree reconstruction for each node in the
 //! path and check if the reconstructed root is inside the current root set.
