@@ -6,15 +6,16 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{ConstraintSystemRef, Namespace, SynthesisError};
 use ark_std::{fmt::Debug, vec::Vec};
-use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
-use arkworks_utils::poseidon::{
-	sbox::{constraints::SboxConstraints, PoseidonSbox},
-	PoseidonParameters,
-};
+use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon, sbox::{PoseidonSbox},
+PoseidonParameters};
+
 use core::{
 	borrow::Borrow,
 	ops::{Add, AddAssign, Mul},
 };
+
+pub mod sbox;
+use sbox::SboxConstraints;
 
 pub trait FieldHasherGadget<F: PrimeField>
 where

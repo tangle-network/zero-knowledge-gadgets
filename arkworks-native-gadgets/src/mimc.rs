@@ -2,7 +2,8 @@ use crate::ark_std::string::ToString;
 use ark_crypto_primitives::{crh::TwoToOneCRH, Error, CRH as CRHTrait};
 use ark_ff::{fields::PrimeField, BigInteger};
 use ark_std::{error::Error as ArkError, marker::PhantomData, rand::Rng, vec::Vec};
-use arkworks_utils::{mimc::MiMCParameters, utils::to_field_elements};
+
+use super::to_field_elements;
 
 #[derive(Debug)]
 pub enum MiMCError {
@@ -21,11 +22,52 @@ impl core::fmt::Display for MiMCError {
 
 impl ArkError for MiMCError {}
 
+#[derive(Default, Clone)]
+pub struct MiMCParameters<F> {
+	pub k: F,
+	pub rounds: usize,
+	pub num_inputs: usize,
+	pub num_outputs: usize,
+	pub round_keys: Vec<F>,
+}
+
+impl<F: PrimeField> MiMCParameters<F> {
+	pub fn new(
+		k: F,
+		rounds: usize,
+		num_inputs: usize,
+		num_outputs: usize,
+		round_keys: Vec<F>,
+	) -> Self {
+		Self {
+			k,
+			rounds,
+			num_inputs,
+			num_outputs,
+			round_keys,
+		}
+	}
+
+	pub fn generate<R: Rng>(rng: &mut R) -> Self {
+		Self {
+			round_keys: Self::create_round_keys(rng),
+			rounds: 220,
+			k: F::zero(),
+			num_inputs: 2,
+			num_outputs: 1,
+		}
+	}
+
+	pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
+		todo!();
+	}
+}
+
 pub trait Rounds: Default + Clone {
 	/// The size of the input vector
-	const WIDTH: usize;
+	const WIDTH: u8;
 	/// Number of mimc rounds
-	const ROUNDS: usize;
+	const ROUNDS: u16;
 }
 
 pub struct CRH<F: PrimeField, P: Rounds> {
@@ -112,7 +154,7 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 	type Output = F;
 	type Parameters = MiMCParameters<F>;
 
-	const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8;
+	const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * P::WIDTH as usize * 8;
 
 	// Not sure what's the purpose of this function of we are going to pass
 	// parameters
@@ -125,7 +167,7 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 
 		let f_inputs: Vec<F> = to_field_elements(input)?;
 
-		if f_inputs.len() > P::WIDTH {
+		if f_inputs.len() > P::WIDTH as usize {
 			panic!(
 				"incorrect input length {:?} for width {:?} -- input bits {:?}",
 				f_inputs.len(),
@@ -134,7 +176,7 @@ impl<F: PrimeField, P: Rounds> CRHTrait for CRH<F, P> {
 			);
 		}
 
-		let mut buffer = vec![F::zero(); P::WIDTH];
+		let mut buffer = vec![F::zero(); P::WIDTH as usize];
 		buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
 		let result = Self::mimc(parameters, buffer)?;
 		end_timer!(eval_time);
@@ -177,26 +219,38 @@ mod test {
 	use super::*;
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
+	use arkworks_utils::mimc_params::setup_mimc_params;
+	use arkworks_utils::{bytes_vec_to_f, Curve};
 
 	#[derive(Default, Clone)]
 	struct MiMCRounds220;
 
 	impl Rounds for MiMCRounds220 {
-		const ROUNDS: usize = 220;
-		const WIDTH: usize = 3;
+		const ROUNDS: u16 = 220;
+		const WIDTH: u8 = 3;
 	}
 
 	type MiMC220 = CRH<Fq, MiMCRounds220>;
 
+	pub fn setup_mimc<F: PrimeField>(curve: Curve, rounds: u16, width: u8) -> MiMCParameters<F> {
+		let mimc_data = setup_mimc_params(curve, rounds, width).unwrap();
+		let constants_f = bytes_vec_to_f(&mimc_data.constants);
+
+		let mimc_p = MiMCParameters {
+			k: F::zero(),
+			num_inputs: mimc_data.width as usize,
+			num_outputs: mimc_data.width as usize,
+			rounds: mimc_data.rounds as usize,
+			round_keys: constants_f
+		};
+
+		mimc_p
+	}
+
 	#[test]
 	fn test_hash() {
-		let params = MiMCParameters::<Fq>::new(
-			Fq::zero(),
-			MiMCRounds220::ROUNDS,
-			MiMCRounds220::WIDTH,
-			MiMCRounds220::WIDTH,
-			arkworks_utils::utils::get_rounds_mimc_220(),
-		);
+		let curve = Curve::Bn254;
+		let params = setup_mimc(curve, MiMCRounds220::ROUNDS, MiMCRounds220::WIDTH);
 
 		let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 

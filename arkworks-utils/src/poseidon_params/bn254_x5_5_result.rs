@@ -1,4 +1,4 @@
-pub const RESULT: [&str; 5] = [
+pub const RESULT: &[&str] = &[
 	"0x299c867db6c1fdd79dcefa40e4510b9837e60ebb1ce0663dbaa525df65250465",
 	"0x1148aaef609aa338b27dafd89bb98862d8bb2b429aceac47d86206154ffe053d",
 	"0x24febb87fed7462e23f6665ff9a0111f4044c38ee1672c1ac6b0637d34f24907",

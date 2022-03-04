@@ -1,16 +1,9 @@
-use super::parse_matrix;
-use crate::{
-	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
-	utils::parse_vec,
-	Vec,
-};
-use ark_ff::PrimeField;
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 60;
 pub const WIDTH: u8 = 5;
-pub const SBOX: PoseidonSbox = PoseidonSbox(3);
+pub const EXPONENTIATION: i8 = 3;
 
-pub const ROUND_CONSTS: [&str; 465] = [
+pub const ROUND_CONSTS: &[&str] = &[
 	"0x12f865f28b419806bd53e1d8f6389be0169e5dc5fda2a25ddf2a0e557f5055e1",
 	"0x19110d104ac4f20ebcaee6bfb88886deb87ec2b6ce04846cb3366e2eacaab8f6",
 	"0x09ceadb610b5d825d411a7e738a2ac70e5c3bc8a1276b4130adbeff063decdc7",
@@ -477,36 +470,37 @@ pub const ROUND_CONSTS: [&str; 465] = [
 	"0x2ae7470b8aebb2a75477de36955ee86dd081800ad758116c5336e63d636faaad",
 	"0x07a274bf6c009e61a156fa06515bb93d38058d75647ea80aab981b14fd85a35a",
 ];
-pub const MDS_ENTRIES: [[&str; 5]; 5] = [
-	[
+
+pub const MDS_ENTRIES: &[&[&str]] = &[
+	&[
 		"0x0f754ed4286eddc119da595757352ee4e8d08794fd42d5b4a0e9eb7c15a4be7f",
 		"0x0dfb14b9bc39250dcd9cfeb17fd1aadbbbcf83098dba5af872dfdb31c7383c0a",
 		"0x0bf9c31074794ed5ba3f153378af6e9d251bc7b7b3187939c2f5e0a71471d2cc",
 		"0x1b0e46f0de792b82ab0581d9117c2ff0a27d795d77ceaa93e374966e4d2b0a7b",
 		"0x29d3fe5323f74bb43006ecacc5b6b014897de19d7c1642d4a13a68715f56f505",
 	],
-	[
+	&[
 		"0x1006dbcb453799b3e3ccdd4434b5b9d6df1b152f37aa39bfe122dbe7ba90779b",
 		"0x062dde697032bdccdb235105996f0096ddb8f6a4155c7b68ca1e89de6578b098",
 		"0x0e75d9f202ee7e78cd97c0babc6d5299a4e4f418e3fda05d011652ecc3c0ddbe",
 		"0x27c5c227352a389eb9cf95b40f7d0accb80d3269fe3e75c028ac0581ecd6b669",
 		"0x05485ca8b0a9aeb812c1658ce5c7fac88088ea53244a5b1c89138a2350b1eaa3",
 	],
-	[
+	&[
 		"0x22c42b2b4213502f74dc84eeafbf04a4cfbf8737815171a1e9aa60635140f612",
 		"0x19494eafdfac930888a74229e643d6186b3ead8c7888c29b241ad4db45e409f6",
 		"0x05af2be87681dd56ff875b0040f2bea03107d6a5fe482b6bc4f35501ee4aaeef",
 		"0x0bcf71bc07881e3102e041d59981e24abe05ac3836a3a5145fddcb588bd9e50e",
 		"0x21137ecc29e97f36b3952eaa7eca7a0868e071a21a1b01abd0e1755eda8cdc8f",
 	],
-	[
+	&[
 		"0x0d2df2f0631f3e8b6ca5814e24712563c3db9e2833d995e4a7de7eeb2f17d7b3",
 		"0x0fa1b37f4438c10a4d7e0122fe8f7cbc19ec5f2aa8f3531cae13a2c3f45c0607",
 		"0x012f7124314119a80e97335f5582a5ed720062466f7d02a8ad18f941e139ee26",
 		"0x0c949c2193e445b5e35a3249666ee59c22c8e4b9b83f2e94b33d06c7433a8f25",
 		"0x2f44338416bc000de0358c02ff17f82b51cd09f5a3d694104fe3ae96ef0a43a1",
 	],
-	[
+	&[
 		"0x1dc1c7e53d480961b07594be9acb76170ade382097ae0194cd685deb8360f1e9",
 		"0x2ee218b3da5f5df6986e69713d3dc58dbe1bef87ac91027d4630c4f5cc3faff1",
 		"0x2d03a0c76689d3404bdb0f140240c33c489bed08b5493cd17a64d0aad91a4fd5",
@@ -514,16 +508,3 @@ pub const MDS_ENTRIES: [[&str; 5]; 5] = [
 		"0x1d5b3f45251cbe0793b42619735b0f07cd5bb335533a2d418cd477abe9388ae3",
 	],
 ];
-
-pub fn get_rounds_poseidon_bn254_x3_5<F: PrimeField>() -> Vec<F> {
-	parse_vec(ROUND_CONSTS.to_vec())
-}
-pub fn get_mds_poseidon_bn254_x3_5<F: PrimeField>() -> Vec<Vec<F>> {
-	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
-}
-
-pub fn get_poseidon_bn254_x3_5<F: PrimeField>() -> PoseidonParameters<F> {
-	let rounds = get_rounds_poseidon_bn254_x3_5();
-	let mds = get_mds_poseidon_bn254_x3_5();
-	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
-}

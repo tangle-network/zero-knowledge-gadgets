@@ -1,16 +1,9 @@
-use super::parse_matrix;
-use crate::{
-	poseidon::{sbox::PoseidonSbox, PoseidonParameters},
-	utils::parse_vec,
-	Vec,
-};
-use ark_ff::PrimeField;
 pub const FULL_ROUNDS: u8 = 8;
 pub const PARTIAL_ROUNDS: u8 = 57;
 pub const WIDTH: u8 = 3;
-pub const SBOX: PoseidonSbox = PoseidonSbox(5);
+pub const EXPONENTIATION: i8 = 5;
 
-pub const ROUND_CONSTS: [&str; 195] = [
+pub const ROUND_CONSTS: &[&str] = &[
 	"0x0ee9a592ba9a9518d05986d656f40c2114c4993c11bb29938d21d47304cd8e6e",
 	"0x00f1445235f2148c5986587169fc1bcd887b08d4d00868df5696fff40956e864",
 	"0x08dff3487e8ac99e1f29a058d0fa80b930c728730b7ab36ce879f3890ecf73f5",
@@ -207,33 +200,21 @@ pub const ROUND_CONSTS: [&str; 195] = [
 	"0x216f6717bbc7dedb08536a2220843f4e2da5f1daa9ebdefde8a5ea7344798d22",
 	"0x1da55cc900f0d21f4a3e694391918a1b3c23b2ac773c6b3ef88e2e4228325161",
 ];
-pub const MDS_ENTRIES: [[&str; 3]; 3] = [
-	[
+
+pub const MDS_ENTRIES: &[&[&str]] = &[
+	&[
 		"0x109b7f411ba0e4c9b2b70caf5c36a7b194be7c11ad24378bfedb68592ba8118b",
 		"0x16ed41e13bb9c0c66ae119424fddbcbc9314dc9fdbdeea55d6c64543dc4903e0",
 		"0x2b90bba00fca0589f617e7dcbfe82e0df706ab640ceb247b791a93b74e36736d",
 	],
-	[
+	&[
 		"0x2969f27eed31a480b9c36c764379dbca2cc8fdd1415c3dded62940bcde0bd771",
 		"0x2e2419f9ec02ec394c9871c832963dc1b89d743c8c7b964029b2311687b1fe23",
 		"0x101071f0032379b697315876690f053d148d4e109f5fb065c8aacc55a0f89bfa",
 	],
-	[
+	&[
 		"0x143021ec686a3f330d5f9e654638065ce6cd79e28c5b3753326244ee65a1b1a7",
 		"0x176cc029695ad02582a70eff08a6fd99d057e12e58e7d7b6b16cdfabc8ee2911",
 		"0x19a3fc0a56702bf417ba7fee3802593fa644470307043f7773279cd71d25d5e0",
 	],
 ];
-
-pub fn get_rounds_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<F> {
-	parse_vec(ROUND_CONSTS.to_vec())
-}
-pub fn get_mds_poseidon_bn254_x5_3<F: PrimeField>() -> Vec<Vec<F>> {
-	parse_matrix(MDS_ENTRIES.iter().map(|x| x.to_vec()).collect::<Vec<_>>())
-}
-
-pub fn get_poseidon_bn254_x5_3<F: PrimeField>() -> PoseidonParameters<F> {
-	let rounds = get_rounds_poseidon_bn254_x5_3();
-	let mds = get_mds_poseidon_bn254_x5_3();
-	PoseidonParameters::<F>::new(rounds, mds, FULL_ROUNDS, PARTIAL_ROUNDS, WIDTH, SBOX)
-}

@@ -16,12 +16,11 @@ ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-featu
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
 plonk-core = { version = "^0.8", git = "https://github.com/ZK-Garage/plonk", features = ["trace"], default-features = false }
-plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
 ark-ec = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies]
-arkworks-utils = { path = "../arkworks-utils", version = "0.5.0" }
 
+plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize = {version = "^0.3.0", default-features = false }
@@ -30,6 +29,12 @@ ark-serialize = {version = "^0.3.0", default-features = false }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
+
+[dev-dependencies.arkworks-utils]
+path = "../arkworks-utils"
+version = "0.5.0"
+default-features = false
+features = ["poseidon_bn254_x5_3"]
 
 [features]
 default = ["std"]

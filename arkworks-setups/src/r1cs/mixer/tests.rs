@@ -6,7 +6,8 @@ use ark_snark::SNARK;
 use ark_std::{test_rng, vec::Vec, One, Zero};
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
-use arkworks_utils::utils::common::{setup_params_x5_3, Curve};
+use arkworks_utils::Curve;
+use super::setup_params;
 
 // merkle proof path legth
 // TreeConfig_x5, x7 HEIGHT is hardcoded to 30
@@ -157,7 +158,7 @@ fn should_fail_with_invalid_leaf() {
 
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
@@ -207,7 +208,7 @@ fn should_fail_with_invalid_leaf_2() {
 
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
@@ -255,7 +256,7 @@ fn should_fail_with_invalid_nullifier() {
 
 	let arbitrary_input = Bn254Fr::rand(rng);
 
-	let params3 = setup_params_x5_3::<Bn254Fr>(curve);
+	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();

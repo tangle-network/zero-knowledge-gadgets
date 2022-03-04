@@ -11,7 +11,6 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = { path = "../arkworks-utils",  version = "0.5.0", default-features = false, features = ["r1cs"] }
 arkworks-native-gadgets = { path = "../arkworks-native-gadgets",  version = "0.5.0", default-features = false }
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
@@ -31,20 +30,22 @@ ark-serialize = {version = "^0.3.0", default-features = false }
 digest = { version = "0.9" }
 crypto_box = { version = "0.7.1" }
 
-arkworks-utils = { path = "../arkworks-utils",  version = "0.5.0", default-features = false, features = ["default_poseidon", "default_mimc"] }
-
 # curves
 ark-ed-on-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
+[dev-dependencies.arkworks-utils]
+path = "../arkworks-utils"
+version = "0.5.0"
+default-features = false
+features = ["poseidon_bls381_x5_3", "mimc_ed_on_bn254_220"]
+
 [features]
-default = ["std", "r1cs"]
-r1cs = ["arkworks-utils/r1cs"]
+default = ["std"]
 std = [
   "ark-std/std",
-  "arkworks-utils/std",
 ]
 parallel = [
   "ark-crypto-primitives/parallel",

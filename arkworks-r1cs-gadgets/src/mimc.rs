@@ -8,9 +8,9 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::{marker::PhantomData, vec::Vec};
-use arkworks_native_gadgets::mimc::{Rounds, CRH};
-use arkworks_utils::{mimc::MiMCParameters, utils::to_field_var_elements};
+use arkworks_native_gadgets::mimc::{Rounds, CRH, MiMCParameters};
 use core::borrow::Borrow;
+use super::to_field_var_elements;
 
 #[derive(Clone)]
 pub struct MiMCParametersVar<F: PrimeField> {
@@ -127,7 +127,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> 
 		input: &[UInt8<F>],
 	) -> Result<Self::OutputVar, SynthesisError> {
 		let f_var_inputs: Vec<FpVar<F>> = to_field_var_elements(input)?;
-		if f_var_inputs.len() > P::WIDTH {
+		if f_var_inputs.len() > P::WIDTH as usize {
 			panic!(
 				"incorrect input length {:?} for width {:?}",
 				f_var_inputs.len(),
@@ -135,7 +135,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> 
 			);
 		}
 
-		let mut buffer = vec![FpVar::zero(); P::WIDTH];
+		let mut buffer = vec![FpVar::zero(); P::WIDTH as usize];
 		buffer
 			.iter_mut()
 			.zip(f_var_inputs)
@@ -198,13 +198,15 @@ mod test {
 	use ark_ed_on_bn254::Fq;
 	use ark_ff::{to_bytes, Zero};
 	use ark_relations::r1cs::ConstraintSystem;
+	use arkworks_utils::mimc_params::setup_mimc_params;
+	use arkworks_utils::{bytes_vec_to_f, Curve};
 
 	#[derive(Default, Clone)]
 	struct MiMCRounds220_2;
 
 	impl Rounds for MiMCRounds220_2 {
-		const ROUNDS: usize = 220;
-		const WIDTH: usize = 2;
+		const ROUNDS: u16 = 220;
+		const WIDTH: u8 = 2;
 	}
 
 	type MiMC220_2 = CRH<Fq, MiMCRounds220_2>;
@@ -214,24 +216,34 @@ mod test {
 	struct MiMCRounds220_3;
 
 	impl Rounds for MiMCRounds220_3 {
-		const ROUNDS: usize = 220;
-		const WIDTH: usize = 3;
+		const ROUNDS: u16 = 220;
+		const WIDTH: u8 = 3;
 	}
 
 	type MiMC220_3 = CRH<Fq, MiMCRounds220_3>;
 	type MiMC220Gadget_3 = CRHGadget<Fq, MiMCRounds220_3>;
 
+	pub fn setup_mimc<F: PrimeField>(curve: Curve, rounds: u16, width: u8) -> MiMCParameters<F> {
+		let mimc_data = setup_mimc_params(curve, rounds, width).unwrap();
+		let constants_f = bytes_vec_to_f(&mimc_data.constants);
+
+		let mimc_p = MiMCParameters {
+			k: F::zero(),
+			num_inputs: mimc_data.width as usize,
+			num_outputs: mimc_data.width as usize,
+			rounds: mimc_data.rounds as usize,
+			round_keys: constants_f
+		};
+
+		mimc_p
+	}
+
 	#[test]
 	fn test_mimc_native_equality() {
+		let curve = Curve::Bn254;
 		let cs = ConstraintSystem::<Fq>::new_ref();
 
-		let params = MiMCParameters::<Fq>::new(
-			Fq::from(0),
-			MiMCRounds220_3::ROUNDS,
-			MiMCRounds220_3::WIDTH,
-			MiMCRounds220_3::WIDTH,
-			arkworks_utils::utils::get_rounds_mimc_220(),
-		);
+		let params = setup_mimc(curve, MiMCRounds220_3::ROUNDS, MiMCRounds220_3::WIDTH);
 
 		let params_var =
 			MiMCParametersVar::new_variable(cs.clone(), || Ok(&params), AllocationMode::Constant)
@@ -249,45 +261,5 @@ mod test {
 		)
 		.unwrap();
 		assert_eq!(res, res_var.value().unwrap());
-	}
-
-	#[test]
-	fn test_mimc_against_circom_fixture() {
-		// > require('circomlib').mimcsponge.multiHash([1,2], 0, 0)
-		// [
-		//   19814528709687996974327303300007262407299502847885145507292406548098437687919n
-		// ]
-		// let out = field_new!(
-		// 	Fq,
-		// 	"19814528709687996974327303300007262407299502847885145507292406548098437687919"
-		// );
-
-		let cs = ConstraintSystem::<Fq>::new_ref();
-
-		let params = MiMCParameters::<Fq>::new(
-			Fq::from(3),
-			MiMCRounds220_2::ROUNDS,
-			MiMCRounds220_2::WIDTH,
-			MiMCRounds220_2::WIDTH,
-			arkworks_utils::utils::get_rounds_mimc_220(),
-		);
-
-		let params_var =
-			MiMCParametersVar::new_variable(cs.clone(), || Ok(&params), AllocationMode::Constant)
-				.unwrap();
-
-		// Test MiMC on an input of 3 field elements.
-		let aligned_inp = to_bytes![Fq::from(1u128), Fq::from(2u128)].unwrap();
-		let aligned_inp_var =
-			Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(aligned_inp.clone())).unwrap();
-
-		let res = MiMC220_2::evaluate(&params, &aligned_inp).unwrap();
-		let res_var = <MiMC220Gadget_2 as CRHGadgetTrait<_, _>>::evaluate(
-			&params_var.clone(),
-			&aligned_inp_var,
-		)
-		.unwrap();
-		assert_eq!(res, res_var.value().unwrap());
-		// assert_eq!(res, out);
 	}
 }
