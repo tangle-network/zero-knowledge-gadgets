@@ -13,7 +13,7 @@ use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_r1cs_gadgets::{merkle_tree::PathVar, poseidon::FieldHasherGadget, set::SetGadget};
 
-/// Defines a `AnchorCircuit` struct that hold all the information thats needed
+/// Defines an `AnchorCircuit` struct that hold all the information thats needed
 /// to verify the following statements:
 /// * Alice knows a witness tuple `(secret, nullifier, merklePath)`
 /// and a commitment `Hash(chain_id, nullifier, secret)` stored in one of the
