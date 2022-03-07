@@ -16,7 +16,7 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::{setup_params, setup_tree_and_create_path};
+use crate::common::*;
 
 #[cfg(test)]
 mod tests;
@@ -28,7 +28,7 @@ pub struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_
 	engine: PhantomData<E>,
 }
 
-pub impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
+impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	AnchorR1CSProver<E, HEIGHT, ANCHOR_CT>
 {
 	#[allow(clippy::too_many_arguments)]
@@ -270,7 +270,7 @@ pub impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	}
 }
 
-pub impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
+impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	AnchorProver<E, HEIGHT, ANCHOR_CT> for AnchorR1CSProver<E, HEIGHT, ANCHOR_CT>
 {
 	fn create_leaf_with_privates(

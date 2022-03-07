@@ -16,15 +16,12 @@ use arkworks_r1cs_circuits::mixer::MixerCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::setup_params;
 use crate::common::*;
 
 #[cfg(test)]
 mod tests;
 
 use crate::MixerProver;
-
-use super::setup_tree_and_create_path;
 
 pub fn construct_public_inputs<F: PrimeField>(
 	nullifier_hash: F,
@@ -60,7 +57,7 @@ pub struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
 	engine: PhantomData<E>,
 }
 
-pub impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
+impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	#[allow(dead_code)]
 	pub fn setup_random_circuit<R: CryptoRng + RngCore>(
 		curve: Curve,
@@ -249,9 +246,7 @@ pub impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	}
 }
 
-pub impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT>
-	for MixerR1CSProver<E, HEIGHT>
-{
+impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CSProver<E, HEIGHT> {
 	fn create_leaf_with_privates(
 		curve: Curve,
 		secret: Vec<u8>,

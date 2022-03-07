@@ -17,8 +17,7 @@ use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::{setup_params, setup_tree_and_create_path, SMT};
-use crate::utxo;
+use crate::{common::*, utxo};
 
 #[cfg(test)]
 mod tests;
@@ -301,7 +300,7 @@ impl<
 	}
 }
 
-pub impl<
+impl<
 		E: PairingEngine,
 		const HEIGHT: usize,
 		const ANCHOR_CT: usize,
