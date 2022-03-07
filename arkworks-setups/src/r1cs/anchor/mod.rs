@@ -24,11 +24,11 @@ mod tests;
 pub type PoseidonAnchorCircuit<F, const N: usize, const M: usize> =
 	AnchorCircuit<F, PoseidonGadget<F>, N, M>;
 
-struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
+pub struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
 	engine: PhantomData<E>,
 }
 
-impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
+pub impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	AnchorR1CSProver<E, HEIGHT, ANCHOR_CT>
 {
 	#[allow(clippy::too_many_arguments)]
@@ -270,7 +270,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	}
 }
 
-impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
+pub impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	AnchorProver<E, HEIGHT, ANCHOR_CT> for AnchorR1CSProver<E, HEIGHT, ANCHOR_CT>
 {
 	fn create_leaf_with_privates(

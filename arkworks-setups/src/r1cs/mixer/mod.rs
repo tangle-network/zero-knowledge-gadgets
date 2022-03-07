@@ -56,11 +56,11 @@ pub fn deconstruct_public_inputs<F: PrimeField>(
 
 pub type PoseidonMixerCircuit<F, const N: usize> = MixerCircuit<F, PoseidonGadget<F>, N>;
 
-struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
+pub struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
 	engine: PhantomData<E>,
 }
 
-impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
+pub impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	#[allow(dead_code)]
 	pub fn setup_random_circuit<R: CryptoRng + RngCore>(
 		curve: Curve,
@@ -249,7 +249,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	}
 }
 
-impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CSProver<E, HEIGHT> {
+pub impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CSProver<E, HEIGHT> {
 	fn create_leaf_with_privates(
 		curve: Curve,
 		secret: Vec<u8>,

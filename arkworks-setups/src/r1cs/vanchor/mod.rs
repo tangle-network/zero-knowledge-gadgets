@@ -23,7 +23,7 @@ use crate::utxo;
 #[cfg(test)]
 mod tests;
 
-struct VAnchorR1CSProver<
+pub struct VAnchorR1CSProver<
 	E: PairingEngine,
 	const HEIGHT: usize,
 	const ANCHOR_CT: usize,
@@ -301,7 +301,7 @@ impl<
 	}
 }
 
-impl<
+pub impl<
 		E: PairingEngine,
 		const HEIGHT: usize,
 		const ANCHOR_CT: usize,
