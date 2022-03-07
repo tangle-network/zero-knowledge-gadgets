@@ -12,7 +12,7 @@ use arkworks_native_gadgets::poseidon::FieldHasher;
 use codec::{Decode, Encode};
 use crypto_box::{
 	aead::{generic_array::GenericArray, Aead, AeadCore, Payload},
-	generate_nonce, SalsaBox, PublicKey, SecretKey,
+	generate_nonce, PublicKey, SalsaBox, SecretKey,
 };
 
 #[derive(Debug)]
