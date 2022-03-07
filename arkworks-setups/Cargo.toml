@@ -54,7 +54,6 @@ std = [
   "ark-groth16/std",
   "ark-serialize/std",
   "arkworks-utils/std",
-  "ark-bn254/std",
   "codec/std",
 ]
 parallel = [

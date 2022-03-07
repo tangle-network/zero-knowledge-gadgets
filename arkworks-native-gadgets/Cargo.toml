@@ -33,10 +33,6 @@ std = [
   "ark-std/std",
   "ark-ff/std",
   "ark-crypto-primitives/std",
-  "ark-ed-on-bls12-381/std",
-  "ark-ed-on-bn254/std",
-  "ark-bn254/std",
-  "arkworks-utils/std",
 ]
 parallel = [
   "ark-crypto-primitives/parallel",

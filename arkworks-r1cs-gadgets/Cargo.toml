@@ -12,6 +12,7 @@ homepage = "https://webb.tools"
 
 [dependencies]
 arkworks-native-gadgets = { path = "../arkworks-native-gadgets",  version = "0.5.0", default-features = false }
+
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
@@ -45,25 +46,12 @@ default = ["std"]
 std = [
   "ark-std/std",
   "arkworks-native-gadgets/std",
-  "ark-crypto-primitives/std",
   "ark-ff/std",
   "ark-std/std",
   "ark-r1cs-std/std",
-  "ark-relations/std",
-  "ark-marlin/std",
-  "ark-groth16/std",
-  "ark-groth16/std",
-  "blake2/std",
-  "ark-poly-commit/std",
-  "ark-poly/std",
-  "ark-ec/std",
-  "ark-serialize/std",
-  "ark-ed-on-bn254/std",
-  "ark-bls12-381/std",
-  "arkworks-utils/std"
+  "ark-relations/std"
 ]
 parallel = [
-  "ark-crypto-primitives/parallel",
   "ark-ff/parallel",
   "ark-std/parallel",
   "ark-r1cs-std/parallel",
