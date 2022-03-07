@@ -1,8 +1,9 @@
-use crate::utils::add_public_input_variable;
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use arkworks_native_gadgets::merkle_tree::Path;
-use arkworks_plonk_gadgets::{merkle_tree::PathGadget, poseidon::FieldHasherGadget};
+use arkworks_plonk_gadgets::{
+	add_public_input_variable, merkle_tree::PathGadget, poseidon::FieldHasherGadget,
+};
 use plonk_core::{circuit::Circuit, constraint_system::StandardComposer, error::Error};
 
 pub struct MixerCircuit<

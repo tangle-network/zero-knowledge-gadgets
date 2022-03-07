@@ -16,17 +16,14 @@
 // Then we will verify that the reconstructed root from each input's
 // membership path is within a set of public merkle roots.
 
-use crate::utils::add_public_input_variable;
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
-use ark_std::vec::Vec;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_plonk_gadgets::{
-	merkle_tree::PathGadget, poseidon::FieldHasherGadget, set::check_set_membership_is_enabled,
+	add_public_input_variable, add_public_input_variables, merkle_tree::PathGadget,
+	poseidon::FieldHasherGadget, set::SetGadget,
 };
-use plonk_core::{
-	circuit::Circuit, constraint_system::StandardComposer, error::Error, prelude::Variable,
-};
+use plonk_core::{circuit::Circuit, constraint_system::StandardComposer, error::Error};
 
 pub struct VariableAnchorCircuit<
 	F: PrimeField,
@@ -139,8 +136,14 @@ where
 	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
 		// Initialize public inputs
 		let public_amount = add_public_input_variable(composer, self.public_amount);
-		let public_chain_id = add_public_input_variable(composer, self.public_chain_id);
 		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
+		// Allocate nullifier hashes
+		let nullifier_hash_vars =
+			add_public_input_variables(composer, self.in_nullifier_hashes.to_vec());
+		// Allocate output commitments
+		let commitment_vars = add_public_input_variables(composer, self.out_commitments.to_vec());
+		let public_chain_id = add_public_input_variable(composer, self.public_chain_id);
+		let set_gadget = SetGadget::from_native(composer, self.in_root_set.to_vec());
 
 		// Initialize hashers
 		let pk_hasher_gadget: HG =
@@ -156,12 +159,6 @@ where
 		let mut input_sum = public_amount;
 		let mut output_sum = composer.zero_var();
 
-		// Storage for the nullifier hash variables as we allocate them
-		let mut nullifier_hashes: Vec<Variable> = Vec::new();
-
-		// Name the composer's build in zero variable
-		let zero = composer.zero_var();
-
 		// General strategy
 		// 1. Reconstruct the commitments (along the way reconstruct other values)
 		// 2. Reconstruct the target merkle root with the input's merkle path
@@ -175,11 +172,6 @@ where
 			let in_index_i = composer.add_input(self.in_indices[i]);
 			let path_gadget =
 				PathGadget::<F, P, HG, N>::from_native(composer, self.in_paths[i].clone());
-
-			// Add public inputs for each input UTXO being spent
-			let in_nullifier_hash_i =
-				add_public_input_variable(composer, self.in_nullifier_hashes[i]);
-			nullifier_hashes.push(in_nullifier_hash_i);
 
 			// Computing the public key, which is done just by hashing the private key
 			let calc_public_key = pk_hasher_gadget.hash(composer, &[in_private_key_i])?;
@@ -204,11 +196,7 @@ where
 			// Checking if the passed nullifier hash is the same as the calculated one
 			// Optimized version of allocating public nullifier input and constraining
 			// to the calculated one.
-			let _ = composer.arithmetic_gate(|gate| {
-				gate.witness(calc_nullifier, nullifier_hashes[i], Some(zero))
-					.add(-F::one(), F::one())
-				// .pi(self.in_nullifier_hashes[i])
-			});
+			composer.assert_equal(calc_nullifier, nullifier_hash_vars[i]);
 
 			// Calculate the root hash
 			let calc_root_hash =
@@ -218,12 +206,8 @@ where
 			// Note that if `in_amount_i = 0` then the input is a
 			// "dummy" input, so the check is not needed.  The
 			// `check_set_membership_is_enabled` function accounts for this.
-			let is_member = check_set_membership_is_enabled(
-				composer,
-				&self.in_root_set.to_vec(),
-				calc_root_hash,
-				in_amount_i,
-			);
+			let is_member =
+				set_gadget.check_set_membership_is_enabled(composer, calc_root_hash, in_amount_i);
 			composer.constrain_to_constant(is_member, F::one(), None);
 
 			// Finally add the amount to the sum
@@ -239,7 +223,8 @@ where
 		// side
 		for i in 0..INS {
 			for j in (i + 1)..INS {
-				let result = composer.is_eq_with_output(nullifier_hashes[i], nullifier_hashes[j]);
+				let result =
+					composer.is_eq_with_output(nullifier_hash_vars[i], nullifier_hash_vars[j]);
 				composer.assert_equal(result, composer.zero_var());
 			}
 		}
@@ -258,11 +243,7 @@ where
 			])?;
 
 			// Check if calculated leaf is the same as the passed one
-			let _ = composer.arithmetic_gate(|gate| {
-				gate.witness(calc_leaf, calc_leaf, Some(zero))
-					.add(-F::one(), F::zero())
-					.pi(self.out_commitments[i])
-			});
+			composer.assert_equal(calc_leaf, commitment_vars[i]);
 
 			// Each amount should not be greater than the limit constant
 			// TODO: The field size can be gotten as F::size_in_bits()
@@ -1183,18 +1164,15 @@ mod test {
 
 		let verifier_public_inputs = vec![
 			public_amount,
-			public_chain_id,
 			arbitrary_data,
+			public_chain_id,
 			in_nullifier_hashes[0].double(), // Give the verifier a different nullifier hash here
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 		];
 
 		// Verify proof
@@ -1525,18 +1503,15 @@ mod test {
 
 		let verifier_public_inputs = vec![
 			public_amount,
-			public_chain_id,
 			arbitrary_data.double(), // Give the verifier different arbitrary data
+			public_chain_id,
 			in_nullifier_hashes[0],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 		];
 
 		// Verify proof
@@ -1702,18 +1677,15 @@ mod test {
 
 		let verifier_public_inputs = vec![
 			public_amount,
-			public_chain_id.double(), // Give the verifier different chain id
 			arbitrary_data,
+			public_chain_id.double(), // Give the verifier different chain id
 			in_nullifier_hashes[0],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 		];
 
 		// Verify proof
@@ -1879,18 +1851,15 @@ mod test {
 
 		let verifier_public_inputs = vec![
 			public_amount.double(), // Give the verifier different public amount
-			public_chain_id,
 			arbitrary_data,
+			public_chain_id,
 			in_nullifier_hashes[0],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			in_nullifier_hashes[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
 			out_commitments[0],
 			out_commitments[1],
+			in_root_set[0],
+			in_root_set[1],
+			in_root_set[2],
 		];
 
 		// Verify proof

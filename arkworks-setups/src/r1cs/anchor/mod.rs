@@ -38,9 +38,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		roots: [E::Fr; ANCHOR_CT],
 		arbitrary_input: E::Fr,
 	) -> Vec<E::Fr> {
-		let mut pub_ins = vec![chain_id, nullifier_hash];
+		let mut pub_ins = vec![nullifier_hash, arbitrary_input, chain_id];
 		pub_ins.extend(roots.to_vec());
-		pub_ins.push(arbitrary_input);
 		pub_ins
 	}
 

@@ -156,28 +156,6 @@ pub(crate) fn prove_then_verify<
 	Ok(())
 }
 
-/// Add a variable to a circuit and constrain it to a public input value that
-/// is expected to be different in each instance of the circuit.
-pub fn add_public_input_variable<F, P>(composer: &mut StandardComposer<F, P>, value: F) -> Variable
-where
-	F: PrimeField,
-	P: TEModelParameters<BaseField = F>,
-{
-	let variable = composer.add_input(value);
-	composer.poly_gate(
-		variable,
-		variable,
-		variable,
-		F::zero(),
-		-F::one(),
-		F::zero(),
-		F::zero(),
-		F::zero(),
-		Some(value),
-	);
-	variable
-}
-
 // I used the MixerCircuit to test the new helper function:
 // TODO: Include a more minimal example to show how it's used
 #[cfg(test)]
