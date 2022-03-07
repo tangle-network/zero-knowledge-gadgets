@@ -7,9 +7,9 @@ pub mod merkle_tree;
 pub mod poseidon;
 pub mod set;
 
-use ark_std::vec::Vec;
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
+use ark_std::vec::Vec;
 use plonk_core::{constraint_system::StandardComposer, prelude::Variable};
 
 /// Add a variable to a circuit and constrain it to a public input value that

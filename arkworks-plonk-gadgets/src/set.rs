@@ -1,10 +1,7 @@
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
-use ark_std::vec::Vec;
+use ark_std::{marker::PhantomData, vec::Vec};
 use plonk_core::{constraint_system::StandardComposer, prelude::Variable};
-use ark_std::{
-	marker::PhantomData,
-};
 
 use crate::add_public_input_variables;
 
