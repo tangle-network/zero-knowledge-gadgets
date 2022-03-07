@@ -249,7 +249,9 @@ pub impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 	}
 }
 
-pub impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CSProver<E, HEIGHT> {
+pub impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT>
+	for MixerR1CSProver<E, HEIGHT>
+{
 	fn create_leaf_with_privates(
 		curve: Curve,
 		secret: Vec<u8>,
