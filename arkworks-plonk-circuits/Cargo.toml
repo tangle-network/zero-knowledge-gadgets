@@ -34,8 +34,6 @@ version = "0.5.0"
 default-features = false
 features = ["poseidon_bn254_x5_2", "poseidon_bn254_x5_3", "poseidon_bn254_x5_4", "poseidon_bn254_x5_5"]
 
-ark-serialize = {version = "^0.3.0", default-features = false }
-
 [features]
 default = ["std"]
 std = [
