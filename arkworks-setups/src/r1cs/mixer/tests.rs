@@ -15,9 +15,8 @@ pub const LEN: usize = 30;
 
 use crate::{
 	common::{
-		prove, prove_unchecked, setup_keys, setup_keys_unchecked, verify, verify_unchecked_raw,
+		prove, prove_unchecked, setup_keys, setup_keys_unchecked, verify, verify_unchecked_raw, setup_tree_and_create_path
 	},
-	r1cs::setup_tree_and_create_path,
 	MixerProver,
 };
 
