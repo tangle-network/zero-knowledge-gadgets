@@ -50,8 +50,8 @@
 //!
 //! // Import dependencies
 //! use ark_bn254::Fr;
-//! use ark_std::{collections::BTreeMap, test_rng};
-//! use arkworks_native_gadgets::poseidon::{test::setup_params, Poseidon};
+//! use ark_std::{UniformRand, test_rng, collections::BTreeMap};
+//! use arkworks_native_gadgets::poseidon::{test::setup_params, Poseidon, SparseMerkleTree};
 //! use arkworks_utils::Curve;
 //!
 //! // Setup the Poseidon parameters and hasher for
