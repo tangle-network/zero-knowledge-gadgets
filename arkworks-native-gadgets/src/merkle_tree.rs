@@ -49,6 +49,7 @@
 //! //! Create a new Sparse Merkle Tree with 32 random leaves
 //!
 //! // Import dependencies
+//! use ark_bn254::Fr
 //! use ark_std::{collections::BTreeMap, test_rng};
 //! use arkworks_native_gadgets::poseidon::{test::setup_params, Poseidon};
 //! use arkworks_utils::Curve;
@@ -60,16 +61,16 @@
 //!
 //! // Create a random number generator for generating 32 leaves.
 //! let rng = &mut test_rng();
-//! let leaves: Vec<F> = vec![F::rand(rng); 32];
-//! let pairs: BTreeMap<u32, F> = leaves
+//! let leaves: Vec<F> = vec![Fr::rand(rng); 32];
+//! let pairs: BTreeMap<u32, Fr> = leaves
 //! 	.iter()
 //! 	.enumerate()
 //! 	.map(|(i, l)| (i as u32, *l))
 //! 	.collect();
 //!
 //! // Create the tree with a default leaf of zero.
-//! let default_leaf = F::from(0u64);
-//! let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &poseidon, default_leaf).unwrap();
+//! let default_leaf = Fr::from(0u64);
+//! let smt = SparseMerkleTree::<Fr, Poseidon<Fr>, 30>::new(&pairs, &poseidong, default_leaf).unwrap();
 //! ```
 
 use crate::poseidon::FieldHasher;
