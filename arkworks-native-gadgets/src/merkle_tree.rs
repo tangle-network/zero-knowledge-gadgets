@@ -49,7 +49,7 @@
 //! //! Create a new Sparse Merkle Tree with 32 random leaves
 //!
 //! // Import dependencies
-//! use ark_bn254::Fr
+//! use ark_bn254::Fr;
 //! use ark_std::{collections::BTreeMap, test_rng};
 //! use arkworks_native_gadgets::poseidon::{test::setup_params, Poseidon};
 //! use arkworks_utils::Curve;
