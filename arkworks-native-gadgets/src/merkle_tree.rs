@@ -27,7 +27,6 @@
 //! the nodes. Then the merkle proof path `e-b-a` from leaf `e` to root `a` is
 //! stored as `[(d,e), (b,c)]`
 
-
 use crate::poseidon::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
