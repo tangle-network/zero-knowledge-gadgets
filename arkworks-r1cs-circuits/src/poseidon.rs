@@ -1,3 +1,23 @@
+// This file is part of Webb.
+
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! Poseidon hasher circuit to prove Hash(a, b) == c
+//!
+//! This is the Groth16 setup implementation of Poseidon
 use ark_ff::PrimeField;
 use ark_r1cs_std::{alloc::AllocVar, eq::EqGadget, fields::fp::FpVar};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
@@ -10,6 +30,8 @@ struct PoseidonCircuit<F: PrimeField, HG: FieldHasherGadget<F>> {
 	pub c: F,
 	hasher: HG::Native,
 }
+
+/// Constructor for PoseidonCircuit
 #[allow(dead_code)]
 impl<F: PrimeField, HG: FieldHasherGadget<F>> PoseidonCircuit<F, HG> {
 	pub fn new(a: F, b: F, c: F, hasher: HG::Native) -> Self {
@@ -28,6 +50,11 @@ impl<F: PrimeField, HG: FieldHasherGadget<F>> Clone for PoseidonCircuit<F, HG> {
 	}
 }
 
+/// Implementation of the `ConstraintSynthesizer` trait for the
+/// `PoseidonCircuit` https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
+///
+/// This is the main function that is called by the `R1CS` library to generate
+/// the constraints for the `PoseidonCircuit`.
 impl<F: PrimeField, HG: FieldHasherGadget<F>> ConstraintSynthesizer<F> for PoseidonCircuit<F, HG> {
 	fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
 		let a = FpVar::new_witness(cs.clone(), || Ok(self.a))?;
