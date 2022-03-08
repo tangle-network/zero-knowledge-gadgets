@@ -21,7 +21,7 @@ pub mod r1cs;
 #[cfg(feature = "plonk")]
 pub mod plonk;
 
-trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
+pub trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
 	// For creating leaves where we supply the secret and the nullifier, for
 	// generating new values, pass None
 	fn create_leaf_with_privates(
@@ -51,7 +51,7 @@ trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
 	) -> Result<MixerProof, Error>;
 }
 
-trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
+pub trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
 	// For creating leaves where we supply the chain_id, secret and the nullifier,
 	// for generating new values, pass None
 	fn create_leaf_with_privates(
