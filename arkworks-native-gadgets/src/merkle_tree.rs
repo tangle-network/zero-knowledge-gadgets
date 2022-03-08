@@ -1,3 +1,31 @@
+//! This file provides a native implementation of the Sparse Merkle tree data
+//! structure.
+//!
+//! A Sparse Merkle tree is a type of Merkle tree, but it is much easier to
+//! prove non-membership in a sparse Merkle tree than in an arbitrary Merkle
+//! tree. For an explanation of sparse Merkle trees, see:
+//! `<https://medium.com/@kelvinfichter/whats-a-sparse-merkle-tree-acda70aeb837>`
+//!
+//! In this file we define the `Path` and `SparseMerkleTree` structs.
+//! These depend on your choice of a prime field F, a field hasher over F
+//! (any hash function that maps F^2 to F will do, e.g. the poseidon hash
+//! function of width 3 where an input of zero is used for padding), and the
+//! height N of the sparse Merkle tree.
+//!
+//! The path corresponding to a given leaf node is stored as an N-tuple of pairs
+//! of field elements. Each pair consists of a node lying on the path from the
+//! leaf node to the root, and that node's sibling.  For example, suppose
+//! ```text
+//!           a
+//!         /   \
+//!        b     c
+//!       / \   / \
+//!      d   e f   g
+//! ```
+//! is our Sparse Merkle tree, and `a` through `g` are field elements stored at
+//! the nodes. Then the merkle proof path `e-b-a` from leaf `e` to root `a` is
+//! stored as `[(d,e), (b,c)]`
+
 use crate::poseidon::FieldHasher;
 use ark_crypto_primitives::Error;
 use ark_ff::PrimeField;
@@ -25,11 +53,15 @@ impl core::fmt::Display for MerkleError {
 
 impl ark_std::error::Error for MerkleError {}
 
-// Path
+/// The Path struct.
+///
+/// The path contains a sequence of sibling nodes that make up a merkle proof.
+/// Each pair is used to identify whether an incremental merkle root
+/// construction is valid at each intermediate step.
 #[derive(Clone)]
 pub struct Path<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	pub path: [(F, F); N],
-	pub _marker: PhantomData<H>,
+	pub marker: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
@@ -85,21 +117,22 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 	}
 }
 
-// Merkle sparse tree
-// We wanted the "default" or "empty" leaf to be specified as a constant in
-// the struct's trait bounds but arrays are not allowed as constants.  Instead
-// all constructor functions take in a default/empty leaf argument.
+/// The Sparse Merkle Tree struct.
+///
+/// The Sparse Merkle Tree stores a set of leaves represented in a map and
+/// a set of empty hashes that it uses to represent the sparse areas of the
+/// tree.
 pub struct SparseMerkleTree<F: PrimeField, H: FieldHasher<F>, const N: usize> {
-	/// data of the tree
+	/// A map from leaf indices to leaf data stored as field elements.
 	pub tree: BTreeMap<u64, F>,
+	/// An array of default hashes hashed with themselves `N` times.
 	empty_hashes: [F; N],
-	_marker: PhantomData<H>,
+	marker: PhantomData<H>,
 }
 
 impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N> {
-	/// Takes a collection of leaf data (hashes of secrets), inserts
-	/// these hashes at leaf level, and propagates the changes up the tree to
-	/// the root.
+	/// Takes a batch of field elements, inserts
+	/// these hashes into the tree, and updates the merkle root.
 	pub fn insert_batch(&mut self, leaves: &BTreeMap<u32, F>, hasher: &H) -> Result<(), Error> {
 		let last_level_index: u64 = (1u64 << N) - 1;
 
@@ -134,6 +167,8 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(())
 	}
 
+	/// Creates a new Sparse Merkle Tree from a map of indices to field
+	/// elements.
 	pub fn new(leaves: &BTreeMap<u32, F>, hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		// Ensure the tree can hold this many leaves
 		let last_level_size = leaves.len().next_power_of_two();
@@ -148,13 +183,14 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		let mut smt = SparseMerkleTree::<F, H, N> {
 			tree,
 			empty_hashes,
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		smt.insert_batch(leaves, hasher)?;
 
 		Ok(smt)
 	}
 
+	/// Creates a new Sparse Merkle Tree from an array of field elements.
 	pub fn new_sequential(leaves: &[F], hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		let pairs: BTreeMap<u32, F> = leaves
 			.iter()
@@ -212,19 +248,23 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 
 		Path {
 			path,
-			_marker: PhantomData,
+			marker: PhantomData,
 		}
 	}
 }
 
+/// A function to generate empty hashes with a given `default_leaf`.
+///
+/// Given a `FieldHasher`, generate a list of `N` hashes consisting
+/// of the `default_leaf` hashed with itself and repeated `N` times
+/// with the intermediate results. These are used to initialize the
+/// sparse portion of the Sparse Merkle Tree.
 pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 	hasher: &H,
 	default_leaf: &[u8],
 ) -> Result<[F; N], Error> {
 	let mut empty_hashes = [F::zero(); N];
 
-	// let mut empty_hash =
-	// hasher.hash(&[F::from_le_bytes_mod_order(default_leaf)])?;
 	let mut empty_hash = F::from_le_bytes_mod_order(default_leaf);
 	empty_hashes[0] = empty_hash;
 
