@@ -1,3 +1,31 @@
+//! A native implementation of the Poseidon hash function.
+//! 
+//! The Poseidon hash function takes in a vector of elements of a prime field `F`,
+//! and outputs an element of `F`.  This means it has the `FieldHasher` trait.
+//! 
+//! The `width` parameter is the length of the input vector plus one.
+//! This is because before hashing, we append one entry of zero to the input vector.
+//! 
+//! After this initial padding, Poseidon hashes the input vector through a number of cryptographic 
+//! rounds, which can either be full rounds or partial rounds.  
+//! Each round is of the form ARK --> SB --> M, where
+//! - ARK stands for "add round constants."
+//! - SB stands for "S-box", which means
+//! 	- raising each entry of the state vector to the power alpha, in a full round.
+//! 	- raising the first entry of the state vector to the power alpha, in a partial round.
+//! - M stands for "mix layer," which means multiplying the state vector by a fixed MDS matrix.
+//! 
+//! The round constants and MDS matrix are precomputed and passed to Poseidon as parameters
+//! `round_keys` and `mds_matrix`, respectively.
+//! The output is the first entry of the state vector after the final round.
+//! 
+//! Note that this is the *original* Poseidon hash function described in the paper of
+//! Grassi, Khovratovich, Rechberger, Roy, and Schofnegger, and NOT the optimized 
+//! one described in this page by Feng.
+//! 
+
+
+///Importing dependencies
 use ark_crypto_primitives::Error;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{error::Error as ArkError, io::Read, rand::Rng, string::ToString, vec::Vec};
@@ -28,7 +56,7 @@ impl core::fmt::Display for PoseidonError {
 
 impl ArkError for PoseidonError {}
 
-/// The Poseidon permutation.
+/// Parameters for the Poseidon hash function.
 #[derive(Default, Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
 	/// The round key constants
@@ -166,6 +194,9 @@ impl<F: PrimeField> Poseidon<F> {
 	}
 }
 
+/// A field hasher over a prime field `F` is any cryptographic hash function
+/// that takes in a vector of elements of `F` and outputs a single element
+/// of `F`. 
 pub trait FieldHasher<F: PrimeField> {
 	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError>;
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError>;
@@ -192,20 +223,27 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 
 		let nr = full_rounds + partial_rounds;
 		for r in 0..nr {
+			//Adding round constants
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c = self.params.round_keys[(r * width + i)];
 				a.add_assign(c);
 			});
 
 			let half_rounds = full_rounds / 2;
+			
 			if r < half_rounds || r >= half_rounds + partial_rounds {
+				//Applying an exponentiation S-box to the -first- entry of the
+				//state vector, during partial rounds
 				state
 					.iter_mut()
 					.try_for_each(|a| self.params.sbox.apply_sbox(*a).map(|f| *a = f))?;
 			} else {
+				//Applying an exponentiation S-box to -all- entries of the state
+				//vector, during full rounds
 				state[0] = self.params.sbox.apply_sbox(state[0])?;
 			}
 
+			//Multiplying the state vector by the MDS matrix.
 			state = state
 				.iter()
 				.enumerate()
