@@ -70,7 +70,8 @@
 //!
 //! // Create the tree with a default leaf of zero.
 //! let default_leaf = Fr::from(0u64);
-//! let smt = SparseMerkleTree::<Fr, Poseidon<Fr>, 30>::new(&pairs, &poseidon, default_leaf).unwrap();
+//! let smt =
+//!		SparseMerkleTree::<Fr, Poseidon<Fr>, 30>::new(&pairs, &poseidon, default_leaf).unwrap();
 //! ```
 
 use crate::poseidon::FieldHasher;
