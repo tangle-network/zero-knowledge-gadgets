@@ -1,6 +1,6 @@
 use ark_std::vec;
 
-use crate::{common::*};
+use crate::common::*;
 use ark_serialize::CanonicalDeserialize;
 use ark_std::{One, Zero};
 use arkworks_native_gadgets::poseidon::Poseidon;
