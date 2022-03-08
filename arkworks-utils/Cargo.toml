@@ -39,3 +39,8 @@ poseidon_bn254_x17_3 = []
 poseidon_bn254_x17_5 = []
 
 mimc_ed_on_bn254_220 = []
+
+parallel = [
+    "ark-std/parallel",
+    "ark-ff/parallel",
+]

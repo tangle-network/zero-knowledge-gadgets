@@ -12,7 +12,7 @@ use arkworks_native_gadgets::poseidon::FieldHasher;
 use codec::{Decode, Encode};
 use crypto_box::{
 	aead::{generic_array::GenericArray, Aead, AeadCore, Payload},
-	generate_nonce, ChaChaBox, PublicKey, SecretKey,
+	generate_nonce, PublicKey, SalsaBox, SecretKey,
 };
 
 #[derive(Debug)]
@@ -39,7 +39,7 @@ impl core::fmt::Display for KeypairError {
 
 impl ArkError for KeypairError {}
 
-type NonceSize = <ChaChaBox as AeadCore>::NonceSize;
+type NonceSize = <SalsaBox as AeadCore>::NonceSize;
 type Nonce = GenericArray<u8, NonceSize>;
 pub struct EncryptedData {
 	pub nonce: Nonce,
@@ -151,7 +151,7 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 		let ephemeral_sk = SecretKey::generate(rng);
 		let ephemeral_pk = PublicKey::from(&ephemeral_sk);
 
-		let my_box = ChaChaBox::new(&public_key, &ephemeral_sk);
+		let my_box = SalsaBox::new(&public_key, &ephemeral_sk);
 
 		// Encrypting the message
 		let ct = my_box
@@ -178,7 +178,7 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 		let secret_key = SecretKey::from(sc_bytes);
 
 		// Making ephemeral public key from the encryption data
-		let my_box = ChaChaBox::new(&encrypted_data.ephemeral_pk, &secret_key);
+		let my_box = SalsaBox::new(&encrypted_data.ephemeral_pk, &secret_key);
 
 		// Converting nonce into proper type
 		let nonce = GenericArray::from_slice(&encrypted_data.nonce);

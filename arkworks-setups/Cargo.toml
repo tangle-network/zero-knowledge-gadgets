@@ -54,7 +54,6 @@ std = [
   "ark-groth16/std",
   "ark-serialize/std",
   "arkworks-utils/std",
-  "ark-bn254/std",
   "codec/std",
 ]
 parallel = [
@@ -66,5 +65,6 @@ parallel = [
   "ark-ff/parallel",
   "arkworks-r1cs-circuits/parallel",
   "arkworks-r1cs-gadgets/parallel",
+  "arkworks-native-gadgets/parallel",
 ]
 

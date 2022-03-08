@@ -16,15 +16,12 @@ use arkworks_r1cs_circuits::mixer::MixerCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::setup_params;
 use crate::common::*;
 
 #[cfg(test)]
 mod tests;
 
 use crate::MixerProver;
-
-use super::setup_tree_and_create_path;
 
 pub fn construct_public_inputs<F: PrimeField>(
 	nullifier_hash: F,
@@ -56,7 +53,7 @@ pub fn deconstruct_public_inputs<F: PrimeField>(
 
 pub type PoseidonMixerCircuit<F, const N: usize> = MixerCircuit<F, PoseidonGadget<F>, N>;
 
-struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
+pub struct MixerR1CSProver<E: PairingEngine, const HEIGHT: usize> {
 	engine: PhantomData<E>,
 }
 

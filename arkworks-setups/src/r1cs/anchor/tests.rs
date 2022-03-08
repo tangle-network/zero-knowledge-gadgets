@@ -1,4 +1,4 @@
-use crate::{common::*, r1cs::setup_tree_and_create_path, AnchorProver};
+use crate::{common::*, AnchorProver};
 use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_ff::{PrimeField, UniformRand};
 use ark_groth16::Groth16;

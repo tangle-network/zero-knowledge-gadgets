@@ -1,9 +1,8 @@
-use crate::utils::add_public_input_variable;
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use arkworks_native_gadgets::merkle_tree::Path;
 use arkworks_plonk_gadgets::{
-	merkle_tree::PathGadget, poseidon::FieldHasherGadget, set::check_set_membership,
+	add_public_input_variable, merkle_tree::PathGadget, poseidon::FieldHasherGadget, set::SetGadget,
 };
 use plonk_core::{circuit::Circuit, constraint_system::StandardComposer, error::Error};
 
@@ -71,9 +70,10 @@ where
 		let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, self.path.clone());
 
 		// Public Inputs
-		let chain_id = add_public_input_variable(composer, self.chain_id);
 		let nullifier_hash = add_public_input_variable(composer, self.nullifier_hash);
 		let arbitrary_data = add_public_input_variable(composer, self.arbitrary_data);
+		let chain_id = add_public_input_variable(composer, self.chain_id);
+		let set_gadget = SetGadget::from_native(composer, self.roots.to_vec());
 
 		// Create the hasher gadgets from native
 		let hasher_gadget_two: HG =
@@ -94,7 +94,7 @@ where
 		// Proof of Merkle tree set membership
 		let calculated_root =
 			path_gadget.calculate_root(composer, &res_leaf, &hasher_gadget_two)?;
-		let result = check_set_membership(composer, &self.roots.to_vec(), calculated_root);
+		let result = set_gadget.check_set_membership(composer, calculated_root);
 		let one = composer.add_witness_to_circuit_description(F::one());
 		composer.assert_equal(result, one);
 

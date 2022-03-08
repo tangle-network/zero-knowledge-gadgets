@@ -115,10 +115,10 @@ where
 
 		// Generating vars
 		// Public inputs
-		let chain_id_var = FpVar::<F>::new_input(cs.clone(), || Ok(chain_id))?;
 		let nullifier_hash_var = FpVar::<F>::new_input(cs.clone(), || Ok(nullifier_hash))?;
-		let roots_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 		let arbitrary_input_var = FpVar::<F>::new_input(cs.clone(), || Ok(arbitrary_input))?;
+		let chain_id_var = FpVar::<F>::new_input(cs.clone(), || Ok(chain_id))?;
+		let roots_var = Vec::<FpVar<F>>::new_input(cs.clone(), || Ok(root_set))?;
 
 		// Hashers
 		let hasher3_gadget: HG =

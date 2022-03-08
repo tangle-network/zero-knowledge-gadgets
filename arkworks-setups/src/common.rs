@@ -179,9 +179,9 @@ pub fn keccak_256(input: &[u8]) -> Vec<u8> {
 	let mut keccak = Keccak::v256();
 	keccak.update(&input);
 
-	let mut output = Vec::new();
+	let mut output = [0u8; 32];
 	keccak.finalize(&mut output);
-	output
+	output.to_vec()
 }
 
 pub type SMT<F, H, const HEIGHT: usize> = SparseMerkleTree<F, H, HEIGHT>;

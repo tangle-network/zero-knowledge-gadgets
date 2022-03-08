@@ -16,7 +16,7 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use super::{setup_params, setup_tree_and_create_path};
+use crate::common::*;
 
 #[cfg(test)]
 mod tests;
@@ -24,7 +24,7 @@ mod tests;
 pub type PoseidonAnchorCircuit<F, const N: usize, const M: usize> =
 	AnchorCircuit<F, PoseidonGadget<F>, N, M>;
 
-struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
+pub struct AnchorR1CSProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize> {
 	engine: PhantomData<E>,
 }
 
@@ -38,9 +38,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		roots: [E::Fr; ANCHOR_CT],
 		arbitrary_input: E::Fr,
 	) -> Vec<E::Fr> {
-		let mut pub_ins = vec![chain_id, nullifier_hash];
+		let mut pub_ins = vec![nullifier_hash, arbitrary_input, chain_id];
 		pub_ins.extend(roots.to_vec());
-		pub_ins.push(arbitrary_input);
 		pub_ins
 	}
 
