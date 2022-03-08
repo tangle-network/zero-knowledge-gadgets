@@ -169,6 +169,33 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 
 	/// Creates a new Sparse Merkle Tree from a map of indices to field
 	/// elements.
+	///
+	/// ```rust
+	/// //! Create a new Sparse Merkle Tree with 32 random leaves
+	///
+	/// // Import dependencies
+	/// use ark_std::{collections::BTreeMap, test_rng};
+	/// use arkworks_native_gadgets::poseidon::{test::setup_params, Poseidon};
+	/// use arkworks_utils::Curve;
+	///
+	/// // Setup the Poseidon parameters and hasher for
+	/// // Curve BN254, a width of 3, and an exponentiation of 5.
+	/// let params = setup_params(Curve::Bn254, 5, 3);
+	/// let poseidon = Poseidon::new(params);
+	///
+	/// // Create a random number generator for generating 32 leaves.
+	/// let rng = &mut test_rng();
+	/// let leaves: Vec<F> = vec![F::rand(rng); 32];
+	/// let pairs: BTreeMap<u32, F> = leaves
+	/// 	.iter()
+	/// 	.enumerate()
+	/// 	.map(|(i, l)| (i as u32, *l))
+	/// 	.collect();
+	///
+	/// // Create the tree with a default leaf of zero.
+	/// let default_leaf = F::from(0u64);
+	/// let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, default_leaf).unwrap();
+	/// ```
 	pub fn new(leaves: &BTreeMap<u32, F>, hasher: &H, empty_leaf: &[u8]) -> Result<Self, Error> {
 		// Ensure the tree can hold this many leaves
 		let last_level_size = leaves.len().next_power_of_two();
@@ -202,7 +229,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		Ok(smt)
 	}
 
-	/// This returns the Merkle tree root
+	/// Returns the Merkle tree root.
 	pub fn root(&self) -> F {
 		self.tree
 			.get(&0)
