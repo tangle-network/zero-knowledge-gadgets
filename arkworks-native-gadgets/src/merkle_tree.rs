@@ -50,18 +50,37 @@
 //!
 //! // Import dependencies
 //! use ark_bn254::Fr;
-//! use ark_std::{UniformRand, test_rng, collections::BTreeMap};
-//! use arkworks_native_gadgets::poseidon::{test::setup_params, Poseidon, SparseMerkleTree};
-//! use arkworks_utils::Curve;
+//! use ark_ff::{BigInteger, PrimeField};
+//! use ark_std::{collections::BTreeMap, test_rng, UniformRand};
+//! use arkworks_native_gadgets::{
+//! 	merkle_tree::SparseMerkleTree,
+//! 	poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+//! };
+//! use arkworks_utils::{
+//! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec, poseidon_params::setup_poseidon_params, Curve,
+//! };
 //!
 //! // Setup the Poseidon parameters and hasher for
 //! // Curve BN254, a width of 3, and an exponentiation of 5.
-//! let params = setup_params(Curve::Bn254, 5, 3);
-//! let poseidon = Poseidon::new(params);
+//! let pos_data = setup_poseidon_params(Curve::Bn254, 5, 3).unwrap();
+//!
+//! let mds_f = bytes_matrix_to_f(&pos_data.mds);
+//! let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+//!
+//! let pos = PoseidonParameters {
+//! 	mds_matrix: mds_f,
+//! 	round_keys: rounds_f,
+//! 	full_rounds: pos_data.full_rounds,
+//! 	partial_rounds: pos_data.partial_rounds,
+//! 	sbox: PoseidonSbox(pos_data.exp),
+//! 	width: pos_data.width,
+//! };
+//!
+//! let poseidon = Poseidon::new(pos);
 //!
 //! // Create a random number generator for generating 32 leaves.
 //! let rng = &mut test_rng();
-//! let leaves: Vec<F> = vec![Fr::rand(rng); 32];
+//! let leaves: Vec<Fr> = vec![Fr::rand(rng); 32];
 //! let pairs: BTreeMap<u32, Fr> = leaves
 //! 	.iter()
 //! 	.enumerate()
@@ -70,8 +89,8 @@
 //!
 //! // Create the tree with a default leaf of zero.
 //! type SMT = SparseMerkleTree<Fr, Poseidon<Fr>, 30>;
-//! let default_leaf = Fr::from(0u64);
-//! let smt = SMT::new(&pairs, &poseidon, default_leaf).unwrap();
+//! let default_leaf = Fr::from(0u64).into_repr().to_bytes_le();
+//! let smt = SMT::new(&pairs, &poseidon, &default_leaf).unwrap();
 //! ```
 
 use crate::poseidon::FieldHasher;
