@@ -5,7 +5,7 @@
 //! A sparse Merkle tree is a type of Merkle tree, but it is much easier to
 //! prove non-membership in a sparse Merkle tree than in an arbitrary Merkle
 //! tree. For an explanation of sparse Merkle trees, see:
-//! https://medium.com/@kelvinfichter/whats-a-sparse-merkle-tree-acda70aeb837
+//! `<https://medium.com/@kelvinfichter/whats-a-sparse-merkle-tree-acda70aeb837>`
 //!
 //! In this file we define the "Path" and "SparseMerkleTree" structs.
 //! These depend on your choice of a prime field F, a field hasher over F
@@ -16,16 +16,17 @@
 //! The path corresponding to a given leaf node is stored as an N-tuple of pairs
 //! of field elements. Each pair consists of a node lying on the path from the
 //! leaf node to the root, and that node's sibling.  For example, suppose
-//!
+//! ```text
 //!           a
 //!         /   \
 //!        b     c
 //!       / \   / \
 //!      d   e f   g
-//!
+//! ```
 //! is our sparse Merkle tree, and `a` through `g` are field elements stored at
 //! the nodes. Then the merkle proof path `e-b-a` from leaf `e` to root `a` is
 //! stored as `[(d,e), (b,c)]`
+
 
 use crate::poseidon::FieldHasher;
 use ark_crypto_primitives::Error;
@@ -114,10 +115,10 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> Path<F, H, N> {
 	}
 }
 
-// Sparse Merkle tree
-// We wanted the "default" or "empty" leaf to be specified as a constant in
-// the struct's trait bounds but arrays are not allowed as constants.  Instead
-// all constructor functions take in a default/empty leaf argument.
+/// Sparse Merkle tree
+/// We wanted the "default" or "empty" leaf to be specified as a constant in
+/// the struct's trait bounds but arrays are not allowed as constants.  Instead
+/// all constructor functions take in a default/empty leaf argument.
 pub struct SparseMerkleTree<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	/// data of the tree
 	pub tree: BTreeMap<u64, F>,
@@ -330,11 +331,14 @@ fn parent(index: u64) -> Option<u64> {
 #[cfg(test)]
 mod test {
 	use super::{gen_empty_hashes, SparseMerkleTree};
-	use crate::poseidon::{test::setup_params, FieldHasher, Poseidon};
+	use crate::poseidon::{FieldHasher, Poseidon};
 	use ark_ed_on_bls12_381::Fq;
 	use ark_ff::{BigInteger, PrimeField, UniformRand};
 	use ark_std::{collections::BTreeMap, test_rng};
-	use arkworks_utils::{bytes_vec_to_f, parse_vec, Curve};
+	use arkworks_utils::utils::{
+		common::{setup_params_x5_3, Curve},
+		parse_vec,
+	};
 
 	type BLSHash = Poseidon<Fq>;
 	use ark_bn254::Fr as Bn254Fr;
@@ -360,7 +364,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
 
-		let params = setup_params(curve, 5, 3);
+		let params = setup_params_x5_3(curve);
 		let poseidon = Poseidon::new(params);
 		let default_leaf = [0u8; 32];
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -390,7 +394,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
 
-		let params = setup_params(curve, 5, 3);
+		let params = setup_params_x5_3(curve);
 		let poseidon = Poseidon::new(params);
 		let default_leaf = [0u8; 32];
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -411,7 +415,7 @@ mod test {
 		let rng = &mut test_rng();
 		let curve = Curve::Bls381;
 
-		let params = setup_params(curve, 5, 3);
+		let params = setup_params_x5_3(curve);
 		let poseidon = Poseidon::new(params);
 		let default_leaf = [0u8; 32];
 		let leaves = [Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
@@ -468,18 +472,16 @@ mod test {
 			"0x1f15585f8947e378bcf8bd918716799da909acdb944c57150b1eb4565fda8aa0",
 			"0x1eb064b21055ac6a350cf41eb30e4ce2cb19680217df3a243617c2838185ad06",
 		];
-		let solidity_empty_hashes: Vec<Bn254Fr> =
-			bytes_vec_to_f(&parse_vec(solidity_empty_hashes_hex).unwrap());
+		let solidity_empty_hashes: Vec<Bn254Fr> = parse_vec(solidity_empty_hashes_hex);
 
 		// Generate again with this module's functions
 		let curve = Curve::Bn254;
-		let params = setup_params(curve, 5, 3);
+		let params = setup_params_x5_3::<Bn254Fr>(curve);
 		let poseidon = Poseidon::<Bn254Fr>::new(params.clone());
 
 		let default_leaf_hex =
 			vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
-		let default_leaf_scalar: Vec<Bn254Fr> =
-			bytes_vec_to_f(&parse_vec(default_leaf_hex).unwrap());
+		let default_leaf_scalar: Vec<Bn254Fr> = parse_vec(default_leaf_hex);
 		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_le();
 		let empty_hashes =
 			gen_empty_hashes::<Bn254Fr, _, 32usize>(&poseidon, &default_leaf_vec[..]).unwrap();
