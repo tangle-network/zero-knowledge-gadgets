@@ -64,9 +64,12 @@ use ark_std::{
 	marker::PhantomData,
 };
 
+/// Error enum for Sparse Merkle Tree.
 #[derive(Debug)]
 pub enum MerkleError {
+	/// Thrown when the given leaf is not in the tree or the path.
 	InvalidLeaf,
+	/// Thrown when the merkle path is invalid.
 	InvalidPathNodes,
 }
 
@@ -89,7 +92,9 @@ impl ark_std::error::Error for MerkleError {}
 /// construction is valid at each intermediate step.
 #[derive(Clone)]
 pub struct Path<F: PrimeField, H: FieldHasher<F>, const N: usize> {
+	/// The path represented as a sequence of sibling pairs.
 	pub path: [(F, F); N],
+	/// The phantom hasher type used to reconstruct the merkle root.
 	pub marker: PhantomData<H>,
 }
 
@@ -156,6 +161,7 @@ pub struct SparseMerkleTree<F: PrimeField, H: FieldHasher<F>, const N: usize> {
 	pub tree: BTreeMap<u64, F>,
 	/// An array of default hashes hashed with themselves `N` times.
 	empty_hashes: [F; N],
+	/// The phantom hasher type used to build the merkle tree.
 	marker: PhantomData<H>,
 }
 
