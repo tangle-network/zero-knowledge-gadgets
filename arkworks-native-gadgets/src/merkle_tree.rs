@@ -69,7 +69,7 @@
 //! 	.collect();
 //!
 //! // Create the tree with a default leaf of zero.
-//! type SMT = SparseMerkleTree::<Fr, Poseidon<Fr>, 30>;
+//! type SMT = SparseMerkleTree<Fr, Poseidon<Fr>, 30>;
 //! let default_leaf = Fr::from(0u64);
 //! let smt = SMT::new(&pairs, &poseidon, default_leaf).unwrap();
 //! ```
