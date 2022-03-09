@@ -27,16 +27,12 @@
 //! //! Create a new Sparse Merkle Tree with 32 random leaves
 //!
 //! // Import dependencies
-//! use ark_bn254::Fr;
 //! use ark_ff::{BigInteger, PrimeField};
-//! use ark_std::{collections::BTreeMap, test_rng, UniformRand};
-//! use arkworks_r1cs_gadgets::{
-//! 	merkle_tree::SparseMerkleTree,
-//! 	poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
-//! };
+//! use ark_std::{collections::BTreeMap, test_rng, UniformRand, Fr};
+//! use crate::poseidon::{FieldHasherGadget, PoseidonGadget};
 //! use arkworks_utils::{
-//! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec, poseidon_params::setup_poseidon_params, Curve,
-//! };
+//! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec,
+//! poseidon_params::setup_poseidon_params, Curve, };
 // //! // Setup the Poseidon parameters and hasher for
 //! // Curve BN254, a width of 3, and an exponentiation of 5.
 //! let pos_data = setup_poseidon_params(Curve::Bn254, 5, 3).unwrap();
@@ -56,7 +52,7 @@
 //! type SMTCRHGadget = PoseidonGadget<Fq>;
 //! const HEIGHT: usize = 30;
 //! const DEFAULT_LEAF: [u8; 32] = [0; 32];
-//! type SMT = SparseMerkleTree<Fq, Poseidon<Fq>, Height>
+//! type SMT = SparseMerkleTree<Fq, Poseidon<Fq>, Height>;
 //!
 //!
 //! let rng = &mut test_rng();
