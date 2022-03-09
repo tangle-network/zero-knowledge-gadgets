@@ -16,8 +16,6 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use crate::common::*;
-
 #[cfg(test)]
 mod tests;
 
@@ -278,7 +276,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		chain_id: u64,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<AnchorLeaf, Error> {
+	) -> Result<Leaf, Error> {
 		// Initialize hashers
 		let params3 = setup_params::<E::Fr>(curve, 5, 3);
 		let params4 = setup_params::<E::Fr>(curve, 5, 4);
@@ -292,8 +290,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			leaf_hasher.hash(&[chain_id_elt, nullifier_field_elt, secret_field_elt])?;
 		let nullifier_hash_field_element =
 			tree_hasher.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
-		Ok(AnchorLeaf {
-			chain_id_bytes: chain_id.to_be_bytes().to_vec(),
+		Ok(Leaf {
+			chain_id_bytes: Some(chain_id.to_be_bytes().to_vec()),
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
 			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
@@ -341,7 +339,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
 		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
-		let AnchorLeaf {
+		let Leaf {
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..
@@ -355,6 +353,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
+		let nullifier_hash_f = E::Fr::from_le_bytes_mod_order(&nullifier_hash_bytes);
 		let mc = AnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>::new(
 			arbitrary_input,
 			secret_f,
@@ -362,12 +361,16 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			chain_id_f,
 			root_set_f,
 			path,
-			nullifier_f,
+			nullifier_hash_f,
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs =
-			Self::construct_public_inputs(chain_id_f, nullifier_f, root_set_f, arbitrary_input);
+		let public_inputs = Self::construct_public_inputs(
+			chain_id_f,
+			nullifier_hash_f,
+			root_set_f,
+			arbitrary_input,
+		);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;
@@ -395,7 +398,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		curve: Curve,
 		chain_id: u64,
 		rng: &mut R,
-	) -> Result<AnchorLeaf, Error> {
+	) -> Result<Leaf, Error> {
 		let secret = E::Fr::rand(rng);
 		let nullifier = E::Fr::rand(rng);
 		Self::create_leaf_with_privates(
