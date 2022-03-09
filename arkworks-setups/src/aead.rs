@@ -217,7 +217,7 @@ mod test {
 	}
 
 	#[test]
-	fn test_encrypt() {
+	fn test_utxo_encrypt() {
 		let curve = Curve::Bn254;
 		let params2 = setup_params::<Fr>(curve, 5, 2);
 		let params4 = setup_params::<Fr>(curve, 5, 4);
