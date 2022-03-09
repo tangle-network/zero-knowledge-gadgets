@@ -83,9 +83,9 @@
 //! let res = path_var
 //! 	.check_membership(&root_var, &leaf_var, &hasher_gadget)
 //! 	.unwrap();
-//!```
-//! 
-//! // Import dependencies
+
+//! ```
+// Import dependencies
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, fields::fp::FpVar, prelude::*, select::CondSelectGadget,
@@ -114,7 +114,8 @@ where
 	F: PrimeField,
 	HG: FieldHasherGadget<F>,
 {
-	/// conditionally check a lookup proof (does not enforce index consistency)
+	/// check whether path belongs to merkle path (does not check if indexes
+	/// match)
 	pub fn check_membership(
 		&self,
 		root: &FpVar<F>,
@@ -126,11 +127,13 @@ where
 		root.is_eq(&computed_root)
 	}
 
+	/// Creates circuit to calculate merkle root and deny any invalid paths
 	pub fn root_hash(&self, leaf: &FpVar<F>, hasher: &HG) -> Result<FpVar<F>, SynthesisError> {
 		assert_eq!(self.path.len(), N);
 		// Check if leaf is one of the bottom-most siblings.
 		let leaf_is_left = leaf.is_eq(&self.path[0].0)?;
 
+		// Checks if leaf hash matches path value
 		leaf.enforce_equal(&FpVar::<F>::conditionally_select(
 			&leaf_is_left,
 			&self.path[0].0,
@@ -155,6 +158,7 @@ where
 		Ok(previous_hash)
 	}
 
+	/// Creates circuit to get index of a leaf hash
 	pub fn get_index(
 		&self,
 		root: &FpVar<F>,
