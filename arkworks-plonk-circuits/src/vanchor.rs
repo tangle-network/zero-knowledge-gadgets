@@ -369,7 +369,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [
 			default_path.clone(),
@@ -537,7 +537,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
@@ -697,7 +697,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
@@ -874,7 +874,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
@@ -1038,7 +1038,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
@@ -1212,7 +1212,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] =
 			[default_path.clone(), default_path.clone()];
@@ -1377,7 +1377,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
@@ -1551,7 +1551,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
@@ -1725,7 +1725,7 @@ mod test {
 		// Default path to initialize the `in_paths` array
 		let default_path = Path::<Fq, PoseidonBn254, TREE_HEIGHT> {
 			path: [(Fq::from(0u64), Fq::from(0u64)); TREE_HEIGHT],
-			_marker: PhantomData,
+			marker: PhantomData,
 		};
 		let mut in_paths: [Path<_, _, TREE_HEIGHT>; INS] = [default_path.clone(), default_path];
 
