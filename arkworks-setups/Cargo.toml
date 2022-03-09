@@ -21,7 +21,7 @@ ark-groth16 = { version = "^0.3.0", default-features = false }
 
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-crypto_box = { version = "0.7.1" }
+crypto_box = { version = "0.7.1", optional = true }
 
 [dependencies.arkworks-utils]
 path = "../arkworks-utils"
@@ -39,6 +39,7 @@ hex-literal = { version = "0.3.4" }
 
 [features]
 default = ["std"]
+aead = ["crypto_box"]
 r1cs = []
 plonk = []
 std = [
