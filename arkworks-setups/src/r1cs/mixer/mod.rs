@@ -1,4 +1,4 @@
-use crate::common::{MixerLeaf, MixerProof};
+use crate::common::{Leaf, MixerProof};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
@@ -251,7 +251,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		curve: Curve,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<MixerLeaf, Error> {
+	) -> Result<Leaf, Error> {
 		let secret_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&secret);
 		let nullifier_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&nullifier);
 
@@ -260,7 +260,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		let leaf_field_element = poseidon.hash_two(&secret_field_elt, &nullifier_field_elt)?;
 		let nullifier_hash_field_element =
 			poseidon.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
-		Ok(MixerLeaf {
+		Ok(Leaf {
+			chain_id_bytes: None,
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
 			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
@@ -300,7 +301,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
 		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
-		let MixerLeaf {
+		let Leaf {
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..
@@ -348,7 +349,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 	fn create_random_leaf<R: RngCore + CryptoRng>(
 		curve: Curve,
 		rng: &mut R,
-	) -> Result<MixerLeaf, Error> {
+	) -> Result<Leaf, Error> {
 		let secret = E::Fr::rand(rng);
 		let nullifier = E::Fr::rand(rng);
 		Self::create_leaf_with_privates(

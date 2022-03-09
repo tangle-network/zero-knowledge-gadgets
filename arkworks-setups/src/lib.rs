@@ -8,7 +8,7 @@ use ark_std::{
 };
 
 pub use arkworks_utils::Curve;
-use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
+use common::{AnchorProof, Leaf, MixerProof, VAnchorProof};
 use utxo::Utxo;
 
 pub mod common;
@@ -28,12 +28,10 @@ pub trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
 		curve: Curve,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<MixerLeaf, Error>;
+	) -> Result<Leaf, Error>;
 	/// Create random leaf
-	fn create_random_leaf<R: RngCore + CryptoRng>(
-		curve: Curve,
-		rng: &mut R,
-	) -> Result<MixerLeaf, Error>;
+	fn create_random_leaf<R: RngCore + CryptoRng>(curve: Curve, rng: &mut R)
+		-> Result<Leaf, Error>;
 	// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(
 		curve: Curve,
@@ -59,13 +57,13 @@ pub trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: u
 		chain_id: u64,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<AnchorLeaf, Error>;
+	) -> Result<Leaf, Error>;
 	/// Create random leaf
 	fn create_random_leaf<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
 		rng: &mut R,
-	) -> Result<AnchorLeaf, Error>;
+	) -> Result<Leaf, Error>;
 	// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(
 		curve: Curve,

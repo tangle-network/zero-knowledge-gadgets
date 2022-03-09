@@ -31,15 +31,8 @@ pub struct VAnchorLeaf {
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
-pub struct AnchorLeaf {
-	pub chain_id_bytes: Vec<u8>,
-	pub secret_bytes: Vec<u8>,
-	pub nullifier_bytes: Vec<u8>,
-	pub leaf_bytes: Vec<u8>,
-	pub nullifier_hash_bytes: Vec<u8>,
-}
-
-pub struct MixerLeaf {
+pub struct Leaf {
+	pub chain_id_bytes: Option<Vec<u8>>,
 	pub secret_bytes: Vec<u8>,
 	pub nullifier_bytes: Vec<u8>,
 	pub leaf_bytes: Vec<u8>,
