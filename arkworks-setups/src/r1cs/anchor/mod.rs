@@ -355,6 +355,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
+		let nullifier_hash_f = E::Fr::from_le_bytes_mod_order(&nullifier_hash_bytes);
 		let mc = AnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>::new(
 			arbitrary_input,
 			secret_f,
@@ -362,12 +363,16 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			chain_id_f,
 			root_set_f,
 			path,
-			nullifier_f,
+			nullifier_hash_f,
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs =
-			Self::construct_public_inputs(chain_id_f, nullifier_f, root_set_f, arbitrary_input);
+		let public_inputs = Self::construct_public_inputs(
+			chain_id_f,
+			nullifier_hash_f,
+			root_set_f,
+			arbitrary_input,
+		);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;

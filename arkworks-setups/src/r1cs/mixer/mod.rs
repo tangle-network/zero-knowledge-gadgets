@@ -314,16 +314,17 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		)?;
 		let root = tree.root();
 
+		let nullifier_hash_f = E::Fr::from_le_bytes_mod_order(&nullifier_hash_bytes);
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
 			secret_f,
 			nullifier_f,
 			path,
 			root,
-			nullifier_f,
+			nullifier_hash_f,
 			poseidon,
 		);
-		let public_inputs = construct_public_inputs(nullifier_f, root, arbitrary_input);
+		let public_inputs = construct_public_inputs(nullifier_hash_f, root, arbitrary_input);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;
