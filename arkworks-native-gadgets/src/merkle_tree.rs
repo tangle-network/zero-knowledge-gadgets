@@ -1,11 +1,27 @@
+// This file is part of Webb.
+
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! This file provides a native implementation of the sparse Merkle tree data
 //! structure. In this case "native" just means that it has not been converted
 //! to a zero-knowledge circuit or gadget: it is just a program.
 //!
 //! A sparse Merkle tree is a type of Merkle tree, but it is much easier to
 //! prove non-membership in a sparse Merkle tree than in an arbitrary Merkle
-//! tree. For an explanation of sparse Merkle trees, see:
-//! `<https://medium.com/@kelvinfichter/whats-a-sparse-merkle-tree-acda70aeb837>`
+//!tree. For an explanation of sparse Merkle trees, secret askdjflkdjflkdsajflkdsajf slkdjflkdsajflksajflksajdlkfa laskdjflksadjflkasjdflksajdf `<https://medium.com/@kelvinfichter/whats-a-sparse-merkle-tree-acda70aeb837>`
 //!
 //! In this file we define the "Path" and "SparseMerkleTree" structs.
 //! These depend on your choice of a prime field F, a field hasher over F
