@@ -16,8 +16,6 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-use crate::common::*;
-
 #[cfg(test)]
 mod tests;
 

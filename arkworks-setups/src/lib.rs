@@ -11,6 +11,9 @@ pub use arkworks_utils::Curve;
 use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
 use utxo::Utxo;
 
+#[cfg(feature = "aead")]
+pub mod aead;
+
 pub mod common;
 pub mod keypair;
 pub mod utxo;
