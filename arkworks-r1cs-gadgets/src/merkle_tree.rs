@@ -27,9 +27,13 @@
 //! //! Create a new Sparse Merkle Tree with 32 random leaves
 //!
 //! // Import dependencies
+//! use ark_r1cs_std::prelude::FieldVar;
 //! use ark_ff::{BigInteger, PrimeField};
+//! use ark_ed_on_bn254::Fq;
 //! use ark_std::{collections::BTreeMap, test_rng, UniformRand, Fr};
+//! use ark_relations::r1cs::ConstraintSystem;
 //! use crate::poseidon::{FieldHasherGadget, PoseidonGadget};
+//! use arkworks_native_gadgets::poseidon::Poseidon;
 //! use arkworks_utils::{
 //! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec,
 //! poseidon_params::setup_poseidon_params, Curve, };
@@ -58,7 +62,19 @@
 //! let rng = &mut test_rng();
 //! let curve = Curve::Bn254;
 //!
-//! let params3 = setup_params(curve, 5, 3);
+//! let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+//!
+//! let mds_f = bytes_matrix_to_f(&pos_data.mds);
+//! let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+//!
+//! let params3 = PoseidonParameters {
+//!     mds_matrix: mds_f,
+//!     round_keys: rounds_f,
+//!     full_rounds: pos_data.full_rounds,
+//!     partial_rounds: pos_data.partial_rounds,
+//!     sbox: PoseidonSbox(pos_data.exp),
+//!     width: pos_data.width,
+//! };
 //! let hasher = Poseidon::<Fq> { params: params3 };
 //!
 //! let mut cs = ConstraintSystem::<Fq>::new_ref();
