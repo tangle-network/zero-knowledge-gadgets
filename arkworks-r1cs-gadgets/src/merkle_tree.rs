@@ -79,8 +79,8 @@
 //! let res = path_var
 //! 	.check_membership(&root_var, &leaf_var, &hasher_gadget)
 //! 	.unwrap();
-
 //! ```
+//!
 // Import dependencies
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
