@@ -62,15 +62,15 @@ impl ArkError for PoseidonError {}
 /// Parameters for the Poseidon hash function.
 #[derive(Default, Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
-	/// The round key constants
+	/// The round constants
 	pub round_keys: Vec<F>,
 	/// The MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<F>>,
-	/// Number of full SBox rounds
+	/// Number of full rounds
 	pub full_rounds: u8,
 	/// Number of partial rounds
 	pub partial_rounds: u8,
-	/// The size of the permutation, in field elements.
+	/// The length of the input, in field elements, plus one.
 	pub width: u8,
 	/// The S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
