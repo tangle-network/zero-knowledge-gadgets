@@ -10,31 +10,31 @@
 //!
 //! After this initial padding, Poseidon hashes the input vector through a
 //! number of cryptographic rounds, which can either be full rounds or partial
-//! rounds. (After the input vector begins to be processed, we call it the 
+//! rounds. (After the input vector begins to be processed, we call it the
 //! *state* vector).
-//! 
+//!
 //! Each round is of the form ARC --> SB --> M, where
 //! - ARC stands for "add round constants."
 //! - SB stands for "S-box", (or "sub words") which means
-//! 	- raising **all** entries of the state vector to a fixed power alpha, 
+//! 	- raising **all** entries of the state vector to a fixed power alpha,
 //! 	in a full round.
-//! 	- raising **only the first** entry of the state vector to a fixed power 
+//! 	- raising **only the first** entry of the state vector to a fixed power
 //! 	alpha, in a partial round.
 //! - M stands for "mix layer," which means multiplying the state vector by a
 //!   fixed [MDS matrix](https://en.wikipedia.org/wiki/MDS_matrix).
-//! 
+//!
 //! The output is the first entry of the state vector after the final round.
 //!
 //! The round constants and MDS matrix are precomputed and passed to Poseidon as
 //! parameters `round_keys` and `mds_matrix`, respectively.  There is a separate
 //! module `sbox` for setting the exponent alpha, which is passed to Poseidon as
-//! `sbox.0`.  Common values of alpha, which are supported in `sbox`, are 
+//! `sbox.0`.  Common values of alpha, which are supported in `sbox`, are
 //! 3, 5, 17, and -1: the default value is 5.
 //!
 //! Note that this is the *original* Poseidon hash function described in [the
-//! paper of Grassi, Khovratovich, 
-//! Rechberger, Roy, and Schofnegger](https://eprint.iacr.org/2019/458.pdf), 
-//! and NOT the optimized version described in 
+//! paper of Grassi, Khovratovich,
+//! Rechberger, Roy, and Schofnegger](https://eprint.iacr.org/2019/458.pdf),
+//! and NOT the optimized version described in
 //! [this page by Feng](https://hackmd.io/8MdoHwoKTPmQfZyIKEYWXQ).
 
 /// Importing dependencies
@@ -50,10 +50,9 @@ pub mod sbox;
 #[derive(Debug)]
 
 /// Error enum for the Poseidon hash function.  
-/// 
+///
 /// See Variants for more information about when this error is thrown.
 pub enum PoseidonError {
-
 	/// Thrown if the S-box exponent alpha is not 3, 5, 17, or -1.
 	InvalidSboxSize(i8),
 
@@ -122,7 +121,6 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		}
 	}
 
-
 	pub fn generate<R: Rng>(_rng: &mut R) -> Self {
 		unimplemented!();
 	}
@@ -130,7 +128,7 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	/// The MDS matrices used for the Poseidon hash functions of widths 2-17
 	/// have been pre-computed, audited for security, and published.
 	/// If we wanted to generated our own MDS matrix we could write and use
-	/// this function, but for the moment we only use the published matrices, 
+	/// this function, but for the moment we only use the published matrices,
 	/// so it remains unimplemented.
 	pub fn create_mds<R: Rng>(_rng: &mut R) -> Vec<Vec<F>> {
 		unimplemented!();
@@ -139,20 +137,21 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	/// The round constants used for the Poseidon hash functions of widths 2-17
 	/// have been pre-computed, audited for security, and published.
 	/// If we wanted to generated our own round constants we could write and use
-	/// this function, but for the moment we only use the published round constants, 
-	/// so it remains unimplemented.
+	/// this function, but for the moment we only use the published round
+	/// constants, so it remains unimplemented.
 	pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
 		unimplemented!();
 	}
 
-	/// Encodes the PoseidonParameters struct as a bytestring (vector of u8 integers),
-	/// in the following way: [width, number of full rounds, number of partial rounds,
-	/// S-box exponent alpha, round constant length, round constants, 
-	/// MDS matrix length, MDS matrix]. Bytes are stored the big-endian way.
+	/// Encodes the PoseidonParameters struct as a bytestring (vector of u8
+	/// integers), in the following way: [width, number of full rounds, number
+	/// of partial rounds, S-box exponent alpha, round constant length, round
+	/// constants, MDS matrix length, MDS matrix]. Bytes are stored the
+	/// big-endian way.
 	pub fn to_bytes(&self) -> Vec<u8> {
 		let max_elt_size = F::BigInt::NUM_LIMBS * 8;
 		let mut buf: Vec<u8> = vec![];
-		
+
 		buf.extend(&self.width.to_be_bytes());
 		buf.extend(&self.full_rounds.to_be_bytes());
 		buf.extend(&self.partial_rounds.to_be_bytes());
@@ -188,8 +187,8 @@ impl<F: PrimeField> PoseidonParameters<F> {
 	}
 
 	/// Decodes a (valid) bytestring into a PoseidonParameters struct.
-	/// Throws an error if the bytestring is not valid, i.e., is not the result of
-	/// encoding an instance of PoseidonParameters with `to_bytes`.
+	/// Throws an error if the bytestring is not valid, i.e., is not the result
+	/// of encoding an instance of PoseidonParameters with `to_bytes`.
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
 		let mut width_u8 = [0u8; 1];
 		bytes.read_exact(&mut width_u8)?;
@@ -261,9 +260,9 @@ impl<F: PrimeField> Poseidon<F> {
 pub trait FieldHasher<F: PrimeField> {
 	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError>;
 
-	/// With this method we separate the special case when the length of the 
-	/// input vector is 2, since hashing together two field elements is particularly
-	/// useful in Merkle trees.
+	/// With this method we separate the special case when the length of the
+	/// input vector is 2, since hashing together two field elements is
+	/// particularly useful in Merkle trees.
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError>;
 }
 
