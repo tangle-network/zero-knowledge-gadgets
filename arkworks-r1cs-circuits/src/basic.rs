@@ -15,7 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Dummy example to show how interfaces should be used
+//! Dummy example to show how interfaces should be used on a circuit that will
+//! use the groth16 cerimony
 use ark_ff::PrimeField;
 use ark_relations::{
 	lc,
@@ -44,8 +45,7 @@ impl<F: PrimeField> Clone for DummyCircuit<F> {
 }
 
 /// Implementation of the `ConstraintSynthesizer` trait for the `DummyCircuit`
-/// https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
-///
+/// for more details refer to ark_r1cs_std::ConstraintSystem
 /// This is the main function that is called by the `R1CS` library to generate
 /// the constraints for the `DummyCircuit`.
 impl<F: PrimeField> ConstraintSynthesizer<F> for DummyCircuit<F> {

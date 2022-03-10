@@ -15,14 +15,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The Anchor is a cross-chain fixed sized deposit/withdraw shielded pool.
-//! It allows for users to deposit tokens on one chain and withdraw in another
-//! one without linking the deposit to the withdrawal.
+//! This file provides a R1CS constraint generation implementation of Anchor
+//! protocol.
+//!
+//! Anchor is a cross-chain fixed sized deposit/withdraw
+//! shielded pool. It allows for users to deposit tokens on one chain and
+//! withdraw in another one without linking the deposit to the withdrawal.
 
 //! We will take inputs and do a merkle tree reconstruction for each node in the
 //! path and check if the reconstructed root is inside the current root set.
 //!
-//! This is the Groth16 setup implementation of Anchor
+//! For a simpler usage example see arkworks_r1cs_circuits::basic::DummyCircuit
 use ark_ff::fields::PrimeField;
 use ark_r1cs_std::{eq::EqGadget, fields::fp::FpVar, prelude::*};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};

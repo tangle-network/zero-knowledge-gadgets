@@ -16,10 +16,11 @@
 // limitations under the License.
 
 //! The Mixer is a fixed sized deposit/withdraw shielded pool.
-//! This is the simplest circuit in arkworks-circuits.
-//! It implements a on-chain mixer contract that allows for users to deposit
-//! tokens using one wallet and withdraw using another one. This system uses
-//! zero-knowledge proofs so no private information about the user gets leaked.
+//! This is the simplest circuit in arkworks-circuits (aside from the dummy
+//! one). It implements a on-chain mixer contract that allows for users to
+//! deposit tokens using one wallet and withdraw using another one. This system
+//! uses zero-knowledge proofs so no private information about the user gets
+//! leaked.
 //!
 //! Will take inputs and do a merkle tree reconstruction for each node in the
 //! path to check if the reconstructed root matches current merkle root.

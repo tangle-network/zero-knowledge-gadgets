@@ -15,6 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! This is the rust equivalent of a .circom file being used on a groth16
+//! cerimony
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[macro_use]
