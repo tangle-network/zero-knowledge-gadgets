@@ -1,7 +1,7 @@
 //! A native implementation of the Poseidon hash function.
 //!
 //! The Poseidon hash function takes in a vector of elements of a prime field
-//! `F`, and outputs an element of `F`.  This means it has the `FieldHasher`
+//! `F`, and outputs an element of `F`. This means it has the `FieldHasher`
 //! trait.
 //!
 //! The `width` parameter is the length of the input vector plus one.
@@ -10,25 +10,34 @@
 //!
 //! After this initial padding, Poseidon hashes the input vector through a
 //! number of cryptographic rounds, which can either be full rounds or partial
-//! rounds. Each round is of the form ARK --> SB --> M, where
-//! - ARK stands for "add round constants."
-//! - SB stands for "S-box", which means
-//! 	- raising each entry of the state vector to the power alpha, in a full
-//!    round.
-//! 	- raising the first entry of the state vector to the power alpha, in a
-//!    partial round.
-//! - M stands for "mix layer," which means multiplying the state vector by a
-//!   fixed MDS matrix.
+//! rounds. (After the input vector begins to be processed, we call it the
+//! *state* vector).
 //!
-//! The round constants and MDS matrix are precomputed and passed to Poseidon as
-//! parameters `round_keys` and `mds_matrix`, respectively.
+//! Each round is of the form ARC --> SB --> M, where
+//! - ARC stands for "add round constants."
+//! - SB stands for "S-box", (or "sub words") which means
+//! 	- raising **all** entries of the state vector to a fixed power alpha,
+//! 	in a full round.
+//! 	- raising **only the first** entry of the state vector to a fixed power
+//! 	alpha, in a partial round.
+//! - M stands for "mix layer," which means multiplying the state vector by a
+//!   fixed [MDS matrix](https://en.wikipedia.org/wiki/MDS_matrix).
+//!
 //! The output is the first entry of the state vector after the final round.
 //!
-//! Note that this is the *original* Poseidon hash function described in the
-//! paper of Grassi, Khovratovich, Rechberger, Roy, and Schofnegger, and NOT the
-//! optimized one described in this page by Feng.
+//! The round constants and MDS matrix are precomputed and passed to Poseidon as
+//! parameters `round_keys` and `mds_matrix`, respectively.  There is a separate
+//! module `sbox` for setting the exponent alpha, which is passed to Poseidon as
+//! `sbox.0`.  Common values of alpha, which are supported in `sbox`, are
+//! 3, 5, 17, and -1: the default value is 5.
+//!
+//! Note that this is the *original* Poseidon hash function described in [the
+//! paper of Grassi, Khovratovich,
+//! Rechberger, Roy, and Schofnegger](https://eprint.iacr.org/2019/458.pdf),
+//! and NOT the optimized version described in
+//! [this page by Feng](https://hackmd.io/8MdoHwoKTPmQfZyIKEYWXQ).
 
-///Importing dependencies
+/// Importing dependencies
 use ark_crypto_primitives::Error;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{error::Error as ArkError, io::Read, rand::Rng, string::ToString, vec::Vec};
@@ -39,12 +48,24 @@ use super::{from_field_elements, to_field_elements};
 pub mod sbox;
 
 #[derive(Debug)]
+
+/// Error enum for the Poseidon hash function.  
+///
+/// See Variants for more information about when this error is thrown.
 pub enum PoseidonError {
+	/// Thrown if the S-box exponent alpha is not 3, 5, 17, or -1.
 	InvalidSboxSize(i8),
+
+	/// Thrown if the exponent alpha is -1 and the S-box tries to
+	/// take the inverse of zero.
 	ApplySboxFailed,
+
+	/// Thrown if the user attempts to input a vector whose length is
+	/// greater than the `width` parameter minus one.
 	InvalidInputs,
 }
 
+/// Error messages for PoseidonError.
 impl core::fmt::Display for PoseidonError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		use PoseidonError::*;
@@ -62,17 +83,22 @@ impl ArkError for PoseidonError {}
 /// Parameters for the Poseidon hash function.
 #[derive(Default, Clone, Debug)]
 pub struct PoseidonParameters<F: PrimeField> {
-	/// The round key constants
+	/// Round constants
 	pub round_keys: Vec<F>,
-	/// The MDS matrix to apply in the mix layer.
+
+	/// MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<F>>,
-	/// Number of full SBox rounds
+
+	/// Number of full rounds
 	pub full_rounds: u8,
+
 	/// Number of partial rounds
 	pub partial_rounds: u8,
-	/// The size of the permutation, in field elements.
+
+	/// Length of the input, in field elements, plus one zero element.
 	pub width: u8,
-	/// The S-box to apply in the sub words layer.
+
+	/// S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }
 
@@ -99,29 +125,52 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		unimplemented!();
 	}
 
+	/// The MDS matrices used for the Poseidon hash functions of widths 2-17
+	/// have been pre-computed, audited for security, and published.
+	/// If we wanted to generated our own MDS matrix we could write and use
+	/// this function, but for the moment we only use the published matrices,
+	/// so it remains unimplemented.
 	pub fn create_mds<R: Rng>(_rng: &mut R) -> Vec<Vec<F>> {
 		unimplemented!();
 	}
 
+	/// The round constants used for the Poseidon hash functions of widths 2-17
+	/// have been pre-computed, audited for security, and published.
+	/// If we wanted to generated our own round constants we could write and use
+	/// this function, but for the moment we only use the published round
+	/// constants, so it remains unimplemented.
 	pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
 		unimplemented!();
 	}
 
+	/// Encodes the PoseidonParameters struct as a bytestring (vector of u8
+	/// integers), in the following way: [width, number of full rounds, number
+	/// of partial rounds, S-box exponent alpha, round constant length, round
+	/// constants, MDS matrix length, MDS matrix]. Bytes are stored the
+	/// big-endian way.
 	pub fn to_bytes(&self) -> Vec<u8> {
 		let max_elt_size = F::BigInt::NUM_LIMBS * 8;
 		let mut buf: Vec<u8> = vec![];
-		// serialize length of round keys and round keys, packing them together
-		let round_key_len = self.round_keys.len() * max_elt_size;
+
 		buf.extend(&self.width.to_be_bytes());
 		buf.extend(&self.full_rounds.to_be_bytes());
 		buf.extend(&self.partial_rounds.to_be_bytes());
 		buf.extend(&self.sbox.0.to_be_bytes());
 
+		// Appends the length of the round constants to the encoding,
+		// allowing the decoder to parse the round constants.
+		let round_key_len = self.round_keys.len() * max_elt_size;
 		buf.extend_from_slice(&(round_key_len as u32).to_be_bytes());
+
+		// Appends the round constants to the encoding.
 		buf.extend_from_slice(&from_field_elements(&self.round_keys).unwrap());
-		// serialize all inner matrices and add to buffer, we assume the rest
-		// of the buffer is reserved for mds_matrix serialization. Since each
-		// inner mds_matrix is equally sized we only add the length once.
+
+		// Suppose that M, the MDS matrix in the PoseidonParameters instance,
+		// is a t x t matrix.  Then the next block does the following:
+		// 1. Finds t by returning the length of the first entry of M,
+		// since M is a vector of vectors.
+		// 2. Appends t to the encoding.
+		// 3. Flattens M and appends it to the encoding.
 		let mut stored = false;
 		//TODO: implement this for new properties
 		for i in 0..self.mds_matrix.len() {
@@ -137,6 +186,9 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		buf
 	}
 
+	/// Decodes a (valid) bytestring into a PoseidonParameters struct.
+	/// Throws an error if the bytestring is not valid, i.e., is not the result
+	/// of encoding an instance of PoseidonParameters with `to_bytes`.
 	pub fn from_bytes(mut bytes: &[u8]) -> Result<Self, Error> {
 		let mut width_u8 = [0u8; 1];
 		bytes.read_exact(&mut width_u8)?;
@@ -187,6 +239,11 @@ impl<F: PrimeField> PoseidonParameters<F> {
 }
 
 #[derive(Default, Clone, Debug)]
+
+/// The Poseidon hash function struct.  As a struct it contains just
+/// one field `params`, which holds an instance of the `PoseidonParameters`
+/// struct.  The real magic happens in the implementation of the `FieldHasher`
+/// trait, which is where the Poseidon hashing algorithm can be found.
 pub struct Poseidon<F: PrimeField> {
 	pub params: PoseidonParameters<F>,
 }
@@ -202,9 +259,14 @@ impl<F: PrimeField> Poseidon<F> {
 /// of `F`.
 pub trait FieldHasher<F: PrimeField> {
 	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError>;
+
+	/// With this method we separate the special case when the length of the
+	/// input vector is 2, since hashing together two field elements is
+	/// particularly useful in Merkle trees.
 	fn hash_two(&self, left: &F, right: &F) -> Result<F, PoseidonError>;
 }
 
+/// The Poseidon hash algorithm.
 impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 	fn hash(&self, inputs: &[F]) -> Result<F, PoseidonError> {
 		// Casting params to usize
@@ -226,7 +288,7 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 
 		let nr = full_rounds + partial_rounds;
 		for r in 0..nr {
-			//Adding round constants
+			// Adding round constants
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c = self.params.round_keys[(r * width + i)];
 				a.add_assign(c);
@@ -235,18 +297,18 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 			let half_rounds = full_rounds / 2;
 
 			if r < half_rounds || r >= half_rounds + partial_rounds {
-				//Applying an exponentiation S-box to the -first- entry of the
-				//state vector, during partial rounds
+				// Applying an exponentiation S-box to the -first- entry of the
+				// state vector, during partial rounds
 				state
 					.iter_mut()
 					.try_for_each(|a| self.params.sbox.apply_sbox(*a).map(|f| *a = f))?;
 			} else {
 				//Applying an exponentiation S-box to -all- entries of the state
-				//vector, during full rounds
+				// vector, during full rounds
 				state[0] = self.params.sbox.apply_sbox(state[0])?;
 			}
 
-			//Multiplying the state vector by the MDS matrix.
+			// Multiplying the state vector by the MDS matrix.
 			state = state
 				.iter()
 				.enumerate()
