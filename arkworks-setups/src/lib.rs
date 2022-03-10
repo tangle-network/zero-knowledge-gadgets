@@ -87,7 +87,7 @@ pub trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: u
 	) -> Result<AnchorProof, Error>;
 }
 
-trait VAnchorProver<
+pub trait VAnchorProver<
 	E: PairingEngine,
 	const HEIGHT: usize,
 	const ANCHOR_CT: usize,
