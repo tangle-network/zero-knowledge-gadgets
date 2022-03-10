@@ -27,39 +27,29 @@
 //! //! Create a new Sparse Merkle Tree with 32 random leaves
 //!
 //! // Import dependencies
-//! use ark_r1cs_std::prelude::FieldVar;
-//! use ark_ff::{BigInteger, PrimeField};
+//! use crate::arkworks_r1cs_gadgets::poseidon::{FieldHasherGadget, PoseidonGadget};
 //! use ark_ed_on_bn254::Fq;
-//! use ark_std::{collections::BTreeMap, test_rng, UniformRand, Fr};
+//! use ark_ff::{BigInteger, PrimeField};
+//! use ark_r1cs_std::{alloc::AllocVar, prelude::FieldVar};
 //! use ark_relations::r1cs::ConstraintSystem;
-//! use crate::poseidon::{FieldHasherGadget, PoseidonGadget};
-//! use arkworks_native_gadgets::poseidon::Poseidon;
+//! use ark_std::{collections::BTreeMap, test_rng, UniformRand};
+//! use arkworks_native_gadgets::{
+//! 	merkle_tree::SparseMerkleTree,
+//! 	poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+//! };
+//! use arkworks_r1cs_gadgets::merkle_tree::PathVar;
 //! use arkworks_utils::{
-//! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec,
-//! poseidon_params::setup_poseidon_params, Curve, };
-// //! // Setup the Poseidon parameters and hasher for
-//! // Curve BN254, a width of 3, and an exponentiation of 5.
-//! let pos_data = setup_poseidon_params(Curve::Bn254, 5, 3).unwrap();
-//!
-//! let mds_f = bytes_matrix_to_f(&pos_data.mds);
-//! let rounds_f = bytes_vec_to_f(&pos_data.rounds);
-//!
-//! let pos = PoseidonParameters {
-//! 	mds_matrix: mds_f,
-//! 	round_keys: rounds_f,
-//! 	full_rounds: pos_data.full_rounds,
-//! 	partial_rounds: pos_data.partial_rounds,
-//! 	sbox: PoseidonSbox(pos_data.exp),
-//! 	width: pos_data.width,
+//! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec, poseidon_params::setup_poseidon_params, Curve,
 //! };
 //!
 //! type SMTCRHGadget = PoseidonGadget<Fq>;
 //! const HEIGHT: usize = 30;
 //! const DEFAULT_LEAF: [u8; 32] = [0; 32];
-//! type SMT = SparseMerkleTree<Fq, Poseidon<Fq>, Height>;
-//!
+//! type SMT = SparseMerkleTree<Fq, Poseidon<Fq>, HEIGHT>;
 //!
 //! let rng = &mut test_rng();
+//! let exp = 5;
+//! let width = 3;
 //! let curve = Curve::Bn254;
 //!
 //! let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
@@ -68,18 +58,17 @@
 //! let rounds_f = bytes_vec_to_f(&pos_data.rounds);
 //!
 //! let params3 = PoseidonParameters {
-//!     mds_matrix: mds_f,
-//!     round_keys: rounds_f,
-//!     full_rounds: pos_data.full_rounds,
-//!     partial_rounds: pos_data.partial_rounds,
-//!     sbox: PoseidonSbox(pos_data.exp),
-//!     width: pos_data.width,
+//! 	mds_matrix: mds_f,
+//! 	round_keys: rounds_f,
+//! 	full_rounds: pos_data.full_rounds,
+//! 	partial_rounds: pos_data.partial_rounds,
+//! 	sbox: PoseidonSbox(pos_data.exp),
+//! 	width: pos_data.width,
 //! };
 //! let hasher = Poseidon::<Fq> { params: params3 };
 //!
 //! let mut cs = ConstraintSystem::<Fq>::new_ref();
-//! let hasher_gadget = PoseidonGadget::from_native(&mut cs,
-//! hasher.clone()).unwrap();
+//! let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone()).unwrap();
 //!
 //! let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
 //! let smt = SMT::new_sequential(&leaves, &hasher, &DEFAULT_LEAF).unwrap();
@@ -87,16 +76,16 @@
 //! let path = smt.generate_membership_proof(0);
 //!
 //! let path_var =
-//! 	PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), ||
-//! Ok(path)).unwrap(); let root_var = FieldVar::new_witness(cs.clone(), ||
-//! Ok(root)).unwrap(); let leaf_var = FieldVar::new_witness(cs.clone(), ||
-//! Ok(leaves[0])).unwrap();
+//! 	PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
+//!
+//! let root_var = FieldVar::new_witness(cs.clone(), || Ok(root)).unwrap();
+//!
+//! let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 //!
 //! let res = path_var
 //! 	.check_membership(&root_var, &leaf_var, &hasher_gadget)
 //! 	.unwrap();
 //! ```
-//!
 // Import dependencies
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
