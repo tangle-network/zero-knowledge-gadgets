@@ -9,6 +9,7 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
+use ark_ff::SquareRootField;
 use arkworks_native_gadgets::{merkle_tree::Path, poseidon::Poseidon};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
@@ -34,6 +35,7 @@ impl<
 		const INS: usize,
 		const OUTS: usize,
 	> VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+	where <E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>
 {
 	// TODO: Should be deprecated and tests migrated to `create_utxo`
 	#[allow(dead_code)]
@@ -303,6 +305,7 @@ impl<
 		const OUTS: usize,
 	> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 	for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+	where <E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>
 {
 	fn create_utxo(
 		curve: Curve,
@@ -340,7 +343,7 @@ impl<
 		curve: Curve,
 		chain_id: u64,
 		// External data
-		public_amount: u128,
+		public_amount: i128,
 		ext_data_hash: Vec<u8>,
 		public_root_set: [Vec<u8>; ANCHOR_CT],
 		in_indices: [u64; INS],
