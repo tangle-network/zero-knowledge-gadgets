@@ -15,6 +15,7 @@ use arkworks_native_gadgets::{
 use arkworks_r1cs_circuits::mixer::MixerCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
+use codec::Encode;
 
 use crate::common::*;
 
@@ -187,8 +188,9 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
 		arbitrary_data_bytes.extend(&relayer);
-		arbitrary_data_bytes.extend(fee.to_le_bytes());
-		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		// Using encode to be compatible with on chain types
+		arbitrary_data_bytes.extend(fee.encode());
+		arbitrary_data_bytes.extend(refund.encode());
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
 		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 
@@ -296,8 +298,9 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
 		arbitrary_data_bytes.extend(&relayer);
-		arbitrary_data_bytes.extend(fee.to_le_bytes());
-		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		// Using encode to be compatible with on chain types
+		arbitrary_data_bytes.extend(fee.encode());
+		arbitrary_data_bytes.extend(refund.encode());
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
 		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf

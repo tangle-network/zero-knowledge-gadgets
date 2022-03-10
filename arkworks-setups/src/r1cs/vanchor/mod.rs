@@ -1,7 +1,7 @@
 use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, PrimeField, SquareRootField};
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -34,6 +34,8 @@ impl<
 		const INS: usize,
 		const OUTS: usize,
 	> VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	// TODO: Should be deprecated and tests migrated to `create_utxo`
 	#[allow(dead_code)]
@@ -303,6 +305,8 @@ impl<
 		const OUTS: usize,
 	> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 	for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	fn create_utxo(
 		curve: Curve,
@@ -340,7 +344,7 @@ impl<
 		curve: Curve,
 		chain_id: u64,
 		// External data
-		public_amount: u128,
+		public_amount: i128,
 		ext_data_hash: Vec<u8>,
 		public_root_set: [Vec<u8>; ANCHOR_CT],
 		in_indices: [u64; INS],
@@ -365,6 +369,7 @@ impl<
 		// Cast as field elements
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public_amount_elt = E::Fr::from(public_amount);
+		// TODO: pass the raw ext data, and hash them inside this function with keccak
 		let ext_data_hash_elt = E::Fr::from_le_bytes_mod_order(&ext_data_hash);
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();

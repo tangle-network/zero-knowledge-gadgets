@@ -2,6 +2,7 @@ use ark_std::collections::BTreeMap;
 
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
+use ark_ff::{PrimeField, SquareRootField};
 use ark_std::{
 	rand::{CryptoRng, RngCore},
 	vec::Vec,
@@ -87,13 +88,14 @@ pub trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: u
 	) -> Result<AnchorProof, Error>;
 }
 
-trait VAnchorProver<
+pub trait VAnchorProver<
 	E: PairingEngine,
 	const HEIGHT: usize,
 	const ANCHOR_CT: usize,
 	const INS: usize,
 	const OUTS: usize,
->
+> where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	fn create_leaf_with_privates(
 		curve: Curve,
@@ -137,7 +139,7 @@ trait VAnchorProver<
 		curve: Curve,
 		chain_id: u64,
 		// External data
-		public_amount: u128,
+		public_amount: i128,
 		ext_data_hash: Vec<u8>,
 		in_root_set: [Vec<u8>; ANCHOR_CT],
 		in_indices: [u64; INS],
