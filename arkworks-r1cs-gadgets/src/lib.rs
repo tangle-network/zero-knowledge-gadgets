@@ -15,6 +15,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_r1cs_std::{fields::fp::FpVar, prelude::*, uint8::UInt8};
 use ark_relations::r1cs::SynthesisError;
 
+/// Converts bytearray to `Vec<FpVar<F>>`
 pub fn to_field_var_elements<F: PrimeField>(
 	bytes: &[UInt8<F>],
 ) -> Result<Vec<FpVar<F>>, SynthesisError> {
