@@ -1,7 +1,7 @@
 use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, PrimeField, SquareRootField};
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -9,7 +9,6 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use ark_ff::SquareRootField;
 use arkworks_native_gadgets::{merkle_tree::Path, poseidon::Poseidon};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
@@ -35,7 +34,8 @@ impl<
 		const INS: usize,
 		const OUTS: usize,
 	> VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
-	where <E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>
+where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	// TODO: Should be deprecated and tests migrated to `create_utxo`
 	#[allow(dead_code)]
@@ -305,7 +305,8 @@ impl<
 		const OUTS: usize,
 	> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 	for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
-	where <E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>
+where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	fn create_utxo(
 		curve: Curve,
