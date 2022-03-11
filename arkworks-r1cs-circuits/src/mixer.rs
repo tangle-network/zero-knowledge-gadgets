@@ -84,7 +84,7 @@ where
 	}
 }
 /// Implementation of the `ConstraintSynthesizer` trait for the `MixerCircuit`
-/// https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs
+/// <https://github.com/arkworks-rs/snark/blob/master/relations/src/r1cs/constraint_system.rs>
 ///
 /// This is the main function that is called by the `R1CS` library to generate
 /// the constraints for the `AnchorCircuit`.
