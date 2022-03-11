@@ -1,7 +1,7 @@
 //! A native implementation of the Poseidon hash function.
 //!
 //! The Poseidon hash function takes in a vector of elements of a prime field
-//! `F`, and outputs an element of `F`. This means it has the `FieldHasher`
+//! `F`, and outputs an element of `F`.  This means it has the `FieldHasher`
 //! trait.
 //!
 //! The `width` parameter is the length of the input vector plus one.
@@ -10,34 +10,25 @@
 //!
 //! After this initial padding, Poseidon hashes the input vector through a
 //! number of cryptographic rounds, which can either be full rounds or partial
-//! rounds. (After the input vector begins to be processed, we call it the 
-//! *state* vector).
-//! 
-//! Each round is of the form ARC --> SB --> M, where
-//! - ARC stands for "add round constants."
-//! - SB stands for "S-box", (or "sub words") which means
-//! 	- raising **all** entries of the state vector to a fixed power alpha, 
-//! 	in a full round.
-//! 	- raising **only the first** entry of the state vector to a fixed power 
-//! 	alpha, in a partial round.
+//! rounds. Each round is of the form ARK --> SB --> M, where
+//! - ARK stands for "add round constants."
+//! - SB stands for "S-box", which means
+//! 	- raising each entry of the state vector to the power alpha, in a full
+//!    round.
+//! 	- raising the first entry of the state vector to the power alpha, in a
+//!    partial round.
 //! - M stands for "mix layer," which means multiplying the state vector by a
-//!   fixed [MDS matrix](https://en.wikipedia.org/wiki/MDS_matrix).
-//! 
-//! The output is the first entry of the state vector after the final round.
+//!   fixed MDS matrix.
 //!
 //! The round constants and MDS matrix are precomputed and passed to Poseidon as
-//! parameters `round_keys` and `mds_matrix`, respectively.  There is a separate
-//! module `sbox` for setting the exponent alpha, which is passed to Poseidon as
-//! `sbox.0`.  Common values of alpha, which are supported in `sbox`, are 
-//! 3, 5, 17, and -1: the default value is 5.
+//! parameters `round_keys` and `mds_matrix`, respectively.
+//! The output is the first entry of the state vector after the final round.
 //!
-//! Note that this is the *original* Poseidon hash function described in [the
-//! paper of Grassi, Khovratovich, 
-//! Rechberger, Roy, and Schofnegger](https://eprint.iacr.org/2019/458.pdf), 
-//! and NOT the optimized version described in 
-//! [this page by Feng](https://hackmd.io/8MdoHwoKTPmQfZyIKEYWXQ).
+//! Note that this is the *original* Poseidon hash function described in the
+//! paper of Grassi, Khovratovich, Rechberger, Roy, and Schofnegger, and NOT the
+//! optimized one described in this page by Feng.
 
-/// Importing dependencies
+///Importing dependencies
 use ark_crypto_primitives::Error;
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{error::Error as ArkError, io::Read, rand::Rng, string::ToString, vec::Vec};
@@ -289,7 +280,7 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 
 		let nr = full_rounds + partial_rounds;
 		for r in 0..nr {
-			// Adding round constants
+			//Adding round constants
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c = self.params.round_keys[(r * width + i)];
 				a.add_assign(c);
@@ -298,18 +289,18 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 			let half_rounds = full_rounds / 2;
 
 			if r < half_rounds || r >= half_rounds + partial_rounds {
-				// Applying an exponentiation S-box to the -first- entry of the
-				// state vector, during partial rounds
+				//Applying an exponentiation S-box to the -first- entry of the
+				//state vector, during partial rounds
 				state
 					.iter_mut()
 					.try_for_each(|a| self.params.sbox.apply_sbox(*a).map(|f| *a = f))?;
 			} else {
 				//Applying an exponentiation S-box to -all- entries of the state
-				// vector, during full rounds
+				//vector, during full rounds
 				state[0] = self.params.sbox.apply_sbox(state[0])?;
 			}
 
-			// Multiplying the state vector by the MDS matrix.
+			//Multiplying the state vector by the MDS matrix.
 			state = state
 				.iter()
 				.enumerate()

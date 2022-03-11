@@ -1,4 +1,4 @@
-use crate::{common::*, r1cs::vanchor::utxo::Utxo, VAnchorProver};
+use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField};
@@ -9,15 +9,10 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_native_gadgets::{
-	merkle_tree::Path,
-	poseidon::{FieldHasher, Poseidon},
-};
+use arkworks_native_gadgets::{merkle_tree::Path, poseidon::Poseidon};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
-
-use crate::{common::*, utxo};
 
 #[cfg(test)]
 mod tests;

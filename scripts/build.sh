@@ -31,4 +31,5 @@ cargo build -p arkworks-utils --release --all-features && \
 # Arkworks Setups
 cargo build -p arkworks-setups --release --no-default-features && \
 cargo build -p arkworks-setups --release --no-default-features --features parallel && \
+cargo build -p arkworks-setups --release --no-default-features --features aead && \
 cargo build -p arkworks-setups --release --all-features
