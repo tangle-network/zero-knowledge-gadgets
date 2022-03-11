@@ -157,8 +157,8 @@ where
 		let in_indices_f = in_indices.map(|x| E::Fr::from(x));
 		let mut in_paths = Vec::new();
 		for i in 0..INS {
-			let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-				tree_hasher.clone(),
+			let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+				&tree_hasher,
 				&in_leaves[i],
 				in_indices[i],
 				&default_leaf,
@@ -387,8 +387,8 @@ where
 						.iter()
 						.map(|l| E::Fr::from_le_bytes_mod_order(&l))
 						.collect::<Vec<E::Fr>>();
-					match setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-						tree_hasher.clone(),
+					match setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+						&tree_hasher,
 						&leaves_f,
 						utxo.index.unwrap_or_default(),
 						&default_leaf,

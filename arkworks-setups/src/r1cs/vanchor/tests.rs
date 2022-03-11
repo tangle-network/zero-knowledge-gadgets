@@ -4,7 +4,6 @@ use crate::common::*;
 use ark_serialize::CanonicalDeserialize;
 use ark_std::{One, Zero};
 use arkworks_native_gadgets::poseidon::Poseidon;
-use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
 use ark_bn254::{Bn254, Fr as BnFr};
@@ -94,8 +93,8 @@ fn should_create_proof_for_random_circuit() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxo1.commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -103,8 +102,8 @@ fn should_create_proof_for_random_circuit() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxo2.commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,
@@ -198,8 +197,8 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxo1.commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -207,8 +206,8 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxo2.commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,
@@ -396,8 +395,8 @@ fn should_fail_with_invalid_nullifier() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -405,8 +404,8 @@ fn should_fail_with_invalid_nullifier() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,
@@ -494,8 +493,8 @@ fn should_fail_with_same_nullifier() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -503,8 +502,8 @@ fn should_fail_with_same_nullifier() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,
@@ -600,8 +599,8 @@ fn should_fail_with_inconsistent_input_output_values() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -609,8 +608,8 @@ fn should_fail_with_inconsistent_input_output_values() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,
@@ -711,8 +710,8 @@ fn should_fail_with_big_amount() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -720,8 +719,8 @@ fn should_fail_with_big_amount() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,
@@ -816,8 +815,8 @@ fn should_fail_with_invalid_public_input() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
@@ -825,8 +824,8 @@ fn should_fail_with_invalid_public_input() {
 	.unwrap();
 	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, PoseidonGadget<BnFr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
 		&vec![leaf1],
 		0,
 		&DEFAULT_LEAF,

@@ -75,8 +75,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
-		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			tree_hasher.clone(),
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&tree_hasher,
 			&leaves,
 			0,
 			&default_leaf,
@@ -136,8 +136,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		// Setup inputs
 		let leaf = leaf_hasher.hash(&[chain_id, secret, nullifier])?;
 		let nullifier_hash = tree_hasher.hash_two(&nullifier, &nullifier)?;
-		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			tree_hasher.clone(),
+		let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&tree_hasher,
 			&leaves,
 			index,
 			&default_leaf,
@@ -347,8 +347,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			..
 		} = Self::create_leaf_with_privates(curve, chain_id, secret, nullifier)?;
 		// Setup the tree and generate the path
-		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			tree_hasher.clone(),
+		let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&tree_hasher,
 			&leaves_f,
 			index,
 			&default_leaf,
