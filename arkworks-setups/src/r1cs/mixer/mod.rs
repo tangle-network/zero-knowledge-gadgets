@@ -87,8 +87,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
-		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			poseidon.clone(),
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&poseidon,
 			&leaves,
 			0,
 			&default_leaf,
@@ -134,8 +134,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		// Setup inputs
 		let leaf = poseidon.hash_two(&secret, &nullifier)?;
 		let nullifier_hash = poseidon.hash_two(&nullifier, &nullifier)?;
-		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			poseidon.clone(),
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&poseidon,
 			&leaves,
 			index,
 			&default_leaf,
@@ -310,8 +310,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 			..
 		} = Self::create_leaf_with_privates(curve, secret, nullifier)?;
 		// Setup the tree and generate the path
-		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			poseidon.clone(),
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&poseidon,
 			&leaves_f,
 			index,
 			&default_leaf,
