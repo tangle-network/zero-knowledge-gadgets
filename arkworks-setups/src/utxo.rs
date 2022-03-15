@@ -120,6 +120,19 @@ impl<F: PrimeField> Utxo<F> {
 		})
 	}
 
+	pub fn set_index(&mut self, index: u64, hasher4: &Poseidon<F>) -> Result<(), Error> {
+		let i = F::from(index);
+
+		let signature = self.keypair.signature(&self.commitment, &i, hasher4)?;
+		// Nullifier
+		let nullifier = hasher4.hash(&[self.commitment, i, signature])?;
+
+		self.index = Some(index);
+		self.nullifier = Some(nullifier);
+
+		Ok(())
+	}
+
 	pub fn get_nullifier(&self) -> Result<F, Error> {
 		self.nullifier
 			.ok_or(UtxoError::NullifierNotCalculated.into())
