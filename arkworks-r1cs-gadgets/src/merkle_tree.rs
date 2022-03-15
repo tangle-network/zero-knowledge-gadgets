@@ -78,9 +78,9 @@
 //! let path_var =
 //! 	PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
 //!
-//! let root_var = FieldVar::new_witness(cs.clone(), || Ok(root)).unwrap();
+//! let root_var = <dyn FieldVar>::new_witness(cs.clone(), || Ok(root)).unwrap();
 //!
-//! let leaf_var = FieldVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+//! let leaf_var = <dyn FieldVar>::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 //!
 //! let res = path_var
 //! 	.check_membership(&root_var, &leaf_var, &hasher_gadget)
