@@ -30,8 +30,7 @@
 //! use crate::arkworks_r1cs_gadgets::poseidon::{FieldHasherGadget, PoseidonGadget};
 //! use ark_ed_on_bn254::Fq;
 //! use ark_ff::{BigInteger, PrimeField};
-//! use ark_r1cs_std::{alloc::AllocVar, prelude::FieldVar};
-//! use ark_r1cs_std::fields::fp::FpVar;
+//! use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, prelude::FieldVar};
 //! use ark_relations::r1cs::ConstraintSystem;
 //! use ark_std::{collections::BTreeMap, test_rng, UniformRand};
 //! use arkworks_native_gadgets::{
