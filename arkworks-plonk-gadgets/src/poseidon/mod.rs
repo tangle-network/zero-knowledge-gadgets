@@ -16,29 +16,28 @@
 // limitations under the License.
 
 //! A Plonk gadget for the Poseidon hash function.
-//! 
-//! The Poseidon hash function is a cryptographic hash function which takes a vector
-//! of elements of a prime field and outputs a single element of the same prime field.
-//! For more information on the Poseidon hash function, see [the documentation for 
-//! our native Poseidon implementation](Poseidon), or 
+//!
+//! The Poseidon hash function is a cryptographic hash function which takes a
+//! vector of elements of a prime field and outputs a single element of the same
+//! prime field. For more information on the Poseidon hash function, see [the
+//! documentation for our native Poseidon implementation](Poseidon), or
 //! [the original Poseidon paper](https://eprint.iacr.org/2019/458.pdf).
-//! 
+//!
 //! [Plonk](https://eprint.iacr.org/2019/953.pdf) is a protocol for generating zk-SNARKs.  
-//! A *gadget* translates a function's native implementation into a form that can be used 
-//! by a *circuit*, which is ultimately used to create a zero-knowledge proof. For more 
-//! information on gadgets and circuits, see 
+//! A *gadget* translates a function's native implementation into a form that
+//! can be used by a *circuit*, which is ultimately used to create a
+//! zero-knowledge proof. For more information on gadgets and circuits, see
 //! [the README for the arkworks-gadgets repository](https://github.com/webb-tools/arkworks-gadgets#readme).
-//! 
+//!
 //! ## Usage
 //! The gadget is meant to be used in a PLONK circuit.
 //! ```rust
-//! 
 //! // Import dependencies
-//! use plonk_core::prelude::*;
-//! use arkworks_plonk_gadgets::poseidon::FieldHasherGadget;
 //! use ark_ec::TEModelParameters;
 //! use ark_ff::PrimeField;
-//! 
+//! use arkworks_plonk_gadgets::poseidon::FieldHasherGadget;
+//! use plonk_core::prelude::*;
+//!
 //! // Use it in a circuit
 //! struct TestCircuit<
 //! 	F: PrimeField,
@@ -50,24 +49,24 @@
 //! 	expected: F,
 //! 	hasher: HG::Native,
 //! }
-//! 
+//!
 //! impl<F: PrimeField, P: TEModelParameters<BaseField = F>, HG: FieldHasherGadget<F, P>>
 //! 	Circuit<F, P> for TestCircuit<F, P, HG>
 //! {
 //! 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
-//! 
+//!
 //! 	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
 //! 		let hasher_gadget = HG::from_native(composer, self.hasher.clone());
-//! 
+//!
 //! 		let left_var = composer.add_input(self.left);
 //! 		let right_var = composer.add_input(self.right);
 //! 		let expected_var = composer.add_input(self.expected);
-//! 
+//!
 //! 		let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
 //! 		composer.assert_equal(outcome, expected_var);
 //! 		Ok(())
 //! 	}
-//! 
+//!
 //! 	fn padded_circuit_size(&self) -> usize {
 //! 		1 << 12
 //! 	}
@@ -197,7 +196,8 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 						.map(|f| *a = f)
 				})?;
 			} else {
-				// Applies the S-box to the *first* entry of the state vector, for all partial rounds.
+				// Applies the S-box to the *first* entry of the state vector, for all partial
+				// rounds.
 				state[0] = self.params.sbox.synthesize_sbox(&state[0], composer)?;
 			}
 
