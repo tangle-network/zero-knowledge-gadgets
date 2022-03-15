@@ -140,7 +140,9 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let params4 = setup_params::<BnFr>(curve, 5, 4);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+	let nullifier_hasher = Poseidon::<BnFr> { params: params4 };
 
 	let public_amount = BnFr::from(10u32);
 	let ext_data_hash = BnFr::rand(rng);
@@ -149,26 +151,32 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let in_chain_id = 0u64;
 	let in_amount = BnFr::from(5u32);
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
-		Some(index),
+		None,
 		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	// Setting the index after the fact to test the function
+	in_utxo1.set_index(index, &nullifier_hasher).unwrap();
+
+	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
-		Some(index),
+		None,
 		None,
 		None,
 		rng,
 	)
 	.unwrap();
+	// Setting the index after the fact to test the function
+	in_utxo2.set_index(index, &nullifier_hasher).unwrap();
+
 	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
 	// Output Utxos
@@ -758,7 +766,9 @@ fn should_fail_with_invalid_public_input() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let params4 = setup_params::<BnFr>(curve, 5, 4);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+	let nullifier_hasher = Poseidon::<BnFr> { params: params4 };
 
 	let public_amount = BnFr::from(0u32);
 	let ext_data_hash = BnFr::rand(rng);
@@ -767,7 +777,20 @@ fn should_fail_with_invalid_public_input() {
 	let in_chain_id = 0u64;
 	let in_amount = BnFr::from(5u32);
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+		curve,
+		in_chain_id,
+		in_amount,
+		None,
+		None,
+		None,
+		rng,
+	)
+	.unwrap();
+	// Setting the index after the fact to test the function
+	in_utxo1.set_index(index, &nullifier_hasher).unwrap();
+
+	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -777,16 +800,9 @@ fn should_fail_with_invalid_public_input() {
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
-		curve,
-		in_chain_id,
-		in_amount,
-		Some(index),
-		None,
-		None,
-		rng,
-	)
-	.unwrap();
+	// Setting the index after the fact to test the function
+	in_utxo2.set_index(index, &nullifier_hasher).unwrap();
+
 	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
 	// Output Utxos
