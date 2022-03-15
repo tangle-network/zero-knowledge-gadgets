@@ -32,7 +32,12 @@
 //! ## Usage
 //! The gadget is meant to be used in a PLONK circuit.
 //! ```rust
+//! 
+//! // Import dependencies
 //! use plonk_core::prelude::*;
+//! use arkworks_plonk_gadgets::poseidon::FieldHasherGadget;
+//! use ark_ec::TEModelParameters;
+//! use ark_ff::PrimeField;
 //! 
 //! // Use it in a circuit
 //! struct TestCircuit<
