@@ -1,3 +1,24 @@
+// This file is part of Webb and was adapted from Arkworks.
+//
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! A Plonk gadget implementation of the Sparse Merkle Tree data structure.
+//! For more info on the Sparse Merkle Tree data structure, see the
+//! documentation for our native implementation.
+
 use crate::poseidon::FieldHasherGadget;
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;

@@ -1,3 +1,31 @@
+// This file is part of Webb and was adapted from Arkworks.
+//
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! A Plonk gadget to check membership within a set.
+//! 
+//! To check whether an element `x` is in a set `A`, the gadget takes the
+//! difference between `x` and every element of `A`, takes the product of
+//! all those differences, and checks if it is equal to zero.  The product
+//! is zero if and only if `x` is in `A`; however, the individual
+//! elements of `A` are not revealed, making it zero-knowledge.
+//! 
+//! For example, one could check if a certain Merkle root hash is a member
+//! of a set of Merkle root hashes.
+
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{marker::PhantomData, vec::Vec};

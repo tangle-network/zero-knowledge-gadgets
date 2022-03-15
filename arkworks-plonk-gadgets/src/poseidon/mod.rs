@@ -1,3 +1,20 @@
+// This file is part of Webb and was adapted from Arkworks.
+//
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! A Plonk gadget for the Poseidon hash function.
 //! 
 //! The Poseidon hash function is a cryptographic hash function which takes a vector
@@ -11,6 +28,67 @@
 //! by a *circuit*, which is ultimately used to create a zero-knowledge proof. For more 
 //! information on gadgets and circuits, see 
 //! [the README for the arkworks-gadgets repository](https://github.com/webb-tools/arkworks-gadgets#readme).
+//! 
+//! ## Usage
+//! 
+//! ```rust
+//! fn should_verify_plonk_poseidon_x5_3() {
+//!		let curve = Curve::Bn254;
+//!
+//!		// Get poseidon parameters for this curve:
+//!		let util_params = setup_params(curve, 5, 3);
+//!		let params = PoseidonParameters {
+//!			round_keys: util_params.clone().round_keys,
+//!			mds_matrix: util_params.clone().mds_matrix,
+//!			full_rounds: util_params.clone().full_rounds,
+//!			partial_rounds: util_params.clone().partial_rounds,
+//!			sbox: PoseidonSbox(5),
+//!			width: util_params.clone().width,
+//!		};
+//!		let poseidon_hasher = PoseidonHasher::new(params);
+//!
+//!		// Choose hash fn inputs and compute hash:
+//!		let left = Fq::one();
+//!		let right = Fq::one().double();
+//!		let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
+//!
+//!		// Create the circuit
+//!		let mut test_circuit = TestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget> {
+//!			left,
+//!			right,
+//!			expected,
+//!			hasher: poseidon_hasher,
+//!		};
+//!
+//!		let rng = &mut test_rng();
+//!		let u_params: UniversalParams<Bn254> =
+//!			SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, None, rng).unwrap();
+//!
+//!		let (pk, vd) = test_circuit
+//!			.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
+//!			.unwrap();
+//!
+//!		// PROVER
+//!		let proof = test_circuit
+//!			.gen_proof(&u_params, pk, b"Poseidon Test")
+//!			.unwrap();
+//!
+//!		// VERIFIER
+//!		let public_inputs: Vec<Bn254Fr> = vec![];
+//!
+//!		let VerifierData { key, pi_pos } = vd;
+//!
+//!		circuit::verify_proof::<_, JubjubParameters, _>(
+//!			&u_params,
+//!			key,
+//!			&proof,
+//!			&public_inputs,
+//!			&pi_pos,
+//!			b"Poseidon Test",
+//!		)
+//!		.unwrap();
+//!	}
+//! ```
 
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
@@ -23,17 +101,17 @@ use sbox::SboxConstraints;
 
 #[derive(Debug, Default)]
 pub struct PoseidonParametersVar {
-	/// The round key constants
+	/// Round constants
 	pub round_keys: Vec<Variable>,
-	/// The MDS matrix to apply in the mix layer.
+	/// MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<Variable>>,
-	/// Number of full SBox rounds
+	/// Number of full rounds
 	pub full_rounds: u8,
 	/// Number of partial rounds
 	pub partial_rounds: u8,
-	/// The size of the permutation, in field elements.
+	/// Length of the input, in field elements, plus one zero element.
 	pub width: u8,
-	/// The S-box to apply in the sub words layer.
+	/// S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }
 
