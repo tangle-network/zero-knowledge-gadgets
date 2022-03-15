@@ -13,7 +13,6 @@ use arkworks_native_gadgets::{
 	merkle_tree::{Path, SparseMerkleTree},
 	poseidon::{sbox::PoseidonSbox, FieldHasher, PoseidonParameters},
 };
-use arkworks_r1cs_gadgets::poseidon::FieldHasherGadget;
 use arkworks_utils::{
 	bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
 };
@@ -31,15 +30,8 @@ pub struct VAnchorLeaf {
 	pub nullifier_hash_bytes: Vec<u8>,
 }
 
-pub struct AnchorLeaf {
-	pub chain_id_bytes: Vec<u8>,
-	pub secret_bytes: Vec<u8>,
-	pub nullifier_bytes: Vec<u8>,
-	pub leaf_bytes: Vec<u8>,
-	pub nullifier_hash_bytes: Vec<u8>,
-}
-
-pub struct MixerLeaf {
+pub struct Leaf {
+	pub chain_id_bytes: Option<Vec<u8>>,
 	pub secret_bytes: Vec<u8>,
 	pub nullifier_bytes: Vec<u8>,
 	pub leaf_bytes: Vec<u8>,
@@ -187,7 +179,7 @@ pub fn keccak_256(input: &[u8]) -> Vec<u8> {
 pub type SMT<F, H, const HEIGHT: usize> = SparseMerkleTree<F, H, HEIGHT>;
 
 pub fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
-	hasher: H,
+	hasher: &H,
 	leaves: &[F],
 	default_leaf: &[u8],
 ) -> SparseMerkleTree<F, H, N> {
@@ -196,19 +188,19 @@ pub fn create_merkle_tree<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 		.enumerate()
 		.map(|(i, l)| (i as u32, *l))
 		.collect();
-	let smt = SparseMerkleTree::<F, H, N>::new(&pairs, &hasher, default_leaf).unwrap();
+	let smt = SparseMerkleTree::<F, H, N>::new(&pairs, hasher, default_leaf).unwrap();
 
 	smt
 }
 
-pub fn setup_tree_and_create_path<F: PrimeField, HG: FieldHasherGadget<F>, const HEIGHT: usize>(
-	hasher: HG::Native,
+pub fn setup_tree_and_create_path<F: PrimeField, H: FieldHasher<F>, const HEIGHT: usize>(
+	hasher: &H,
 	leaves: &[F],
 	index: u64,
 	default_leaf: &[u8],
-) -> Result<(SMT<F, HG::Native, HEIGHT>, Path<F, HG::Native, HEIGHT>), Error> {
+) -> Result<(SMT<F, H, HEIGHT>, Path<F, H, HEIGHT>), Error> {
 	// Making the merkle tree
-	let smt = create_merkle_tree::<F, HG::Native, HEIGHT>(hasher, leaves, default_leaf);
+	let smt = create_merkle_tree::<F, H, HEIGHT>(hasher, leaves, default_leaf);
 	// Getting the proof path
 	let path = smt.generate_membership_proof(index);
 	Ok((smt, path))

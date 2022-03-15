@@ -16,13 +16,13 @@
 // limitations under the License.
 
 //! A Plonk gadget to check membership within a set.
-//! 
+//!
 //! To check whether an element `x` is in a set `A`, the gadget takes the
 //! difference between `x` and every element of `A`, takes the product of
 //! all those differences, and checks if it is equal to zero.  The product
 //! is zero if and only if `x` is in `A`; however, the individual
 //! elements of `A` are not revealed, making it zero-knowledge.
-//! 
+//!
 //! For example, one could check if a certain Merkle root hash is a member
 //! of a set of Merkle root hashes.
 

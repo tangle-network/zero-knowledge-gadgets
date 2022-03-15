@@ -6,7 +6,6 @@ use ark_serialize::CanonicalDeserialize;
 use ark_snark::SNARK;
 use ark_std::{test_rng, vec::Vec, One, Zero};
 use arkworks_native_gadgets::poseidon::Poseidon;
-use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
 // merkle proof path legth
@@ -168,8 +167,8 @@ fn should_fail_with_invalid_leaf() {
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
-	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
-		hasher,
+	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, LEN>(
+		&hasher,
 		&leaves,
 		0,
 		&DEFAULT_LEAF,
@@ -218,8 +217,8 @@ fn should_fail_with_invalid_leaf_2() {
 	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
-	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
-		hasher,
+	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, LEN>(
+		&hasher,
 		&[invalid_leaf_value],
 		0,
 		&DEFAULT_LEAF,
@@ -266,8 +265,8 @@ fn should_fail_with_invalid_nullifier() {
 	let leaf_value = Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
 
 	// Invalid nullifier
-	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, LEN>(
-		hasher,
+	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, LEN>(
+		&hasher,
 		&[leaf_value],
 		0,
 		&DEFAULT_LEAF,

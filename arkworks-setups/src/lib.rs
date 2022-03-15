@@ -2,14 +2,18 @@ use ark_std::collections::BTreeMap;
 
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
+use ark_ff::{PrimeField, SquareRootField};
 use ark_std::{
 	rand::{CryptoRng, RngCore},
 	vec::Vec,
 };
 
 pub use arkworks_utils::Curve;
-use common::{AnchorLeaf, AnchorProof, MixerLeaf, MixerProof, VAnchorProof};
+use common::{AnchorProof, Leaf, MixerProof, VAnchorProof};
 use utxo::Utxo;
+
+#[cfg(feature = "aead")]
+pub mod aead;
 
 pub mod common;
 pub mod keypair;
@@ -28,12 +32,10 @@ pub trait MixerProver<E: PairingEngine, const HEIGHT: usize> {
 		curve: Curve,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<MixerLeaf, Error>;
+	) -> Result<Leaf, Error>;
 	/// Create random leaf
-	fn create_random_leaf<R: RngCore + CryptoRng>(
-		curve: Curve,
-		rng: &mut R,
-	) -> Result<MixerLeaf, Error>;
+	fn create_random_leaf<R: RngCore + CryptoRng>(curve: Curve, rng: &mut R)
+		-> Result<Leaf, Error>;
 	// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(
 		curve: Curve,
@@ -59,13 +61,13 @@ pub trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: u
 		chain_id: u64,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<AnchorLeaf, Error>;
+	) -> Result<Leaf, Error>;
 	/// Create random leaf
 	fn create_random_leaf<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
 		rng: &mut R,
-	) -> Result<AnchorLeaf, Error>;
+	) -> Result<Leaf, Error>;
 	// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(
 		curve: Curve,
@@ -86,13 +88,14 @@ pub trait AnchorProver<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: u
 	) -> Result<AnchorProof, Error>;
 }
 
-trait VAnchorProver<
+pub trait VAnchorProver<
 	E: PairingEngine,
 	const HEIGHT: usize,
 	const ANCHOR_CT: usize,
 	const INS: usize,
 	const OUTS: usize,
->
+> where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	fn create_leaf_with_privates(
 		curve: Curve,
@@ -136,7 +139,7 @@ trait VAnchorProver<
 		curve: Curve,
 		chain_id: u64,
 		// External data
-		public_amount: u128,
+		public_amount: i128,
 		ext_data_hash: Vec<u8>,
 		in_root_set: [Vec<u8>; ANCHOR_CT],
 		in_indices: [u64; INS],

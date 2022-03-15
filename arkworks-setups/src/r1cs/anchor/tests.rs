@@ -50,8 +50,8 @@ fn setup_and_prove_anchor_groth16() {
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 
-	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT>(
-		tree_hasher,
+	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
+		&tree_hasher,
 		&leaves,
 		index,
 		&DEFAULT_LEAF,
@@ -107,8 +107,8 @@ fn should_fail_with_invalid_public_inputs() {
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 
-	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT>(
-		tree_hasher,
+	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
+		&tree_hasher,
 		&leaves,
 		index,
 		&DEFAULT_LEAF,
@@ -198,8 +198,8 @@ fn should_fail_with_invalid_leaf() {
 	let leaves = vec![Bn254Fr::rand(rng)];
 	let index = 0;
 
-	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT>(
-		tree_hasher,
+	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
+		&tree_hasher,
 		&leaves,
 		index,
 		&DEFAULT_LEAF,
@@ -250,8 +250,8 @@ fn should_fail_with_invalid_nullifier_hash() {
 
 	let nullifier_hash = Bn254Fr::rand(rng);
 	let index = 0;
-	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT>(
-		tree_hasher.clone(),
+	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
+		&tree_hasher,
 		&leaves,
 		index,
 		&DEFAULT_LEAF,

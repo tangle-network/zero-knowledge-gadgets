@@ -15,8 +15,7 @@ use arkworks_native_gadgets::{
 use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
-
-use crate::common::*;
+use codec::Encode;
 
 #[cfg(test)]
 mod tests;
@@ -76,8 +75,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
 		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
-		let (tree, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			tree_hasher.clone(),
+		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&tree_hasher,
 			&leaves,
 			0,
 			&default_leaf,
@@ -137,8 +136,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		// Setup inputs
 		let leaf = leaf_hasher.hash(&[chain_id, secret, nullifier])?;
 		let nullifier_hash = tree_hasher.hash_two(&nullifier, &nullifier)?;
-		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			tree_hasher.clone(),
+		let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&tree_hasher,
 			&leaves,
 			index,
 			&default_leaf,
@@ -197,8 +196,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
 		arbitrary_data_bytes.extend(&relayer);
-		arbitrary_data_bytes.extend(fee.to_le_bytes());
-		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		arbitrary_data_bytes.extend(fee.encode());
+		arbitrary_data_bytes.extend(refund.encode());
 		arbitrary_data_bytes.extend(&commitment);
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
 		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
@@ -278,7 +277,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		chain_id: u64,
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
-	) -> Result<AnchorLeaf, Error> {
+	) -> Result<Leaf, Error> {
 		// Initialize hashers
 		let params3 = setup_params::<E::Fr>(curve, 5, 3);
 		let params4 = setup_params::<E::Fr>(curve, 5, 4);
@@ -292,8 +291,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			leaf_hasher.hash(&[chain_id_elt, nullifier_field_elt, secret_field_elt])?;
 		let nullifier_hash_field_element =
 			tree_hasher.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
-		Ok(AnchorLeaf {
-			chain_id_bytes: chain_id.to_be_bytes().to_vec(),
+		Ok(Leaf {
+			chain_id_bytes: Some(chain_id.to_be_bytes().to_vec()),
 			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
 			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
 			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
@@ -335,26 +334,28 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
 		arbitrary_data_bytes.extend(&relayer);
-		arbitrary_data_bytes.extend(fee.to_le_bytes());
-		arbitrary_data_bytes.extend(refund.to_le_bytes());
+		// Using encode to be compatible with on chain types
+		arbitrary_data_bytes.extend(fee.encode());
+		arbitrary_data_bytes.extend(refund.encode());
 		arbitrary_data_bytes.extend(&commitment);
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
 		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
-		let AnchorLeaf {
+		let Leaf {
 			leaf_bytes,
 			nullifier_hash_bytes,
 			..
 		} = Self::create_leaf_with_privates(curve, chain_id, secret, nullifier)?;
 		// Setup the tree and generate the path
-		let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-			tree_hasher.clone(),
+		let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+			&tree_hasher,
 			&leaves_f,
 			index,
 			&default_leaf,
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
+		let nullifier_hash_f = E::Fr::from_le_bytes_mod_order(&nullifier_hash_bytes);
 		let mc = AnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>::new(
 			arbitrary_input,
 			secret_f,
@@ -362,12 +363,16 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			chain_id_f,
 			root_set_f,
 			path,
-			nullifier_f,
+			nullifier_hash_f,
 			tree_hasher,
 			leaf_hasher,
 		);
-		let public_inputs =
-			Self::construct_public_inputs(chain_id_f, nullifier_f, root_set_f, arbitrary_input);
+		let public_inputs = Self::construct_public_inputs(
+			chain_id_f,
+			nullifier_hash_f,
+			root_set_f,
+			arbitrary_input,
+		);
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;
@@ -395,7 +400,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		curve: Curve,
 		chain_id: u64,
 		rng: &mut R,
-	) -> Result<AnchorLeaf, Error> {
+	) -> Result<Leaf, Error> {
 		let secret = E::Fr::rand(rng);
 		let nullifier = E::Fr::rand(rng);
 		Self::create_leaf_with_privates(

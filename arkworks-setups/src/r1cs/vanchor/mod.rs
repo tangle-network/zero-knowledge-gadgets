@@ -1,7 +1,7 @@
-use crate::{common::*, r1cs::vanchor::utxo::Utxo, VAnchorProver};
+use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, PrimeField, SquareRootField};
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -9,15 +9,10 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
-use arkworks_native_gadgets::{
-	merkle_tree::Path,
-	poseidon::{FieldHasher, Poseidon},
-};
+use arkworks_native_gadgets::{merkle_tree::Path, poseidon::Poseidon};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
-
-use crate::{common::*, utxo};
 
 #[cfg(test)]
 mod tests;
@@ -39,6 +34,8 @@ impl<
 		const INS: usize,
 		const OUTS: usize,
 	> VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	// TODO: Should be deprecated and tests migrated to `create_utxo`
 	#[allow(dead_code)]
@@ -160,8 +157,8 @@ impl<
 		let in_indices_f = in_indices.map(|x| E::Fr::from(x));
 		let mut in_paths = Vec::new();
 		for i in 0..INS {
-			let (_, path) = setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-				tree_hasher.clone(),
+			let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+				&tree_hasher,
 				&in_leaves[i],
 				in_indices[i],
 				&default_leaf,
@@ -308,6 +305,8 @@ impl<
 		const OUTS: usize,
 	> VAnchorProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
 	for VAnchorR1CSProver<E, HEIGHT, ANCHOR_CT, INS, OUTS>
+where
+	<E as PairingEngine>::Fr: PrimeField + SquareRootField + From<i128>,
 {
 	fn create_utxo(
 		curve: Curve,
@@ -345,7 +344,7 @@ impl<
 		curve: Curve,
 		chain_id: u64,
 		// External data
-		public_amount: u128,
+		public_amount: i128,
 		ext_data_hash: Vec<u8>,
 		public_root_set: [Vec<u8>; ANCHOR_CT],
 		in_indices: [u64; INS],
@@ -370,6 +369,7 @@ impl<
 		// Cast as field elements
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public_amount_elt = E::Fr::from(public_amount);
+		// TODO: pass the raw ext data, and hash them inside this function with keccak
 		let ext_data_hash_elt = E::Fr::from_le_bytes_mod_order(&ext_data_hash);
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
@@ -387,8 +387,8 @@ impl<
 						.iter()
 						.map(|l| E::Fr::from_le_bytes_mod_order(&l))
 						.collect::<Vec<E::Fr>>();
-					match setup_tree_and_create_path::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>(
-						tree_hasher.clone(),
+					match setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+						&tree_hasher,
 						&leaves_f,
 						utxo.index.unwrap_or_default(),
 						&default_leaf,

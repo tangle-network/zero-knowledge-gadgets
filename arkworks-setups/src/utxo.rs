@@ -1,14 +1,8 @@
-use crate::keypair::{EncryptedData, Keypair};
+use crate::keypair::Keypair;
 use ark_crypto_primitives::Error;
-use ark_ff::{to_bytes, PrimeField};
-use ark_std::{
-	error::Error as ArkError,
-	rand::{CryptoRng, RngCore},
-	string::ToString,
-	vec::Vec,
-};
+use ark_ff::PrimeField;
+use ark_std::{error::Error as ArkError, rand::RngCore, string::ToString};
 use arkworks_native_gadgets::poseidon::{FieldHasher, Poseidon};
-use codec::{Decode, Encode};
 
 #[derive(Debug)]
 pub enum UtxoError {
@@ -129,78 +123,5 @@ impl<F: PrimeField> Utxo<F> {
 	pub fn get_nullifier(&self) -> Result<F, Error> {
 		self.nullifier
 			.ok_or(UtxoError::NullifierNotCalculated.into())
-	}
-
-	pub fn encrypt<R: RngCore + CryptoRng>(&self, rng: &mut R) -> Result<Vec<u8>, Error> {
-		// We are encrypting the amount and the blinding
-		let msg = to_bytes![self.chain_id, self.amount, self.blinding]?;
-		// Encrypting the message
-		let enc_data = self.keypair.encrypt(&msg, rng)?;
-
-		Ok(enc_data.encode())
-	}
-
-	pub fn decrypt(&self, data: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>), Error> {
-		let decoded_ed = EncryptedData::decode(&mut &data[..])
-			.map_err(|_| UtxoError::EncryptedDataDecodeError)?;
-		// Decrypting the message
-		let plaintext = self.keypair.decrypt(&decoded_ed)?;
-
-		// First 32 bytes is chain id
-		let chain_id = plaintext[..32].to_vec();
-		// Second 32 bytes is amount
-		let amount = plaintext[32..64].to_vec();
-		// Third 32 bytes is blinding
-		let blinding = plaintext[64..96].to_vec();
-
-		Ok((chain_id, amount, blinding))
-	}
-}
-
-#[cfg(test)]
-mod test {
-	use super::*;
-	use crate::common::setup_params;
-	use ark_bn254::Fr as BnFr;
-	use ark_ff::BigInteger;
-	use ark_std::{test_rng, UniformRand};
-	use arkworks_utils::Curve;
-
-	#[test]
-	fn test_encrypt() {
-		let curve = Curve::Bn254;
-		let params2 = setup_params::<BnFr>(curve, 5, 2);
-		let params4 = setup_params::<BnFr>(curve, 5, 4);
-		let params5 = setup_params::<BnFr>(curve, 5, 5);
-		let poseidon2 = Poseidon::new(params2);
-		let poseidon4 = Poseidon::new(params4);
-		let poseidon5 = Poseidon::new(params5);
-
-		let rng = &mut test_rng();
-
-		let chain_id_raw = 0u64;
-		let chain_id = BnFr::from(chain_id_raw);
-		let amount = BnFr::rand(rng);
-		let blinding = BnFr::rand(rng);
-		// let utxo
-		let utxo = Utxo::new(
-			chain_id_raw,
-			amount,
-			None,
-			None,
-			Some(blinding),
-			&poseidon2,
-			&poseidon4,
-			&poseidon5,
-			rng,
-		)
-		.unwrap();
-
-		let encrypted_data = utxo.encrypt(rng).unwrap();
-		let (chain_id_bytes, amount_bytes, blinding_bytes) = utxo.decrypt(&encrypted_data).unwrap();
-
-		assert_eq!(chain_id_bytes, chain_id.into_repr().to_bytes_le());
-		assert_eq!(amount_bytes, amount.into_repr().to_bytes_le());
-		assert_eq!(blinding_bytes, blinding.into_repr().to_bytes_le());
 	}
 }
