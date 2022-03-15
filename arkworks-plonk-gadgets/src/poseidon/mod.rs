@@ -16,78 +16,92 @@
 // limitations under the License.
 
 //! A Plonk gadget for the Poseidon hash function.
-//!
-//! The Poseidon hash function is a cryptographic hash function which takes a
-//! vector of elements of a prime field and outputs a single element of the same
-//! prime field. For more information on the Poseidon hash function, see [the
-//! documentation for our native Poseidon implementation](Poseidon), or
+//! 
+//! The Poseidon hash function is a cryptographic hash function which takes a vector
+//! of elements of a prime field and outputs a single element of the same prime field.
+//! For more information on the Poseidon hash function, see [the documentation for 
+//! our native Poseidon implementation](Poseidon), or 
 //! [the original Poseidon paper](https://eprint.iacr.org/2019/458.pdf).
-//!
+//! 
 //! [Plonk](https://eprint.iacr.org/2019/953.pdf) is a protocol for generating zk-SNARKs.  
-//! A *gadget* translates a function's native implementation into a form that
-//! can be used by a *circuit*, which is ultimately used to create a
-//! zero-knowledge proof. For more information on gadgets and circuits, see
+//! A *gadget* translates a function's native implementation into a form that can be used 
+//! by a *circuit*, which is ultimately used to create a zero-knowledge proof. For more 
+//! information on gadgets and circuits, see 
 //! [the README for the arkworks-gadgets repository](https://github.com/webb-tools/arkworks-gadgets#readme).
-//!
+//! 
 //! ## Usage
-//!
+//! 
 //! ```rust
-//! fn should_verify_plonk_poseidon_x5_3() {
-//! 	let curve = Curve::Bn254;
+//! use plonk_core::prelude::*;
+//! use ark_bn254::{Bn254};
+//! use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
+//! use ark_ff::fields::Field;
+//! use ark_poly_commit::PolynomialCommitment;
+//! use ark_poly_commit::sonic_pc::SonicKZG10;
+//! use ark_poly_commit::kzg10::UniversalParams;
+//! use ark_std::test_rng;
+//! use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
+//! use arkworks_native_gadgets::poseidon::sbox::PoseidonSbox;
+//! use arkworks_native_gadgets::poseidon::PoseidonParameters;
+//! use ark_poly::univariate::DensePolynomial;
+//! use arkworks_plonk_gadgets::ark_std::One;
+//! use plonk_core::prelude::VerifierData;
+//! 
+//!	let curve = Curve::Bn254;
 //!
-//! 	// Get poseidon parameters for this curve:
-//! 	let util_params = setup_params(curve, 5, 3);
-//! 	let params = PoseidonParameters {
-//! 		round_keys: util_params.clone().round_keys,
-//! 		mds_matrix: util_params.clone().mds_matrix,
-//! 		full_rounds: util_params.clone().full_rounds,
-//! 		partial_rounds: util_params.clone().partial_rounds,
-//! 		sbox: PoseidonSbox(5),
-//! 		width: util_params.clone().width,
-//! 	};
-//! 	let poseidon_hasher = PoseidonHasher::new(params);
+//!	// Get poseidon parameters for this curve:
+//!	let util_params = setup_params(curve, 5, 3);
+//!	let params = PoseidonParameters {
+//!		round_keys: util_params.clone().round_keys,
+//!		mds_matrix: util_params.clone().mds_matrix,
+//!		full_rounds: util_params.clone().full_rounds,
+//!		partial_rounds: util_params.clone().partial_rounds,
+//!		sbox: PoseidonSbox(5),
+//!		width: util_params.clone().width,
+//!	};
+//!	let poseidon_hasher = PoseidonHasher::new(params);
 //!
-//! 	// Choose hash fn inputs and compute hash:
-//! 	let left = Fq::one();
-//! 	let right = Fq::one().double();
-//! 	let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
+//!	// Choose hash fn inputs and compute hash:
+//!	let left = Fq::one();
+//!	let right = Fq::one().double();
+//!	let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
 //!
-//! 	// Create the circuit
-//! 	let mut test_circuit = TestCircuit::<Bn254Fr, JubjubParameters, PoseidonGadget> {
-//! 		left,
-//! 		right,
-//! 		expected,
-//! 		hasher: poseidon_hasher,
-//! 	};
+//!	// Create the circuit
+//!	let mut test_circuit = TestCircuit::<Fq, JubjubParameters, PoseidonGadget> {
+//!		left,
+//!		right,
+//!		expected,
+//!		hasher: poseidon_hasher,
+//!	};
 //!
-//! 	let rng = &mut test_rng();
-//! 	let u_params: UniversalParams<Bn254> =
-//! 		SonicKZG10::<Bn254, DensePolynomial<Bn254Fr>>::setup(1 << 13, None, rng).unwrap();
+//!	let rng = &mut test_rng();
+//!	let u_params: UniversalParams<Bn254> =
+//!		SonicKZG10::<Bn254, DensePolynomial<Fq>>::setup(1 << 13, None, rng).unwrap();
 //!
-//! 	let (pk, vd) = test_circuit
-//! 		.compile::<SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>(&u_params)
-//! 		.unwrap();
+//!	let (pk, vd) = test_circuit
+//!		.compile::<SonicKZG10<Bn254, DensePolynomial<Fq>>>(&u_params)
+//!		.unwrap();
 //!
-//! 	// PROVER
-//! 	let proof = test_circuit
-//! 		.gen_proof(&u_params, pk, b"Poseidon Test")
-//! 		.unwrap();
+//!	// Generate a proof
+//!	let proof = test_circuit
+//!		.gen_proof(&u_params, pk, b"Poseidon Test")
+//!		.unwrap();
 //!
-//! 	// VERIFIER
-//! 	let public_inputs: Vec<Bn254Fr> = vec![];
+//!	// Format the public inputs for the verifier
+//!	let public_inputs: Vec<Fq> = vec![];
 //!
-//! 	let VerifierData { key, pi_pos } = vd;
+//!	let VerifierData { key, pi_pos } = vd;
 //!
-//! 	circuit::verify_proof::<_, JubjubParameters, _>(
-//! 		&u_params,
-//! 		key,
-//! 		&proof,
-//! 		&public_inputs,
-//! 		&pi_pos,
-//! 		b"Poseidon Test",
-//! 	)
-//! 	.unwrap();
-//! }
+//! // Verify the proof
+//!	circuit::verify_proof::<_, JubjubParameters, _>(
+//!		&u_params,
+//!		key,
+//!		&proof,
+//!		&public_inputs,
+//!		&pi_pos,
+//!		b"Poseidon Test",
+//!	)
+//!	.unwrap();
 //! ```
 
 use ark_ec::models::TEModelParameters;
@@ -213,8 +227,7 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 						.map(|f| *a = f)
 				})?;
 			} else {
-				// Applies the S-box to the *first* entry of the state vector, for all partial
-				// rounds.
+				// Applies the S-box to the *first* entry of the state vector, for all partial rounds.
 				state[0] = self.params.sbox.synthesize_sbox(&state[0], composer)?;
 			}
 
