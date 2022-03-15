@@ -30,78 +30,43 @@
 //! [the README for the arkworks-gadgets repository](https://github.com/webb-tools/arkworks-gadgets#readme).
 //! 
 //! ## Usage
-//! 
+//! The gadget is meant to be used in a PLONK circuit.
 //! ```rust
 //! use plonk_core::prelude::*;
-//! use ark_bn254::{Bn254};
-//! use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
-//! use ark_ff::fields::Field;
-//! use ark_poly_commit::PolynomialCommitment;
-//! use ark_poly_commit::sonic_pc::SonicKZG10;
-//! use ark_poly_commit::kzg10::UniversalParams;
-//! use ark_std::test_rng;
-//! use arkworks_plonk_gadgets::poseidon::PoseidonGadget;
-//! use arkworks_native_gadgets::poseidon::sbox::PoseidonSbox;
-//! use arkworks_native_gadgets::poseidon::PoseidonParameters;
-//! use ark_poly::univariate::DensePolynomial;
-//! use arkworks_plonk_gadgets::ark_std::One;
-//! use plonk_core::prelude::VerifierData;
 //! 
-//!	let curve = Curve::Bn254;
-//!
-//!	// Get poseidon parameters for this curve:
-//!	let util_params = setup_params(curve, 5, 3);
-//!	let params = PoseidonParameters {
-//!		round_keys: util_params.clone().round_keys,
-//!		mds_matrix: util_params.clone().mds_matrix,
-//!		full_rounds: util_params.clone().full_rounds,
-//!		partial_rounds: util_params.clone().partial_rounds,
-//!		sbox: PoseidonSbox(5),
-//!		width: util_params.clone().width,
-//!	};
-//!	let poseidon_hasher = PoseidonHasher::new(params);
-//!
-//!	// Choose hash fn inputs and compute hash:
-//!	let left = Fq::one();
-//!	let right = Fq::one().double();
-//!	let expected = poseidon_hasher.hash_two(&left, &right).unwrap();
-//!
-//!	// Create the circuit
-//!	let mut test_circuit = TestCircuit::<Fq, JubjubParameters, PoseidonGadget> {
-//!		left,
-//!		right,
-//!		expected,
-//!		hasher: poseidon_hasher,
-//!	};
-//!
-//!	let rng = &mut test_rng();
-//!	let u_params: UniversalParams<Bn254> =
-//!		SonicKZG10::<Bn254, DensePolynomial<Fq>>::setup(1 << 13, None, rng).unwrap();
-//!
-//!	let (pk, vd) = test_circuit
-//!		.compile::<SonicKZG10<Bn254, DensePolynomial<Fq>>>(&u_params)
-//!		.unwrap();
-//!
-//!	// Generate a proof
-//!	let proof = test_circuit
-//!		.gen_proof(&u_params, pk, b"Poseidon Test")
-//!		.unwrap();
-//!
-//!	// Format the public inputs for the verifier
-//!	let public_inputs: Vec<Fq> = vec![];
-//!
-//!	let VerifierData { key, pi_pos } = vd;
-//!
-//! // Verify the proof
-//!	circuit::verify_proof::<_, JubjubParameters, _>(
-//!		&u_params,
-//!		key,
-//!		&proof,
-//!		&public_inputs,
-//!		&pi_pos,
-//!		b"Poseidon Test",
-//!	)
-//!	.unwrap();
+//! // Use it in a circuit
+//! struct TestCircuit<
+//! 	F: PrimeField,
+//! 	P: TEModelParameters<BaseField = F>,
+//! 	HG: FieldHasherGadget<F, P>,
+//! > {
+//! 	left: F,
+//! 	right: F,
+//! 	expected: F,
+//! 	hasher: HG::Native,
+//! }
+//! 
+//! impl<F: PrimeField, P: TEModelParameters<BaseField = F>, HG: FieldHasherGadget<F, P>>
+//! 	Circuit<F, P> for TestCircuit<F, P, HG>
+//! {
+//! 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
+//! 
+//! 	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+//! 		let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+//! 
+//! 		let left_var = composer.add_input(self.left);
+//! 		let right_var = composer.add_input(self.right);
+//! 		let expected_var = composer.add_input(self.expected);
+//! 
+//! 		let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
+//! 		composer.assert_equal(outcome, expected_var);
+//! 		Ok(())
+//! 	}
+//! 
+//! 	fn padded_circuit_size(&self) -> usize {
+//! 		1 << 12
+//! 	}
+//! }
 //! ```
 
 use ark_ec::models::TEModelParameters;
