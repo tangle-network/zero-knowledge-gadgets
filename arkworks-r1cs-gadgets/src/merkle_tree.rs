@@ -31,6 +31,7 @@
 //! use ark_ed_on_bn254::Fq;
 //! use ark_ff::{BigInteger, PrimeField};
 //! use ark_r1cs_std::{alloc::AllocVar, prelude::FieldVar};
+//! use ark_r1cs_std::fields::fp::FpVar;
 //! use ark_relations::r1cs::ConstraintSystem;
 //! use ark_std::{collections::BTreeMap, test_rng, UniformRand};
 //! use arkworks_native_gadgets::{
@@ -78,9 +79,9 @@
 //! let path_var =
 //! 	PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
 //!
-//! let root_var = <dyn FieldVar>::new_witness(cs.clone(), || Ok(root)).unwrap();
+//! let root_var = FpVar::new_witness(cs.clone(), || Ok(root)).unwrap();
 //!
-//! let leaf_var = <dyn FieldVar>::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+//! let leaf_var = FpVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
 //!
 //! let res = path_var
 //! 	.check_membership(&root_var, &leaf_var, &hasher_gadget)
