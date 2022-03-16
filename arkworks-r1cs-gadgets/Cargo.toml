@@ -20,8 +20,8 @@ ark-r1cs-std = { version = "^0.3.0", default-features = false }
 ark-relations = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies]
-ark-marlin = {version = "^0.3.0", default-features = false }
-ark-groth16 = {version = "^0.3.0", default-features = false }
+ark-marlin = { version = "^0.3.0", default-features = false }
+ark-groth16 = { version = "^0.3.0", default-features = false }
 blake2 = { version = "0.9", default-features = false }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
@@ -37,7 +37,6 @@ ark-bls12-381 = { version = "^0.3.0", default-features = false, features = [ "cu
 
 [dev-dependencies.arkworks-utils]
 path = "../arkworks-utils"
-version = "0.5.0"
 default-features = false
 features = ["poseidon_bn254_x5_3", "mimc_ed_on_bn254_220"]
 

@@ -26,11 +26,10 @@ ark-ec = { version = "^0.3.0", default-features = false }
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
-ark-serialize = {version = "^0.3.0", default-features = false }
+ark-serialize = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies.arkworks-utils]
 path = "../arkworks-utils"
-version = "0.5.0"
 default-features = false
 features = ["poseidon_bn254_x5_2", "poseidon_bn254_x5_3", "poseidon_bn254_x5_4", "poseidon_bn254_x5_5"]
 
