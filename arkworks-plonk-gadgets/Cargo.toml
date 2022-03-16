@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-plonk-gadgets"
-version = "0.1.0"
+version = "0.5.0"
 authors = ["Webb Developers"]
 edition = "2021"
 description = "Webb protocol's Plonk zero-knowledge circuits using Arkworks (ark-plonk)"
