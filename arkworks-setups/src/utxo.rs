@@ -16,7 +16,7 @@ impl core::fmt::Display for UtxoError {
 		let msg = match self {
 			UtxoError::NullifierNotCalculated => "Nullifier not calculated".to_string(),
 			UtxoError::EncryptedDataDecodeError => "Failed to decode encrypted data".to_string(),
-			&UtxoError::IndexNotSet => "Utxo not set".to_string(),
+			&UtxoError::IndexNotSet => "Utxo index not set".to_string(),
 		};
 		write!(f, "{}", msg)
 	}
