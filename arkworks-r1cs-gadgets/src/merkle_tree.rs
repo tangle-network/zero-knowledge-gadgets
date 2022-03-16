@@ -1,3 +1,92 @@
+// This file is part of Webb and was adapted from Arkworks.
+//
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! This file provides the R1CS constraints implementation of the Sparse Merkle
+//! tree data structure.
+
+//! For a more through description of the sparse merkle tree data structure
+//! refer to [arkworks_native_gadgets::merkle_tree]
+//!
+//!
+//! # Usage
+//! ```rust
+//! //! Create a new Sparse Merkle Tree with 32 random leaves
+//!
+//! // Import dependencies
+//! use crate::arkworks_r1cs_gadgets::poseidon::{FieldHasherGadget, PoseidonGadget};
+//! use ark_ed_on_bn254::Fq;
+//! use ark_ff::{BigInteger, PrimeField};
+//! use ark_r1cs_std::{alloc::AllocVar, fields::fp::FpVar, prelude::FieldVar};
+//! use ark_relations::r1cs::ConstraintSystem;
+//! use ark_std::{collections::BTreeMap, test_rng, UniformRand};
+//! use arkworks_native_gadgets::{
+//! 	merkle_tree::SparseMerkleTree,
+//! 	poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+//! };
+//! use arkworks_r1cs_gadgets::merkle_tree::PathVar;
+//! use arkworks_utils::{
+//! 	bytes_matrix_to_f, bytes_vec_to_f, parse_vec, poseidon_params::setup_poseidon_params, Curve,
+//! };
+//!
+//! type SMTCRHGadget = PoseidonGadget<Fq>;
+//! const HEIGHT: usize = 30;
+//! const DEFAULT_LEAF: [u8; 32] = [0; 32];
+//! type SMT = SparseMerkleTree<Fq, Poseidon<Fq>, HEIGHT>;
+//!
+//! let rng = &mut test_rng();
+//! let exp = 5;
+//! let width = 3;
+//! let curve = Curve::Bn254;
+//!
+//! let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+//!
+//! let mds_f = bytes_matrix_to_f(&pos_data.mds);
+//! let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+//!
+//! let params3 = PoseidonParameters {
+//! 	mds_matrix: mds_f,
+//! 	round_keys: rounds_f,
+//! 	full_rounds: pos_data.full_rounds,
+//! 	partial_rounds: pos_data.partial_rounds,
+//! 	sbox: PoseidonSbox(pos_data.exp),
+//! 	width: pos_data.width,
+//! };
+//! let hasher = Poseidon::<Fq> { params: params3 };
+//!
+//! let mut cs = ConstraintSystem::<Fq>::new_ref();
+//! let hasher_gadget = PoseidonGadget::from_native(&mut cs, hasher.clone()).unwrap();
+//!
+//! let leaves = vec![Fq::rand(rng), Fq::rand(rng), Fq::rand(rng)];
+//! let smt = SMT::new_sequential(&leaves, &hasher, &DEFAULT_LEAF).unwrap();
+//! let root = smt.root();
+//! let path = smt.generate_membership_proof(0);
+//!
+//! let path_var =
+//! 	PathVar::<_, SMTCRHGadget, HEIGHT>::new_witness(cs.clone(), || Ok(path)).unwrap();
+//!
+//! let root_var = FpVar::new_witness(cs.clone(), || Ok(root)).unwrap();
+//!
+//! let leaf_var = FpVar::new_witness(cs.clone(), || Ok(leaves[0])).unwrap();
+//!
+//! let res = path_var
+//! 	.check_membership(&root_var, &leaf_var, &hasher_gadget)
+//! 	.unwrap();
+//! ```
+// Import dependencies
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar, eq::EqGadget, fields::fp::FpVar, prelude::*, select::CondSelectGadget,
@@ -26,7 +115,8 @@ where
 	F: PrimeField,
 	HG: FieldHasherGadget<F>,
 {
-	/// conditionally check a lookup proof (does not enforce index consistency)
+	/// check whether path belongs to merkle path (does not check if indexes
+	/// match)
 	pub fn check_membership(
 		&self,
 		root: &FpVar<F>,
@@ -38,11 +128,13 @@ where
 		root.is_eq(&computed_root)
 	}
 
+	/// Creates circuit to calculate merkle root and deny any invalid paths
 	pub fn root_hash(&self, leaf: &FpVar<F>, hasher: &HG) -> Result<FpVar<F>, SynthesisError> {
 		assert_eq!(self.path.len(), N);
 		// Check if leaf is one of the bottom-most siblings.
 		let leaf_is_left = leaf.is_eq(&self.path[0].0)?;
 
+		// Checks if leaf hash matches path value
 		leaf.enforce_equal(&FpVar::<F>::conditionally_select(
 			&leaf_is_left,
 			&self.path[0].0,
@@ -67,6 +159,7 @@ where
 		Ok(previous_hash)
 	}
 
+	/// Creates circuit to get index of a leaf hash
 	pub fn get_index(
 		&self,
 		root: &FpVar<F>,

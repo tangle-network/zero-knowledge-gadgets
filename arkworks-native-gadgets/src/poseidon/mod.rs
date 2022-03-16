@@ -1,3 +1,20 @@
+// This file is part of Webb and was adapted from Arkworks.
+//
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! A native implementation of the Poseidon hash function.
 //!
 //! The Poseidon hash function takes in a vector of elements of a prime field
@@ -297,13 +314,13 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 			let half_rounds = full_rounds / 2;
 
 			if r < half_rounds || r >= half_rounds + partial_rounds {
-				// Applying an exponentiation S-box to the -first- entry of the
+				// Applying an exponentiation S-box to the *first* entry of the
 				// state vector, during partial rounds
 				state
 					.iter_mut()
 					.try_for_each(|a| self.params.sbox.apply_sbox(*a).map(|f| *a = f))?;
 			} else {
-				//Applying an exponentiation S-box to -all- entries of the state
+				//Applying an exponentiation S-box to *all* entries of the state
 				// vector, during full rounds
 				state[0] = self.params.sbox.apply_sbox(state[0])?;
 			}

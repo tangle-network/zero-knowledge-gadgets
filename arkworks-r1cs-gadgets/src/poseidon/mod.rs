@@ -1,3 +1,9 @@
+//! A R1CS contraint generation implementation of the Poseidon hash function.
+//!
+//! For a more through description for poseidon hash refer to
+//! [arkworks_native_gadgets::poseidon]
+
+///Importing dependencies
 use ark_ff::PrimeField;
 use ark_r1cs_std::{
 	alloc::AllocVar,
@@ -18,6 +24,7 @@ use core::{
 pub mod sbox;
 use sbox::SboxConstraints;
 
+/// FieldHasher gadget for `PrimeFields`
 pub trait FieldHasherGadget<F: PrimeField>
 where
 	Self: Sized,
@@ -33,6 +40,7 @@ where
 	fn hash_two(&self, left: &FpVar<F>, right: &FpVar<F>) -> Result<FpVar<F>, SynthesisError>;
 }
 
+/// Parameters for poseidon hash
 #[derive(Default, Clone)]
 pub struct PoseidonParametersVar<F: PrimeField> {
 	/// The round key constants
@@ -92,6 +100,7 @@ pub struct PoseidonGadget<F: PrimeField> {
 }
 
 impl<F: PrimeField> PoseidonGadget<F> {
+	/// Calculates poseidon permutations of state wrt `PoseidonParametersVar`
 	pub fn permute(&self, mut state: Vec<FpVar<F>>) -> Result<Vec<FpVar<F>>, SynthesisError> {
 		let params = &self.params;
 		let nr = (params.full_rounds + params.partial_rounds) as usize;
@@ -143,6 +152,7 @@ impl<F: PrimeField> FieldHasherGadget<F> for PoseidonGadget<F> {
 		Ok(Self { params })
 	}
 
+	/// Calculates poseidon hash of inputs wrt `PoseidonParametersVar`
 	fn hash(&self, inputs: &[FpVar<F>]) -> Result<FpVar<F>, SynthesisError> {
 		let parameters = &self.params;
 		if inputs.len() >= parameters.width.into() {
@@ -164,6 +174,7 @@ impl<F: PrimeField> FieldHasherGadget<F> for PoseidonGadget<F> {
 		result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
 	}
 
+	/// utility function to hash to adjacent leaves together
 	fn hash_two(&self, left: &FpVar<F>, right: &FpVar<F>) -> Result<FpVar<F>, SynthesisError> {
 		self.hash(&[left.clone(), right.clone()])
 	}

@@ -16,6 +16,10 @@ impl<F: PrimeField> SetGadget<F> {
 		Self { set }
 	}
 
+	/// Calculates product between (set_element - target) for every set_element.
+	/// Outputs 0 iff `set_element == target` for at least one element of the
+	/// set. This is an utility function to prove membership of a merkle_root in
+	/// a set of merkle_roots
 	pub fn calculate_product<T: ToBytesGadget<F>>(
 		&self,
 		target: &T,
@@ -37,6 +41,7 @@ impl<F: PrimeField> SetGadget<F> {
 		Ok(product)
 	}
 
+	/// Checks if target is present in the set
 	pub fn check_membership<T: ToBytesGadget<F>>(
 		&self,
 		target: &T,

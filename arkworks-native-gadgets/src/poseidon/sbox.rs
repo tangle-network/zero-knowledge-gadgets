@@ -45,7 +45,6 @@ impl PoseidonSbox {
 				sixteenth * elem
 			}
 			-1 => elem.inverse().ok_or(PoseidonError::ApplySboxFailed)?,
-
 			n => return Err(PoseidonError::InvalidSboxSize(n)),
 		};
 		Ok(res)

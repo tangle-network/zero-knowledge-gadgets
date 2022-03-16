@@ -1,3 +1,78 @@
+// This file is part of Webb and was adapted from Arkworks.
+//
+// Copyright (C) 2021 Webb Technologies Inc.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! A Plonk gadget for the Poseidon hash function.
+//!
+//! The Poseidon hash function is a cryptographic hash function which takes a
+//! vector of elements of a prime field and outputs a single element of the same
+//! prime field. For more information on the Poseidon hash function, see [the
+//! documentation for our native Poseidon implementation](Poseidon), or
+//! [the original Poseidon paper](https://eprint.iacr.org/2019/458.pdf).
+//!
+//! [Plonk](https://eprint.iacr.org/2019/953.pdf) is a protocol for generating zk-SNARKs.  
+//! A *gadget* translates a function's native implementation into a form that
+//! can be used by a *circuit*, which is ultimately used to create a
+//! zero-knowledge proof. For more information on gadgets and circuits, see
+//! [the README for the arkworks-gadgets repository](https://github.com/webb-tools/arkworks-gadgets#readme).
+//!
+//! ## Usage
+//! The gadget is meant to be used in a PLONK circuit.
+//! ```rust
+//! // Import dependencies
+//! use ark_ec::TEModelParameters;
+//! use ark_ff::PrimeField;
+//! use arkworks_plonk_gadgets::poseidon::FieldHasherGadget;
+//! use plonk_core::prelude::*;
+//!
+//! // Use it in a circuit
+//! struct TestCircuit<
+//! 	F: PrimeField,
+//! 	P: TEModelParameters<BaseField = F>,
+//! 	HG: FieldHasherGadget<F, P>,
+//! > {
+//! 	left: F,
+//! 	right: F,
+//! 	expected: F,
+//! 	hasher: HG::Native,
+//! }
+//!
+//! impl<F: PrimeField, P: TEModelParameters<BaseField = F>, HG: FieldHasherGadget<F, P>>
+//! 	Circuit<F, P> for TestCircuit<F, P, HG>
+//! {
+//! 	const CIRCUIT_ID: [u8; 32] = [0xff; 32];
+//!
+//! 	fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+//! 		let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+//!
+//! 		let left_var = composer.add_input(self.left);
+//! 		let right_var = composer.add_input(self.right);
+//! 		let expected_var = composer.add_input(self.expected);
+//!
+//! 		let outcome = hasher_gadget.hash_two(composer, &left_var, &right_var)?;
+//! 		composer.assert_equal(outcome, expected_var);
+//! 		Ok(())
+//! 	}
+//!
+//! 	fn padded_circuit_size(&self) -> usize {
+//! 		1 << 12
+//! 	}
+//! }
+//! ```
+
 use ark_ec::models::TEModelParameters;
 use ark_ff::PrimeField;
 use ark_std::{fmt::Debug, vec, vec::Vec};
@@ -9,17 +84,17 @@ use sbox::SboxConstraints;
 
 #[derive(Debug, Default)]
 pub struct PoseidonParametersVar {
-	/// The round key constants
+	/// Round constants
 	pub round_keys: Vec<Variable>,
-	/// The MDS matrix to apply in the mix layer.
+	/// MDS matrix to apply in the mix layer.
 	pub mds_matrix: Vec<Vec<Variable>>,
-	/// Number of full SBox rounds
+	/// Number of full rounds
 	pub full_rounds: u8,
 	/// Number of partial rounds
 	pub partial_rounds: u8,
-	/// The size of the permutation, in field elements.
+	/// Length of the input, in field elements, plus one zero element.
 	pub width: u8,
-	/// The S-box to apply in the sub words layer.
+	/// S-box to apply in the sub words layer.
 	pub sbox: PoseidonSbox,
 }
 
@@ -51,6 +126,7 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 {
 	type Native = Poseidon<F>;
 
+	/// Converts the native poseidon hash function to a Plonk gadget.
 	fn from_native(composer: &mut StandardComposer<F, P>, native: Self::Native) -> Self {
 		// Add native parameters to composer and store variables:
 		let mut round_keys_var = vec![];
@@ -95,6 +171,7 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 		for f in inputs {
 			state.push(*f);
 		}
+		// Pads the input vector with zeroes if necessary.
 		while state.len() < width {
 			state.push(composer.zero_var());
 		}
@@ -102,6 +179,7 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 		// COMPUTE HASH
 		let nr = full_rounds + partial_rounds;
 		for r in 0..nr {
+			// Adds round constants.
 			state.iter_mut().enumerate().for_each(|(i, a)| {
 				let c_temp = self.params.round_keys[(r * width + i)];
 				*a = composer
@@ -109,6 +187,7 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 			});
 
 			let half_rounds = full_rounds / 2;
+			// Applies the S-box to *all* entries of the state vector, for all full rounds.
 			if r < half_rounds || r >= half_rounds + partial_rounds {
 				state.iter_mut().try_for_each(|a| {
 					self.params
@@ -117,9 +196,12 @@ impl<F: PrimeField, P: TEModelParameters<BaseField = F>> FieldHasherGadget<F, P>
 						.map(|f| *a = f)
 				})?;
 			} else {
+				// Applies the S-box to the *first* entry of the state vector, for all partial
+				// rounds.
 				state[0] = self.params.sbox.synthesize_sbox(&state[0], composer)?;
 			}
 
+			// Multiplies the state vector by the MDS matrix.
 			state = state
 				.iter()
 				.enumerate()
