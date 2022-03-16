@@ -318,7 +318,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-plonk-circuits"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -337,7 +337,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-plonk-gadgets"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "ark-bn254",
  "ark-ec",
