@@ -25,6 +25,7 @@ crypto_box = { version = "0.7.1", optional = true }
 
 [dependencies.arkworks-utils]
 path = "../arkworks-utils"
+version = "0.5.0"
 default-features = false
 features = ["poseidon_bn254_x5_2", "poseidon_bn254_x5_3", "poseidon_bn254_x5_4", "poseidon_bn254_x5_5"]
 
