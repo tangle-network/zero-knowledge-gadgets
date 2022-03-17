@@ -3,8 +3,8 @@ name = "arkworks-plonk-gadgets"
 version = "0.5.0"
 authors = ["Webb Developers"]
 edition = "2021"
-description = "Webb protocol's Plonk zero-knowledge circuits using Arkworks (ark-plonk)"
-license = "MIT/Apache-2.0"
+description = "Webb protocol's plonk zero-knowledge gadgets written using Arkworks (ark-plonk)"
+license = "Apache-2.0"
 repository = "https://github.com/webb-tools/arkworks-gadgets"
 homepage = "https://webb.tools"
 

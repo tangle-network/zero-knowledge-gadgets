@@ -3,8 +3,8 @@ name = "arkworks-native-gadgets"
 version = "0.5.0"
 authors = ["Webb Developers"]
 edition = "2018"
-description = "Webb protocol's zero-knowledge gadgets written using Arkworks"
-license = "MIT/Apache-2.0"
+description = "Webb protocol's native gadgets"
+license = "Apache-2.0"
 repository = "https://github.com/webb-tools/arkworks-gadgets"
 homepage = "https://webb.tools"
 

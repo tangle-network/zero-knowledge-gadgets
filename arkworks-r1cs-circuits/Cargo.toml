@@ -3,8 +3,8 @@ name = "arkworks-r1cs-circuits"
 version = "0.5.0"
 authors = ["Webb Developers"]
 edition = "2018"
-description = "Webb protocol's circuit's using zero-knowledge gadgets written using Arkworks"
-license = "MIT/Apache-2.0"
+description = "Webb protocol's r1cs zero-knowledge circuits written using Arkworks"
+license = "Apache-2.0"
 repository = "https://github.com/webb-tools/arkworks-gadgets"
 homepage = "https://webb.tools"
 
