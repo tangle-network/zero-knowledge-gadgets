@@ -34,11 +34,17 @@ jobs:
           version: '0.15.0'
           args: '--workspace --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
       
+       - name: Checkout repository 2
+        uses: actions/checkout@v2
+      
       - name: Run Tarpaulin Plonk Circuits
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.15.0'
           args: '--manifest-path="${{ github.workspace }}/arkworks-plonk-circuits/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+
+      - name: Checkout repository 3
+        uses: actions/checkout@v2
 
       - name: Run Tarpaulin Plonk Gadgets
         uses: actions-rs/tarpaulin@v0.1
