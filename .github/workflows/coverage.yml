@@ -34,17 +34,17 @@ jobs:
           version: '0.15.0'
           args: '--workspace --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
       
-      - name: Run Tarpaulin
+      - name: Run Tarpaulin Plonk Circuits
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.15.0'
-          args: '--manifest-path="./arkworks-plonk-circuits/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+          args: '--manifest-path="../arkworks-plonk-circuits/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
 
-      - name: Run Tarpaulin
+      - name: Run Tarpaulin Plonk Gadgets
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.15.0'
-          args: '--manifest-path="./arkworks-plonk-gadgets/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+          args: '--manifest-path="../arkworks-plonk-gadgets/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
