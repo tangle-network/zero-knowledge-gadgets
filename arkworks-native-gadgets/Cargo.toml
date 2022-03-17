@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-native-gadgets"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's native gadgets"
