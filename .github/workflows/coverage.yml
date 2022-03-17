@@ -24,6 +24,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      
+      - name: workspace
+        run: echo ${{ github.workspace }}
+
+      - name: pwd
+        run: echo ${{ PWD }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v1.3.0
