@@ -1,17 +1,10 @@
 # Build each crate with isolated features
+BASEDIR=$(dirname "$0")
 
 # Native Gadgets
 cargo build -p arkworks-native-gadgets --release --no-default-features && \
 cargo build -p arkworks-native-gadgets --release --no-default-features --features parallel && \
 cargo build -p arkworks-native-gadgets --release --all-features && \
-
-# PLONK gadgets
-cargo build -p arkworks-plonk-gadgets --release --no-default-features && \
-cargo build -p arkworks-plonk-gadgets --release && \
-
-# PLONK circuits
-cargo build -p arkworks-plonk-circuits --release --no-default-features && \
-cargo build -p arkworks-plonk-circuits --release && \
 
 # R1CS Gadgets
 cargo build -p arkworks-r1cs-gadgets --release --no-default-features && \
@@ -33,3 +26,11 @@ cargo build -p arkworks-setups --release --no-default-features && \
 cargo build -p arkworks-setups --release --no-default-features --features parallel && \
 cargo build -p arkworks-setups --release --no-default-features --features aead && \
 cargo build -p arkworks-setups --release --all-features
+
+# PLONK gadgets
+cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release --no-default-features && \
+cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release && \
+
+# PLONK circuits
+cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release --no-default-features && \
+cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release
