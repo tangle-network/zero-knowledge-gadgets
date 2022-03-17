@@ -34,7 +34,7 @@ jobs:
           version: '0.15.0'
           args: '--workspace --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
       
-       - name: Checkout repository 2
+      - name: Checkout repository 2
         uses: actions/checkout@v2
       
       - name: Run Tarpaulin Plonk Circuits
