@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-plonk-gadgets"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Webb Developers"]
 edition = "2021"
 description = "Webb protocol's plonk zero-knowledge gadgets written using Arkworks (ark-plonk)"
@@ -11,7 +11,7 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.0", default-features = false }
+arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.1", default-features = false }
 
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
