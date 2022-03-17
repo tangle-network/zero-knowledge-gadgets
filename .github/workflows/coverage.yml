@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.15.0'
-          args: '--manifest-path="${{ github.workspace }}/arkworks-plonk-circuits/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+          args: '--manifest-path="/__w/arkworks-gadgets/arkworks-gadgets/arkworks-plonk-circuits/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
 
       - name: Checkout repository 3
         uses: actions/checkout@v2
@@ -50,7 +50,7 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.15.0'
-          args: '--manifest-path="${{ github.workspace }}/arkworks-plonk-gadgets/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+          args: '--manifest-path="/__w/arkworks-gadgets/arkworks-gadgets/arkworks-plonk-gadgets/Cargo.toml" --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
