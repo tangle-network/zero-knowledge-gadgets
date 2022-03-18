@@ -18,6 +18,98 @@
 //! A Plonk gadget implementation of the Sparse Merkle Tree data structure.
 //! For more info on the Sparse Merkle Tree data structure, see the
 //! documentation for our native implementation.
+//! 
+//! ## Usage
+//! 
+//! In this example we build a plonk circuit with a Sparse Merkle Tree.
+//! 
+//! ```rust
+//! 
+//! use arkworks_plonk_gadgets::merkle_tree::PathGadget;
+//! use arkworks_plonk_gadgets::poseidon::FieldHasherGadget;
+//!	use ark_ec::TEModelParameters;
+//!	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
+//!	use ark_ff::PrimeField;
+//!	use ark_std::{test_rng, UniformRand};
+//!	use arkworks_native_gadgets::{
+//!		merkle_tree::SparseMerkleTree,
+//!		poseidon::{sbox::PoseidonSbox, Poseidon, PoseidonParameters},
+//!	};
+//!	use arkworks_utils::{
+//!		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+//!	};
+//!	use plonk_core::prelude::*;
+//!
+//!	type PoseidonBn254 = Poseidon<Fq>;
+//!
+//!	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+//!		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+//!
+//!		let mds_f = bytes_matrix_to_f(&pos_data.mds);
+//!		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+//!
+//!		let pos = PoseidonParameters {
+//!			mds_matrix: mds_f,
+//!			round_keys: rounds_f,
+//!			full_rounds: pos_data.full_rounds,
+//!			partial_rounds: pos_data.partial_rounds,
+//!			sbox: PoseidonSbox(pos_data.exp),
+//!			width: pos_data.width,
+//!		};
+//!
+//!		pos
+//!	}
+//!
+//!	struct TestCircuit<
+//!		'a,
+//!		F: PrimeField,
+//!		P: TEModelParameters<BaseField = F>,
+//!		HG: FieldHasherGadget<F, P>,
+//!		const N: usize,
+//!	> {
+//!		leaves: &'a [F],
+//!		empty_leaf: &'a [u8],
+//!		hasher: &'a HG::Native,
+//!	}
+//!
+//!	impl<
+//!			F: PrimeField,
+//!			P: TEModelParameters<BaseField = F>,
+//!			HG: FieldHasherGadget<F, P>,
+//!			const N: usize,
+//!		> Circuit<F, P> for TestCircuit<'_, F, P, HG, N>
+//!	{
+//!		const CIRCUIT_ID: [u8; 32] = [0xfe; 32];
+//!
+//!		fn gadget(&mut self, composer: &mut StandardComposer<F, P>) -> Result<(), Error> {
+//!			let hasher_gadget = HG::from_native(composer, self.hasher.clone());
+//!
+//!			let smt = SparseMerkleTree::<F, HG::Native, N>::new_sequential(
+//!				self.leaves,
+//!				&self.hasher,
+//!				self.empty_leaf,
+//!			)
+//!			.unwrap();
+//!			let path = smt.generate_membership_proof(0);
+//!			let root = path.calculate_root(&self.leaves[0], &self.hasher).unwrap();
+//!
+//!			let path_gadget = PathGadget::<F, P, HG, N>::from_native(composer, path);
+//!			let root_var = composer.add_input(root);
+//!			let leaf_var = composer.add_input(self.leaves[0]);
+//!
+//!			let res =
+//!				path_gadget.check_membership(composer, &root_var, &leaf_var, &hasher_gadget)?;
+//!			let one = composer.add_input(F::one());
+//!			composer.assert_equal(res, one);
+//!
+//!			Ok(())
+//!		}
+//!
+//!		fn padded_circuit_size(&self) -> usize {
+//!			1 << 13
+//!		}
+//!	}
+//! ```
 
 use crate::poseidon::FieldHasherGadget;
 use ark_ec::models::TEModelParameters;
