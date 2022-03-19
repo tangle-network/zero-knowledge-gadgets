@@ -1,14 +1,18 @@
 [package]
 name = "arkworks-setups"
-version = "0.5.0"
+version = "0.5.3"
 edition = "2021"
+license = "Apache-2.0"
+description = "Webb protocol's API for zero-knowledge circuits"
+repository = "https://github.com/webb-tools/arkworks-gadgets"
+homepage = "https://webb.tools"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-r1cs-circuits = { path = "../arkworks-r1cs-circuits", version = "0.5.0", default-features = false }
-arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "0.5.0", default-features = false }
-arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.0", default-features = false }
+arkworks-r1cs-circuits = { path = "../arkworks-r1cs-circuits", version = "0.5.3", default-features = false }
+arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "0.5.3", default-features = false }
+arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.3", default-features = false }
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
@@ -25,6 +29,7 @@ crypto_box = { version = "0.7.1", optional = true }
 
 [dependencies.arkworks-utils]
 path = "../arkworks-utils"
+version = "0.5.3"
 default-features = false
 features = ["poseidon_bn254_x5_2", "poseidon_bn254_x5_3", "poseidon_bn254_x5_4", "poseidon_bn254_x5_5"]
 

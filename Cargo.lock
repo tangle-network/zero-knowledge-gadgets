@@ -302,7 +302,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-native-gadgets"
-version = "0.5.0"
+version = "0.5.3"
 dependencies = [
  "ark-bn254",
  "ark-crypto-primitives",
@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-r1cs-circuits"
-version = "0.5.0"
+version = "0.5.3"
 dependencies = [
  "ark-bls12-381",
  "ark-crypto-primitives",
@@ -338,7 +338,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-r1cs-gadgets"
-version = "0.5.0"
+version = "0.5.3"
 dependencies = [
  "ark-bls12-381",
  "ark-crypto-primitives",
@@ -363,7 +363,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-setups"
-version = "0.5.0"
+version = "0.5.3"
 dependencies = [
  "ark-bn254",
  "ark-crypto-primitives",
@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-utils"
-version = "0.5.0"
+version = "0.5.3"
 dependencies = [
  "ark-ff",
  "ark-std",
