@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-r1cs-circuits"
-version = "0.5.3"
+version = "1.0.0"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's r1cs zero-knowledge circuits written using Arkworks"
@@ -11,8 +11,8 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "0.5.3", default-features = false }
-arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.3", default-features = false }
+arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "1.0.0", default-features = false }
+arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "1.0.0", default-features = false }
 
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
