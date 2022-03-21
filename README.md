@@ -18,6 +18,24 @@ To run the unit tests, run:
 ```
 > **Note: All commands should be run from the root directory.**
 
+## Publishing to crates.io
+For version management, we use [cargo-workspaces](https://github.com/pksunkara/cargo-workspaces). We use the following flow:
+1) Use `cargo-workspaces` to bump the version of all crates, using the command `cargo ws version`. This will bump the version of all the crates in the workspace, which include:
+    - arkworks-native-gadgets
+    - arkworks-r1cs-gadgets
+    - arkworks-r1cs-circuits
+    - arkworks-setups
+    - arkworks-utils
+2) The previous step will only update the crates themself, but not their dependencies. So, for example, if `arkworks-setups` depend on `arkworks-utils`, the dependency version will not be updated. **We have to do this manually.**
+3) Commit all the changes.
+4) Publish the crates with following command: `cargo ws publish --allow-branch [current_branch] --from-git`.
+
+    The `--allow-branch` allows us to publish the crates on any branch. By default, it's only allowed on `master`. If you wish to publish from the `master`, this option is not needed.
+    
+    The `--from-git` flag specifies that the crates should be published as is, bypassing the additional version bump that comes with the `cargo ws publish` command.
+
+
+
 # Overview
 
 This repo contains zero-knowledge gadgets & circuits for different end applications such as a mixer and an anchor that can be integrated into compatible blockchain and smart contract protocols. The repo is split into three main parts: 
