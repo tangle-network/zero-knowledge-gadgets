@@ -97,9 +97,9 @@ It's worth mentioning that all the values included in arbitrary input bind the p
 
 ## Anchor
 
-Anchor protocol is very similar to the mixer. Instead of proving the membership inside one Merkle tree, we are proving the membership in many Merkle trees. These trees can live on many different blockchains, and if the Merkle tree states are synced across chains, this will allow us to make cross-chain anonymous transactions. Higher-level overview of how Anchor works:
+Anchor protocol is very similar to the mixer. Instead of proving the membership inside one Merkle tree, we are proving the inclusion in one of many Merkle trees. These trees can live on many different blockchains, and if the Merkle tree states are synced across chains, this will allow us to make cross-chain anonymous transactions. A higher-level overview of how Anchor works:
 
-1. We are computing the leaf commitment using the Poseidon hash function passing: `secret` (private input), `nullifier` (private input).
+1. We are computing the leaf commitment using the Poseidon hash function passing: `secret` (private input), `nullifier` (private input) and chain id (public input).
 2. We are computing the nullifier hash using the Poseidon hash function, passing: `nullifier` (private input)
 3. We are calculating the root hash using the calculated leaf and the path (private input)
 4. We are checking if the calculated root is inside the set (public input) using the SetGadget.
@@ -432,6 +432,13 @@ Examples of implementations of these protocols:
 - Mixer - [Substrate Pallet](https://github.com/webb-tools/protocol-substrate/blob/main/pallets/mixer/src/lib.rs), [Cosmos (CosmWasm smart contracts)](https://github.com/webb-tools/protocol-cosmwasm/blob/main/contracts/mixer/src/contract.rs)
 - Anchor - [Substrate Pallet](https://github.com/webb-tools/protocol-substrate/blob/main/pallets/anchor/src/lib.rs), [Cosmos (CosmWasm smart contracts)](https://github.com/webb-tools/protocol-cosmwasm/blob/main/contracts/anchor/src/contract.rs), [Ethereum (Solidity smart contracts)](https://github.com/webb-tools/protocol-solidity/tree/main/contracts/anchors)
 - VAnchor [Substrate Pallet](https://github.com/webb-tools/protocol-substrate/blob/main/pallets/vanchor/src/lib.rs), [Ethereum (Solidity smart contracts)](https://github.com/webb-tools/protocol-solidity/tree/main/contracts/vanchors)
+
+Links to relayer services for these protocols:
+- [Mixer/Anchor](https://github.com/webb-tools/relayer/blob/main/src/handler.rs)
+
+Links to trusted setup ceremony examples:
+- [aleo-setup](https://github.com/AleoHQ/aleo-setup)
+- [celo-setup](https://github.com/celo-org/snark-setup)
 
 # Gratitude
 
