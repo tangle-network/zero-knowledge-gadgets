@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-benchmarks"
-version = "0.5.3"
+version = "1.0.0"
 authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's zero-knowledge gadgets written using Arkworks"
@@ -11,10 +11,10 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-utils = { path = "../arkworks-utils", version = "0.5.3" }
-arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "0.5.3" }
-arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "0.5.3" }
-arkworks-r1cs-circuits = { path = "../arkworks-r1cs-circuits", version = "0.5.3" }
+arkworks-utils = { path = "../arkworks-utils", version = "1.0.0" }
+arkworks-r1cs-gadgets = { path = "../arkworks-r1cs-gadgets", version = "1.0.0" }
+arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "1.0.0" }
+arkworks-r1cs-circuits = { path = "../arkworks-r1cs-circuits", version = "1.0.0" }
 
 ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
