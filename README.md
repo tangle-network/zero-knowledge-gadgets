@@ -171,7 +171,7 @@ UTXOs are deposited and stored in on-chain Merkle trees first by serializing its
 - Chain Id and Merkle root set remain the same as in the Anchor
 
 # Example usage of the API
-## Mixer - Generating leaf commitments and zero-knowladge proof
+## Mixer - Generating leaf commitments and zero-knowledge proof
 ```rust
 use arkworks_setups::{
 	common::{Leaf, MixerProof},
@@ -228,7 +228,7 @@ let MixerProof {
 	rng,
 )?;
 ```
-## Anchor - Generating leaf commitments and zero-knowladge proof
+## Anchor - Generating leaf commitments and zero-knowledge proof
 ```rust
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_setups::{
@@ -305,7 +305,7 @@ let AnchorProof {
 )?
 ```
 
-## VAnchor - Generating Utxos and zero-knowladge proof
+## VAnchor - Generating Utxos and zero-knowledge proof
 ```rust
 use arkworks_setups::{
 	common::{
