@@ -21,8 +21,6 @@ coverage:
 # --------------
 # which folders/files to ignore
 ignore:
-  - arkworks-plonk-circuits/*/**
-  - arkworks-plonk-gadgets/*/**
   - arkworks-benchmarks/*/**
 
 # Pull request comments:

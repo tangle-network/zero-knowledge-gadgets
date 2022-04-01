@@ -40,6 +40,16 @@ jobs:
         with:
           args: '--workspace --release --locked --out Xml --jobs 16 --timeout 5600 -- --test-threads 16'
 
+      - name: Run Tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--packages arkworks-plonk-circuits --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+
+      - name: Run Tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--packages arkworks-plonk-gadgets --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:
