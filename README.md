@@ -79,6 +79,7 @@
 </details>
 
 <h2 id="build"> Build </h2>
+
 To build the project run:
 ```
 ./scripts/build.sh
