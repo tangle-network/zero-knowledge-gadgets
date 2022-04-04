@@ -1,4 +1,4 @@
-name: coverage
+name: check
 
 # Controls when the action will run.
 on:
@@ -17,13 +17,20 @@ jobs:
     name: coverage
     runs-on: ubuntu-latest
 
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
-
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Install Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v1.3.0
@@ -31,8 +38,7 @@ jobs:
       - name: Run Tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.15.0'
-          args: '--workspace --release --locked --out Xml --jobs 16 --timeout 3600 -- --test-threads 16'
+          args: '--workspace --release --locked --out Xml --jobs 16 --timeout 5600 -- --test-threads 16'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
