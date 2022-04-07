@@ -291,6 +291,17 @@ fn should_fail_with_invalid_nullifier_hash() {
 	assert!(!res);
 }
 
+// What this test does
+// We make a deposit in anchor 1 targeting anchor 2. That means the leaf =
+// (chain_id_of_2, secret_1, nullifier_1) We want to prove this deposit exists
+// in one of the tree roots in root_set from the smart contract where anchor 2
+// is. In order to prove this, we must get the (path_1, nullifier_hash_1,
+// chain_2, secret_1, nullifier_1)
+//
+// So, we create two trees
+// Insert an element into both, let (m_a, m_b) be the merkle root of the trees
+// on Anchors 1 and 2 Create the root sets that each anchor would have on the
+// respective smart contract (m_1, m_2) on A, (m_2, m_1) on B
 #[test]
 fn setup_and_prove_2_anchors_using_zk_proof() {
 	let rng = &mut test_rng();
@@ -374,12 +385,12 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 		)
 		.unwrap();
 
-	// roots for first anchor
+	// roots for first anchor (m_1, m_2)
 	let mut roots_first_anchor = [Bn254Fr::from(0u64); ANCHOR_CT];
 	roots_first_anchor[0] = tree_first_anchor.root();
 	roots_first_anchor[1] = tree_second_anchor.root();
 
-	// roots for second anchor
+	// roots for second anchor (m_2, m_1)
 	let mut roots_second_anchor = [Bn254Fr::from(0u64); ANCHOR_CT];
 	roots_second_anchor[0] = tree_second_anchor.root();
 	roots_second_anchor[1] = tree_first_anchor.root();
