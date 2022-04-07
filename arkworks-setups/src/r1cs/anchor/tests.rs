@@ -536,7 +536,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 			nullifier_first_anchor,
 			chain_id_second_anchor,
 			roots_second_anchor,
-			path_first_anchor,
+			path_second_anchor,
 			nullifier_hash_first_anchor,
 			tree_hasher,
 			leaf_hasher,
@@ -544,7 +544,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 
 	let public_inputs_second_anchor = AnchorR1CSProver_Bn254_Poseidon_30::construct_public_inputs(
 		chain_id_second_anchor,
-		nullifier_hash_second_anchor,
+		nullifier_hash_first_anchor,
 		roots_second_anchor,
 		arbitrary_input,
 	);
@@ -553,6 +553,9 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 		setup_keys::<Bn254, _, _>(anchor_circuit_second_anchor.clone(), rng).unwrap();
 	//println!("pk second anchor is: {:?}", pk_second_anchor);
 
-	let proof = prove::<Bn254, _, _>(anchor_circuit_second_anchor, &pk_second_anchor, rng);
-	println!("proof second anchor is: {:?}", proof);
+	let proof = prove::<Bn254, _, _>(anchor_circuit_second_anchor, &pk_second_anchor, rng).unwrap();
+	println!("proof is: {:?}", proof);
+	let res = verify::<Bn254>(&public_inputs_second_anchor, &vk_second_anchor, &proof).unwrap();
+	println!("result: {:?}", res);
+	assert_eq!(res, true);
 }
