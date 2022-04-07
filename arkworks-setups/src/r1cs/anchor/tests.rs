@@ -9,7 +9,6 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 
-
 use super::{setup_params, AnchorR1CSProver};
 
 pub const HEIGHT: usize = 30;
@@ -312,44 +311,63 @@ fn setup_and_prove_2_anchors() {
 	let arbitrary_input_second_anchor = Bn254Fr::rand(rng);
 
 	// setup leaf, secret, nullifier and leaves for first anchor
-	let leaf_first_anchor =
-		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64_first_anchor, rng).unwrap();
+	let leaf_first_anchor = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
+		curve,
+		chain_id_u64_first_anchor,
+		rng,
+	)
+	.unwrap();
 	let secret_first_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.secret_bytes);
-	let nullifier_first_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.nullifier_bytes);
-	let leaves_first_anchor = vec![Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.leaf_bytes)];
+	let nullifier_first_anchor =
+		Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.nullifier_bytes);
+	let leaves_first_anchor = vec![Bn254Fr::from_le_bytes_mod_order(
+		&leaf_first_anchor.leaf_bytes,
+	)];
 
 	// setup leaf, secret, nullifier and leaves for second anchor
-	let leaf_second_anchor =
-		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64_second_anchor, rng).unwrap();
+	let leaf_second_anchor = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
+		curve,
+		chain_id_u64_second_anchor,
+		rng,
+	)
+	.unwrap();
 	let secret_second_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.secret_bytes);
-	let nullifier_second_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.nullifier_bytes);
-	let leaves_second_anchor = vec![Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.leaf_bytes)];
+	let nullifier_second_anchor =
+		Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.nullifier_bytes);
+	let leaves_second_anchor = vec![Bn254Fr::from_le_bytes_mod_order(
+		&leaf_second_anchor.leaf_bytes,
+	)];
 
-	let nullifier_hash_first_anchor = tree_hasher.hash_two(&nullifier_first_anchor, &nullifier_first_anchor).unwrap();
-	let nullifier_hash_second_anchor = tree_hasher.hash_two(&nullifier_second_anchor, &nullifier_second_anchor).unwrap();
+	let nullifier_hash_first_anchor = tree_hasher
+		.hash_two(&nullifier_first_anchor, &nullifier_first_anchor)
+		.unwrap();
+	let nullifier_hash_second_anchor = tree_hasher
+		.hash_two(&nullifier_second_anchor, &nullifier_second_anchor)
+		.unwrap();
 
 	let index = 0;
 
 	// sets up a merkle tree and generates path for it
 	// are the elements inserted into the tree, the leaves?
 	// tree for first anchor
-	let (tree_first_anchor,path_first_anchor) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
-		&tree_hasher,
-		&leaves_first_anchor,
-		index,
-		&DEFAULT_LEAF,
-	)
+	let (tree_first_anchor, path_first_anchor) =
+		setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
+			&tree_hasher,
+			&leaves_first_anchor,
+			index,
+			&DEFAULT_LEAF,
+		)
 		.unwrap();
 
 	// tree for second anchor
-	let (tree_second_anchor, path_second_anchor) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
-		&tree_hasher,
-		&leaves_second_anchor,
-		index,
-		&DEFAULT_LEAF,
-	)
+	let (tree_second_anchor, path_second_anchor) =
+		setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
+			&tree_hasher,
+			&leaves_second_anchor,
+			index,
+			&DEFAULT_LEAF,
+		)
 		.unwrap();
-
 
 	let mut roots_first_anchor = [Bn254Fr::from(0u64); ANCHOR_CT];
 	roots_first_anchor[0] = tree_first_anchor.root();
@@ -359,23 +377,35 @@ fn setup_and_prove_2_anchors() {
 	roots_second_anchor[0] = tree_second_anchor.root();
 	roots_second_anchor[1] = tree_first_anchor.root();
 
-	let anchor_circuit_first_anchor = AnchorCircuit::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::new(
-		arbitrary_input_first_anchor,
-		secret_first_anchor,
-		nullifier_first_anchor,
-		chain_id_first_anchor,
-		roots_first_anchor,
-		path_first_anchor,
-		nullifier_hash_first_anchor,
-		tree_hasher,
-		leaf_hasher,
-	);
+	let anchor_circuit_first_anchor =
+		AnchorCircuit::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::new(
+			arbitrary_input_first_anchor,
+			secret_first_anchor,
+			nullifier_first_anchor,
+			chain_id_first_anchor,
+			roots_first_anchor,
+			path_first_anchor,
+			nullifier_hash_first_anchor,
+			tree_hasher,
+			leaf_hasher,
+		);
 
-	let public_inputs_first_anchor = AnchorR1CSProver_Bn254_Poseidon_30::construct_public_inputs(chain_id_first_anchor, nullifier_hash_first_anchor, roots_first_anchor, arbitrary_input_first_anchor);
-	let (pk_first_anchor, vk_first_anchor) = setup_keys::<Bn254, _, _>(anchor_circuit_first_anchor.clone(), rng).unwrap();
-	let proof_first_anchor = prove::<Bn254, _, _>(anchor_circuit_first_anchor, &pk_first_anchor, rng).unwrap();
-	let res_first_anchor = verify::<Bn254>(&public_inputs_first_anchor, &vk_first_anchor, &proof_first_anchor).unwrap();
+	let public_inputs_first_anchor = AnchorR1CSProver_Bn254_Poseidon_30::construct_public_inputs(
+		chain_id_first_anchor,
+		nullifier_hash_first_anchor,
+		roots_first_anchor,
+		arbitrary_input_first_anchor,
+	);
+	let (pk_first_anchor, vk_first_anchor) =
+		setup_keys::<Bn254, _, _>(anchor_circuit_first_anchor.clone(), rng).unwrap();
+	let proof_first_anchor =
+		prove::<Bn254, _, _>(anchor_circuit_first_anchor, &pk_first_anchor, rng).unwrap();
+	let res_first_anchor = verify::<Bn254>(
+		&public_inputs_first_anchor,
+		&vk_first_anchor,
+		&proof_first_anchor,
+	)
+	.unwrap();
 	println!("result first anchor is: {:?}", res_first_anchor);
 	assert_eq!(res_first_anchor, true);
-
 }
