@@ -292,130 +292,6 @@ fn should_fail_with_invalid_nullifier_hash() {
 }
 
 #[test]
-fn setup_and_prove_2_anchors() {
-	let rng = &mut test_rng();
-	let curve = Curve::Bn254;
-
-	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
-	let params4 = setup_params::<Bn254Fr>(curve, 5, 4);
-	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
-	let leaf_hasher = Poseidon::<Bn254Fr> { params: params4 };
-
-	// setup chain id and arbitrary input for first anchor
-	let chain_id_u64_first_anchor = 1u64;
-	let chain_id_first_anchor = Bn254Fr::from(chain_id_u64_first_anchor);
-	let arbitrary_input_first_anchor = Bn254Fr::rand(rng);
-
-	// setup chain id and arbitrary input for second anchor
-	let chain_id_u64_second_anchor = 2u64;
-	let chain_id_second_anchor = Bn254Fr::from(chain_id_u64_second_anchor);
-	let arbitrary_input_second_anchor = Bn254Fr::rand(rng);
-
-	// setup leaf, secret, nullifier and leaves for first anchor
-	// You want to make the leaf you insert into the first anchor have the chain ID
-	// of the chain_id_u64_second_anchor
-	let leaf_first_anchor = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64_first_anchor,
-		rng,
-	)
-	.unwrap();
-	let secret_first_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.secret_bytes);
-	let nullifier_first_anchor =
-		Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.nullifier_bytes);
-	let leaves_first_anchor = vec![Bn254Fr::from_le_bytes_mod_order(
-		&leaf_first_anchor.leaf_bytes,
-	)];
-
-	// setup leaf, secret, nullifier and leaves for second anchor
-	let leaf_second_anchor = AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(
-		curve,
-		chain_id_u64_second_anchor,
-		rng,
-	)
-	.unwrap();
-	let secret_second_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.secret_bytes);
-	let nullifier_second_anchor =
-		Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.nullifier_bytes);
-	let leaves_second_anchor = vec![Bn254Fr::from_le_bytes_mod_order(
-		&leaf_second_anchor.leaf_bytes,
-	)];
-
-	let nullifier_hash_first_anchor = tree_hasher
-		.hash_two(&nullifier_first_anchor, &nullifier_first_anchor)
-		.unwrap();
-	let nullifier_hash_second_anchor = tree_hasher
-		.hash_two(&nullifier_second_anchor, &nullifier_second_anchor)
-		.unwrap();
-
-	let index = 0;
-
-	// sets up a merkle tree and generates path for it
-	// are the elements inserted into the tree, the leaves?
-	// tree for first anchor
-	let (tree_first_anchor, path_first_anchor) =
-		setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
-			&tree_hasher,
-			&leaves_first_anchor,
-			index,
-			&DEFAULT_LEAF,
-		)
-		.unwrap();
-
-	// tree for second anchor
-	let (tree_second_anchor, path_second_anchor) =
-		setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
-			&tree_hasher,
-			&leaves_second_anchor,
-			index,
-			&DEFAULT_LEAF,
-		)
-		.unwrap();
-
-	// roots for first anchor
-	let mut roots_first_anchor = [Bn254Fr::from(0u64); ANCHOR_CT];
-	roots_first_anchor[0] = tree_first_anchor.root();
-	roots_first_anchor[1] = tree_second_anchor.root();
-
-	// roots for second anchor
-	let mut roots_second_anchor = [Bn254Fr::from(0u64); ANCHOR_CT];
-	roots_second_anchor[0] = tree_second_anchor.root();
-	roots_second_anchor[1] = tree_first_anchor.root();
-
-	let anchor_circuit_first_anchor =
-		AnchorCircuit::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::new(
-			arbitrary_input_first_anchor,
-			secret_first_anchor,
-			nullifier_first_anchor,
-			chain_id_first_anchor,
-			roots_first_anchor,
-			path_first_anchor,
-			nullifier_hash_first_anchor,
-			tree_hasher,
-			leaf_hasher,
-		);
-
-	let public_inputs_first_anchor = AnchorR1CSProver_Bn254_Poseidon_30::construct_public_inputs(
-		chain_id_first_anchor,
-		nullifier_hash_first_anchor,
-		roots_first_anchor,
-		arbitrary_input_first_anchor,
-	);
-	let (pk_first_anchor, vk_first_anchor) =
-		setup_keys::<Bn254, _, _>(anchor_circuit_first_anchor.clone(), rng).unwrap();
-	let proof_first_anchor =
-		prove::<Bn254, _, _>(anchor_circuit_first_anchor, &pk_first_anchor, rng).unwrap();
-	let res_first_anchor = verify::<Bn254>(
-		&public_inputs_first_anchor,
-		&vk_first_anchor,
-		&proof_first_anchor,
-	)
-	.unwrap();
-	println!("result first anchor is: {:?}", res_first_anchor);
-	assert_eq!(res_first_anchor, true);
-}
-
-#[test]
 fn setup_and_prove_2_anchors_using_zk_proof() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
@@ -536,7 +412,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 			nullifier_first_anchor,
 			chain_id_second_anchor,
 			roots_second_anchor,
-			path_second_anchor,
+			path_first_anchor,
 			nullifier_hash_first_anchor,
 			tree_hasher,
 			leaf_hasher,
