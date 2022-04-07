@@ -548,6 +548,15 @@ Links to trusted setup ceremony examples:
 - [aleo-setup](https://github.com/AleoHQ/aleo-setup)
 - [celo-setup](https://github.com/celo-org/snark-setup)
 
+<h1 id="smart"> Test </h1>
+
+- You can run all the `arkworks-setups` test by running the command
+   `cargo test --features r1cs,plonk --release`
+
+- You can run a specific test by specifying the name of the test to run with the command 
+   `cargo test setup_and_prove_2_anchors --features r1cs,plonk --release`
+
+
 <h1 id="grat"> Gratitude </h1>
 
 We are grateful to the arkworks community for their open-source first approach to zero-knowledge infrastructure. Many of the gadgets here leverage tools that are found in other repos and that are open source. Specifically, we leverage the sparse Merkle tree data structures from the [ivls](https://github.com/arkworks-rs/ivls/tree/master/src/building_blocks/mt/merkle_sparse_tree) project on incrementally verifiable computation. This work would not have been possible without that.
