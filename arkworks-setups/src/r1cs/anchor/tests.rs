@@ -38,13 +38,10 @@ fn setup_and_prove_anchor_groth16() {
 	let curve = Curve::Bn254;
 
 	let params3 = setup_params::<Bn254Fr>(curve, 5, 3);
-	// the essence of tree hasher? for creating a tree?
 	let tree_hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let chain_id_u64 = 1u64;
-	//what's this Bn254Fr crate?
 	let chain_id = Bn254Fr::from(chain_id_u64);
-	// must the arbitrary input be random? why random
 	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf =
@@ -53,9 +50,6 @@ fn setup_and_prove_anchor_groth16() {
 	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
-
-	// sets up a merkle tree and generates path for it
-	// are the elements inserted into the tree, the leaves?
 	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
 		&tree_hasher,
 		&leaves,
@@ -291,17 +285,18 @@ fn should_fail_with_invalid_nullifier_hash() {
 	assert!(!res);
 }
 
-// What this test does
-// We make a deposit in anchor 1 targeting anchor 2. That means the leaf =
-// (chain_id_of_2, secret_1, nullifier_1) We want to prove this deposit exists
-// in one of the tree roots in root_set from the smart contract where anchor 2
-// is. In order to prove this, we must get the (path_1, nullifier_hash_1,
-// chain_2, secret_1, nullifier_1)
+// What this test does is that
+// We make a deposit in anchor 1 targeting anchor 2.
+// That means the leaf = (chain_id_of_2, secret_1, nullifier_1)
+// We want to prove this deposit exists in one of the tree roots in root_set
+// from the smart contract where anchor 2 is.
+// In order to prove this, we must get the (path_1, nullifier_hash_1, chain_2,
+// secret_1, nullifier_1)
 //
 // So, we create two trees
-// Insert an element into both, let (m_a, m_b) be the merkle root of the trees
+// Insert an element into both, let (m_1, m_2) be the merkle root of the trees
 // on Anchors 1 and 2 Create the root sets that each anchor would have on the
-// respective smart contract (m_1, m_2) on A, (m_2, m_1) on B
+// respective smart contract (m_1, m_2) on Anchor 1, (m_2, m_1) on Anchor 2
 #[test]
 fn setup_and_prove_2_anchors_using_zk_proof() {
 	let rng = &mut test_rng();
@@ -364,7 +359,6 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 	let index = 0;
 
 	// sets up a merkle tree and generates path for it
-	// are the elements inserted into the tree, the leaves?
 	// tree for first anchor
 	let (tree_first_anchor, path_first_anchor) =
 		setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
@@ -438,11 +432,8 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 
 	let (pk_second_anchor, vk_second_anchor) =
 		setup_keys::<Bn254, _, _>(anchor_circuit_second_anchor.clone(), rng).unwrap();
-	//println!("pk second anchor is: {:?}", pk_second_anchor);
 
 	let proof = prove::<Bn254, _, _>(anchor_circuit_second_anchor, &pk_second_anchor, rng).unwrap();
-	println!("proof is: {:?}", proof);
 	let res = verify::<Bn254>(&public_inputs_second_anchor, &vk_second_anchor, &proof).unwrap();
-	println!("result: {:?}", res);
 	assert_eq!(res, true);
 }
