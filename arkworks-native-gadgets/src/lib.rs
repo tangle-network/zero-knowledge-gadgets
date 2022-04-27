@@ -31,7 +31,12 @@ pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 
 	let res = padded_input
 		.chunks(max_size_bytes)
-		.map(F::read)
+		.map(|x| {
+			match F::read(x) {
+				Ok(x) => Ok(x),
+				Err(_) => F::read(&*x.into_iter().rev().cloned().collect::<Vec<u8>>()),
+			}
+		})
 		.collect::<Result<Vec<_>, _>>()?;
 
 	Ok(res)
