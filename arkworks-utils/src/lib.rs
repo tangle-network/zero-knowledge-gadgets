@@ -19,7 +19,7 @@ pub enum Curve {
 }
 
 pub fn decode_hex(s: &str) -> Result<Bytes, FromHexError> {
-	let mut bytes = [0u8];
+	let mut bytes = ark_std::vec![0u8; s.len() / 2];
 	let s = &s[2..];
 	hex::decode_to_slice(s, &mut bytes as &mut [u8]);
 	Ok(bytes.to_vec())
