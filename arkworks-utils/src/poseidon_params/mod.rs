@@ -1,13 +1,4 @@
-use super::{Bytes, Curve};
-
-#[cfg(feature = "std")]
-use super::parse_matrix;
-
-#[cfg(feature = "std")]
-use super::parse_vec;
-
-#[cfg(feature = "std")]
-pub use hex::FromHexError;
+use super::{parse_matrix, parse_vec, Bytes, Curve, FromHexError};
 
 pub use ark_std::vec::Vec;
 
@@ -40,7 +31,6 @@ impl PoseidonData {
 	}
 }
 
-#[cfg(feature = "std")]
 pub fn setup_poseidon_params(
 	curve: Curve,
 	exp: i8,
@@ -276,7 +266,6 @@ pub fn setup_poseidon_params(
 	}
 }
 
-#[cfg(feature = "std")]
 pub fn get_poseidon_result(curve: Curve, exp: i8, width: u8) -> Result<Vec<Bytes>, FromHexError> {
 	match (curve, exp, width) {
 		#[cfg(feature = "poseidon_bn254_x5_5")]
@@ -295,7 +284,6 @@ pub fn get_poseidon_result(curve: Curve, exp: i8, width: u8) -> Result<Vec<Bytes
 	}
 }
 
-#[cfg(feature = "std")]
 pub fn get_poseidon_data(
 	rounds: &[&str],
 	mds: &[&[&str]],

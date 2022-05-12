@@ -14,14 +14,8 @@ use arkworks_native_gadgets::{
 	poseidon::{sbox::PoseidonSbox, FieldHasher, PoseidonParameters},
 };
 use arkworks_utils::{
-	bytes_matrix_to_f, bytes_vec_to_f, Curve,
+	bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
 };
-
-#[cfg(feature = "std")]
-use arkworks_utils::{
-	poseidon_params::setup_poseidon_params
-};
-
 use tiny_keccak::{Hasher, Keccak};
 
 pub struct VAnchorLeaf {
@@ -212,7 +206,6 @@ pub fn setup_tree_and_create_path<F: PrimeField, H: FieldHasher<F>, const HEIGHT
 	Ok((smt, path))
 }
 
-#[cfg(feature = "std")]
 pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
 	let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
 

@@ -5,7 +5,6 @@ extern crate ark_std;
 
 use ark_ff::PrimeField;
 pub use ark_std::vec::Vec;
-#[cfg(feature = "std")]
 pub use hex::FromHexError;
 
 pub mod mimc_params;
@@ -19,13 +18,13 @@ pub enum Curve {
 	Bn254,
 }
 
-#[cfg(feature = "std")]
 pub fn decode_hex(s: &str) -> Result<Bytes, FromHexError> {
+	let mut bytes = [0u8];
 	let s = &s[2..];
-	hex::decode(s)
+	hex::decode_to_slice(s, &mut bytes as &mut [u8]);
+	Ok(bytes.to_vec())
 }
 
-#[cfg(feature = "std")]
 pub fn parse_vec(arr: Vec<&str>) -> Result<Vec<Bytes>, FromHexError> {
 	let mut res = Vec::new();
 	for r in arr.iter() {
@@ -34,7 +33,6 @@ pub fn parse_vec(arr: Vec<&str>) -> Result<Vec<Bytes>, FromHexError> {
 	Ok(res)
 }
 
-#[cfg(feature = "std")]
 pub fn parse_matrix(mds_entries: Vec<Vec<&str>>) -> Result<Vec<Vec<Bytes>>, FromHexError> {
 	let width = mds_entries.len();
 	let mut mds = vec![vec![Vec::new(); width]; width];
@@ -46,14 +44,12 @@ pub fn parse_matrix(mds_entries: Vec<Vec<&str>>) -> Result<Vec<Vec<Bytes>>, From
 	Ok(mds)
 }
 
-
 pub fn bytes_vec_to_f<F: PrimeField>(bytes_vec: &Vec<Vec<u8>>) -> Vec<F> {
 	bytes_vec
 		.iter()
 		.map(|x| F::from_be_bytes_mod_order(x))
 		.collect()
 }
-
 
 pub fn bytes_matrix_to_f<F: PrimeField>(bytes_matrix: &Vec<Vec<Vec<u8>>>) -> Vec<Vec<F>> {
 	bytes_matrix.iter().map(|x| bytes_vec_to_f(x)).collect()
