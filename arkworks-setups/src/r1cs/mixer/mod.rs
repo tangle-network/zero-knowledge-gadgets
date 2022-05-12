@@ -16,6 +16,7 @@ use arkworks_r1cs_circuits::mixer::MixerCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 use codec::Encode;
+use ark_std::vec;
 
 use crate::common::*;
 

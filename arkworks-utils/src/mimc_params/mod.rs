@@ -1,4 +1,9 @@
-use super::{parse_vec, Bytes, Curve, FromHexError};
+use super::{Bytes, Curve};
+#[cfg(feature = "std")]
+pub use hex::FromHexError;
+
+#[cfg(feature = "std")]
+use super::parse_vec;
 
 pub use ark_std::vec::Vec;
 
@@ -18,6 +23,7 @@ impl MimcData {
 	}
 }
 
+#[cfg(feature = "std")]
 pub fn setup_mimc_params(curve: Curve, rounds: u16, width: u8) -> Result<MimcData, FromHexError> {
 	match (curve, rounds, width) {
 		#[cfg(feature = "mimc_ed_on_bn254_220")]
@@ -31,6 +37,7 @@ pub fn setup_mimc_params(curve: Curve, rounds: u16, width: u8) -> Result<MimcDat
 	}
 }
 
+#[cfg(feature = "std")]
 pub fn get_mimc_data(constants: &[&str], rounds: u16, width: u8) -> Result<MimcData, FromHexError> {
 	let constants = parse_vec(constants.to_vec())?;
 	Ok(MimcData::new(constants, rounds, width))

@@ -16,6 +16,7 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 use codec::Encode;
+use ark_std::vec;
 
 #[cfg(test)]
 mod tests;
@@ -43,6 +44,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	}
 
 	#[allow(dead_code)]
+	#[cfg(feature = "std")]
 	pub fn setup_random_circuit<R: CryptoRng + RngCore>(
 		curve: Curve,
 		default_leaf: [u8; 32],
@@ -59,6 +61,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	> {
 		let arbitrary_input = E::Fr::rand(rng);
 		// Initialize hashers
+		#[cfg(feature = "std")]
 		let params3 = setup_params::<E::Fr>(curve, 5, 3);
 		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
@@ -108,6 +111,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	}
 
 	#[allow(dead_code)]
+	#[cfg(feature = "std")]
 	pub fn setup_circuit_with_privates(
 		curve: Curve,
 		chain_id: E::Fr,
@@ -161,6 +165,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 
 	#[allow(dead_code)]
 	#[allow(clippy::too_many_arguments)]
+	#[cfg(feature = "std")]
 	pub fn setup_circuit_with_privates_raw(
 		curve: Curve,
 		chain_id: u64,
@@ -238,6 +243,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	}
 
 	#[allow(dead_code)]
+	#[cfg(feature = "std")]
 	pub fn create_circuit(
 		curve: Curve,
 		arbitrary_input: E::Fr,
@@ -272,6 +278,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 	AnchorProver<E, HEIGHT, ANCHOR_CT> for AnchorR1CSProver<E, HEIGHT, ANCHOR_CT>
 {
+	#[cfg(feature = "std")]
 	fn create_leaf_with_privates(
 		curve: Curve,
 		chain_id: u64,
@@ -300,6 +307,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		})
 	}
 
+	#[cfg(feature = "std")]
 	fn create_proof<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
@@ -396,6 +404,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		})
 	}
 
+	#[cfg(feature = "std")]
 	fn create_random_leaf<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
