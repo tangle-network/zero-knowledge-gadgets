@@ -2,3 +2,5 @@
 /protocol-solidity-fixtures
 
 .idea
+
+*.iml
