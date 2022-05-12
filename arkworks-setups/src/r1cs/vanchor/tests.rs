@@ -1,4 +1,5 @@
 use ark_std::vec;
+use std::collections::BTreeMap;
 
 use crate::common::*;
 use ark_serialize::CanonicalDeserialize;
@@ -7,9 +8,10 @@ use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_utils::Curve;
 
 use ark_bn254::{Bn254, Fr as BnFr};
-use ark_ff::UniformRand;
+use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 
+use crate::VAnchorProver;
 use ark_snark::SNARK;
 use ark_std::{str::FromStr, test_rng};
 
@@ -225,8 +227,18 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 
 	let in_leaves = [vec![leaf0], vec![leaf1]];
 	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
-
+	let in_root_set = [root0.clone(), root1.clone()];
+	let in_root_set2: Vec<_> = [root0, root1]
+		.to_vec()
+		.into_iter()
+		.map(|i| i.into_repr().to_bytes_le())
+		.collect();
+	let mut in_leaves_map = BTreeMap::new();
+	let map_leaves: Vec<_> = vec![leaf0, leaf1]
+		.into_iter()
+		.map(|i| i.into_repr().to_bytes_le())
+		.collect();
+	in_leaves_map.insert(in_chain_id, map_leaves);
 	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
 		curve,
 		BnFr::from(in_chain_id),
@@ -235,8 +247,8 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		in_root_set,
 		in_indices,
 		in_leaves,
-		in_utxos,
-		out_utxos,
+		in_utxos.clone(),
+		out_utxos.clone(),
 		DEFAULT_LEAF,
 	)
 	.unwrap();
@@ -245,6 +257,29 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
 	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
 
+	assert!(res);
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+		curve,
+		in_chain_id,
+		10,
+		ext_data_hash.into_repr().to_bytes_le(),
+		[in_root_set2[0].clone(), in_root_set2[1].clone()],
+		[0; 2],
+		in_leaves_map,
+		in_utxos.clone(),
+		in_utxos,
+		proving_key,
+		DEFAULT_LEAF,
+		rng,
+	)
+	.unwrap();
+
+	let public_inputs_proof: Vec<_> = proof
+		.public_inputs_raw
+		.into_iter()
+		.map(|i| BnFr::from_le_bytes_mod_order(i.as_slice()))
+		.collect();
+	let res = verify::<Bn254>(&public_inputs_proof, &verifying_key, &proof.proof).unwrap();
 	assert!(res);
 }
 
