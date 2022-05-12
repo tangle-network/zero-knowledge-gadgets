@@ -5,6 +5,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::{
 	marker::PhantomData,
 	rand::{CryptoRng, RngCore},
+	vec,
 	vec::Vec,
 	UniformRand, Zero,
 };
@@ -16,7 +17,6 @@ use arkworks_r1cs_circuits::anchor::AnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
 use codec::Encode;
-use ark_std::vec;
 
 #[cfg(test)]
 mod tests;
