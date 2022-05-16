@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 use ark_std::collections::BTreeMap;
 
 use ark_crypto_primitives::Error;
