@@ -22,7 +22,6 @@ pub fn decode_hex(s: &str) -> Result<Bytes, FromHexError> {
 	let mut bytes = ark_std::vec![0u8; 32];
 	let s = &s[2..];
 	hex::decode_to_slice(s, &mut bytes as &mut [u8]);
-	println!("bytes after decoding is {:?}", bytes);
 	Ok(bytes.into())
 }
 
