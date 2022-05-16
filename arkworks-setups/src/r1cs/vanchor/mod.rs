@@ -6,6 +6,7 @@ use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
 	rand::{CryptoRng, Rng, RngCore},
+	vec,
 	vec::Vec,
 	UniformRand,
 };
