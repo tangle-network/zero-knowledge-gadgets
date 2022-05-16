@@ -5,6 +5,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::{
 	marker::PhantomData,
 	rand::{CryptoRng, RngCore},
+	vec,
 	vec::Vec,
 	UniformRand, Zero,
 };

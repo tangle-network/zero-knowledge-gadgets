@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-setups"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 license = "Apache-2.0"
 description = "Webb protocol's API for zero-knowledge circuits"
