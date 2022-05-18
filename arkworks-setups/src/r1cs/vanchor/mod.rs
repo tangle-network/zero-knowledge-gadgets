@@ -107,44 +107,6 @@ where
 		)?;
 		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
 
-		let (circuit, ..) = Self::setup_circuit_with_utxos(
-			curve,
-			E::Fr::from(chain_id),
-			E::Fr::from(public_amount),
-			ext_data_hash,
-			in_root_set,
-			in_indices,
-			in_leaves,
-			in_utxos,
-			out_utxos,
-			default_leaf,
-		)?;
-
-		Ok(circuit)
-	}
-
-	#[allow(dead_code)]
-	pub fn setup_circuit_with_utxos(
-		curve: Curve,
-		chain_id: E::Fr,
-		// External data
-		public_amount: E::Fr,
-		ext_data_hash: E::Fr,
-		in_root_set: [E::Fr; ANCHOR_CT],
-		in_indices: [u64; INS],
-		in_leaves: [Vec<E::Fr>; INS],
-		// Input transactions
-		in_utxos: [Utxo<E::Fr>; INS],
-		// Output transactions
-		out_utxos: [Utxo<E::Fr>; OUTS],
-		default_leaf: [u8; 32],
-	) -> Result<
-		(
-			VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>,
-			Vec<E::Fr>,
-		),
-		Error,
-	> {
 		// Initialize hashers
 		let params2 = setup_params::<E::Fr>(curve, 5, 2);
 		let params3 = setup_params::<E::Fr>(curve, 5, 3);
@@ -169,7 +131,7 @@ where
 		// Arbitrary data
 
 		let circuit = Self::setup_circuit(
-			chain_id,
+			E::Fr::from(chain_id),
 			public_amount,
 			ext_data_hash,
 			in_utxos.clone(),
@@ -183,22 +145,7 @@ where
 			leaf_hasher,
 		)?;
 
-		let in_nullifiers: Result<Vec<E::Fr>, Error> =
-			in_utxos.iter().map(|x| x.get_nullifier()).collect();
-		let out_nullifiers = out_utxos
-			.iter()
-			.map(|x| x.commitment)
-			.collect::<Vec<E::Fr>>();
-		let public_inputs = Self::construct_public_inputs(
-			in_utxos[0].chain_id,
-			public_amount,
-			in_root_set.to_vec(),
-			in_nullifiers?,
-			out_nullifiers,
-			ext_data_hash,
-		);
-
-		Ok((circuit, public_inputs))
+		Ok(circuit)
 	}
 
 	pub fn setup_circuit(
@@ -451,8 +398,10 @@ where
 
 		#[cfg(feature = "trace")]
 		{
+			use ark_relations::r1cs::{
+				ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode,
+			};
 			use tracing_subscriber::layer::SubscriberExt;
-			use ark_relations::r1cs::{ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode};
 
 			let mut layer = ConstraintLayer::default();
 			layer.mode = TracingMode::OnlyConstraints;

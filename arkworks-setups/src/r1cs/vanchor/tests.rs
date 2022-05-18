@@ -44,25 +44,21 @@ fn should_create_proof_for_random_circuit() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(5u32);
+	let in_amount = 5;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(0),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(1),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -70,23 +66,19 @@ fn should_create_proof_for_random_circuit() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -162,13 +154,11 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(5u32);
-	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_amount = 5;
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -176,12 +166,10 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	// Setting the index after the fact to test the function
 	in_utxo1.set_index(0, &nullifier_hasher).unwrap();
 
-	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -193,23 +181,19 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -284,25 +268,21 @@ fn should_fail_with_invalid_root() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(5u32);
+	let in_amount = 5;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -310,23 +290,19 @@ fn should_fail_with_invalid_root() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -401,25 +377,21 @@ fn should_fail_with_invalid_nullifier() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(5u32);
+	let in_amount = 5;
 	let index = 0u64;
-	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -431,23 +403,19 @@ fn should_fail_with_invalid_nullifier() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -522,15 +490,13 @@ fn should_fail_with_same_nullifier() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(5u32);
+	let in_amount = 5;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -540,23 +506,19 @@ fn should_fail_with_same_nullifier() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -630,25 +592,21 @@ fn should_fail_with_inconsistent_input_output_values() {
 	// Input Utxos
 	let in_chain_id = 0u64;
 	// Input amount too high
-	let in_amount = BnFr::from(10u32);
+	let in_amount = 10;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -656,23 +614,19 @@ fn should_fail_with_inconsistent_input_output_values() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -778,23 +732,19 @@ fn should_fail_with_big_amount() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -870,14 +820,12 @@ fn should_fail_with_invalid_public_input() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(5u32);
+	let in_amount = 5;
 	let index = 0u64;
-	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -885,13 +833,11 @@ fn should_fail_with_invalid_public_input() {
 	// Setting the index after the fact to test the function
 	in_utxo1.set_index(index, &nullifier_hasher).unwrap();
 
-	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
 		Some(index),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -902,23 +848,19 @@ fn should_fail_with_invalid_public_input() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(10u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 10;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
@@ -995,25 +937,22 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Default input utxos
+	let amount = 0;
 	let in_chain_id = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
-		BnFr::from(0u32),
+		amount,
 		Some(0u64),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
 
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		in_chain_id,
-		BnFr::from(0u32),
+		amount,
 		Some(0u64),
-		None,
-		None,
 		rng,
 	)
 	.unwrap();
@@ -1022,23 +961,19 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = BnFr::from(5u32);
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_amount = 5;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
-		None,
-		None,
 		None,
 		rng,
 	)
