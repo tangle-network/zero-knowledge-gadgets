@@ -1,7 +1,7 @@
 use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField, SquareRootField};
+use ark_ff::{BigInteger, PrimeField, SquareRootField, Zero};
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -375,11 +375,24 @@ where
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
 
+		// TODO: Check that all inputs have the provided chain ID
+		// for utxo in in_utxos {
+		// 	if utxo.chain_id_raw != chain_id {
+		// 		return Err("Invalid input chain ID".to_string());
+		// 	}
+		// }
+
 		let in_paths = in_utxos
 			.iter()
 			.map(|utxo| {
 				let chain_id_of_utxo: u64 = utxo.chain_id_raw;
-				if trees.contains_key(&chain_id_of_utxo) {
+				// Handle the default utxo when the amount is 0.
+				if utxo.amount == E::Fr::zero() {
+					Path {
+						path: [(E::Fr::zero(), E::Fr::zero()); HEIGHT],
+						marker: PhantomData,
+					}
+				} else if trees.contains_key(&chain_id_of_utxo) {
 					let tree = trees.get(&chain_id_of_utxo).unwrap();
 					tree.generate_membership_proof(utxo.index.unwrap_or_default())
 				} else {

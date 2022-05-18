@@ -42,7 +42,7 @@ ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve"
 hex-literal = { version = "0.3.4" }
 
 [features]
-default = ["std"]
+default = ["std", "r1cs"]
 aead = ["crypto_box"]
 r1cs = []
 plonk = []

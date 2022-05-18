@@ -877,3 +877,102 @@ fn should_fail_with_invalid_public_input() {
 
 	assert!(res.is_err());
 }
+
+#[test]
+fn should_create_circuit_and_prove_with_default_utxos() {
+	let rng = &mut test_rng();
+	let curve = Curve::Bn254;
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let params4 = setup_params::<BnFr>(curve, 5, 4);
+	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+	let nullifier_hasher = Poseidon::<BnFr> { params: params4 };
+
+	let public_amount = BnFr::from(10u32);
+	let ext_data_hash = BnFr::rand(rng);
+
+	// Default input utxos
+	let in_chain_id = 0u64;
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+		curve,
+		in_chain_id,
+		BnFr::from(0u32),
+		Some(0u64),
+		None,
+		None,
+		rng,
+	)
+	.unwrap();
+	
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+		curve,
+		in_chain_id,
+		BnFr::from(0u32),
+		Some(0u64),
+		None,
+		None,
+		rng,
+	)
+	.unwrap();
+
+
+	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
+
+	// Output Utxos
+	let out_chain_id = 0u64;
+	let out_amount = BnFr::from(5u32);
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		None,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		None,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+
+	let leaf = BnFr::rand(rng);
+	let (tree, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
+		&vec![leaf],
+		0,
+		&DEFAULT_LEAF,
+	)
+	.unwrap();
+
+	let in_leaves = [vec![leaf], vec![leaf]];
+	let in_indices = [0; 2];
+	let in_root_set = [BnFr::from(0u32), BnFr::from(0u32)];
+
+	// TODO: Use create_proof
+	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+		curve,
+		BnFr::from(in_chain_id),
+		public_amount,
+		ext_data_hash,
+		in_root_set,
+		in_indices,
+		in_leaves,
+		in_utxos,
+		out_utxos,
+		DEFAULT_LEAF,
+	)
+	.unwrap();
+
+	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
+	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
+	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+
+	assert!(res);
+}
