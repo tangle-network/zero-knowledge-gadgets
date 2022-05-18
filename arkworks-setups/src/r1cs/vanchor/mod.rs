@@ -208,7 +208,7 @@ where
 		// Input transactions
 		in_utxos: [Utxo<E::Fr>; INS],
 		// Data related to tree
-		in_indicies: [E::Fr; INS],
+		in_indices: [E::Fr; INS],
 		in_paths: Vec<Path<E::Fr, Poseidon<E::Fr>, HEIGHT>>,
 		public_root_set: [E::Fr; ANCHOR_CT],
 		// Output transactions
@@ -264,7 +264,7 @@ where
 				chain_id,
 				public_root_set,
 				in_paths,
-				in_indicies.to_vec(),
+				in_indices.to_vec(),
 				in_nullifiers?,
 				out_commitments,
 				out_amounts,
@@ -375,12 +375,12 @@ where
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
 
-		// TODO: Check that all inputs have the provided chain ID
-		// for utxo in in_utxos {
-		// 	if utxo.chain_id_raw != chain_id {
-		// 		return Err("Invalid input chain ID".to_string());
-		// 	}
-		// }
+		// Throw an error if chain IDs don't match intended spending chain.
+		for utxo in in_utxos.clone() {
+			if utxo.chain_id_raw != chain_id {
+				return Err("Invalid input chain ID".into());
+			}
+		}
 
 		let in_paths = in_utxos
 			.iter()
