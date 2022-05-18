@@ -1,6 +1,6 @@
 [package]
 name = "arkworks-setups"
-version = "1.0.2"
+version = "1.1.0"
 edition = "2021"
 license = "Apache-2.0"
 description = "Webb protocol's API for zero-knowledge circuits"
@@ -27,6 +27,9 @@ tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 codec = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 crypto_box = { version = "0.7.1", optional = true }
 
+tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
+tracing-subscriber = { version = "0.2", optional = true }
+
 [dependencies.arkworks-utils]
 path = "../arkworks-utils"
 version = "1.0.0"
@@ -42,7 +45,7 @@ ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve"
 hex-literal = { version = "0.3.4" }
 
 [features]
-default = ["std"]
+default = ["std", "r1cs"]
 aead = ["crypto_box"]
 r1cs = []
 plonk = []
@@ -72,4 +75,7 @@ parallel = [
   "arkworks-r1cs-gadgets/parallel",
   "arkworks-native-gadgets/parallel",
 ]
-
+trace = [
+  "tracing",
+  "tracing-subscriber",
+]

@@ -185,7 +185,6 @@ where
 		.unwrap_or_default();
 		// check the previous conversion is done correctly
 		assert_ne!(limit, F::default());
-
 		// Generating vars
 		// Public inputs
 		let public_amount_var = FpVar::<F>::new_input(cs.clone(), || Ok(public_amount))?;
@@ -258,7 +257,6 @@ where
 
 			sum_ins_var += in_amount_tx;
 		}
-
 		// verify correctness of transaction outputs
 		let mut sum_outs_var = FpVar::<F>::zero();
 		for tx in 0..N_OUTS {

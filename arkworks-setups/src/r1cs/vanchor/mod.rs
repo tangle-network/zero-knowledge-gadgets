@@ -1,7 +1,7 @@
 use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField, SquareRootField};
+use ark_ff::{BigInteger, PrimeField, SquareRootField, Zero};
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -107,44 +107,6 @@ where
 		)?;
 		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
 
-		let (circuit, ..) = Self::setup_circuit_with_utxos(
-			curve,
-			E::Fr::from(chain_id),
-			E::Fr::from(public_amount),
-			ext_data_hash,
-			in_root_set,
-			in_indices,
-			in_leaves,
-			in_utxos,
-			out_utxos,
-			default_leaf,
-		)?;
-
-		Ok(circuit)
-	}
-
-	#[allow(dead_code)]
-	pub fn setup_circuit_with_utxos(
-		curve: Curve,
-		chain_id: E::Fr,
-		// External data
-		public_amount: E::Fr,
-		ext_data_hash: E::Fr,
-		in_root_set: [E::Fr; ANCHOR_CT],
-		in_indices: [u64; INS],
-		in_leaves: [Vec<E::Fr>; INS],
-		// Input transactions
-		in_utxos: [Utxo<E::Fr>; INS],
-		// Output transactions
-		out_utxos: [Utxo<E::Fr>; OUTS],
-		default_leaf: [u8; 32],
-	) -> Result<
-		(
-			VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>,
-			Vec<E::Fr>,
-		),
-		Error,
-	> {
 		// Initialize hashers
 		let params2 = setup_params::<E::Fr>(curve, 5, 2);
 		let params3 = setup_params::<E::Fr>(curve, 5, 3);
@@ -169,7 +131,7 @@ where
 		// Arbitrary data
 
 		let circuit = Self::setup_circuit(
-			chain_id,
+			E::Fr::from(chain_id),
 			public_amount,
 			ext_data_hash,
 			in_utxos.clone(),
@@ -183,22 +145,7 @@ where
 			leaf_hasher,
 		)?;
 
-		let in_nullifiers: Result<Vec<E::Fr>, Error> =
-			in_utxos.iter().map(|x| x.get_nullifier()).collect();
-		let out_nullifiers = out_utxos
-			.iter()
-			.map(|x| x.commitment)
-			.collect::<Vec<E::Fr>>();
-		let public_inputs = Self::construct_public_inputs(
-			in_utxos[0].chain_id,
-			public_amount,
-			in_root_set.to_vec(),
-			in_nullifiers?,
-			out_nullifiers,
-			ext_data_hash,
-		);
-
-		Ok((circuit, public_inputs))
+		Ok(circuit)
 	}
 
 	pub fn setup_circuit(
@@ -208,7 +155,7 @@ where
 		// Input transactions
 		in_utxos: [Utxo<E::Fr>; INS],
 		// Data related to tree
-		in_indicies: [E::Fr; INS],
+		in_indices: [E::Fr; INS],
 		in_paths: Vec<Path<E::Fr, Poseidon<E::Fr>, HEIGHT>>,
 		public_root_set: [E::Fr; ANCHOR_CT],
 		// Output transactions
@@ -264,7 +211,7 @@ where
 				chain_id,
 				public_root_set,
 				in_paths,
-				in_indicies.to_vec(),
+				in_indices.to_vec(),
 				in_nullifiers?,
 				out_commitments,
 				out_amounts,
@@ -375,11 +322,38 @@ where
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
 
+		// Throw an error if chain IDs don't match intended spending chain.
+		for utxo in in_utxos.clone() {
+			if utxo.chain_id_raw != chain_id {
+				return Err("Invalid input chain ID".into());
+			}
+		}
+
 		let in_paths = in_utxos
 			.iter()
 			.map(|utxo| {
 				let chain_id_of_utxo: u64 = utxo.chain_id_raw;
-				if trees.contains_key(&chain_id_of_utxo) {
+				// Handle the default utxo when the amount is 0.
+				if utxo.amount == E::Fr::zero() {
+					// If the amount is 0, we just need to create a dummy path for a tree
+					// that contains this dummy UTXO so that we can satisfy the merkle path
+					// constraints on the path gadget.
+					//
+					// The path gadget contains constraints that verify the path was correctly
+					// generated for a tree containing the UTXO in question. Therefore even for
+					// dummy UTXOs, we still need to *simulate* this by creating a valid path in an
+					// arbitrary tree. Since the amount is 0, this arbitrary tree has no effect on
+					// the set membership check.
+					match setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
+						&tree_hasher,
+						&[utxo.commitment],
+						utxo.index.unwrap_or_default(),
+						&default_leaf,
+					) {
+						Ok((_, path)) => path,
+						Err(err) => panic!("{}", err),
+					}
+				} else if trees.contains_key(&chain_id_of_utxo) {
 					let tree = trees.get(&chain_id_of_utxo).unwrap();
 					tree.generate_membership_proof(utxo.index.unwrap_or_default())
 				} else {
@@ -421,6 +395,26 @@ where
 			nullifier_hasher,
 			leaf_hasher,
 		)?;
+
+		#[cfg(feature = "trace")]
+		{
+			use ark_relations::r1cs::{
+				ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode,
+			};
+			use tracing_subscriber::layer::SubscriberExt;
+
+			let mut layer = ConstraintLayer::default();
+			layer.mode = TracingMode::OnlyConstraints;
+			let subscriber = tracing_subscriber::Registry::default().with(layer);
+			let _guard = tracing::subscriber::set_default(subscriber);
+
+			let cs = ConstraintSystem::new_ref();
+			circuit.clone().generate_constraints(cs.clone()).unwrap();
+			let is_satisfied = cs.is_satisfied().unwrap();
+			if !is_satisfied {
+				println!("{:?}", cs.which_is_unsatisfied());
+			}
+		}
 
 		let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;
 
