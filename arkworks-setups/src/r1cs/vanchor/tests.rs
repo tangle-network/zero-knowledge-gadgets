@@ -147,13 +147,18 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 	let nullifier_hasher = Poseidon::<BnFr> { params: params4 };
 
-	let public_amount = BnFr::from(10u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
 	let in_chain_id = 0u64;
 	let in_amount = BnFr::from(5u32);
-	let index = 0u64;
 	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
 		curve,
 		in_chain_id,
@@ -165,7 +170,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	)
 	.unwrap();
 	// Setting the index after the fact to test the function
-	in_utxo1.set_index(index, &nullifier_hasher).unwrap();
+	in_utxo1.set_index(0, &nullifier_hasher).unwrap();
 
 	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
 		curve,
@@ -178,7 +183,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	)
 	.unwrap();
 	// Setting the index after the fact to test the function
-	in_utxo2.set_index(index, &nullifier_hasher).unwrap();
+	in_utxo2.set_index(1, &nullifier_hasher).unwrap();
 
 	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
@@ -208,45 +213,47 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf0 = in_utxo1.commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
-		&tree_hasher,
-		&vec![leaf0],
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
-	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
 	let leaf1 = in_utxo2.commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf1],
+		&vec![leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
 	.unwrap();
-	let root1 = in_path1.calculate_root(&leaf1, &tree_hasher).unwrap();
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf1.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 1];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(res);
 }
@@ -255,8 +262,16 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 fn should_fail_with_invalid_root() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
-	let public_amount = BnFr::from(10u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
@@ -310,32 +325,48 @@ fn should_fail_with_invalid_root() {
 	.unwrap();
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
-	let leaf0 = in_utxos[0].commitment;
-	let leaf1 = in_utxos[1].commitment;
+	let leaf0 = in_utxo1.commitment;
+	let leaf1 = in_utxo2.commitment;
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
+		&vec![leaf0, leaf1],
+		0,
+		&DEFAULT_LEAF,
+	)
+	.unwrap();
 
-	// Invalid root set
-	let in_root_set = [BnFr::rand(rng); 2];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf1.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 1];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
 }
@@ -347,7 +378,13 @@ fn should_fail_with_invalid_nullifier() {
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
-	let public_amount = BnFr::from(10u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
@@ -405,46 +442,47 @@ fn should_fail_with_invalid_nullifier() {
 	.unwrap();
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
-	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+	let leaf0 = in_utxo1.commitment;
+	let leaf1 = in_utxo2.commitment;
+
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0],
+		&vec![leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
 	.unwrap();
-	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
-	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
-		&tree_hasher,
-		&vec![leaf1],
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
-	let root1 = in_path1.calculate_root(&leaf1, &tree_hasher).unwrap();
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf1.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 1];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
 }
@@ -457,7 +495,13 @@ fn should_fail_with_same_nullifier() {
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
-	let public_amount = BnFr::from(0u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 0;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
@@ -503,46 +547,46 @@ fn should_fail_with_same_nullifier() {
 	.unwrap();
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
-	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+	let leaf0 = in_utxo1.commitment;
+
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
 		&vec![leaf0],
 		0,
 		&DEFAULT_LEAF,
 	)
 	.unwrap();
-	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
-	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
-		&tree_hasher,
-		&vec![leaf1],
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
-	let root1 = in_path1.calculate_root(&leaf1, &tree_hasher).unwrap();
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 0];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
 }
@@ -554,7 +598,13 @@ fn should_fail_with_inconsistent_input_output_values() {
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
-	let public_amount = BnFr::from(10u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
@@ -609,46 +659,47 @@ fn should_fail_with_inconsistent_input_output_values() {
 	.unwrap();
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
-	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+	let leaf0 = in_utxo1.commitment;
+	let leaf1 = in_utxo2.commitment;
+
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0],
+		&vec![leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
 	.unwrap();
-	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
-	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
-		&tree_hasher,
-		&vec![leaf1],
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
-	let root1 = in_path1.calculate_root(&leaf1, &tree_hasher).unwrap();
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf1.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 1];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
 }
@@ -660,13 +711,19 @@ fn should_fail_with_big_amount() {
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
 	// 2^248
 	let limit = BnFr::from_str(
 		"452312848583266388373324160190187140051835877600158453279131187530910662656",
 	)
 	.unwrap();
 
-	let public_amount = BnFr::zero();
+	let public_amount = 0;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
@@ -720,46 +777,47 @@ fn should_fail_with_big_amount() {
 	.unwrap();
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
-	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+	let leaf0 = in_utxo1.commitment;
+	let leaf1 = in_utxo2.commitment;
+
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0],
+		&vec![leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
 	.unwrap();
-	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
-	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
-		&tree_hasher,
-		&vec![leaf1],
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
-	let root1 = in_path1.calculate_root(&leaf1, &tree_hasher).unwrap();
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf1.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 1];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
 }
@@ -773,7 +831,13 @@ fn should_fail_with_invalid_public_input() {
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
 	let nullifier_hasher = Poseidon::<BnFr> { params: params4 };
 
-	let public_amount = BnFr::from(0u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 0;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Input Utxos
@@ -833,49 +897,50 @@ fn should_fail_with_invalid_public_input() {
 	.unwrap();
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
-	let leaf0 = in_utxos[0].commitment;
-	let (_, in_path0) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+	let leaf0 = in_utxo1.commitment;
+	let leaf1 = in_utxo2.commitment;
+
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0],
+		&vec![leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
 	.unwrap();
-	let root0 = in_path0.calculate_root(&leaf0, &tree_hasher).unwrap();
-	let leaf1 = in_utxos[1].commitment;
-	let (_, in_path1) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
-		&tree_hasher,
-		&vec![leaf1],
-		0,
-		&DEFAULT_LEAF,
-	)
-	.unwrap();
-	let root1 = in_path1.calculate_root(&leaf1, &tree_hasher).unwrap();
 
-	let in_leaves = [vec![leaf0], vec![leaf1]];
-	let in_indices = [0; 2];
-	let in_root_set = [root0, root1];
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, vec![
+		leaf0.into_repr().to_bytes_le(),
+		leaf1.into_repr().to_bytes_le(),
+	]);
+	let in_indices = [0, 1];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
+
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
 
 	let truncated_public_inputs = &pub_ins[2..];
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-
-	let vk = VerifyingKey::<Bn254>::deserialize(&verifying_key[..]).unwrap();
-	let proof = Proof::<Bn254>::deserialize(&proof[..]).unwrap();
+	let vk = VerifyingKey::<Bn254>::deserialize_unchecked(&verifying_key[..]).unwrap();
+	let proof = Proof::<Bn254>::deserialize(&proof.proof[..]).unwrap();
 	let res = Groth16::<Bn254>::verify(&vk, truncated_public_inputs, &proof);
 
 	assert!(res.is_err());
@@ -886,11 +951,15 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let rng = &mut test_rng();
 	let curve = Curve::Bn254;
 	let params3 = setup_params::<BnFr>(curve, 5, 3);
-	let params4 = setup_params::<BnFr>(curve, 5, 4);
 	let tree_hasher = Poseidon::<BnFr> { params: params3 };
-	let nullifier_hasher = Poseidon::<BnFr> { params: params4 };
 
-	let public_amount = BnFr::from(10u32);
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Default input utxos
@@ -946,7 +1015,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
 
 	let leaf = BnFr::rand(rng);
-	let (tree, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
 		&vec![leaf],
 		0,
@@ -954,28 +1023,32 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	)
 	.unwrap();
 
-	let in_leaves = [vec![leaf], vec![leaf]];
-	let in_indices = [0; 2];
-	let in_root_set = [BnFr::from(0u32), BnFr::from(0u32)];
+	let in_leaves = BTreeMap::new();
+	let in_indices = [0, 0];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le()
+	];
 
-	// TODO: Use create_proof
-	let (circuit, .., pub_ins) = VAnchorR1CSProver_Bn254_Poseidon_30::setup_circuit_with_utxos(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
 		curve,
-		BnFr::from(in_chain_id),
+		in_chain_id,
 		public_amount,
-		ext_data_hash,
+		ext_data_hash.into_repr().to_bytes_le(),
 		in_root_set,
 		in_indices,
 		in_leaves,
 		in_utxos,
 		out_utxos,
+		proving_key,
 		DEFAULT_LEAF,
-	)
-	.unwrap();
+		rng
+	).unwrap();
 
-	let (proving_key, verifying_key) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
-	let proof = prove::<Bn254, _, _>(circuit, &proving_key, rng).unwrap();
-	let res = verify::<Bn254>(&pub_ins, &verifying_key, &proof).unwrap();
+	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
+		BnFr::from_le_bytes_mod_order(inp.as_slice())
+	}).collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(res);
 }
