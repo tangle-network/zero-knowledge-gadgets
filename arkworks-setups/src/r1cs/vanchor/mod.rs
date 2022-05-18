@@ -2,7 +2,6 @@ use crate::{common::*, r1cs::vanchor::utxo::Utxo, utxo, VAnchorProver};
 use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField, SquareRootField, Zero};
-use ark_relations::r1cs::{ConstraintLayer, TracingMode, ConstraintSystem, ConstraintSynthesizer};
 use ark_std::{
 	collections::BTreeMap,
 	marker::PhantomData,
@@ -15,7 +14,6 @@ use arkworks_native_gadgets::{merkle_tree::Path, poseidon::Poseidon};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
 use arkworks_utils::Curve;
-use tracing_subscriber::layer::SubscriberExt;
 
 #[cfg(test)]
 mod tests;
@@ -395,18 +393,17 @@ where
 					// constraints on the path gadget.
 					//
 					// The path gadget contains constraints that verify the path was correctly
-					// generated for a tree containing the UTXO in question. Therefore even for dummy
-					// UTXOs, we still need to *simulate* this by creating a valid path in an arbitrary tree.
-					// Since the amount is 0, this arbitrary tree has no effect on the set membership check.
+					// generated for a tree containing the UTXO in question. Therefore even for
+					// dummy UTXOs, we still need to *simulate* this by creating a valid path in an
+					// arbitrary tree. Since the amount is 0, this arbitrary tree has no effect on
+					// the set membership check.
 					match setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
 						&tree_hasher,
 						&[utxo.commitment],
 						utxo.index.unwrap_or_default(),
 						&default_leaf,
 					) {
-						Ok((_, path)) => {
-							path
-						}
+						Ok((_, path)) => path,
 						Err(err) => panic!("{}", err),
 					}
 				} else if trees.contains_key(&chain_id_of_utxo) {
@@ -452,20 +449,22 @@ where
 			leaf_hasher,
 		)?;
 
-		// First, some boilerplat that helps with debugging
-		let mut layer = ConstraintLayer::default();
-		layer.mode = TracingMode::OnlyConstraints;
-		let subscriber = tracing_subscriber::Registry::default().with(layer);
-		let _guard = tracing::subscriber::set_default(subscriber);
+		#[cfg(feature = "trace")]
+		{
+			use tracing_subscriber::layer::SubscriberExt;
+			use ark_relations::r1cs::{ConstraintLayer, ConstraintSynthesizer, ConstraintSystem, TracingMode};
 
-		// Next, let's make the circuit!
-		let cs = ConstraintSystem::new_ref();
-		circuit.clone().generate_constraints(cs.clone()).unwrap();
-		// Let's check whether the constraint system is satisfied
-		let is_satisfied = cs.is_satisfied().unwrap();
-		if !is_satisfied {
-			// If it isn't, find out the offending constraint.
-			println!("{:?}", cs.which_is_unsatisfied());
+			let mut layer = ConstraintLayer::default();
+			layer.mode = TracingMode::OnlyConstraints;
+			let subscriber = tracing_subscriber::Registry::default().with(layer);
+			let _guard = tracing::subscriber::set_default(subscriber);
+
+			let cs = ConstraintSystem::new_ref();
+			circuit.clone().generate_constraints(cs.clone()).unwrap();
+			let is_satisfied = cs.is_satisfied().unwrap();
+			if !is_satisfied {
+				println!("{:?}", cs.which_is_unsatisfied());
+			}
 		}
 
 		let proof = prove_unchecked::<E, _, _>(circuit, &pk, rng)?;

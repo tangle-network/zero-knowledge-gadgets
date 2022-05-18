@@ -2,13 +2,12 @@ use ark_std::vec;
 
 use crate::{common::*, VAnchorProver};
 use ark_serialize::CanonicalDeserialize;
-use ark_std::collections::BTreeMap;
-use ark_std::{One, Zero};
+use ark_std::{collections::BTreeMap, One, Zero};
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_utils::Curve;
 
 use ark_bn254::{Bn254, Fr as BnFr};
-use ark_ff::{UniformRand, PrimeField, BigInteger};
+use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_groth16::{Groth16, Proof, VerifyingKey};
 
 use ark_snark::SNARK;
@@ -36,7 +35,8 @@ fn should_create_proof_for_random_circuit() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	// Make a proof now
 	let public_amount = 10;
@@ -112,7 +112,7 @@ fn should_create_proof_for_random_circuit() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -127,12 +127,15 @@ fn should_create_proof_for_random_circuit() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(res);
@@ -151,7 +154,8 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
@@ -231,7 +235,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -246,12 +250,15 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -269,7 +276,8 @@ fn should_fail_with_invalid_root() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
@@ -344,7 +352,7 @@ fn should_fail_with_invalid_root() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -359,12 +367,15 @@ fn should_fail_with_invalid_root() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -382,7 +393,8 @@ fn should_fail_with_invalid_nullifier() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
@@ -461,7 +473,7 @@ fn should_fail_with_invalid_nullifier() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -476,12 +488,15 @@ fn should_fail_with_invalid_nullifier() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
@@ -499,7 +514,8 @@ fn should_fail_with_same_nullifier() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 0;
 	let ext_data_hash = BnFr::rand(rng);
@@ -565,7 +581,7 @@ fn should_fail_with_same_nullifier() {
 	let in_indices = [0, 0];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -580,12 +596,15 @@ fn should_fail_with_same_nullifier() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
@@ -602,7 +621,8 @@ fn should_fail_with_inconsistent_input_output_values() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
@@ -678,7 +698,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -693,12 +713,15 @@ fn should_fail_with_inconsistent_input_output_values() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
@@ -715,7 +738,8 @@ fn should_fail_with_big_amount() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	// 2^248
 	let limit = BnFr::from_str(
@@ -796,7 +820,7 @@ fn should_fail_with_big_amount() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -811,12 +835,15 @@ fn should_fail_with_big_amount() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(!res);
@@ -835,7 +862,8 @@ fn should_fail_with_invalid_public_input() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 0;
 	let ext_data_hash = BnFr::rand(rng);
@@ -916,7 +944,7 @@ fn should_fail_with_invalid_public_input() {
 	let in_indices = [0, 1];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -931,12 +959,15 @@ fn should_fail_with_invalid_public_input() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 
 	let truncated_public_inputs = &pub_ins[2..];
 	let vk = VerifyingKey::<Bn254>::deserialize_unchecked(&verifying_key[..]).unwrap();
@@ -957,7 +988,8 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let random_circuit =
 		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
-	let (proving_key, verifying_key) = setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
 
 	let public_amount = 10;
 	let ext_data_hash = BnFr::rand(rng);
@@ -974,7 +1006,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 		rng,
 	)
 	.unwrap();
-	
+
 	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
 		curve,
 		in_chain_id,
@@ -985,7 +1017,6 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 		rng,
 	)
 	.unwrap();
-
 
 	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
@@ -1027,7 +1058,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let in_indices = [0, 0];
 	let in_root_set = [
 		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le()
+		smt.root().into_repr().to_bytes_le(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
@@ -1042,12 +1073,15 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 		out_utxos,
 		proving_key,
 		DEFAULT_LEAF,
-		rng
-	).unwrap();
+		rng,
+	)
+	.unwrap();
 
-	let pub_ins = proof.public_inputs_raw.iter().map(|inp| {
-		BnFr::from_le_bytes_mod_order(inp.as_slice())
-	}).collect::<Vec<_>>();
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
 	assert!(res);
