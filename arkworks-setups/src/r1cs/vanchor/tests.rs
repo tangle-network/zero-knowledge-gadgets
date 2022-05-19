@@ -1055,7 +1055,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 			curve,
 			in_chain_id,
 			amount,
-			Some(utxo_index),
+			Some(0),
 			rng,
 		)
 		.unwrap();
