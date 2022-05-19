@@ -3,6 +3,7 @@ use ark_crypto_primitives::Error;
 use ark_ec::PairingEngine;
 use ark_ff::{BigInteger, PrimeField, SquareRootField, Zero};
 use ark_std::{
+	boxed::Box,
 	collections::BTreeMap,
 	marker::PhantomData,
 	rand::{CryptoRng, Rng, RngCore},
@@ -10,6 +11,7 @@ use ark_std::{
 	vec::Vec,
 	UniformRand,
 };
+
 use arkworks_native_gadgets::{merkle_tree::Path, poseidon::Poseidon};
 use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
@@ -17,6 +19,22 @@ use arkworks_utils::Curve;
 
 #[cfg(test)]
 mod tests;
+
+#[derive(Debug)]
+pub enum VAnchorError {
+	InvalidInputChainId,
+}
+
+impl core::fmt::Display for VAnchorError {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let msg = match self {
+			Self::InvalidInputChainId => ark_std::format!("Invalid input chain ID"),
+		};
+		write!(f, "{}", msg)
+	}
+}
+
+impl ark_std::error::Error for VAnchorError {}
 
 pub struct VAnchorR1CSProver<
 	E: PairingEngine,
@@ -325,7 +343,8 @@ where
 		// Throw an error if chain IDs don't match intended spending chain.
 		for utxo in in_utxos.clone() {
 			if utxo.chain_id_raw != chain_id {
-				return Err("Invalid input chain ID".into());
+				//return Err("Invalid input chain ID".into());
+				return Err(Box::new(VAnchorError::InvalidInputChainId).into());
 			}
 		}
 
