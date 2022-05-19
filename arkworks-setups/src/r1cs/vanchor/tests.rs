@@ -1043,7 +1043,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 	let ext_data_hash = BnFr::rand(rng);
 
 	// Default input utxos
-	let amount = 0;
+	let amount = 10;
 	let in_chain_id = 0u64;
 	let mut in_utxos_list: Vec<_> = vec![];
 	let mut utxo_index = 0;
@@ -1055,7 +1055,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 			curve,
 			in_chain_id,
 			amount,
-			Some(0),
+			Some(utxo_index),
 			rng,
 		)
 		.unwrap();
@@ -1071,7 +1071,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 
 	// Output Utxos
 	let out_chain_id = 0u64;
-	let out_amount = 5;
+	let out_amount = 85;
 	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_16_in::create_random_utxo(
 		curve,
 		out_chain_id,
