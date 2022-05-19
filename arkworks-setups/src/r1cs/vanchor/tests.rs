@@ -1102,7 +1102,12 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 	)
 	.unwrap();
 
-	let in_leaves = BTreeMap::new();
+	let mut in_leaves = BTreeMap::new();
+	let leaves_bytes = leaves
+		.iter()
+		.map(|f| f.into_repr().to_bytes_le())
+		.collect::<Vec<_>>();
+	in_leaves.insert(in_chain_id, leaves_bytes);
 	let in_indices = in_utxos_list
 		.iter()
 		.enumerate()
