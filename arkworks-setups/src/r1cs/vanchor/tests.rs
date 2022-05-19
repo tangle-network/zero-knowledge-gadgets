@@ -1250,3 +1250,140 @@ fn should_create_circuit_and_prove_with_16_default_utxos() {
 
 	assert!(res);
 }
+
+#[test]
+fn should_create_circuit_and_prove_with_16_mixed_utxos() {
+	// Input 8 non-default utxo with amount 20 each
+	// Input 8 different default utxos
+	// public amount 10 => 8 * 20 + 10 = 170
+	// Output 2 utxos with amount 85
+	let rng = &mut test_rng();
+	let curve = Curve::Bn254;
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30_16_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
+	let ext_data_hash = BnFr::rand(rng);
+
+	// Default input utxos
+	let amount = 20;
+	let in_chain_id = 0u64;
+	let mut in_utxos_list: Vec<_> = vec![];
+	let mut utxo_index = 0;
+
+	loop {
+		if in_utxos_list.len() == 16 {
+			break;
+		}
+		let non_default_utxo = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+			curve,
+			in_chain_id,
+			amount,
+			Some(utxo_index),
+			rng,
+		)
+		.unwrap();
+		// should create a different default utxo each time to avoid Error
+		// `AssignmentMissing`
+		let default_utxo = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+			curve,
+			in_chain_id,
+			0,
+			Some(0u64),
+			rng,
+		)
+		.unwrap();
+		utxo_index += 1;
+		in_utxos_list.push(non_default_utxo);
+		in_utxos_list.push(default_utxo.clone());
+	}
+
+	let in_utxos: [_; 16] = in_utxos_list
+		.clone()
+		.try_into()
+		.map_err(|_| "".to_string())
+		.unwrap();
+
+	// Output Utxos
+	let out_chain_id = 0u64;
+	let out_amount = 85;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+
+	let leaves = in_utxos_list
+		.iter()
+		.filter(|u| u.amount != BnFr::zero())
+		.map(|utxo| utxo.commitment)
+		.collect::<Vec<_>>();
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
+		&leaves,
+		0,
+		&DEFAULT_LEAF,
+	)
+	.unwrap();
+	let leaves_bytes = leaves
+		.iter()
+		.map(|f| f.into_repr().to_bytes_le())
+		.collect::<Vec<_>>();
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, leaves_bytes);
+
+	let in_indices = in_utxos_list
+		.iter()
+		.map(|u| u.index.unwrap_or(0))
+		.collect::<Vec<_>>()
+		.try_into()
+		.unwrap();
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le(),
+	];
+
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
+		curve,
+		in_chain_id,
+		public_amount,
+		ext_data_hash.into_repr().to_bytes_le(),
+		in_root_set,
+		in_indices,
+		in_leaves,
+		in_utxos,
+		out_utxos,
+		proving_key,
+		DEFAULT_LEAF,
+		rng,
+	)
+	.unwrap();
+
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
+
+	assert!(res);
+}
