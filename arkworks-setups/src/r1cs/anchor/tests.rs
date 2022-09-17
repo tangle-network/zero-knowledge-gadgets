@@ -46,9 +46,9 @@ fn setup_and_prove_anchor_groth16() {
 
 	let leaf =
 		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
 		&tree_hasher,
@@ -102,9 +102,9 @@ fn should_fail_with_invalid_public_inputs() {
 
 	let leaf =
 		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 
 	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
@@ -153,9 +153,9 @@ fn should_fail_with_invalid_set() {
 
 	let leaf =
 		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 	let roots = [Bn254Fr::rand(rng); ANCHOR_CT];
 
@@ -193,8 +193,8 @@ fn should_fail_with_invalid_leaf() {
 
 	let leaf =
 		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
 	let leaves = vec![Bn254Fr::rand(rng)];
 	let index = 0;
 
@@ -244,9 +244,9 @@ fn should_fail_with_invalid_nullifier_hash() {
 
 	let leaf =
 		AnchorR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, chain_id_u64, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 
 	let nullifier_hash = Bn254Fr::rand(rng);
 	let index = 0;
@@ -310,7 +310,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 
 	// setup chain id for first anchor
 	let chain_id_u64_first_anchor = 1u64;
-	let chain_id_first_anchor = Bn254Fr::from(chain_id_u64_first_anchor);
+	let _chain_id_first_anchor = Bn254Fr::from(chain_id_u64_first_anchor);
 
 	// setup chain id for second anchor
 	let chain_id_u64_second_anchor = 2u64;
@@ -325,10 +325,10 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 		rng,
 	)
 	.unwrap();
-	let secret_first_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.secret_bytes);
+	let secret_first_anchor = Bn254Fr::from_be_bytes_mod_order(&leaf_first_anchor.secret_bytes);
 	let nullifier_first_anchor =
-		Bn254Fr::from_le_bytes_mod_order(&leaf_first_anchor.nullifier_bytes);
-	let leaves_first_anchor = vec![Bn254Fr::from_le_bytes_mod_order(
+		Bn254Fr::from_be_bytes_mod_order(&leaf_first_anchor.nullifier_bytes);
+	let leaves_first_anchor = vec![Bn254Fr::from_be_bytes_mod_order(
 		&leaf_first_anchor.leaf_bytes,
 	)];
 
@@ -339,10 +339,10 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 		rng,
 	)
 	.unwrap();
-	let secret_second_anchor = Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.secret_bytes);
+	let _secret_second_anchor = Bn254Fr::from_be_bytes_mod_order(&leaf_second_anchor.secret_bytes);
 	let nullifier_second_anchor =
-		Bn254Fr::from_le_bytes_mod_order(&leaf_second_anchor.nullifier_bytes);
-	let leaves_second_anchor = vec![Bn254Fr::from_le_bytes_mod_order(
+		Bn254Fr::from_be_bytes_mod_order(&leaf_second_anchor.nullifier_bytes);
+	let leaves_second_anchor = vec![Bn254Fr::from_be_bytes_mod_order(
 		&leaf_second_anchor.leaf_bytes,
 	)];
 
@@ -352,7 +352,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 		.unwrap();
 
 	// nullifier hash for second anchor
-	let nullifier_hash_second_anchor = tree_hasher
+	let _nullifier_hash_second_anchor = tree_hasher
 		.hash_two(&nullifier_second_anchor, &nullifier_second_anchor)
 		.unwrap();
 
@@ -370,7 +370,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 		.unwrap();
 
 	// tree for second anchor
-	let (tree_second_anchor, path_second_anchor) =
+	let (tree_second_anchor, _path_second_anchor) =
 		setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, HEIGHT>(
 			&tree_hasher,
 			&leaves_second_anchor,
@@ -405,7 +405,7 @@ fn setup_and_prove_2_anchors_using_zk_proof() {
 	arbitrary_data_bytes.extend(refund.encode());
 	arbitrary_data_bytes.extend(&commitment);
 	let arbitrary_data = keccak_256(&arbitrary_data_bytes);
-	let arbitrary_input = Bn254Fr::from_le_bytes_mod_order(&arbitrary_data);
+	let arbitrary_input = Bn254Fr::from_be_bytes_mod_order(&arbitrary_data);
 
 	// create a circuit for the second anchor
 	// using the leaf secret values of the deposit in the first anchor

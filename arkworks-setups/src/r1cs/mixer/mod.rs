@@ -81,13 +81,13 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		let arbitrary_input = E::Fr::rand(rng);
 		// Generate the leaf
 		let leaf = Self::create_random_leaf(curve, rng)?;
-		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
+		let leaf_value = E::Fr::from_be_bytes_mod_order(&leaf.leaf_bytes);
 
-		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-		let nullifier = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+		let secret = E::Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+		let nullifier = E::Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
 
-		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
-		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+		let nullifier_hash = E::Fr::from_be_bytes_mod_order(&leaf.nullifier_hash_bytes);
+		let leaves = vec![E::Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
 			&poseidon,
 			&leaves,
@@ -179,11 +179,11 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		),
 		Error,
 	> {
-		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
-		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
+		let secret_f = E::Fr::from_be_bytes_mod_order(&secret);
+		let nullifier_f = E::Fr::from_be_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<E::Fr> = leaves
 			.iter()
-			.map(|x| E::Fr::from_le_bytes_mod_order(x))
+			.map(|x| E::Fr::from_be_bytes_mod_order(x))
 			.collect();
 
 		let mut arbitrary_data_bytes = Vec::new();
@@ -193,7 +193,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		arbitrary_data_bytes.extend(fee.encode());
 		arbitrary_data_bytes.extend(refund.encode());
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
-		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
+		let arbitrary_input = E::Fr::from_be_bytes_mod_order(&arbitrary_data);
 
 		let (mc, leaf, nullifier_hash, root, public_inputs) = Self::setup_circuit_with_privates(
 			curve,
@@ -205,12 +205,12 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 			default_leaf,
 		)?;
 
-		let leaf_raw = leaf.into_repr().to_bytes_le();
-		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_le();
-		let root_raw = root.into_repr().to_bytes_le();
+		let leaf_raw = leaf.into_repr().to_bytes_be();
+		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_be();
+		let root_raw = root.into_repr().to_bytes_be();
 		let public_inputs_raw: Vec<Vec<u8>> = public_inputs
 			.iter()
-			.map(|x| x.into_repr().to_bytes_le())
+			.map(|x| x.into_repr().to_bytes_be())
 			.collect();
 
 		Ok((
@@ -255,8 +255,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		secret: Vec<u8>,
 		nullifier: Vec<u8>,
 	) -> Result<Leaf, Error> {
-		let secret_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&secret);
-		let nullifier_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&nullifier);
+		let secret_field_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&secret);
+		let nullifier_field_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&nullifier);
 
 		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
@@ -265,10 +265,10 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 			poseidon.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(Leaf {
 			chain_id_bytes: None,
-			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
-			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
-			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
-			nullifier_hash_bytes: nullifier_hash_field_element.into_repr().to_bytes_le(),
+			secret_bytes: secret_field_elt.into_repr().to_bytes_be(),
+			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_be(),
+			leaf_bytes: leaf_field_element.into_repr().to_bytes_be(),
+			nullifier_hash_bytes: nullifier_hash_field_element.into_repr().to_bytes_be(),
 		})
 	}
 
@@ -289,11 +289,11 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3.clone());
 		// Get field element version of all the data
-		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
-		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
+		let secret_f = E::Fr::from_be_bytes_mod_order(&secret);
+		let nullifier_f = E::Fr::from_be_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<E::Fr> = leaves
 			.iter()
-			.map(|x| E::Fr::from_le_bytes_mod_order(x))
+			.map(|x| E::Fr::from_be_bytes_mod_order(x))
 			.collect();
 
 		let mut arbitrary_data_bytes = Vec::new();
@@ -303,7 +303,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		arbitrary_data_bytes.extend(fee.encode());
 		arbitrary_data_bytes.extend(refund.encode());
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
-		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
+		let arbitrary_input = E::Fr::from_be_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
 		let Leaf {
 			leaf_bytes,
@@ -319,7 +319,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		)?;
 		let root = tree.root();
 
-		let nullifier_hash_f = E::Fr::from_le_bytes_mod_order(&nullifier_hash_bytes);
+		let nullifier_hash_f = E::Fr::from_be_bytes_mod_order(&nullifier_hash_bytes);
 		let mc = MixerCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT>::new(
 			arbitrary_input,
 			secret_f,
@@ -333,10 +333,10 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 
 		let leaf_raw = leaf_bytes;
 		let nullifier_hash_raw = nullifier_hash_bytes;
-		let root_raw = root.into_repr().to_bytes_le();
+		let root_raw = root.into_repr().to_bytes_be();
 		let public_inputs_raw: Vec<Vec<u8>> = public_inputs
 			.iter()
-			.map(|x| x.into_repr().to_bytes_le())
+			.map(|x| x.into_repr().to_bytes_be())
 			.collect();
 
 		let proof = prove_unchecked::<E, _, _>(mc, &pk, rng)?;
@@ -358,8 +358,8 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerProver<E, HEIGHT> for MixerR1CS
 		let nullifier = E::Fr::rand(rng);
 		Self::create_leaf_with_privates(
 			curve,
-			secret.into_repr().to_bytes_le(),
-			nullifier.into_repr().to_bytes_le(),
+			secret.into_repr().to_bytes_be(),
+			nullifier.into_repr().to_bytes_be(),
 		)
 	}
 }

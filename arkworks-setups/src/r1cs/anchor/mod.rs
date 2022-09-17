@@ -69,13 +69,13 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let chain_id_f = E::Fr::from(chain_id);
 		// Generate the leaf
 		let leaf = Self::create_random_leaf(curve, chain_id, rng)?;
-		let leaf_value = E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
+		let leaf_value = E::Fr::from_be_bytes_mod_order(&leaf.leaf_bytes);
 
-		let secret = E::Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-		let nullifier = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
+		let secret = E::Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+		let nullifier = E::Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
 
-		let nullifier_hash = E::Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
-		let leaves = vec![E::Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+		let nullifier_hash = E::Fr::from_be_bytes_mod_order(&leaf.nullifier_hash_bytes);
+		let leaves = vec![E::Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 		let (tree, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
 			&tree_hasher,
 			&leaves,
@@ -187,11 +187,11 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		Error,
 	> {
 		let chain_id_f = E::Fr::from(chain_id);
-		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
-		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
+		let secret_f = E::Fr::from_be_bytes_mod_order(&secret);
+		let nullifier_f = E::Fr::from_be_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<E::Fr> = leaves
 			.iter()
-			.map(|x| E::Fr::from_le_bytes_mod_order(x))
+			.map(|x| E::Fr::from_be_bytes_mod_order(x))
 			.collect();
 
 		let mut arbitrary_data_bytes = Vec::new();
@@ -201,10 +201,10 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		arbitrary_data_bytes.extend(refund.encode());
 		arbitrary_data_bytes.extend(&commitment);
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
-		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
+		let arbitrary_input = E::Fr::from_be_bytes_mod_order(&arbitrary_data);
 		let roots_set: [E::Fr; ANCHOR_CT] = roots
 			.iter()
-			.map(|x| E::Fr::from_le_bytes_mod_order(x))
+			.map(|x| E::Fr::from_be_bytes_mod_order(x))
 			.collect::<Vec<E::Fr>>()
 			.try_into()
 			.unwrap_or([E::Fr::zero(); ANCHOR_CT]);
@@ -221,12 +221,12 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			default_leaf,
 		)?;
 
-		let leaf_raw = leaf.into_repr().to_bytes_le();
-		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_le();
-		let roots_raw = roots.iter().map(|v| v.into_repr().to_bytes_le()).collect();
+		let leaf_raw = leaf.into_repr().to_bytes_be();
+		let nullifier_hash_raw = nullifier_hash.into_repr().to_bytes_be();
+		let roots_raw = roots.iter().map(|v| v.into_repr().to_bytes_be()).collect();
 		let public_inputs_raw: Vec<Vec<u8>> = public_inputs
 			.iter()
-			.map(|x| x.into_repr().to_bytes_le())
+			.map(|x| x.into_repr().to_bytes_be())
 			.collect();
 
 		Ok((
@@ -285,8 +285,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 
-		let secret_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&secret);
-		let nullifier_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&nullifier);
+		let secret_field_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&secret);
+		let nullifier_field_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&nullifier);
 		let chain_id_elt = E::Fr::from(chain_id);
 		let leaf_field_element =
 			leaf_hasher.hash(&[chain_id_elt, nullifier_field_elt, secret_field_elt])?;
@@ -294,10 +294,10 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			tree_hasher.hash_two(&nullifier_field_elt, &nullifier_field_elt)?;
 		Ok(Leaf {
 			chain_id_bytes: Some(chain_id.to_be_bytes().to_vec()),
-			secret_bytes: secret_field_elt.into_repr().to_bytes_le(),
-			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_le(),
-			leaf_bytes: leaf_field_element.into_repr().to_bytes_le(),
-			nullifier_hash_bytes: nullifier_hash_field_element.into_repr().to_bytes_le(),
+			secret_bytes: secret_field_elt.into_repr().to_bytes_be(),
+			nullifier_bytes: nullifier_field_elt.into_repr().to_bytes_be(),
+			leaf_bytes: leaf_field_element.into_repr().to_bytes_be(),
+			nullifier_hash_bytes: nullifier_hash_field_element.into_repr().to_bytes_be(),
 		})
 	}
 
@@ -324,13 +324,13 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 		// Get field element version of all the data
-		let secret_f = E::Fr::from_le_bytes_mod_order(&secret);
-		let nullifier_f = E::Fr::from_le_bytes_mod_order(&nullifier);
+		let secret_f = E::Fr::from_be_bytes_mod_order(&secret);
+		let nullifier_f = E::Fr::from_be_bytes_mod_order(&nullifier);
 		let leaves_f: Vec<E::Fr> = leaves
 			.iter()
-			.map(|x| E::Fr::from_le_bytes_mod_order(x))
+			.map(|x| E::Fr::from_be_bytes_mod_order(x))
 			.collect();
-		let root_set_f: [E::Fr; ANCHOR_CT] = root_set.map(|x| E::Fr::from_le_bytes_mod_order(&x));
+		let root_set_f: [E::Fr; ANCHOR_CT] = root_set.map(|x| E::Fr::from_be_bytes_mod_order(&x));
 		// Create the arbitrary input data
 		let mut arbitrary_data_bytes = Vec::new();
 		arbitrary_data_bytes.extend(&recipient);
@@ -340,7 +340,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		arbitrary_data_bytes.extend(refund.encode());
 		arbitrary_data_bytes.extend(&commitment);
 		let arbitrary_data = keccak_256(&arbitrary_data_bytes);
-		let arbitrary_input = E::Fr::from_le_bytes_mod_order(&arbitrary_data);
+		let arbitrary_input = E::Fr::from_be_bytes_mod_order(&arbitrary_data);
 		// Generate the leaf
 		let Leaf {
 			leaf_bytes,
@@ -356,7 +356,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		)?;
 
 		let chain_id_f = E::Fr::from(chain_id);
-		let nullifier_hash_f = E::Fr::from_le_bytes_mod_order(&nullifier_hash_bytes);
+		let nullifier_hash_f = E::Fr::from_be_bytes_mod_order(&nullifier_hash_bytes);
 		let mc = AnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, ANCHOR_CT>::new(
 			arbitrary_input,
 			secret_f,
@@ -379,11 +379,11 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let nullifier_hash_raw = nullifier_hash_bytes;
 		let roots_raw = root_set_f
 			.iter()
-			.map(|v| v.into_repr().to_bytes_le())
+			.map(|v| v.into_repr().to_bytes_be())
 			.collect();
 		let public_inputs_raw: Vec<Vec<u8>> = public_inputs
 			.iter()
-			.map(|x| x.into_repr().to_bytes_le())
+			.map(|x| x.into_repr().to_bytes_be())
 			.collect();
 
 		let proof = prove_unchecked::<E, _, _>(mc, &pk, rng)?;
@@ -407,8 +407,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		Self::create_leaf_with_privates(
 			curve,
 			chain_id,
-			secret.into_repr().to_bytes_le(),
-			nullifier.into_repr().to_bytes_le(),
+			secret.into_repr().to_bytes_be(),
+			nullifier.into_repr().to_bytes_be(),
 		)
 	}
 }

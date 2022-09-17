@@ -47,9 +47,9 @@ fn setup_and_prove_mixer_groth16_2() {
 	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 	let (circuit, .., public_inputs) =
 		MixerR1CSProver_Bn254_Poseidon_30::setup_circuit_with_privates(
@@ -84,9 +84,9 @@ fn should_fail_with_invalid_public_inputs() {
 	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 	let index = 0;
 	let (circuit, .., public_inputs) =
 		MixerR1CSProver_Bn254_Poseidon_30::setup_circuit_with_privates(
@@ -119,10 +119,10 @@ fn should_fail_with_invalid_root() {
 	let arbitrary_input = Bn254Fr::rand(rng);
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let nullifier_hash = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_hash_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 
 	let bad_root = Bn254Fr::rand(rng);
 
@@ -161,10 +161,10 @@ fn should_fail_with_invalid_leaf() {
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
-	let leaves = vec![Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes)];
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let nullifier_hash = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_hash_bytes);
+	let leaves = vec![Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes)];
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
 	let (tree, _) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, LEN>(
@@ -212,9 +212,9 @@ fn should_fail_with_invalid_leaf_2() {
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
 
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
-	let nullifier = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_bytes);
-	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
+	let nullifier = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_bytes);
+	let nullifier_hash = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_hash_bytes);
 	let invalid_leaf_value = Bn254Fr::rand(rng);
 
 	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, LEN>(
@@ -259,10 +259,10 @@ fn should_fail_with_invalid_nullifier() {
 	let hasher = Poseidon::<Bn254Fr> { params: params3 };
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
-	let secret = Bn254Fr::from_le_bytes_mod_order(&leaf.secret_bytes);
+	let secret = Bn254Fr::from_be_bytes_mod_order(&leaf.secret_bytes);
 	let nullifier = Bn254Fr::rand(rng);
-	let nullifier_hash = Bn254Fr::from_le_bytes_mod_order(&leaf.nullifier_hash_bytes);
-	let leaf_value = Bn254Fr::from_le_bytes_mod_order(&leaf.leaf_bytes);
+	let nullifier_hash = Bn254Fr::from_be_bytes_mod_order(&leaf.nullifier_hash_bytes);
+	let leaf_value = Bn254Fr::from_be_bytes_mod_order(&leaf.leaf_bytes);
 
 	// Invalid nullifier
 	let (tree, path) = setup_tree_and_create_path::<Bn254Fr, Poseidon<Bn254Fr>, LEN>(
@@ -306,8 +306,8 @@ fn setup_and_prove_mixer_raw_inputs() {
 	let fee = 0;
 	let refund = 0;
 
-	let recipient_raw = recipient.into_repr().to_bytes_le();
-	let relayer_raw = relayer.into_repr().to_bytes_le();
+	let recipient_raw = recipient.into_repr().to_bytes_be();
+	let relayer_raw = relayer.into_repr().to_bytes_be();
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
 	let index = 0;
@@ -330,7 +330,7 @@ fn setup_and_prove_mixer_raw_inputs() {
 
 	let public_inputs: Vec<Bn254Fr> = public_inputs_raw
 		.iter()
-		.map(|x| Bn254Fr::from_le_bytes_mod_order(x))
+		.map(|x| Bn254Fr::from_be_bytes_mod_order(x))
 		.collect();
 
 	let (pk, vk) = setup_keys::<Bn254, _, _>(circuit.clone(), rng).unwrap();
@@ -360,8 +360,8 @@ fn setup_and_prove_mixer_raw_inputs_unchecked() {
 	let fee = 0;
 	let refund = 0;
 
-	let recipient_raw = recipient.into_repr().to_bytes_le();
-	let relayer_raw = relayer.into_repr().to_bytes_le();
+	let recipient_raw = recipient.into_repr().to_bytes_be();
+	let relayer_raw = relayer.into_repr().to_bytes_be();
 
 	let leaf = MixerR1CSProver_Bn254_Poseidon_30::create_random_leaf(curve, rng).unwrap();
 	let leaves_raw = vec![leaf.leaf_bytes];

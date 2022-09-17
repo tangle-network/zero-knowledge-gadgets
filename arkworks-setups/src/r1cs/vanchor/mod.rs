@@ -110,8 +110,8 @@ where
 			chain_id,
 			amount,
 			Some(index),
-			secret_key.into_repr().to_bytes_le(),
-			blinding.into_repr().to_bytes_le(),
+			secret_key.into_repr().to_bytes_be(),
+			blinding.into_repr().to_bytes_be(),
 		)?;
 		let in_utxos: [Utxo<E::Fr>; INS] = [0; INS].map(|_| in_utxo.clone());
 
@@ -120,8 +120,8 @@ where
 			chain_id,
 			amount,
 			None,
-			secret_key.into_repr().to_bytes_le(),
-			blinding.into_repr().to_bytes_le(),
+			secret_key.into_repr().to_bytes_be(),
+			blinding.into_repr().to_bytes_be(),
 		)?;
 		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
 
@@ -290,8 +290,8 @@ where
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 
-		let private_key_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&private_key);
-		let blinding_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&blinding);
+		let private_key_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&private_key);
+		let blinding_field_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&blinding);
 		let amount_elt = E::Fr::from(amount);
 		let utxo = Utxo::new_with_privates(
 			chain_id,
@@ -336,7 +336,7 @@ where
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public_amount_elt = E::Fr::from(public_amount);
 		// TODO: pass the raw ext data, and hash them inside this function with keccak
-		let ext_data_hash_elt = E::Fr::from_le_bytes_mod_order(&ext_data_hash);
+		let ext_data_hash_elt = E::Fr::from_be_bytes_mod_order(&ext_data_hash);
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
 
@@ -379,7 +379,7 @@ where
 					let leaves = in_leaves.get(&chain_id_of_utxo).unwrap();
 					let leaves_f = leaves
 						.iter()
-						.map(|l| E::Fr::from_le_bytes_mod_order(&l))
+						.map(|l| E::Fr::from_be_bytes_mod_order(&l))
 						.collect::<Vec<E::Fr>>();
 					match setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
 						&tree_hasher,
@@ -407,7 +407,7 @@ where
 			in_paths,
 			public_root_set
 				.clone()
-				.map(|elt| E::Fr::from_le_bytes_mod_order(&elt)),
+				.map(|elt| E::Fr::from_be_bytes_mod_order(&elt)),
 			out_utxos.clone(),
 			keypair_hasher,
 			tree_hasher,
@@ -429,6 +429,7 @@ where
 
 			let cs = ConstraintSystem::new_ref();
 			circuit.clone().generate_constraints(cs.clone()).unwrap();
+			println!("Number of constraints: {}", cs.num_constraints());
 			let is_satisfied = cs.is_satisfied().unwrap();
 			if !is_satisfied {
 				println!("{:?}", cs.which_is_unsatisfied());
@@ -441,7 +442,7 @@ where
 			chain_id_elt,
 			public_amount_elt,
 			public_root_set
-				.map(|elt| E::Fr::from_le_bytes_mod_order(&elt))
+				.map(|elt| E::Fr::from_be_bytes_mod_order(&elt))
 				.to_vec(),
 			in_utxos.map(|utxo| utxo.get_nullifier().unwrap()).to_vec(),
 			out_utxos.map(|utxo| utxo.commitment).to_vec(),
@@ -450,7 +451,7 @@ where
 
 		let public_inputs_raw = public_inputs
 			.iter()
-			.map(|inp| inp.into_repr().to_bytes_le())
+			.map(|inp| inp.into_repr().to_bytes_be())
 			.collect();
 
 		Ok(VAnchorProof {

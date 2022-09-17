@@ -55,7 +55,7 @@ fn should_create_proof_for_random_circuit() {
 		curve,
 		in_chain_id,
 		in_amount,
-		Some(0),
+		Some(index),
 		rng,
 	)
 	.unwrap();
@@ -103,20 +103,20 @@ fn should_create_proof_for_random_circuit() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -131,7 +131,7 @@ fn should_create_proof_for_random_circuit() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -218,20 +218,20 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -246,7 +246,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
@@ -327,20 +327,20 @@ fn should_fail_with_invalid_root() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -355,7 +355,7 @@ fn should_fail_with_invalid_root() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
@@ -440,20 +440,20 @@ fn should_fail_with_invalid_nullifier() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -468,7 +468,7 @@ fn should_fail_with_invalid_nullifier() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -542,20 +542,20 @@ fn should_fail_with_same_nullifier() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf0.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf0.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 0];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -570,7 +570,7 @@ fn should_fail_with_same_nullifier() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -651,20 +651,20 @@ fn should_fail_with_inconsistent_input_output_values() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -679,7 +679,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -769,20 +769,20 @@ fn should_fail_with_big_amount() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -797,7 +797,7 @@ fn should_fail_with_big_amount() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -885,20 +885,20 @@ fn should_fail_with_invalid_public_input() {
 
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, vec![
-		leaf0.into_repr().to_bytes_le(),
-		leaf1.into_repr().to_bytes_le(),
+		leaf0.into_repr().to_bytes_be(),
+		leaf1.into_repr().to_bytes_be(),
 	]);
 	let in_indices = [0, 1];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -913,7 +913,7 @@ fn should_fail_with_invalid_public_input() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 
 	let truncated_public_inputs = &pub_ins[2..];
@@ -997,15 +997,15 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let in_leaves = BTreeMap::new();
 	let in_indices = [0, 0];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -1020,7 +1020,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -1107,7 +1107,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 	let mut in_leaves = BTreeMap::new();
 	let leaves_bytes = leaves
 		.iter()
-		.map(|f| f.into_repr().to_bytes_le())
+		.map(|f| f.into_repr().to_bytes_be())
 		.collect::<Vec<_>>();
 	in_leaves.insert(in_chain_id, leaves_bytes);
 	let in_indices = in_utxos_list
@@ -1116,15 +1116,15 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 		.map(|(index, _)| index as u64)
 		.collect::<Vec<u64>>();
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 	let in_indices = in_indices.try_into().unwrap();
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -1139,7 +1139,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -1221,15 +1221,15 @@ fn should_create_circuit_and_prove_with_16_default_utxos() {
 	let in_leaves = BTreeMap::new();
 	let in_indices = [0; 16];
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -1244,7 +1244,7 @@ fn should_create_circuit_and_prove_with_16_default_utxos() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
@@ -1346,7 +1346,7 @@ fn should_create_circuit_and_prove_with_16_mixed_utxos() {
 	.unwrap();
 	let leaves_bytes = leaves
 		.iter()
-		.map(|f| f.into_repr().to_bytes_le())
+		.map(|f| f.into_repr().to_bytes_be())
 		.collect::<Vec<_>>();
 	let mut in_leaves = BTreeMap::new();
 	in_leaves.insert(in_chain_id, leaves_bytes);
@@ -1358,15 +1358,15 @@ fn should_create_circuit_and_prove_with_16_mixed_utxos() {
 		.try_into()
 		.unwrap();
 	let in_root_set = [
-		smt.root().into_repr().to_bytes_le(),
-		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_be(),
+		smt.root().into_repr().to_bytes_be(),
 	];
 
 	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
-		ext_data_hash.into_repr().to_bytes_le(),
+		ext_data_hash.into_repr().to_bytes_be(),
 		in_root_set,
 		in_indices,
 		in_leaves,
@@ -1381,7 +1381,7 @@ fn should_create_circuit_and_prove_with_16_mixed_utxos() {
 	let pub_ins = proof
 		.public_inputs_raw
 		.iter()
-		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.map(|inp| BnFr::from_be_bytes_mod_order(inp.as_slice()))
 		.collect::<Vec<_>>();
 	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
 
