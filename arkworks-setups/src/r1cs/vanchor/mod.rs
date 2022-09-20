@@ -193,14 +193,14 @@ where
 			.collect::<Vec<E::Fr>>();
 		let in_private_keys = in_utxos
 			.iter()
-			.map(|x| x.keypair.secret_key.clone())
+			.map(|x| x.keypair.secret_key.unwrap().clone())
 			.collect::<Vec<E::Fr>>();
 		let in_nullifiers: Result<Vec<E::Fr>, Error> =
 			in_utxos.iter().map(|x| x.get_nullifier()).collect();
 
 		let out_pub_keys: Result<Vec<E::Fr>, _> = out_utxos
 			.iter()
-			.map(|x| x.keypair.public_key(&keypair_hasher))
+			.map(|x| x.keypair.public_key())
 			.collect();
 		let out_commitments = out_utxos
 			.iter()

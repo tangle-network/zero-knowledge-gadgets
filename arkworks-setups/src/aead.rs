@@ -39,7 +39,7 @@ impl Decode for EncryptedData {
 
 		// Getting the length of the remaining data
 		let remaining_len: usize = input.remaining_len()?.unwrap_or(0usize);
-		let mut cypher_text_data = vec![0u8; remaining_len];
+		let mut cypher_text_data = ark_std::vec![0u8; remaining_len];
 
 		// Use the remaining data as cypher text
 		input.read(&mut cypher_text_data)?;
@@ -61,7 +61,7 @@ impl Encode for EncryptedData {
 		const PUB_KEY_LEN: usize = core::mem::size_of::<PublicKey>();
 
 		// Initialize return array
-		let mut ret = vec![0u8; self.encoded_size()];
+		let mut ret = ark_std::vec![0u8; self.encoded_size()];
 
 		// Populate it with data
 		ret[0..NONCE_LEN].copy_from_slice(&self.nonce.as_slice());

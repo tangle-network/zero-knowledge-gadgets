@@ -52,9 +52,9 @@ impl<F: PrimeField> Utxo<F> {
 		let blinding = blinding.unwrap_or(F::rand(rng));
 
 		let private_key = private_key.unwrap_or(F::rand(rng));
-		let keypair = Keypair::new(private_key);
+		let keypair = Keypair::new(private_key, hasher2);
 
-		let pub_key = keypair.public_key(hasher2)?;
+		let pub_key = keypair.public_key()?;
 
 		let leaf = hasher5.hash(&[chain_id, amount, pub_key, blinding])?;
 
@@ -93,9 +93,9 @@ impl<F: PrimeField> Utxo<F> {
 		hasher5: &Poseidon<F>,
 	) -> Result<Self, Error> {
 		let chain_id = F::from(chain_id_raw);
-		let keypair = Keypair::new(private_key);
+		let keypair = Keypair::new(private_key, hasher2);
 
-		let pub_key = keypair.public_key(hasher2)?;
+		let pub_key = keypair.public_key()?;
 		let leaf = hasher5.hash(&[chain_id, amount, pub_key, blinding])?;
 
 		let nullifier = if index.is_some() {
@@ -122,6 +122,31 @@ impl<F: PrimeField> Utxo<F> {
 		})
 	}
 
+	pub fn new_with_public(
+		chain_id_raw: u64,
+		amount: F,
+		index: Option<u64>,
+		public_key: F,
+		blinding: F,
+		hasher5: &Poseidon<F>,
+	) -> Result<Self, Error> {
+		let chain_id = F::from(chain_id_raw);
+		let keypair = Keypair::new_from_public_key(public_key);
+
+		let commitment = hasher5.hash(&[chain_id, amount, public_key, blinding])?;
+
+		Ok(Self {
+			chain_id_raw,
+			chain_id,
+			amount,
+			keypair,
+			blinding,
+			index,
+			nullifier: None,
+			commitment,
+		})
+	}
+
 	pub fn set_index(&mut self, index: u64, hasher4: &Poseidon<F>) -> Result<(), Error> {
 		let i = F::from(index);
 
@@ -132,6 +157,11 @@ impl<F: PrimeField> Utxo<F> {
 		self.index = Some(index);
 		self.nullifier = Some(nullifier);
 
+		Ok(())
+	}
+
+	pub fn set_keypair(&mut self, keypair: Keypair<F, Poseidon<F>>) -> Result<(), Error> {
+		self.keypair = keypair;
 		Ok(())
 	}
 
