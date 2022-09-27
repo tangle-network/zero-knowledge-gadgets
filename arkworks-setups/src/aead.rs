@@ -189,9 +189,13 @@ mod test {
 	#[test]
 	fn should_encrypt_decrypt() {
 		let rng = &mut test_rng();
-
+		let curve = Curve::Bn254;
+		// create the hasher which is used for deriving the public key from the private
+		// key
+		let params2 = setup_params(curve, 5, 2);
+		let hasher2 = Poseidon::<Fr>::new(params2.clone());
 		let private_key = Fr::rand(rng);
-		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone());
+		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone(), &hasher2);
 
 		let msg = vec![1, 2, 3];
 		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
@@ -203,9 +207,13 @@ mod test {
 	#[test]
 	fn should_encode_decode_encrypted_data() {
 		let rng = &mut test_rng();
-
+		let curve = Curve::Bn254;
+		// create the hasher which is used for deriving the public key from the private
+		// key
+		let params2 = setup_params(curve, 5, 2);
+		let hasher2 = Poseidon::<Fr>::new(params2.clone());
 		let private_key = Fr::rand(rng);
-		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone());
+		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone(), &hasher2);
 
 		let msg = vec![1, 2, 3];
 		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
