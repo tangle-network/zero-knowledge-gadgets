@@ -118,7 +118,7 @@ pub trait VAnchorProver<
 	) -> Result<Utxo<E::Fr>, Error> {
 		Self::create_random_utxo(curve, chain_id, amount, index, rng)
 	}
-	/// For creating UTXO from all the secrets already generated
+	/// For creating UTXO from with secrets already generated
 	fn create_utxo(
 		curve: Curve,
 		chain_id: u64,
@@ -127,13 +127,22 @@ pub trait VAnchorProver<
 		private_key: Vec<u8>,
 		blinding: Vec<u8>,
 	) -> Result<Utxo<E::Fr>, Error>;
-	/// For creating UTXO from all the secrets already generated
+	/// For creating UTXO and generating secrets
 	fn create_random_utxo<R: RngCore + CryptoRng>(
 		curve: Curve,
 		chain_id: u64,
 		amount: u128,
 		index: Option<u64>,
 		rng: &mut R,
+	) -> Result<Utxo<E::Fr>, Error>;
+	/// For creating UTXO without private key
+	fn create_public_utxo(
+		curve: Curve,
+		chain_id: u64,
+		amount: u128,
+		blinding: Vec<u8>,
+		public_key: Vec<u8>,
+		index: Option<u64>,
 	) -> Result<Utxo<E::Fr>, Error>;
 	/// For making proofs
 	fn create_proof<R: RngCore + CryptoRng>(

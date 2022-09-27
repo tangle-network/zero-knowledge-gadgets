@@ -61,11 +61,6 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 		}
 	}
 
-	pub fn public_key(&self) -> Result<F, Error> {
-		let res = self.public_key;
-		Ok(res)
-	}
-
 	// Computes the signature = hash(secret_key, commitment, pathIndices)
 	// If the secret_key is not configured on this Keypair, return an error
 	pub fn signature(&self, commitment: &F, index: &F, hasher4: &H) -> Result<F, Error> {
@@ -110,7 +105,7 @@ mod test {
 		let pubkey = hasher.hash(&[private_key]).unwrap();
 
 		let keypair = Keypair::<Fq, Poseidon<Fq>>::new(private_key.clone(), &hasher);
-		let new_pubkey = keypair.public_key().unwrap();
+		let new_pubkey = keypair.public_key;
 
 		assert_eq!(new_pubkey, pubkey)
 	}

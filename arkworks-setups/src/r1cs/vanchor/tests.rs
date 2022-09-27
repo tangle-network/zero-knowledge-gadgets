@@ -164,7 +164,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	)
 	.unwrap();
 	// Setting the index after the fact to test the function
-	in_utxo1.set_index(0, &nullifier_hasher).unwrap();
+	in_utxo1.set_index(0);
 
 	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
@@ -175,7 +175,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	)
 	.unwrap();
 	// Setting the index after the fact to test the function
-	in_utxo2.set_index(1, &nullifier_hasher).unwrap();
+	in_utxo2.set_index(1);
 
 	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
@@ -831,7 +831,7 @@ fn should_fail_with_invalid_public_input() {
 	)
 	.unwrap();
 	// Setting the index after the fact to test the function
-	in_utxo1.set_index(index, &nullifier_hasher).unwrap();
+	in_utxo1.set_index(index);
 
 	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
 		curve,
@@ -842,7 +842,7 @@ fn should_fail_with_invalid_public_input() {
 	)
 	.unwrap();
 	// Setting the index after the fact to test the function
-	in_utxo2.set_index(index, &nullifier_hasher).unwrap();
+	in_utxo2.set_index(index);
 
 	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
