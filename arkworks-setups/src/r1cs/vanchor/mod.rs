@@ -93,6 +93,16 @@ where
 		default_leaf: [u8; 32],
 		rng: &mut R,
 	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
+		// Initialize hashers
+		let params2 = setup_params::<E::Fr>(curve, 5, 2);
+		let params3 = setup_params::<E::Fr>(curve, 5, 3);
+		let params4 = setup_params::<E::Fr>(curve, 5, 4);
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
+		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
+		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
+		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
+		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
+
 		let public_amount = E::Fr::rand(rng);
 		let ext_data_hash = E::Fr::rand(rng);
 		let in_root_set = [E::Fr::rand(rng); ANCHOR_CT];
@@ -125,15 +135,6 @@ where
 		)?;
 		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
 
-		// Initialize hashers
-		let params2 = setup_params::<E::Fr>(curve, 5, 2);
-		let params3 = setup_params::<E::Fr>(curve, 5, 3);
-		let params4 = setup_params::<E::Fr>(curve, 5, 4);
-		let params5 = setup_params::<E::Fr>(curve, 5, 5);
-		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
-		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
-		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
-		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 		// Tree + set for proving input txos
 		let in_indices_f = in_indices.map(|x| E::Fr::from(x));
 		let mut in_paths = Vec::new();
@@ -193,15 +194,17 @@ where
 			.collect::<Vec<E::Fr>>();
 		let in_private_keys = in_utxos
 			.iter()
-			.map(|x| x.keypair.secret_key.clone())
+			.map(|x| x.keypair.secret_key.unwrap().clone())
 			.collect::<Vec<E::Fr>>();
-		let in_nullifiers: Result<Vec<E::Fr>, Error> =
-			in_utxos.iter().map(|x| x.get_nullifier()).collect();
-
-		let out_pub_keys: Result<Vec<E::Fr>, _> = out_utxos
+		let in_nullifiers: Result<Vec<E::Fr>, Error> = in_utxos
 			.iter()
-			.map(|x| x.keypair.public_key(&keypair_hasher))
+			.map(|x| x.calculate_nullifier(&nullifier_hasher.clone()))
 			.collect();
+
+		let out_pub_keys = out_utxos
+			.iter()
+			.map(|x| x.keypair.public_key)
+			.collect::<Vec<E::Fr>>();
 		let out_commitments = out_utxos
 			.iter()
 			.map(|x| x.commitment)
@@ -235,7 +238,7 @@ where
 				out_amounts,
 				out_blindings,
 				out_chain_ids,
-				out_pub_keys?,
+				out_pub_keys,
 				tree_hasher,
 				keypair_hasher,
 				leaf_hasher,
@@ -332,6 +335,7 @@ where
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
+
 		// Cast as field elements
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public_amount_elt = E::Fr::from(public_amount);
@@ -347,6 +351,10 @@ where
 				return Err(Box::new(VAnchorError::InvalidInputChainId).into());
 			}
 		}
+
+		let input_nullifiers = in_utxos
+			.clone()
+			.map(|utxo| utxo.calculate_nullifier(&nullifier_hasher).unwrap());
 
 		let in_paths = in_utxos
 			.iter()
@@ -443,7 +451,7 @@ where
 			public_root_set
 				.map(|elt| E::Fr::from_le_bytes_mod_order(&elt))
 				.to_vec(),
-			in_utxos.map(|utxo| utxo.get_nullifier().unwrap()).to_vec(),
+			input_nullifiers.to_vec(),
 			out_utxos.map(|utxo| utxo.commitment).to_vec(),
 			ext_data_hash_elt,
 		);
@@ -485,6 +493,32 @@ where
 			&nullifier_hasher,
 			&leaf_hasher,
 			rng,
+		)?;
+		Ok(utxo)
+	}
+
+	fn create_public_utxo(
+		curve: Curve,
+		chain_id: u64,
+		amount: u128,
+		blinding: Vec<u8>,
+		public_key: Vec<u8>,
+		index: Option<u64>,
+	) -> Result<Utxo<<E as PairingEngine>::Fr>, Error> {
+		// Initialize hashers
+		let params5 = setup_params::<E::Fr>(curve, 5, 5);
+		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
+
+		let blinding_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&blinding);
+		let public_key_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&public_key);
+		let amount_elt = E::Fr::from(amount);
+		let utxo = Utxo::new_with_public(
+			chain_id,
+			amount_elt,
+			index,
+			public_key_elt,
+			blinding_field_elt,
+			&leaf_hasher,
 		)?;
 		Ok(utxo)
 	}
