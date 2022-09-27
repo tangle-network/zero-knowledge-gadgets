@@ -17,11 +17,16 @@ use super::{setup_params, VAnchorR1CSProver};
 
 const HEIGHT: usize = 30;
 const ANCHOR_CT: usize = 2;
-const INS: usize = 2;
+const INS_2: usize = 2;
+const INS_16: usize = 16;
 const OUTS: usize = 2;
 
 #[allow(non_camel_case_types)]
-type VAnchorR1CSProver_Bn254_Poseidon_30 = VAnchorR1CSProver<Bn254, HEIGHT, INS, OUTS, ANCHOR_CT>;
+type VAnchorR1CSProver_Bn254_Poseidon_30_2_2 =
+	VAnchorR1CSProver<Bn254, HEIGHT, ANCHOR_CT, INS_2, OUTS>;
+#[allow(non_camel_case_types)]
+type VAnchorR1CSProver_Bn254_Poseidon_30_16_2 =
+	VAnchorR1CSProver<Bn254, HEIGHT, ANCHOR_CT, INS_16, OUTS>;
 const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
 #[test]
@@ -33,7 +38,7 @@ fn should_create_proof_for_random_circuit() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -46,7 +51,7 @@ fn should_create_proof_for_random_circuit() {
 	let in_chain_id = 0u64;
 	let in_amount = 5;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -54,7 +59,7 @@ fn should_create_proof_for_random_circuit() {
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -67,7 +72,7 @@ fn should_create_proof_for_random_circuit() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -75,7 +80,7 @@ fn should_create_proof_for_random_circuit() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -107,7 +112,7 @@ fn should_create_proof_for_random_circuit() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -144,7 +149,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -155,7 +160,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	// Input Utxos
 	let in_chain_id = 0u64;
 	let in_amount = 5;
-	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -166,7 +171,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	// Setting the index after the fact to test the function
 	in_utxo1.set_index(0);
 
-	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -182,7 +187,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -190,7 +195,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -222,7 +227,7 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -258,7 +263,7 @@ fn should_fail_with_invalid_root() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -270,7 +275,7 @@ fn should_fail_with_invalid_root() {
 	let in_chain_id = 0u64;
 	let in_amount = 5;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -278,7 +283,7 @@ fn should_fail_with_invalid_root() {
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -291,7 +296,7 @@ fn should_fail_with_invalid_root() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -299,7 +304,7 @@ fn should_fail_with_invalid_root() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -331,7 +336,7 @@ fn should_fail_with_invalid_root() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -367,7 +372,7 @@ fn should_fail_with_invalid_nullifier() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -379,7 +384,7 @@ fn should_fail_with_invalid_nullifier() {
 	let in_chain_id = 0u64;
 	let in_amount = 5;
 	let index = 0u64;
-	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -387,7 +392,7 @@ fn should_fail_with_invalid_nullifier() {
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -404,7 +409,7 @@ fn should_fail_with_invalid_nullifier() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -412,7 +417,7 @@ fn should_fail_with_invalid_nullifier() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -444,7 +449,7 @@ fn should_fail_with_invalid_nullifier() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -480,7 +485,7 @@ fn should_fail_with_same_nullifier() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -492,7 +497,7 @@ fn should_fail_with_same_nullifier() {
 	let in_chain_id = 0u64;
 	let in_amount = 5;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -507,7 +512,7 @@ fn should_fail_with_same_nullifier() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -515,7 +520,7 @@ fn should_fail_with_same_nullifier() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -546,7 +551,7 @@ fn should_fail_with_same_nullifier() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -581,7 +586,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -594,7 +599,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 	// Input amount too high
 	let in_amount = 10;
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -602,7 +607,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -615,7 +620,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -623,7 +628,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -655,7 +660,7 @@ fn should_fail_with_inconsistent_input_output_values() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -690,7 +695,7 @@ fn should_fail_with_big_amount() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -708,7 +713,7 @@ fn should_fail_with_big_amount() {
 	let in_chain_id = 0u64;
 	let in_amount = BnFr::from(limit + BnFr::one());
 	let index = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::new_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -718,7 +723,7 @@ fn should_fail_with_big_amount() {
 		rng,
 	)
 	.unwrap();
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::new_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::new_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -733,7 +738,7 @@ fn should_fail_with_big_amount() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -741,7 +746,7 @@ fn should_fail_with_big_amount() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -773,7 +778,7 @@ fn should_fail_with_big_amount() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -810,7 +815,7 @@ fn should_fail_with_invalid_public_input() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -822,7 +827,7 @@ fn should_fail_with_invalid_public_input() {
 	let in_chain_id = 0u64;
 	let in_amount = 5;
 	let index = 0u64;
-	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let mut in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -833,7 +838,7 @@ fn should_fail_with_invalid_public_input() {
 	// Setting the index after the fact to test the function
 	in_utxo1.set_index(index);
 
-	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let mut in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		in_amount,
@@ -849,7 +854,7 @@ fn should_fail_with_invalid_public_input() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 10;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -857,7 +862,7 @@ fn should_fail_with_invalid_public_input() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -889,7 +894,7 @@ fn should_fail_with_invalid_public_input() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
@@ -928,7 +933,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 
 	// Set up a random circuit and make pk/vk pair
 	let random_circuit =
-		VAnchorR1CSProver_Bn254_Poseidon_30::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+		VAnchorR1CSProver_Bn254_Poseidon_30_2_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
 			.unwrap();
 	let (proving_key, verifying_key) =
 		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
@@ -939,7 +944,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	// Default input utxos
 	let amount = 0;
 	let in_chain_id = 0u64;
-	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		amount,
@@ -948,7 +953,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	)
 	.unwrap();
 
-	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let in_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		in_chain_id,
 		amount,
@@ -962,7 +967,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	// Output Utxos
 	let out_chain_id = 0u64;
 	let out_amount = 5;
-	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -970,7 +975,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 		rng,
 	)
 	.unwrap();
-	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30::create_random_utxo(
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_random_utxo(
 		curve,
 		out_chain_id,
 		out_amount,
@@ -996,7 +1001,368 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 		smt.root().into_repr().to_bytes_le(),
 	];
 
-	let proof = VAnchorR1CSProver_Bn254_Poseidon_30::create_proof(
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::create_proof(
+		curve,
+		in_chain_id,
+		public_amount,
+		ext_data_hash.into_repr().to_bytes_le(),
+		in_root_set,
+		in_indices,
+		in_leaves,
+		in_utxos,
+		out_utxos,
+		proving_key,
+		DEFAULT_LEAF,
+		rng,
+	)
+	.unwrap();
+
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
+
+	assert!(res);
+}
+
+#[test]
+fn should_create_circuit_and_prove_with_16_utxos() {
+	let rng = &mut test_rng();
+	let curve = Curve::Bn254;
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30_16_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
+	let ext_data_hash = BnFr::rand(rng);
+
+	// Default input utxos
+	let amount = 10;
+	let in_chain_id = 0u64;
+	let mut in_utxos_list: Vec<_> = vec![];
+	let mut utxo_index = 0;
+	loop {
+		if in_utxos_list.len() == 16 {
+			break;
+		}
+		let utxo = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+			curve,
+			in_chain_id,
+			amount,
+			Some(utxo_index),
+			rng,
+		)
+		.unwrap();
+		utxo_index += 1;
+		in_utxos_list.push(utxo)
+	}
+
+	let in_utxos: [_; 16] = in_utxos_list
+		.clone()
+		.try_into()
+		.map_err(|_| "".to_string())
+		.unwrap();
+
+	// Output Utxos
+	let out_chain_id = 0u64;
+	let out_amount = 85;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+
+	let leaves = in_utxos_list
+		.iter()
+		.map(|utxo| utxo.commitment)
+		.collect::<Vec<_>>();
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
+		&leaves,
+		0,
+		&DEFAULT_LEAF,
+	)
+	.unwrap();
+
+	let mut in_leaves = BTreeMap::new();
+	let leaves_bytes = leaves
+		.iter()
+		.map(|f| f.into_repr().to_bytes_le())
+		.collect::<Vec<_>>();
+	in_leaves.insert(in_chain_id, leaves_bytes);
+	let in_indices = in_utxos_list
+		.iter()
+		.enumerate()
+		.map(|(index, _)| index as u64)
+		.collect::<Vec<u64>>();
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le(),
+	];
+	let in_indices = in_indices.try_into().unwrap();
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
+		curve,
+		in_chain_id,
+		public_amount,
+		ext_data_hash.into_repr().to_bytes_le(),
+		in_root_set,
+		in_indices,
+		in_leaves,
+		in_utxos,
+		out_utxos,
+		proving_key,
+		DEFAULT_LEAF,
+		rng,
+	)
+	.unwrap();
+
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
+
+	assert!(res);
+}
+
+#[test]
+fn should_create_circuit_and_prove_with_16_default_utxos() {
+	let rng = &mut test_rng();
+	let curve = Curve::Bn254;
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30_16_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
+	let ext_data_hash = BnFr::rand(rng);
+
+	// Default input utxos
+	let amount = 0;
+	let in_chain_id = 0u64;
+	let mut in_utxos_list: Vec<_> = vec![];
+	loop {
+		if in_utxos_list.len() == 16 {
+			break;
+		}
+		let utxo = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+			curve,
+			in_chain_id,
+			amount,
+			Some(0u64),
+			rng,
+		)
+		.unwrap();
+		in_utxos_list.push(utxo)
+	}
+
+	let in_utxos: [_; 16] = in_utxos_list
+		.clone()
+		.try_into()
+		.map_err(|_| "".to_string())
+		.unwrap();
+
+	// Output Utxos
+	let out_chain_id = 0u64;
+	let out_amount = 5;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+
+	let leaf = BnFr::rand(rng);
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
+		&vec![leaf],
+		0,
+		&DEFAULT_LEAF,
+	)
+	.unwrap();
+
+	let in_leaves = BTreeMap::new();
+	let in_indices = [0; 16];
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le(),
+	];
+
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
+		curve,
+		in_chain_id,
+		public_amount,
+		ext_data_hash.into_repr().to_bytes_le(),
+		in_root_set,
+		in_indices,
+		in_leaves,
+		in_utxos,
+		out_utxos,
+		proving_key,
+		DEFAULT_LEAF,
+		rng,
+	)
+	.unwrap();
+
+	let pub_ins = proof
+		.public_inputs_raw
+		.iter()
+		.map(|inp| BnFr::from_le_bytes_mod_order(inp.as_slice()))
+		.collect::<Vec<_>>();
+	let res = verify_unchecked::<Bn254>(&pub_ins, &verifying_key, &proof.proof).unwrap();
+
+	assert!(res);
+}
+
+#[test]
+fn should_create_circuit_and_prove_with_16_mixed_utxos() {
+	// Input 8 non-default utxo with amount 20 each
+	// Input 8 different default utxos
+	// public amount 10 => 8 * 20 + 10 = 170
+	// Output 2 utxos with amount 85
+	let rng = &mut test_rng();
+	let curve = Curve::Bn254;
+	let params3 = setup_params::<BnFr>(curve, 5, 3);
+	let tree_hasher = Poseidon::<BnFr> { params: params3 };
+
+	// Set up a random circuit and make pk/vk pair
+	let random_circuit =
+		VAnchorR1CSProver_Bn254_Poseidon_30_16_2::setup_random_circuit(curve, DEFAULT_LEAF, rng)
+			.unwrap();
+	let (proving_key, verifying_key) =
+		setup_keys_unchecked::<Bn254, _, _>(random_circuit, rng).unwrap();
+
+	let public_amount = 10;
+	let ext_data_hash = BnFr::rand(rng);
+
+	// Default input utxos
+	let amount = 20;
+	let in_chain_id = 0u64;
+	let mut in_utxos_list: Vec<_> = vec![];
+	let mut utxo_index = 0;
+
+	loop {
+		if in_utxos_list.len() == 16 {
+			break;
+		}
+		let non_default_utxo = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+			curve,
+			in_chain_id,
+			amount,
+			Some(utxo_index),
+			rng,
+		)
+		.unwrap();
+		// should create a different default utxo each time to avoid Error
+		// `AssignmentMissing`
+		let default_utxo = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+			curve,
+			in_chain_id,
+			0,
+			Some(0u64),
+			rng,
+		)
+		.unwrap();
+		utxo_index += 1;
+		in_utxos_list.push(non_default_utxo);
+		in_utxos_list.push(default_utxo.clone());
+	}
+
+	let in_utxos: [_; 16] = in_utxos_list
+		.clone()
+		.try_into()
+		.map_err(|_| "".to_string())
+		.unwrap();
+
+	// Output Utxos
+	let out_chain_id = 0u64;
+	let out_amount = 85;
+	let out_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxo2 = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_random_utxo(
+		curve,
+		out_chain_id,
+		out_amount,
+		None,
+		rng,
+	)
+	.unwrap();
+	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+
+	let leaves = in_utxos_list
+		.iter()
+		.filter(|u| u.amount != BnFr::zero())
+		.map(|utxo| utxo.commitment)
+		.collect::<Vec<_>>();
+	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
+		&tree_hasher,
+		&leaves,
+		0,
+		&DEFAULT_LEAF,
+	)
+	.unwrap();
+	let leaves_bytes = leaves
+		.iter()
+		.map(|f| f.into_repr().to_bytes_le())
+		.collect::<Vec<_>>();
+	let mut in_leaves = BTreeMap::new();
+	in_leaves.insert(in_chain_id, leaves_bytes);
+
+	let in_indices = in_utxos_list
+		.iter()
+		.map(|u| u.index.unwrap_or(0))
+		.collect::<Vec<_>>()
+		.try_into()
+		.unwrap();
+	let in_root_set = [
+		smt.root().into_repr().to_bytes_le(),
+		smt.root().into_repr().to_bytes_le(),
+	];
+
+	let proof = VAnchorR1CSProver_Bn254_Poseidon_30_16_2::create_proof(
 		curve,
 		in_chain_id,
 		public_amount,
