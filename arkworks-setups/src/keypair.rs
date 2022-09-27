@@ -49,7 +49,7 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 		Self {
 			public_key,
 			secret_key,
-			_h: PhantomData
+			_h: PhantomData,
 		}
 	}
 
@@ -57,7 +57,7 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 		Self {
 			public_key,
 			secret_key: None,
-			_h: PhantomData
+			_h: PhantomData,
 		}
 	}
 
@@ -72,13 +72,8 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 impl<F: PrimeField, H: FieldHasher<F>> Clone for Keypair<F, H> {
 	fn clone(&self) -> Self {
 		match self.secret_key {
-			Some(secret) => Self::new_from_keys(
-				self.public_key.clone(),
-				Some(secret),
-			),
-			None => Self::new_from_public_key(
-				self.public_key.clone(),
-			)
+			Some(secret) => Self::new_from_keys(self.public_key.clone(), Some(secret)),
+			None => Self::new_from_public_key(self.public_key.clone()),
 		}
 	}
 }
@@ -115,7 +110,8 @@ mod test {
 		let index = Fq::zero();
 		let private_key = Fq::rand(rng);
 		let curve = Curve::Bn254;
-		// create the hasher which is used for deriving the public key from the private key
+		// create the hasher which is used for deriving the public key from the private
+		// key
 		let params2 = setup_params(curve, 5, 2);
 		let hasher2 = Poseidon::<Fq>::new(params2.clone());
 

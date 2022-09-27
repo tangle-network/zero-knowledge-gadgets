@@ -196,8 +196,10 @@ where
 			.iter()
 			.map(|x| x.keypair.secret_key.unwrap().clone())
 			.collect::<Vec<E::Fr>>();
-		let in_nullifiers: Result<Vec<E::Fr>, Error> =
-			in_utxos.iter().map(|x| x.calculate_nullifier(&nullifier_hasher.clone())).collect();
+		let in_nullifiers: Result<Vec<E::Fr>, Error> = in_utxos
+			.iter()
+			.map(|x| x.calculate_nullifier(&nullifier_hasher.clone()))
+			.collect();
 
 		let out_pub_keys = out_utxos
 			.iter()
@@ -350,7 +352,9 @@ where
 			}
 		}
 
-		let input_nullifiers = in_utxos.clone().map(|utxo| utxo.calculate_nullifier(&nullifier_hasher).unwrap());
+		let input_nullifiers = in_utxos
+			.clone()
+			.map(|utxo| utxo.calculate_nullifier(&nullifier_hasher).unwrap());
 
 		let in_paths = in_utxos
 			.iter()
@@ -492,7 +496,7 @@ where
 		)?;
 		Ok(utxo)
 	}
-	
+
 	fn create_public_utxo(
 		curve: Curve,
 		chain_id: u64,

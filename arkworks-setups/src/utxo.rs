@@ -74,7 +74,7 @@ impl<F: PrimeField> Utxo<F> {
 			keypair,
 			blinding,
 			index,
-			nullifier: nullifier,
+			nullifier,
 			commitment: leaf,
 		})
 	}
