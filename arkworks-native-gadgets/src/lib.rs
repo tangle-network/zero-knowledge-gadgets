@@ -39,7 +39,7 @@ pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 
 pub fn from_field_elements<F: PrimeField>(elts: &[F]) -> Result<Vec<u8>, Error> {
 	let res = elts.iter().fold(vec![], |mut acc, prev| {
-		acc.extend_from_slice(&prev.into_repr().to_bytes_le());
+		acc.extend_from_slice(&prev.into_repr().to_bytes_be());
 		acc
 	});
 
