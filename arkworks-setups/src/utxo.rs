@@ -52,17 +52,14 @@ impl<F: PrimeField> Utxo<F> {
 		let blinding = blinding.unwrap_or(F::rand(rng));
 
 		let private_key = private_key.unwrap_or(F::rand(rng));
-		let keypair = Keypair::new(private_key);
+		let keypair = Keypair::new(private_key, hasher2);
 
-		let pub_key = keypair.public_key(hasher2)?;
-
+		let pub_key = keypair.public_key;
 		let leaf = hasher5.hash(&[chain_id, amount, pub_key, blinding])?;
 
 		let nullifier = if index.is_some() {
 			let i = F::from(index.unwrap());
-
 			let signature = keypair.signature(&leaf, &i, hasher4)?;
-			// Nullifier
 			let nullifier = hasher4.hash(&[leaf, i, signature])?;
 
 			Some(nullifier)
@@ -93,16 +90,14 @@ impl<F: PrimeField> Utxo<F> {
 		hasher5: &Poseidon<F>,
 	) -> Result<Self, Error> {
 		let chain_id = F::from(chain_id_raw);
-		let keypair = Keypair::new(private_key);
+		let keypair = Keypair::new(private_key, hasher2);
 
-		let pub_key = keypair.public_key(hasher2)?;
+		let pub_key = keypair.public_key;
 		let leaf = hasher5.hash(&[chain_id, amount, pub_key, blinding])?;
 
 		let nullifier = if index.is_some() {
 			let i = F::from(index.unwrap());
-
 			let signature = keypair.signature(&leaf, &i, hasher4)?;
-			// Nullifier
 			let nullifier = hasher4.hash(&[leaf, i, signature])?;
 
 			Some(nullifier)
@@ -122,22 +117,40 @@ impl<F: PrimeField> Utxo<F> {
 		})
 	}
 
-	pub fn set_index(&mut self, index: u64, hasher4: &Poseidon<F>) -> Result<(), Error> {
-		let i = F::from(index);
+	pub fn new_with_public(
+		chain_id_raw: u64,
+		amount: F,
+		index: Option<u64>,
+		public_key: F,
+		blinding: F,
+		hasher5: &Poseidon<F>,
+	) -> Result<Self, Error> {
+		let chain_id = F::from(chain_id_raw);
+		let keypair = Keypair::new_from_public_key(public_key);
 
-		let signature = self.keypair.signature(&self.commitment, &i, hasher4)?;
-		// Nullifier
-		let nullifier = hasher4.hash(&[self.commitment, i, signature])?;
+		let commitment = hasher5.hash(&[chain_id, amount, public_key, blinding])?;
 
-		self.index = Some(index);
-		self.nullifier = Some(nullifier);
-
-		Ok(())
+		Ok(Self {
+			chain_id_raw,
+			chain_id,
+			amount,
+			keypair,
+			blinding,
+			index,
+			nullifier: None,
+			commitment,
+		})
 	}
 
-	pub fn get_nullifier(&self) -> Result<F, Error> {
-		self.nullifier
-			.ok_or(UtxoError::NullifierNotCalculated.into())
+	pub fn set_index(&mut self, index: u64) {
+		self.index = Some(index);
+	}
+
+	pub fn calculate_nullifier(&self, hasher4: &Poseidon<F>) -> Result<F, Error> {
+		let i = F::from(self.index.unwrap());
+		let signature = self.keypair.signature(&self.commitment, &i, hasher4)?;
+		let nullifier = hasher4.hash(&[self.commitment, i, signature])?;
+		Ok(nullifier)
 	}
 
 	pub fn get_index(&self) -> Result<u64, Error> {

@@ -276,7 +276,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-utils"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "ark-ff",
  "ark-std",

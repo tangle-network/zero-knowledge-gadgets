@@ -39,7 +39,7 @@ impl Decode for EncryptedData {
 
 		// Getting the length of the remaining data
 		let remaining_len: usize = input.remaining_len()?.unwrap_or(0usize);
-		let mut cypher_text_data = vec![0u8; remaining_len];
+		let mut cypher_text_data = ark_std::vec![0u8; remaining_len];
 
 		// Use the remaining data as cypher text
 		input.read(&mut cypher_text_data)?;
@@ -61,7 +61,7 @@ impl Encode for EncryptedData {
 		const PUB_KEY_LEN: usize = core::mem::size_of::<PublicKey>();
 
 		// Initialize return array
-		let mut ret = vec![0u8; self.encoded_size()];
+		let mut ret = ark_std::vec![0u8; self.encoded_size()];
 
 		// Populate it with data
 		ret[0..NONCE_LEN].copy_from_slice(&self.nonce.as_slice());
@@ -189,9 +189,13 @@ mod test {
 	#[test]
 	fn should_encrypt_decrypt() {
 		let rng = &mut test_rng();
-
+		let curve = Curve::Bn254;
+		// create the hasher which is used for deriving the public key from the private
+		// key
+		let params2 = setup_params(curve, 5, 2);
+		let hasher2 = Poseidon::<Fr>::new(params2.clone());
 		let private_key = Fr::rand(rng);
-		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone());
+		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone(), &hasher2);
 
 		let msg = vec![1, 2, 3];
 		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
@@ -203,9 +207,13 @@ mod test {
 	#[test]
 	fn should_encode_decode_encrypted_data() {
 		let rng = &mut test_rng();
-
+		let curve = Curve::Bn254;
+		// create the hasher which is used for deriving the public key from the private
+		// key
+		let params2 = setup_params(curve, 5, 2);
+		let hasher2 = Poseidon::<Fr>::new(params2.clone());
 		let private_key = Fr::rand(rng);
-		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone());
+		let keypair = Keypair::<Fr, Poseidon<Fr>>::new(private_key.clone(), &hasher2);
 
 		let msg = vec![1, 2, 3];
 		let encrypted_data = keypair.encrypt(&msg, rng).unwrap();
