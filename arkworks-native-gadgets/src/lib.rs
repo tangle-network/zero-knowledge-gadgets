@@ -39,7 +39,10 @@ pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 	}
 
 	// Read the chunks into arkworks to convert into field elements.
-	let res = reversed_chunks.chunks(max_size_bytes).map(F::read).collect::<Result<Vec<_>, _>>()?;
+	let res = reversed_chunks
+		.chunks(max_size_bytes)
+		.map(F::read)
+		.collect::<Result<Vec<_>, _>>()?;
 	Ok(res)
 }
 
