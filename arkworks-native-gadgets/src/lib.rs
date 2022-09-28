@@ -18,50 +18,28 @@ pub mod prelude {
 	pub use ark_std;
 }
 
+// bytes field is assumed to contain concatenated, Big-endian encoded chunks.
 pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 	let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
-	// Pad the input with zeros
+
+	// Pad the input with zeros to prevent crashes in arkworks
 	let padding_len = (max_size_bytes - (bytes.len() % max_size_bytes)) % max_size_bytes;
-	// Get chunks of size `max_size_bytes`
-	let mut chunks: Vec<Vec<u8>> = bytes.chunks(max_size_bytes).map(|ch| ch.to_vec()).collect();
-	let num_chunks = chunks.len();
-	// Since we are parsing Big-Endian values, we need to pad the LAST chunk.
-	// Because rust is difficult to work with, we first reverse the bytes to
-	// Little-endian. and pad the end with zeros.
-	let last_chunk_reversed = chunks
-		.last()
-		.unwrap()
-		.into_iter()
-		.rev()
-		.cloned()
-		.collect::<Vec<u8>>();
-	// Pad the Little-endian encoded last chunk with zeroes
-	let mut last_chunk: Vec<u8> = last_chunk_reversed
+	let padded_input: Vec<u8> = bytes
 		.iter()
 		.cloned()
 		.chain(core::iter::repeat(0u8).take(padding_len))
 		.collect();
-	// Reverse the bytes back to Big-Endian
-	last_chunk.reverse();
-	// Replace the last chunk with the Big-endian padded one
-	chunks[num_chunks - 1] = last_chunk;
-	// Convert the chunks to Little-endian elements since `F::read` reads
-	// Little-endian values
-	let new_chunks = chunks
-		.iter()
-		.map(|v| {
-			let mut reversed = v.clone();
-			reversed.reverse();
-			reversed
-		})
-		.collect::<Vec<_>>();
-	// Convert the chunks to field elements
-	let res = new_chunks
-		.iter()
-		.cloned()
-		.map(|v| F::read(&v[..]))
-		.collect::<Result<Vec<_>, _>>()?;
 
+	// Reverse all chunks so the values are formatted in little-endian.
+	// This is necessary because arkworks assumes little-endian.
+	let mut reversed_chunks: Vec<u8> = Vec::with_capacity(bytes.len() + padding_len);
+
+	for chunk in padded_input.chunks(max_size_bytes) {
+		reversed_chunks.extend(chunk.iter().rev());
+	}
+
+	// Read the chunks into arkworks to convert into field elements.
+	let res = reversed_chunks.chunks(max_size_bytes).map(F::read).collect::<Result<Vec<_>, _>>()?;
 	Ok(res)
 }
 
