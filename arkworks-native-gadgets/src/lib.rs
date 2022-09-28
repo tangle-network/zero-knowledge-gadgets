@@ -30,9 +30,15 @@ pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 		.chain(core::iter::repeat(0u8).take(padding_len))
 		.collect();
 
+	let mut chunks: Vec<_> = padded_input.chunks(max_size_bytes).collect();
+	chunks[chunks.len() - 1] = core::iter::repeat(0u8).take(max_size_bytes)
+		.chain(chunks[chunks.len() - 1].into_iter())
+		.collect();
+
 	// TODO: Read as LE but first reverse each chunk
 	let res = padded_input
 		.chunks(max_size_bytes)
+		.map(|v| v.reverse())
 		.map(F::read)
 		.collect::<Result<Vec<_>, _>>()?;
 
