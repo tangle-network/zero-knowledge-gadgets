@@ -23,12 +23,14 @@ pub fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
 
 	// Pad the input with zeros
 	let padding_len = (max_size_bytes - (bytes.len() % max_size_bytes)) % max_size_bytes;
+	// TODO: Pad the last element with the padding
 	let padded_input: Vec<u8> = bytes
 		.iter()
 		.cloned()
 		.chain(core::iter::repeat(0u8).take(padding_len))
 		.collect();
 
+	// TODO: Read as LE but first reverse each chunk
 	let res = padded_input
 		.chunks(max_size_bytes)
 		.map(F::read)
