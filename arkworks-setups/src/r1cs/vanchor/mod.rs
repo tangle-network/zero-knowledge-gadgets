@@ -509,8 +509,8 @@ where
 		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 
-		let blinding_field_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&blinding);
-		let public_key_elt: E::Fr = E::Fr::from_le_bytes_mod_order(&public_key);
+		let blinding_field_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&blinding);
+		let public_key_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&public_key);
 		let amount_elt = E::Fr::from(amount);
 		let utxo = Utxo::new_with_public(
 			chain_id,
