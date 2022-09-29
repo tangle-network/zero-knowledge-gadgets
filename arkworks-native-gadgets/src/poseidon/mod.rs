@@ -189,7 +189,6 @@ impl<F: PrimeField> PoseidonParameters<F> {
 		// 2. Appends t to the encoding.
 		// 3. Flattens M and appends it to the encoding.
 		let mut stored = false;
-		//TODO: implement this for new properties
 		for i in 0..self.mds_matrix.len() {
 			if !stored {
 				// the number of bytes to read for each inner mds matrix vec

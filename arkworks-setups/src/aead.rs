@@ -257,8 +257,8 @@ mod test {
 		let encrypted_data = utxo.encrypt(rng).unwrap();
 		let (chain_id_bytes, amount_bytes, blinding_bytes) = utxo.decrypt(&encrypted_data).unwrap();
 
-		assert_eq!(chain_id_bytes, chain_id.into_repr().to_bytes_le());
-		assert_eq!(amount_bytes, amount.into_repr().to_bytes_le());
-		assert_eq!(blinding_bytes, blinding.into_repr().to_bytes_le());
+		assert_eq!(chain_id_bytes, chain_id.into_repr().to_bytes_be());
+		assert_eq!(amount_bytes, amount.into_repr().to_bytes_be());
+		assert_eq!(blinding_bytes, blinding.into_repr().to_bytes_be());
 	}
 }

@@ -10,4 +10,9 @@ members = [
     "arkworks-utils",
 ]
 
-exclude = ["arkworks-plonk-circuits", "arkworks-plonk-gadgets", "arkworks-benchmarks", "arkworks-circom-verifier", "arkworks-utils"]
+exclude = [
+    "arkworks-plonk-circuits",
+    "arkworks-plonk-gadgets",
+    "arkworks-benchmarks",
+    "arkworks-utils"
+]

@@ -89,7 +89,7 @@
 //!
 //! // Create the tree with a default leaf of zero.
 //! type SMT = SparseMerkleTree<Fr, Poseidon<Fr>, 30>;
-//! let default_leaf = Fr::from(0u64).into_repr().to_bytes_le();
+//! let default_leaf = Fr::from(0u64).into_repr().to_bytes_be();
 //! let smt = SMT::new(&pairs, &poseidon, &default_leaf).unwrap();
 //! ```
 
@@ -338,7 +338,7 @@ pub fn gen_empty_hashes<F: PrimeField, H: FieldHasher<F>, const N: usize>(
 ) -> Result<[F; N], Error> {
 	let mut empty_hashes = [F::zero(); N];
 
-	let mut empty_hash = F::from_le_bytes_mod_order(default_leaf);
+	let mut empty_hash = F::from_be_bytes_mod_order(default_leaf);
 	empty_hashes[0] = empty_hash;
 
 	for i in 1..N {
@@ -564,7 +564,7 @@ mod test {
 			vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];
 		let default_leaf_scalar: Vec<Bn254Fr> =
 			bytes_vec_to_f(&parse_vec(default_leaf_hex).unwrap());
-		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_le();
+		let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_be();
 		let empty_hashes =
 			gen_empty_hashes::<Bn254Fr, _, 32usize>(&poseidon, &default_leaf_vec[..]).unwrap();
 

@@ -151,7 +151,7 @@ pub fn verify_unchecked_raw<E: PairingEngine>(
 ) -> Result<bool, Error> {
 	let pub_ins: Vec<E::Fr> = public_inputs
 		.iter()
-		.map(|x| E::Fr::from_le_bytes_mod_order(&x))
+		.map(|x| E::Fr::from_be_bytes_mod_order(&x))
 		.collect();
 	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes)?;
 	let proof = Proof::<E>::deserialize(proof)?;
