@@ -339,7 +339,6 @@ where
 		// Cast as field elements
 		let chain_id_elt = E::Fr::from(chain_id);
 		let public_amount_elt = E::Fr::from(public_amount);
-		// TODO: pass the raw ext data, and hash them inside this function with keccak
 		let ext_data_hash_elt = E::Fr::from_be_bytes_mod_order(&ext_data_hash);
 		// Generate the paths for each UTXO
 		let mut trees = BTreeMap::<u64, SMT<E::Fr, Poseidon<E::Fr>, HEIGHT>>::new();
