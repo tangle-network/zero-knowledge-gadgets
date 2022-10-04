@@ -1283,7 +1283,8 @@ fn should_calculate_and_set_nullifier() {
 		10,
 		None,
 		rng,
-	).unwrap();
+	)
+	.unwrap();
 	let index_before = out_utxo1.index;
 	let nullifier_before = out_utxo1.calculate_nullifier(&nullifier_hasher);
 
