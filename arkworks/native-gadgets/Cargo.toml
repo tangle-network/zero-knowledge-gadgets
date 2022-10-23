@@ -22,7 +22,7 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bn254 = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies.arkworks-utils]
-path = "../arkworks-utils"
+path = "../utils"
 default-features = false
 features = ["poseidon_bn254_x5_2", "poseidon_bn254_x5_3", "poseidon_bn254_x5_4", "poseidon_bn254_x5_5", "poseidon_bls381_x5_3", "mimc_ed_on_bn254_220"]
 

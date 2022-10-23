@@ -346,21 +346,20 @@ mod tests {
 			.unwrap();
 
 		// PROVER
-		let proof = test_circuit
+		let (proof, pi) = test_circuit
 			.gen_proof(&u_params, pk, b"Poseidon Test")
 			.unwrap();
 
-		// VERIFIER
-		let public_inputs: Vec<Bn254Fr> = vec![];
-
-		let VerifierData { key, pi_pos } = vd;
-
+		let (vk, ..): (
+			VerifierKey<Bn254Fr, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>,
+			Vec<usize>,
+		) = vd;
+		let verifier_data = VerifierData::new(vk, pi);
 		circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
-			key,
+			verifier_data.key,
 			&proof,
-			&public_inputs,
-			&pi_pos,
+			&verifier_data.pi,
 			b"Poseidon Test",
 		)
 		.unwrap();

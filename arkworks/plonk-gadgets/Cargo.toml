@@ -11,14 +11,15 @@ homepage = "https://webb.tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arkworks-native-gadgets = { path = "../arkworks-native-gadgets", version = "1.2.0", default-features = false }
+arkworks-native-gadgets = { path = "../native-gadgets", version = "1.2.0", default-features = false }
 
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
-plonk-core = { version = "^0.8", git = "https://github.com/ZK-Garage/plonk", features = ["trace"], default-features = false }
+plonk-core = { version = "^0.1", git = "https://github.com/ZK-Garage/plonk", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies]
+plonk-core = { version = "^0.1", git = "https://github.com/ZK-Garage/plonk", features = ["trace"], default-features = false }
 plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
@@ -29,9 +30,11 @@ ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
 
 [dev-dependencies.arkworks-utils]
-path = "../arkworks-utils"
+path = "../utils"
 default-features = false
 features = ["poseidon_bn254_x5_3"]
+
+
 
 [features]
 default = ["std"]

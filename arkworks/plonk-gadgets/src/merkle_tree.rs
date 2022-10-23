@@ -368,19 +368,19 @@ mod test {
 			.unwrap();
 
 		// PROVER
-		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
+		let (proof, pi) = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<Bn254Fr> = vec![];
-
-		let VerifierData { key, pi_pos } = vd;
-
+		let (vk, ..): (
+			VerifierKey<Bn254Fr, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>,
+			Vec<usize>,
+		) = vd;
+		let verifier_data = VerifierData::new(vk, pi);
 		circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
-			key,
+			verifier_data.key,
 			&proof,
-			&public_inputs,
-			&pi_pos,
+			&verifier_data.pi,
 			b"SMT Test",
 		)
 		.unwrap();
@@ -465,21 +465,21 @@ mod test {
 			.unwrap();
 
 		// PROVER
-		let proof = test_circuit
+		let (proof, pi) = test_circuit
 			.gen_proof(&u_params, pk, b"SMTIndex Test")
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<Bn254Fr> = vec![];
-
-		let VerifierData { key, pi_pos } = vd;
-
+		let (vk, ..): (
+			VerifierKey<Bn254Fr, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>,
+			Vec<usize>,
+		) = vd;
+		let verifier_data = VerifierData::new(vk, pi);
 		circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
-			key,
+			verifier_data.key,
 			&proof,
-			&public_inputs,
-			&pi_pos,
+			&verifier_data.pi,
 			b"SMTIndex Test",
 		)
 		.unwrap();
@@ -576,21 +576,21 @@ mod test {
 			.unwrap();
 
 		// PROVER
-		let proof = test_circuit
+		let (proof, pi) = test_circuit
 			.gen_proof(&u_params, pk, b"SMTIndex Test")
 			.unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<Bn254Fr> = vec![];
-
-		let VerifierData { key, pi_pos } = vd;
-
+		let (vk, ..): (
+			VerifierKey<Bn254Fr, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>,
+			Vec<usize>,
+		) = vd;
+		let verifier_data = VerifierData::new(vk, pi);
 		let res = circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
-			key,
+			verifier_data.key,
 			&proof,
-			&public_inputs,
-			&pi_pos,
+			&verifier_data.pi,
 			b"SMTIndex Test",
 		)
 		.unwrap_err();
@@ -679,19 +679,19 @@ mod test {
 			.unwrap();
 
 		// PROVER
-		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
+		let (proof, pi) = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<Bn254Fr> = vec![];
-
-		let VerifierData { key, pi_pos } = vd;
-
+		let (vk, ..): (
+			VerifierKey<Bn254Fr, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>,
+			Vec<usize>,
+		) = vd;
+		let verifier_data = VerifierData::new(vk, pi);
 		let res = circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
-			key,
+			verifier_data.key,
 			&proof,
-			&public_inputs,
-			&pi_pos,
+			&verifier_data.pi,
 			b"SMTIndex Test",
 		)
 		.unwrap_err();
@@ -779,19 +779,19 @@ mod test {
 			.unwrap();
 
 		// PROVER
-		let proof = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
+		let (proof, pi) = test_circuit.gen_proof(&u_params, pk, b"SMT Test").unwrap();
 
 		// VERIFIER
-		let public_inputs: Vec<Bn254Fr> = vec![];
-
-		let VerifierData { key, pi_pos } = vd;
-
+		let (vk, ..): (
+			VerifierKey<Bn254Fr, SonicKZG10<Bn254, DensePolynomial<Bn254Fr>>>,
+			Vec<usize>,
+		) = vd;
+		let verifier_data = VerifierData::new(vk, pi);
 		let res = circuit::verify_proof::<_, JubjubParameters, _>(
 			&u_params,
-			key,
+			verifier_data.key,
 			&proof,
-			&public_inputs,
-			&pi_pos,
+			&verifier_data.pi,
 			b"SMTIndex Test",
 		)
 		.unwrap_err();
