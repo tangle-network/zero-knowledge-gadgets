@@ -1,18 +1,18 @@
-<h1 align="center">Arkworks-gadgets 🕸️ </h1>
+<h1 align="center">arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlgadgets 🕸️ </h1>
 <div align="center">
 <a href="https://www.webb.tools/">
     <img alt="Webb Logo" src="./assets/webb-icon.svg" width="15%" height="30%" />
   </a>
   </div>
 <p align="center">
-    <strong>Gadgets and circuits written using the <a href="https://github.com/arkworks-rs"> arkworks </a> libraries for Webb and more. 🚀  </strong>
+    <strong>Gadgets and circuits written using the <a href="https://github.com/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlrs"> arkworks </a> libraries for Webb and more. 🚀  </strong>
 </p>
 
 <div align="center" >
 
-[![GitHub tags (latest by date)](https://img.shields.io/github/v/tag/webb-tools/arkworks-gadgets?style=flat-square)](https://github.com/webb-tools/arkworks-gadgets/tags/latest)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/webb-tools/arkworks-gadgets/Set-Up%20&%20Build%20&%20Test?style=flat-square)](https://github.com/webb-tools/arkworks-gadgets/actions)
-[![Codecov](https://img.shields.io/codecov/c/gh/webb-tools/arkworks-gadgets?style=flat-square&token=JDMTR41O4W)](https://codecov.io/gh/webb-tools/relayer)
+[![GitHub tags (latest by date)](https://img.shields.io/github/v/tag/webb-tools/zero-knowledge-gadgets?style=flat-square)](https://github.com/webb-tools/zero-knowledge-gadgets/tags/latest)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/webb-tools/zero-knowledge-gadgets/Set-Up%20&%20Build%20&%20Test?style=flat-square)](https://github.com/webb-tools/zero-knowledge-gadgets/actions)
+[![Codecov](https://img.shields.io/codecov/c/gh/webb-tools/zero-knowledge-gadgets?style=flat-square&token=JDMTR41O4W)](https://codecov.io/gh/webb-tools/relayer)
 [![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol)
 [![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
@@ -102,12 +102,12 @@ To run the unit tests, run:
 For version management, we use [cargo-workspaces](https://github.com/pksunkara/cargo-workspaces). We use the following flow:
 
 1. Use `cargo-workspaces` to bump the version of all crates, using the command `cargo ws version`. This will bump the version of all the crates in the workspace, which include:
-   - arkworks-native-gadgets
-   - arkworks-r1cs-gadgets
-   - arkworks-r1cs-circuits
-   - arkworks-setups
-   - arkworks-utils
-2. The previous step will only update the crates themself, but not their dependencies. So, for example, if `arkworks-setups` depend on `arkworks-utils`, the dependency version will not be updated. **We have to do this manually.**
+   - arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlnative-gadgets
+   - arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-gadgets
+   - arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-circuits
+   - arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups
+   - arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlutils
+2. The previous step will only update the crates themself, but not their dependencies. So, for example, if `arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups` depend on `arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlutils`, the dependency version will not be updated. **We have to do this manually.**
 3. Commit all the changes.
 4. Publish the crates with following command: `cargo ws publish --allow-branch [current_branch] --from-git`.
 
@@ -125,13 +125,13 @@ This repo contains zero-knowledge gadgets & circuits for different end applicati
 
 <h2 id="gadgets"> Gadgets </h2>
 
-You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as-is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-r1cs-circuits/src/basic.rs).
+You can think of gadgets as intermediate computations and constraint systems that you compose to build a more complete zero-knowledge proof of knowledge statement. They can also be used as-is by simply extending the arkworks `ConstraintSynthesizer`. An example using dummy computations can be found in the [dummy circuit](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-circuits/src/basic.rs).
 
 In this repo you will find gadgets for:
 
-- Poseidon [Native](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-native-gadgets/src/poseidon), [R1CS](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-r1cs-gadgets/src/poseidon), [PLONK](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-plonk-gadgets/src/poseidon)
-- Merkle tree [Native](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-native-gadgets/src/merkle_tree.rs), [R1CS](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-r1cs-gadgets/src/merkle_tree.rs), [PLONK](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-plonk-gadgets/src/merkle_tree.rs)
-- Set [R1CS](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-r1cs-gadgets/src/set.rs), [PLONK](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-plonk-gadgets/src/set.rs)
+- Poseidon [Native](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlnative-gadgets/src/poseidon), [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-gadgets/src/poseidon), [PLONK](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlplonk-gadgets/src/poseidon)
+- Merkle tree [Native](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlnative-gadgets/src/merkle_tree.rs), [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-gadgets/src/merkle_tree.rs), [PLONK](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlplonk-gadgets/src/merkle_tree.rs)
+- Set [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-gadgets/src/set.rs), [PLONK](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlplonk-gadgets/src/set.rs)
 
 Poseidon hashing function matches the [circom implementation](https://github.com/iden3/circomlib/blob/master/circuits/poseidon.circom). Implemented based on this paper: https://eprint.iacr.org/2019/458.pdf.
 
@@ -141,19 +141,19 @@ Set membership - Used for proving that some value is inside the set in a zero-kn
 
 In this repo you will find circuits for:
 
-- Mixer [R1CS](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-r1cs-circuits/src/mixer.rs), [PLONK](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-plonk-circuits/src/mixer.rs)
-- Anchor [R1CS](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-r1cs-circuits/src/anchor.rs), [PLONK](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-plonk-circuits/src/anchor.rs)
-- VAnchor [R1CS](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-r1cs-circuits/src/vanchor.rs), [PLONK](https://github.com/webb-tools/arkworks-gadgets/blob/master/arkworks-plonk-circuits/src/vanchor.rs)
+- Mixer [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-circuits/src/mixer.rs), [PLONK](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlplonk-circuits/src/mixer.rs)
+- Anchor [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-circuits/src/anchor.rs), [PLONK](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlplonk-circuits/src/anchor.rs)
+- VAnchor [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlr1cs-circuits/src/vanchor.rs), [PLONK](https://github.com/webb-tools/zero-knowledge-gadgets/blob/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlplonk-circuits/src/vanchor.rs)
 
 <h2 id="api"> Setup API </h2>
 
-For the circuits implemented in this repo, we have setups in the [setup](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-circuits/src/setup) directory. This folder contains circuit-specific setup helpers for creating proofs for each circuit as well as helpers for Poseidon, Merkle tree, proving/verifying key generation, verifier helper, etc.
+For the circuits implemented in this repo, we have setups in the [setup](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlcircuits/src/setup) directory. This folder contains circuit-specific setup helpers for creating proofs for each circuit as well as helpers for Poseidon, Merkle tree, proving/verifying key generation, verifier helper, etc.
 
-Each application-specific folder in `arkworks-setups/[r1cs | plonk]` encapsulates the API for the full setup of a zero-knowledge proof for that circuit. There are currently application-specific gadgets for:
+Each application-specific folder in `arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups/[r1cs | plonk]` encapsulates the API for the full setup of a zero-knowledge proof for that circuit. There are currently application-specific gadgets for:
 
-- Mixers: [R1CS](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-setups/src/r1cs/mixer), PLONK (TBA)
-- Anchors: [R1CS](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-setups/src/r1cs/anchor), PLONK (TBA)
-- VAnchors: [R1CS](https://github.com/webb-tools/arkworks-gadgets/tree/master/arkworks-setups/src/r1cs/vanchor), PLONK (TBA)
+- Mixers: [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups/src/r1cs/mixer), PLONK (TBA)
+- Anchors: [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups/src/r1cs/anchor), PLONK (TBA)
+- VAnchors: [R1CS](https://github.com/webb-tools/zero-knowledge-gadgets/tree/master/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups/src/r1cs/vanchor), PLONK (TBA)
 
 For tests and instantiations of the gadgets used to compose each of these larger-scale application gadgets, refer to the test.rs files within that directory. Most of the tests and implementations in this repo use Groth16 proofs and setups for the zero-knowledge gadgets. Occasionally Marlin zkSNARKs are used for intermediate gadget tests. There are no application-specific instantiations of gadgets that use Marlin however but pull requests are welcome to create them.
 
@@ -550,7 +550,7 @@ Links to trusted setup ceremony examples:
 
 <h1 id="smart"> Test </h1>
 
-- You can run all the `arkworks-setups` test by running the command
+- You can run all the `arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlsetups` test by running the command
    `cargo test --features r1cs,plonk --release`
 
 - You can run a specific test by specifying the name of the test to run with the command 
@@ -559,7 +559,7 @@ Links to trusted setup ceremony examples:
 
 <h1 id="grat"> Gratitude </h1>
 
-We are grateful to the arkworks community for their open-source first approach to zero-knowledge infrastructure. Many of the gadgets here leverage tools that are found in other repos and that are open source. Specifically, we leverage the sparse Merkle tree data structures from the [ivls](https://github.com/arkworks-rs/ivls/tree/master/src/building_blocks/mt/merkle_sparse_tree) project on incrementally verifiable computation. This work would not have been possible without that.
+We are grateful to the arkworks community for their open-source first approach to zero-knowledge infrastructure. Many of the gadgets here leverage tools that are found in other repos and that are open source. Specifically, we leverage the sparse Merkle tree data structures from the [ivls](https://github.com/arkworks/../../../../../../../arkworks/native-gadgets/Cargo.tomlrs/ivls/tree/master/src/building_blocks/mt/merkle_sparse_tree) project on incrementally verifiable computation. This work would not have been possible without that.
 
 Many thanks to the following people for help and insights in both learning and implementing these gadgets & circuits:
 
