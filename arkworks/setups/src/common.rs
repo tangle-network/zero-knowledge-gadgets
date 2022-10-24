@@ -212,8 +212,6 @@ pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> Poseidon
 	let mds_f = bytes_matrix_to_f(&pos_data.mds);
 	let rounds_f = bytes_vec_to_f(&pos_data.rounds);
 
-	
-
 	PoseidonParameters {
 		mds_matrix: mds_f,
 		round_keys: rounds_f,

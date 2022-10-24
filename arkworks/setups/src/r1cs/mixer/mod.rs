@@ -236,7 +236,7 @@ impl<E: PairingEngine, const HEIGHT: usize> MixerR1CSProver<E, HEIGHT> {
 		let params3 = setup_params(curve, 5, 3);
 		let poseidon = Poseidon::<E::Fr>::new(params3);
 		// Setup circuit
-		
+
 		MixerCircuit::new(
 			arbitrary_input,
 			secret,

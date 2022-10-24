@@ -208,16 +208,10 @@ where
 		let mut path = Vec::new();
 		let path_obj = f()?;
 		for &(ref l, ref r) in &path_obj.borrow().path {
-			let l_hash = FpVar::<F>::new_variable(
-				ark_relations::ns!(cs, "l_child"),
-				|| Ok(*l),
-				mode,
-			)?;
-			let r_hash = FpVar::<F>::new_variable(
-				ark_relations::ns!(cs, "r_child"),
-				|| Ok(*r),
-				mode,
-			)?;
+			let l_hash =
+				FpVar::<F>::new_variable(ark_relations::ns!(cs, "l_child"), || Ok(*l), mode)?;
+			let r_hash =
+				FpVar::<F>::new_variable(ark_relations::ns!(cs, "r_child"), || Ok(*r), mode)?;
 			path.push((l_hash, r_hash));
 		}
 
@@ -256,8 +250,6 @@ mod test {
 
 		let mds_f = bytes_matrix_to_f(&pos_data.mds);
 		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
-
-		
 
 		PoseidonParameters {
 			mds_matrix: mds_f,

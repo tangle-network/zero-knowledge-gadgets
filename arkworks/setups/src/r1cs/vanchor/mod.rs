@@ -181,14 +181,8 @@ where
 		nullifier_hasher: Poseidon<E::Fr>,
 		leaf_hasher: Poseidon<E::Fr>,
 	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
-		let in_amounts = in_utxos
-			.iter()
-			.map(|x| x.amount)
-			.collect::<Vec<E::Fr>>();
-		let in_blinding = in_utxos
-			.iter()
-			.map(|x| x.blinding)
-			.collect::<Vec<E::Fr>>();
+		let in_amounts = in_utxos.iter().map(|x| x.amount).collect::<Vec<E::Fr>>();
+		let in_blinding = in_utxos.iter().map(|x| x.blinding).collect::<Vec<E::Fr>>();
 		let in_private_keys = in_utxos
 			.iter()
 			.map(|x| x.keypair.secret_key.unwrap())
@@ -206,18 +200,9 @@ where
 			.iter()
 			.map(|x| x.commitment)
 			.collect::<Vec<E::Fr>>();
-		let out_amounts = out_utxos
-			.iter()
-			.map(|x| x.amount)
-			.collect::<Vec<E::Fr>>();
-		let out_blindings = out_utxos
-			.iter()
-			.map(|x| x.blinding)
-			.collect::<Vec<E::Fr>>();
-		let out_chain_ids = out_utxos
-			.iter()
-			.map(|x| x.chain_id)
-			.collect::<Vec<E::Fr>>();
+		let out_amounts = out_utxos.iter().map(|x| x.amount).collect::<Vec<E::Fr>>();
+		let out_blindings = out_utxos.iter().map(|x| x.blinding).collect::<Vec<E::Fr>>();
+		let out_chain_ids = out_utxos.iter().map(|x| x.chain_id).collect::<Vec<E::Fr>>();
 
 		let circuit =
 			VAnchorCircuit::<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>::new(
@@ -373,7 +358,9 @@ where
 						Ok((_, path)) => path,
 						Err(err) => panic!("{}", err),
 					}
-				} else if let std::collections::btree_map::Entry::Vacant(e) = trees.entry(chain_id_of_utxo) {
+				} else if let std::collections::btree_map::Entry::Vacant(e) =
+					trees.entry(chain_id_of_utxo)
+				{
 					let leaves = in_leaves.get(&chain_id_of_utxo).unwrap();
 					let leaves_f = leaves
 						.iter()

@@ -255,7 +255,6 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 
-		
 		AnchorCircuit::new(
 			arbitrary_input,
 			secret,
