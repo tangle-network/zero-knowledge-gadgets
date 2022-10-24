@@ -22,9 +22,9 @@ coverage:
 # which folders/files to ignore
 # Ignoring for now until we can include them in workspace
 ignore:
-  - arkworks-benchmarks/*/**
-  - arkworks-plonk-circuits/*/**
-  - arkworks-plonk-gadgets/*/**
+  - arkworks/benchmarks/*/**
+  - arkworks/plonk-circuits/*/**
+  - arkworks/plonk-gadgets/*/**
 
 # Pull request comments:
 # ----------------------

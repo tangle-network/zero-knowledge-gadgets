@@ -5,7 +5,7 @@ authors = ["Webb Developers"]
 edition = "2018"
 description = "Webb protocol's r1cs zero-knowledge circuits written using Arkworks"
 license = "Apache-2.0"
-repository = "https://github.com/webb-tools/arkworks-gadgets"
+repository = "https://github.com/webb-tools/zero-knowledge-gadgets"
 homepage = "https://webb.tools"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -4,7 +4,7 @@ version = "1.2.2"
 edition = "2021"
 license = "Apache-2.0"
 description = "Webb protocol's API for zero-knowledge circuits"
-repository = "https://github.com/webb-tools/arkworks-gadgets"
+repository = "https://github.com/webb-tools/zero-knowledge-gadgets"
 homepage = "https://webb.tools"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
