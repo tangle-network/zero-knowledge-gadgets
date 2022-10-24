@@ -1,5 +1,5 @@
 use ark_ec::{models::TEModelParameters, PairingEngine};
-use ark_ff::PrimeField;
+use ark_ff::{PrimeField, ToConstraintField};
 use ark_poly::polynomial::univariate::DensePolynomial;
 use ark_poly_commit::{
 	kzg10::{UniversalParams, KZG10},
@@ -9,10 +9,11 @@ use ark_poly_commit::{
 use ark_std::{test_rng, vec::Vec};
 use plonk_core::{
 	prelude::*,
-	proof_system::{Prover, Verifier},
+	proof_system::{Prover, Verifier, pi::PublicInputs},
 };
 
 // A helper function to prove/verify plonk circuits
+#[allow(dead_code)]
 pub(crate) fn gadget_tester<
 	E: PairingEngine,
 	P: TEModelParameters<BaseField = E::Fr>,
@@ -39,7 +40,7 @@ pub(crate) fn gadget_tester<
 		// Commit Key
 		let (ck, _) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
 			&universal_params,
-			prover.circuit_size().next_power_of_two() + 6,
+			prover.circuit_bound().next_power_of_two() + 6,
 			0,
 			None,
 		)
@@ -49,7 +50,7 @@ pub(crate) fn gadget_tester<
 
 		// Once the prove method is called, the public inputs are cleared
 		// So pre-fetch these before calling Prove
-		let public_inputs = prover.mut_cs().construct_dense_pi_vec();
+		let public_inputs = prover.mut_cs().get_pi().clone();
 		//? let lookup_table = prover.mut_cs().lookup_table.clone();
 
 		// Compute Proof
@@ -69,7 +70,7 @@ pub(crate) fn gadget_tester<
 	// Compute Commit and Verifier Key
 	let (sonic_ck, sonic_vk) = SonicKZG10::<E, DensePolynomial<E::Fr>>::trim(
 		&universal_params,
-		verifier.circuit_size().next_power_of_two(),
+		verifier.circuit_bound().next_power_of_two(),
 		0,
 		None,
 	)
@@ -82,6 +83,22 @@ pub(crate) fn gadget_tester<
 	Ok(verifier.verify(&proof, &sonic_vk, &public_inputs)?)
 }
 
+pub struct ToConstraintFieldHelper<F> {
+	elements: Vec<F>,
+}
+
+impl<F: PrimeField> ToConstraintField<F> for ToConstraintFieldHelper<F> {
+    fn to_field_elements(&self) -> Option<Vec<F>> {
+        Some(self.elements.clone())
+    }
+}
+
+impl<F: PrimeField> From<F> for ToConstraintFieldHelper<F> {
+	fn from(f: F) -> Self {
+		Self { elements: vec![f] }
+	}
+}
+
 /// Helper function that accepts a composer that has already been filled,
 /// generates a proof, then verifies it.
 /// Accepts an optional public input argument that can be used to simulate
@@ -91,10 +108,9 @@ pub(crate) fn prove_then_verify<
 	P: TEModelParameters<BaseField = E::Fr>,
 	T: FnMut(&mut StandardComposer<E::Fr, P>) -> Result<(), Error>,
 >(
-	// gadget: fn(&mut StandardComposer<E::Fr, P>),
 	gadget: &mut T,
 	max_degree: usize,
-	verifier_public_inputs: Option<Vec<E::Fr>>,
+	verifier_public_inputs: Option<Vec<ToConstraintFieldHelper<E::Fr>>>,
 ) -> Result<(), Error> {
 	let rng = &mut test_rng();
 
@@ -104,18 +120,23 @@ pub(crate) fn prove_then_verify<
 
 	// Check for verifier public inputs argument, otherwise
 	// verifier uses the same public inputs as the prover
-	let public_inputs = match verifier_public_inputs {
-		Some(pi) => {
+	let public_inputs: PublicInputs<<E as PairingEngine>::Fr> = match verifier_public_inputs {
+		Some(public_inputs) => {
 			// The provided values need to be turned into a dense public input vector,
 			// which means putting each value in the position corresponding to its gate
-			let mut pi_dense = vec![E::Fr::from(0u32); composer.circuit_size()];
-			let pi_positions = composer.pi_positions();
-			pi_positions.iter().zip(pi).for_each(|(position, value)| {
-				pi_dense[*position] = value;
-			});
-			pi_dense
+			let pi_positions: Vec<usize> = composer.get_pi().get_pos().into_iter().cloned().collect();
+			// pi_positions.zip(pi).for_each(|(position, value)| {
+			// 	pi_dense[*position] = value;
+			// });
+			
+			let mut pi = PublicInputs::new();
+			for (inx, position) in pi_positions.iter().enumerate() {
+				pi.add_input(*position, &public_inputs[inx])?;
+			}
+
+			pi
 		}
-		None => composer.construct_dense_pi_vec(),
+		None => composer.get_pi().clone(),
 	};
 
 	// Go through proof generation/verification
@@ -160,7 +181,7 @@ pub(crate) fn prove_then_verify<
 // TODO: Include a more minimal example to show how it's used
 #[cfg(test)]
 mod test {
-	use crate::{mixer::MixerCircuit, utils::prove_then_verify};
+	use crate::{mixer::MixerCircuit, utils::{prove_then_verify, ToConstraintFieldHelper}};
 	use ark_bn254::Bn254;
 	use ark_ec::{PairingEngine, TEModelParameters};
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
@@ -306,13 +327,17 @@ mod test {
 		);
 
 		// Give verifier different public input data:
-		let verifier_public_inputs = vec![nullifier_hash.double(), root, arbitrary_data];
+		let v_pi = vec![
+		 	ToConstraintFieldHelper::from(nullifier_hash.double()),
+			ToConstraintFieldHelper::from(root),
+			ToConstraintFieldHelper::from(arbitrary_data),
+		];
 
 		// Verify proof
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),
 			1 << 17,
-			Some(verifier_public_inputs),
+			Some(v_pi),
 		);
 
 		match res {
@@ -383,7 +408,9 @@ mod test {
 
 		// This time prover and verifier disagree on what the public input
 		// value was.  The verifier will think it was 4:
-		let verifier_public_inputs = vec![Fq::from(4u32)];
+		let verifier_public_inputs = vec![
+			ToConstraintFieldHelper::from(Fq::from(4u32))
+		];
 
 		// Generate then verify a proof that we know two numbers that add to 4
 		// This should fail because the prover is actually using the public

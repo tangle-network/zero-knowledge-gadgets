@@ -133,7 +133,7 @@ where
 		let out_utxos: [Utxo<E::Fr>; OUTS] = [0; OUTS].map(|_| out_utxo.clone());
 
 		// Tree + set for proving input txos
-		let in_indices_f = in_indices.map(|x| E::Fr::from(x));
+		let in_indices_f = in_indices.map(E::Fr::from);
 		let mut in_paths = Vec::new();
 		for i in 0..INS {
 			let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
@@ -150,11 +150,11 @@ where
 			E::Fr::from(chain_id),
 			public_amount,
 			ext_data_hash,
-			in_utxos.clone(),
+			in_utxos,
 			in_indices_f,
 			in_paths,
 			in_root_set,
-			out_utxos.clone(),
+			out_utxos,
 			keypair_hasher,
 			tree_hasher,
 			nullifier_hasher,
@@ -183,15 +183,15 @@ where
 	) -> Result<VAnchorCircuit<E::Fr, PoseidonGadget<E::Fr>, HEIGHT, INS, OUTS, ANCHOR_CT>, Error> {
 		let in_amounts = in_utxos
 			.iter()
-			.map(|x| x.amount.clone())
+			.map(|x| x.amount)
 			.collect::<Vec<E::Fr>>();
 		let in_blinding = in_utxos
 			.iter()
-			.map(|x| x.blinding.clone())
+			.map(|x| x.blinding)
 			.collect::<Vec<E::Fr>>();
 		let in_private_keys = in_utxos
 			.iter()
-			.map(|x| x.keypair.secret_key.unwrap().clone())
+			.map(|x| x.keypair.secret_key.unwrap())
 			.collect::<Vec<E::Fr>>();
 		let in_nullifiers: Result<Vec<E::Fr>, Error> = in_utxos
 			.iter()
@@ -208,15 +208,15 @@ where
 			.collect::<Vec<E::Fr>>();
 		let out_amounts = out_utxos
 			.iter()
-			.map(|x| x.amount.clone())
+			.map(|x| x.amount)
 			.collect::<Vec<E::Fr>>();
 		let out_blindings = out_utxos
 			.iter()
-			.map(|x| x.blinding.clone())
+			.map(|x| x.blinding)
 			.collect::<Vec<E::Fr>>();
 		let out_chain_ids = out_utxos
 			.iter()
-			.map(|x| x.chain_id.clone())
+			.map(|x| x.chain_id)
 			.collect::<Vec<E::Fr>>();
 
 		let circuit =
@@ -373,14 +373,11 @@ where
 						Ok((_, path)) => path,
 						Err(err) => panic!("{}", err),
 					}
-				} else if trees.contains_key(&chain_id_of_utxo) {
-					let tree = trees.get(&chain_id_of_utxo).unwrap();
-					tree.generate_membership_proof(utxo.index.unwrap_or_default())
-				} else {
+				} else if let std::collections::btree_map::Entry::Vacant(e) = trees.entry(chain_id_of_utxo) {
 					let leaves = in_leaves.get(&chain_id_of_utxo).unwrap();
 					let leaves_f = leaves
 						.iter()
-						.map(|l| E::Fr::from_be_bytes_mod_order(&l))
+						.map(|l| E::Fr::from_be_bytes_mod_order(l))
 						.collect::<Vec<E::Fr>>();
 					match setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
 						&tree_hasher,
@@ -389,11 +386,14 @@ where
 						&default_leaf,
 					) {
 						Ok((tree, path)) => {
-							trees.insert(chain_id_of_utxo, tree);
+							e.insert(tree);
 							path
 						}
 						Err(err) => panic!("{}", err),
 					}
+				} else {
+					let tree = trees.get(&chain_id_of_utxo).unwrap();
+					tree.generate_membership_proof(utxo.index.unwrap_or_default())
 				}
 			})
 			.collect();
@@ -403,8 +403,8 @@ where
 			chain_id_elt,
 			public_amount_elt,
 			ext_data_hash_elt,
-			in_utxos.clone(),
-			in_indices.map(|elt| E::Fr::from(elt)),
+			in_utxos,
+			in_indices.map(E::Fr::from),
 			in_paths,
 			public_root_set
 				.clone()

@@ -139,7 +139,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let nullifier_hash = tree_hasher.hash_two(&nullifier, &nullifier)?;
 		let (_, path) = setup_tree_and_create_path::<E::Fr, Poseidon<E::Fr>, HEIGHT>(
 			&tree_hasher,
-			&leaves,
+			leaves,
 			index,
 			&default_leaf,
 		)?;
@@ -255,7 +255,8 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 		let tree_hasher = Poseidon::<E::Fr> { params: params3 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params4 };
 
-		let mc = AnchorCircuit::new(
+		
+		AnchorCircuit::new(
 			arbitrary_input,
 			secret,
 			nullifier,
@@ -265,8 +266,7 @@ impl<E: PairingEngine, const HEIGHT: usize, const ANCHOR_CT: usize>
 			nullifier_hash,
 			tree_hasher,
 			leaf_hasher,
-		);
-		mc
+		)
 	}
 }
 

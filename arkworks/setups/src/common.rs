@@ -131,7 +131,7 @@ pub fn verify<E: PairingEngine>(
 ) -> Result<bool, Error> {
 	let vk = VerifyingKey::<E>::deserialize(vk_bytes)?;
 	let proof = Proof::<E>::deserialize(proof)?;
-	verify_groth16(&vk, &public_inputs, &proof)
+	verify_groth16(&vk, public_inputs, &proof)
 }
 
 pub fn verify_unchecked<E: PairingEngine>(
@@ -141,7 +141,7 @@ pub fn verify_unchecked<E: PairingEngine>(
 ) -> Result<bool, Error> {
 	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes)?;
 	let proof = Proof::<E>::deserialize(proof)?;
-	verify_groth16(&vk, &public_inputs, &proof)
+	verify_groth16(&vk, public_inputs, &proof)
 }
 
 pub fn verify_unchecked_raw<E: PairingEngine>(
@@ -151,7 +151,7 @@ pub fn verify_unchecked_raw<E: PairingEngine>(
 ) -> Result<bool, Error> {
 	let pub_ins: Vec<E::Fr> = public_inputs
 		.iter()
-		.map(|x| E::Fr::from_be_bytes_mod_order(&x))
+		.map(|x| E::Fr::from_be_bytes_mod_order(x))
 		.collect();
 	let vk = VerifyingKey::<E>::deserialize_unchecked(vk_unchecked_bytes)?;
 	let proof = Proof::<E>::deserialize(proof)?;
@@ -169,7 +169,7 @@ pub fn verify_groth16<E: PairingEngine>(
 
 pub fn keccak_256(input: &[u8]) -> Vec<u8> {
 	let mut keccak = Keccak::v256();
-	keccak.update(&input);
+	keccak.update(input);
 
 	let mut output = [0u8; 32];
 	keccak.finalize(&mut output);
@@ -212,14 +212,14 @@ pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> Poseidon
 	let mds_f = bytes_matrix_to_f(&pos_data.mds);
 	let rounds_f = bytes_vec_to_f(&pos_data.rounds);
 
-	let pos = PoseidonParameters {
+	
+
+	PoseidonParameters {
 		mds_matrix: mds_f,
 		round_keys: rounds_f,
 		full_rounds: pos_data.full_rounds,
 		partial_rounds: pos_data.partial_rounds,
 		sbox: PoseidonSbox(pos_data.exp),
 		width: pos_data.width,
-	};
-
-	pos
+	}
 }

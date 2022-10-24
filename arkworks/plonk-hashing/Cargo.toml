@@ -1,0 +1,38 @@
+[package]
+name = "plonk-hashing"
+version = "0.8.2"
+authors = ["ZK-GARAGE Authors"]
+readme = "README.md"
+repository = "https://github.com/zk-garage/plonk"
+keywords = ["cryptography", "plonk", "zk-snarks", "zero-knowledge", "crypto"]
+categories = ["algorithms", "cryptography", "science"]
+description = "A pure-Rust implementation of the PLONK ZK-Proof algorithm."
+license = "MIT OR Apache-2.0"
+edition = "2021"
+
+[package.metadata.docs.rs]
+# To build locally:
+# RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc --all-features --open
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
+
+[dependencies]
+plonk-core = { version = "^0.1", git = "https://github.com/ZK-Garage/plonk", default-features = false }
+ark-ec = { version = "0.3", features = ["std"] }
+ark-ff = { version = "0.3", features = ["std"] }
+ark-serialize = { version = "0.3", features = ["derive"] }
+ark-poly = "0.3"
+ark-poly-commit = "0.3"
+ark-crypto-primitives = { version = "^0.3.0", features = ["r1cs"], default-features = false }
+ark-std = { version = "^0.3.0", default-features = false }
+itertools = { version = "0.10.1", default-features = false }
+num-traits = "0.2.14"
+derivative = { version = "2.2.0", default-features = false, features = ["use_core"] }
+hashbrown = { version = "0.11.2", default-features = false, features = ["ahash"] }
+ark-relations = "0.3.0"
+ark-r1cs-std = "0.3.1"
+thiserror = "1.0.30"
+
+[features]
+# Enable Standard Library
+std = []

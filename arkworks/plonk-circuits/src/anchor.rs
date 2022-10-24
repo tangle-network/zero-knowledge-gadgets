@@ -114,7 +114,7 @@ where
 #[cfg(test)]
 mod test {
 	use super::AnchorCircuit;
-	use crate::utils::prove_then_verify;
+	use crate::utils::{prove_then_verify, ToConstraintFieldHelper};
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::{Field, PrimeField};
@@ -128,7 +128,7 @@ mod test {
 	use arkworks_utils::{
 		bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
 	};
-	use plonk_core::prelude::*;
+	use plonk_core::{prelude::*};
 
 	pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
 		let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
@@ -550,11 +550,11 @@ mod test {
 		// prover_pi[14356]], 	[chain_id, nullifier_hash, arbitrary_data, roots[0],
 		// roots[1]]);
 		let verifier_pi = vec![
-			chain_id,
-			nullifier_hash,
-			arbitrary_data,
-			roots[0].double(), // Verifier has different root set
-			roots[1],
+			ToConstraintFieldHelper::from(chain_id),
+			ToConstraintFieldHelper::from(nullifier_hash),
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(roots[0].double()), // Verifier has different root set
+			ToConstraintFieldHelper::from(roots[1]),
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
@@ -639,11 +639,11 @@ mod test {
 		// The order of public inputs is [chain_id, nullifier_hash,
 		// arbitrary_data, roots ]
 		let verifier_pi = vec![
-			chain_id,
-			nullifier_hash.double(), // Verifier has different nullifier hash
-			arbitrary_data,
-			roots[0],
-			roots[1],
+			ToConstraintFieldHelper::from(chain_id),
+			ToConstraintFieldHelper::from(nullifier_hash.double()), // Verifier has different nullifier hash
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(roots[0]),
+			ToConstraintFieldHelper::from(roots[1]),
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
@@ -728,11 +728,11 @@ mod test {
 		// The order of public inputs is [chain_id, nullifier_hash,
 		// arbitrary_data, roots ]
 		let verifier_pi = vec![
-			chain_id,
-			nullifier_hash,
-			arbitrary_data.double(), // Verifier has different arbitrary data
-			roots[0],
-			roots[1],
+			ToConstraintFieldHelper::from(chain_id),
+			ToConstraintFieldHelper::from(nullifier_hash),
+			ToConstraintFieldHelper::from(arbitrary_data.double()), // Verifier has different arbitrary data
+			ToConstraintFieldHelper::from(roots[0]),
+			ToConstraintFieldHelper::from(roots[1]),
 		];
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
@@ -817,12 +817,13 @@ mod test {
 		// The order of public inputs is [chain_id, nullifier_hash,
 		// arbitrary_data, roots ]
 		let verifier_pi = vec![
-			chain_id.double(), // Verifier has different chain id
-			nullifier_hash,
-			arbitrary_data,
-			roots[0],
-			roots[1],
+			ToConstraintFieldHelper::from(chain_id.double()), // Verifier has different chain ID
+			ToConstraintFieldHelper::from(nullifier_hash.double()),
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(roots[0]),
+			ToConstraintFieldHelper::from(roots[1]),
 		];
+		// Verifier has different nullifier hash
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| anchor.gadget(c),
 			1 << 17,

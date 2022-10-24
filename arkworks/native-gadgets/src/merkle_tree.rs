@@ -222,7 +222,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 				let left_index = left_child(i);
 				let right_index = right_child(i);
 
-				let empty_hash = self.empty_hashes[level].clone();
+				let empty_hash = self.empty_hashes[level];
 				let left = self.tree.get(&left_index).unwrap_or(&empty_hash);
 				let right = self.tree.get(&right_index).unwrap_or(&empty_hash);
 				#[allow(mutable_borrow_reservation_conflict)]
@@ -268,7 +268,7 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 		let pairs: BTreeMap<u32, F> = leaves
 			.iter()
 			.enumerate()
-			.map(|(i, l)| (i as u32, l.clone()))
+			.map(|(i, l)| (i as u32, *l))
 			.collect();
 		let smt = Self::new(&pairs, hasher, empty_leaf)?;
 
@@ -302,13 +302,11 @@ impl<F: PrimeField, H: FieldHasher<F>, const N: usize> SparseMerkleTree<F, H, N>
 			let current = self
 				.tree
 				.get(&current_node)
-				.cloned()
-				.unwrap_or_else(|| empty_hash.clone());
+				.cloned().unwrap_or(*empty_hash);
 			let sibling = self
 				.tree
 				.get(&sibling_node)
-				.cloned()
-				.unwrap_or_else(|| empty_hash.clone());
+				.cloned().unwrap_or(*empty_hash);
 
 			if is_left_child(current_node) {
 				path[level] = (current, sibling);
@@ -558,7 +556,7 @@ mod test {
 		// Generate again with this module's functions
 		let curve = Curve::Bn254;
 		let params = setup_params(curve, 5, 3);
-		let poseidon = Poseidon::<Bn254Fr>::new(params.clone());
+		let poseidon = Poseidon::<Bn254Fr>::new(params);
 
 		let default_leaf_hex =
 			vec!["0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c"];

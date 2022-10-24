@@ -235,15 +235,15 @@ mod test {
 		let mimc_data = setup_mimc_params(curve, rounds, width).unwrap();
 		let constants_f = bytes_vec_to_f(&mimc_data.constants);
 
-		let mimc_p = MiMCParameters {
+		
+
+		MiMCParameters {
 			k: F::zero(),
 			num_inputs: mimc_data.width as usize,
 			num_outputs: mimc_data.width as usize,
 			rounds: mimc_data.rounds as usize,
 			round_keys: constants_f,
-		};
-
-		mimc_p
+		}
 	}
 
 	#[test]

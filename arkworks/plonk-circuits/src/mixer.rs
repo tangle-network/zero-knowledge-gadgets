@@ -101,7 +101,7 @@ where
 #[cfg(test)]
 mod test {
 	use super::MixerCircuit;
-	use crate::utils::prove_then_verify;
+	use crate::utils::{prove_then_verify, ToConstraintFieldHelper};
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::{Field, PrimeField};
@@ -246,8 +246,11 @@ mod test {
 		);
 
 		// Use a different root for the verifier
-		let verifier_public_inputs = vec![nullifier_hash, root.double(), arbitrary_data];
-
+		let verifier_public_inputs = vec![
+			ToConstraintFieldHelper::from(nullifier_hash),
+			ToConstraintFieldHelper::from(root.double()),
+			ToConstraintFieldHelper::from(arbitrary_data),
+		];
 		// Prove then verify
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),
@@ -499,7 +502,11 @@ mod test {
 		);
 
 		// Give the verifier a different nullifier hash
-		let verifier_public_inputs = vec![nullifier_hash.double(), root, arbitrary_data];
+		let verifier_public_inputs = vec![
+			ToConstraintFieldHelper::from(nullifier_hash.double()),
+			ToConstraintFieldHelper::from(root),
+			ToConstraintFieldHelper::from(arbitrary_data),
+		];
 		// Prove then verify
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),
@@ -562,7 +569,11 @@ mod test {
 		);
 
 		// Give the verifier different arbitrary data
-		let verifier_public_inputs = vec![nullifier_hash, root, arbitrary_data.double()];
+		let verifier_public_inputs = vec![
+			ToConstraintFieldHelper::from(nullifier_hash),
+			ToConstraintFieldHelper::from(root),
+			ToConstraintFieldHelper::from(arbitrary_data.double()),
+		];
 		// Prove then verify
 		let res = prove_then_verify::<Bn254, JubjubParameters, _>(
 			&mut |c| mixer.gadget(c),

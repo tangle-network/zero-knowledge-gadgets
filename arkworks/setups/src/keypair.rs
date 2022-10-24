@@ -64,7 +64,7 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 	// Computes the signature = hash(secret_key, commitment, pathIndices)
 	// If the secret_key is not configured on this Keypair, return an error
 	pub fn signature(&self, commitment: &F, index: &F, hasher4: &H) -> Result<F, Error> {
-		let res = hasher4.hash(&[self.secret_key.unwrap(), commitment.clone(), index.clone()])?;
+		let res = hasher4.hash(&[self.secret_key.unwrap(), *commitment, *index])?;
 		Ok(res)
 	}
 }
@@ -72,8 +72,8 @@ impl<F: PrimeField, H: FieldHasher<F>> Keypair<F, H> {
 impl<F: PrimeField, H: FieldHasher<F>> Clone for Keypair<F, H> {
 	fn clone(&self) -> Self {
 		match self.secret_key {
-			Some(secret) => Self::new_from_keys(self.public_key.clone(), Some(secret)),
-			None => Self::new_from_public_key(self.public_key.clone()),
+			Some(secret) => Self::new_from_keys(self.public_key, Some(secret)),
+			None => Self::new_from_public_key(self.public_key),
 		}
 	}
 }
@@ -94,12 +94,12 @@ mod test {
 		let curve = Curve::Bn254;
 
 		let params = setup_params(curve, 5, 2);
-		let hasher = Poseidon::<Fq>::new(params.clone());
+		let hasher = Poseidon::<Fq>::new(params);
 		let private_key = Fq::rand(rng);
 
 		let pubkey = hasher.hash(&[private_key]).unwrap();
 
-		let keypair = Keypair::<Fq, Poseidon<Fq>>::new(private_key.clone(), &hasher);
+		let keypair = Keypair::<Fq, Poseidon<Fq>>::new(private_key, &hasher);
 		let new_pubkey = keypair.public_key;
 
 		assert_eq!(new_pubkey, pubkey)
@@ -113,14 +113,14 @@ mod test {
 		// create the hasher which is used for deriving the public key from the private
 		// key
 		let params2 = setup_params(curve, 5, 2);
-		let hasher2 = Poseidon::<Fq>::new(params2.clone());
+		let hasher2 = Poseidon::<Fq>::new(params2);
 
 		// create the hasher which is used for generating a signature.
 		let params4 = setup_params(curve, 5, 4);
-		let hasher4 = Poseidon::<Fq>::new(params4.clone());
+		let hasher4 = Poseidon::<Fq>::new(params4);
 		let commitment = Fq::rand(rng);
 
-		let keypair = Keypair::<Fq, Poseidon<Fq>>::new(private_key.clone(), &hasher2);
+		let keypair = Keypair::<Fq, Poseidon<Fq>>::new(private_key, &hasher2);
 
 		// Since signature = hash(privKey, commitment, pathIndices)
 		let ev_res = hasher4.hash(&[private_key, commitment, index]).unwrap();

@@ -20,7 +20,7 @@ ark-ec = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies]
 plonk-core = { version = "^0.1", git = "https://github.com/ZK-Garage/plonk", features = ["trace"], default-features = false }
-plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
+plonk-hashing = { path = "../plonk-hashing" }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
 ark-poly = { version = "^0.3.0", default-features = false }
 ark-serialize = { version = "^0.3.0", default-features = false }

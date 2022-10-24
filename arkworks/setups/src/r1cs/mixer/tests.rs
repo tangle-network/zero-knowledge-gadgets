@@ -228,7 +228,7 @@ fn should_fail_with_invalid_leaf_2() {
 
 	let circuit = MixerR1CSProver_Bn254_Poseidon_30::create_circuit(
 		curve,
-		arbitrary_input.clone(),
+		arbitrary_input,
 		secret,
 		nullifier,
 		path,
@@ -276,7 +276,7 @@ fn should_fail_with_invalid_nullifier() {
 
 	let circuit = MixerR1CSProver_Bn254_Poseidon_30::create_circuit(
 		curve,
-		arbitrary_input.clone(),
+		arbitrary_input,
 		secret,
 		nullifier,
 		path,

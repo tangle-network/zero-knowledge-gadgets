@@ -88,14 +88,14 @@ fn should_create_proof_for_random_circuit() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 	let leaf1 = in_utxo2.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0, leaf1],
+		&[leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -201,14 +201,14 @@ fn should_create_circuit_and_prove_groth16_2_input_2_output() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 	let leaf1 = in_utxo2.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0, leaf1],
+		&[leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -310,14 +310,14 @@ fn should_fail_with_invalid_root() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 	let leaf1 = in_utxo2.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0, leaf1],
+		&[leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -414,13 +414,13 @@ fn should_fail_with_same_nullifier() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0],
+		&[leaf0],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -522,14 +522,14 @@ fn should_fail_with_inconsistent_input_output_values() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 	let leaf1 = in_utxo2.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0, leaf1],
+		&[leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -597,7 +597,7 @@ fn should_fail_with_big_amount() {
 
 	// Input Utxos
 	let in_chain_id = 0u64;
-	let in_amount = BnFr::from(limit + BnFr::one());
+	let in_amount = limit + BnFr::one();
 	let index = 0u64;
 	let in_utxo1 = VAnchorR1CSProver_Bn254_Poseidon_30_2_2::new_utxo(
 		curve,
@@ -640,14 +640,14 @@ fn should_fail_with_big_amount() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 	let leaf1 = in_utxo2.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0, leaf1],
+		&[leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -753,14 +753,14 @@ fn should_fail_with_invalid_public_input() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf0 = in_utxo1.commitment;
 	let leaf1 = in_utxo2.commitment;
 
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf0, leaf1],
+		&[leaf0, leaf1],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -845,7 +845,7 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 	)
 	.unwrap();
 
-	let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
+	let in_utxos = [in_utxo1, in_utxo2];
 
 	// Output Utxos
 	let out_chain_id = 0u64;
@@ -866,12 +866,12 @@ fn should_create_circuit_and_prove_with_default_utxos() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf = BnFr::rand(rng);
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf],
+		&[leaf],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -973,7 +973,7 @@ fn should_create_circuit_and_prove_with_16_utxos() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaves = in_utxos_list
 		.iter()
@@ -1090,12 +1090,12 @@ fn should_create_circuit_and_prove_with_16_default_utxos() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaf = BnFr::rand(rng);
 	let (smt, _) = setup_tree_and_create_path::<BnFr, Poseidon<BnFr>, HEIGHT>(
 		&tree_hasher,
-		&vec![leaf],
+		&[leaf],
 		0,
 		&DEFAULT_LEAF,
 	)
@@ -1213,7 +1213,7 @@ fn should_create_circuit_and_prove_with_16_mixed_utxos() {
 		rng,
 	)
 	.unwrap();
-	let out_utxos = [out_utxo1.clone(), out_utxo2.clone()];
+	let out_utxos = [out_utxo1, out_utxo2];
 
 	let leaves = in_utxos_list
 		.iter()

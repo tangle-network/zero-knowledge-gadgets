@@ -14,7 +14,7 @@ homepage = "https://webb.tools"
 arkworks-native-gadgets = { path = "../native-gadgets", version = "1.2.0", default-features = false }
 arkworks-plonk-gadgets = { path = "../plonk-gadgets", version = "1.2.0", default-features = false }
 
-plonk-core = { version = "^0.8", git = "https://github.com/ZK-Garage/plonk", features = ["trace"], default-features = false }
+plonk-core = { version = "^0.1.0", git = "https://github.com/ZK-Garage/plonk", features = ["trace"], default-features = false }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-std = { version = "^0.3.0", default-features = false }
 ark-poly-commit = { version = "^0.3.0", default-features = false }
@@ -25,7 +25,7 @@ ark-ec = { version = "^0.3.0", default-features = false }
 # curves
 ark-ed-on-bn254 = { version = "^0.3.0", default-features = false, features = [ "r1cs" ] }
 ark-bn254 = { version = "^0.3.0", default-features = false, features = [ "curve" ] }
-plonk-hashing = { git = "https://github.com/ZK-Garage/plonk.git", branch = "poseidon_hash" }
+plonk-hashing = { path = "../plonk-hashing" }
 ark-serialize = { version = "^0.3.0", default-features = false }
 
 [dev-dependencies.arkworks-utils]

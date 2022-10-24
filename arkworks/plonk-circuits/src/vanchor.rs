@@ -280,7 +280,7 @@ mod test {
 	use std::marker::PhantomData;
 
 	use super::VariableAnchorCircuit;
-	use crate::utils::prove_then_verify;
+	use crate::utils::{prove_then_verify, ToConstraintFieldHelper};
 	use ark_bn254::Bn254;
 	use ark_ed_on_bn254::{EdwardsParameters as JubjubParameters, Fq};
 	use ark_ff::{Field, PrimeField};
@@ -822,19 +822,19 @@ mod test {
 		);
 
 		let verifier_public_inputs = vec![
-			public_amount,
-			public_chain_id,
-			arbitrary_data,
-			in_nullifier_hashes[0],
-			in_nullifier_hashes[0],
-			in_root_set[0].double(), // Give the verifier a different root set
-			in_root_set[1],
-			in_nullifier_hashes[1],
-			in_nullifier_hashes[1],
-			in_root_set[0],
-			in_root_set[1],
-			out_commitments[0],
-			out_commitments[1],
+			ToConstraintFieldHelper::from(public_amount),
+			ToConstraintFieldHelper::from(public_chain_id),
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[0]),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[0]),
+			ToConstraintFieldHelper::from(in_root_set[0].double()), // Give the verifier a different root set
+			ToConstraintFieldHelper::from(in_root_set[1]),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[1]),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[1]),
+			ToConstraintFieldHelper::from(in_root_set[0]),
+			ToConstraintFieldHelper::from(in_root_set[1]),
+			ToConstraintFieldHelper::from(out_commitments[0]),
+			ToConstraintFieldHelper::from(out_commitments[1]),
 		];
 
 		// Verify proof
@@ -1163,16 +1163,16 @@ mod test {
 		);
 
 		let verifier_public_inputs = vec![
-			public_amount,
-			arbitrary_data,
-			public_chain_id,
-			in_nullifier_hashes[0].double(), // Give the verifier a different nullifier hash here
-			in_nullifier_hashes[1],
-			out_commitments[0],
-			out_commitments[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
+			ToConstraintFieldHelper::from(public_amount),
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(public_chain_id),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[0].double()), // Give the verifier a different nullifier hash here
+			ToConstraintFieldHelper::from(in_nullifier_hashes[1]),
+			ToConstraintFieldHelper::from(out_commitments[0]),
+			ToConstraintFieldHelper::from(out_commitments[1]),
+			ToConstraintFieldHelper::from(in_root_set[0]),
+			ToConstraintFieldHelper::from(in_root_set[1]),
+			ToConstraintFieldHelper::from(in_root_set[2]),
 		];
 
 		// Verify proof
@@ -1502,16 +1502,16 @@ mod test {
 		);
 
 		let verifier_public_inputs = vec![
-			public_amount,
-			arbitrary_data.double(), // Give the verifier different arbitrary data
-			public_chain_id,
-			in_nullifier_hashes[0],
-			in_nullifier_hashes[1],
-			out_commitments[0],
-			out_commitments[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
+			ToConstraintFieldHelper::from(public_amount),
+			ToConstraintFieldHelper::from(arbitrary_data.double()), // Give the verifier different arbitrary data
+			ToConstraintFieldHelper::from(public_chain_id),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[0]),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[1]),
+			ToConstraintFieldHelper::from(out_commitments[0]),
+			ToConstraintFieldHelper::from(out_commitments[1]),
+			ToConstraintFieldHelper::from(in_root_set[0]),
+			ToConstraintFieldHelper::from(in_root_set[1]),
+			ToConstraintFieldHelper::from(in_root_set[2]),
 		];
 
 		// Verify proof
@@ -1676,16 +1676,16 @@ mod test {
 		);
 
 		let verifier_public_inputs = vec![
-			public_amount,
-			arbitrary_data,
-			public_chain_id.double(), // Give the verifier different chain id
-			in_nullifier_hashes[0],
-			in_nullifier_hashes[1],
-			out_commitments[0],
-			out_commitments[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
+			ToConstraintFieldHelper::from(public_amount),
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(public_chain_id.double()), // Give the verifier different chain id
+			ToConstraintFieldHelper::from(in_nullifier_hashes[0]),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[1]),
+			ToConstraintFieldHelper::from(out_commitments[0]),
+			ToConstraintFieldHelper::from(out_commitments[1]),
+			ToConstraintFieldHelper::from(in_root_set[0]),
+			ToConstraintFieldHelper::from(in_root_set[1]),
+			ToConstraintFieldHelper::from(in_root_set[2]),
 		];
 
 		// Verify proof
@@ -1850,16 +1850,16 @@ mod test {
 		);
 
 		let verifier_public_inputs = vec![
-			public_amount.double(), // Give the verifier different public amount
-			arbitrary_data,
-			public_chain_id,
-			in_nullifier_hashes[0],
-			in_nullifier_hashes[1],
-			out_commitments[0],
-			out_commitments[1],
-			in_root_set[0],
-			in_root_set[1],
-			in_root_set[2],
+			ToConstraintFieldHelper::from(public_amount.double()), // Give the verifier different public amount
+			ToConstraintFieldHelper::from(arbitrary_data),
+			ToConstraintFieldHelper::from(public_chain_id),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[0]),
+			ToConstraintFieldHelper::from(in_nullifier_hashes[1]),
+			ToConstraintFieldHelper::from(out_commitments[0]),
+			ToConstraintFieldHelper::from(out_commitments[1]),
+			ToConstraintFieldHelper::from(in_root_set[0]),
+			ToConstraintFieldHelper::from(in_root_set[1]),
+			ToConstraintFieldHelper::from(in_root_set[2]),
 		];
 
 		// Verify proof

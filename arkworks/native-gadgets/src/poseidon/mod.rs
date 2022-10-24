@@ -362,16 +362,16 @@ pub mod test {
 		let mds_f = bytes_matrix_to_f(&pos_data.mds);
 		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
 
-		let pos = PoseidonParameters {
+		
+
+		PoseidonParameters {
 			mds_matrix: mds_f,
 			round_keys: rounds_f,
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
 			width: pos_data.width,
-		};
-
-		pos
+		}
 	}
 
 	type PoseidonHasher = Poseidon<Fq>;

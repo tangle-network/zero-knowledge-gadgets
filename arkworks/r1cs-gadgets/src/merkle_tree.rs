@@ -210,12 +210,12 @@ where
 		for &(ref l, ref r) in &path_obj.borrow().path {
 			let l_hash = FpVar::<F>::new_variable(
 				ark_relations::ns!(cs, "l_child"),
-				|| Ok(l.clone()),
+				|| Ok(*l),
 				mode,
 			)?;
 			let r_hash = FpVar::<F>::new_variable(
 				ark_relations::ns!(cs, "r_child"),
-				|| Ok(r.clone()),
+				|| Ok(*r),
 				mode,
 			)?;
 			path.push((l_hash, r_hash));
@@ -257,16 +257,16 @@ mod test {
 		let mds_f = bytes_matrix_to_f(&pos_data.mds);
 		let rounds_f = bytes_vec_to_f(&pos_data.rounds);
 
-		let pos = PoseidonParameters {
+		
+
+		PoseidonParameters {
 			mds_matrix: mds_f,
 			round_keys: rounds_f,
 			full_rounds: pos_data.full_rounds,
 			partial_rounds: pos_data.partial_rounds,
 			sbox: PoseidonSbox(pos_data.exp),
 			width: pos_data.width,
-		};
-
-		pos
+		}
 	}
 
 	type FieldVar = FpVar<Fq>;

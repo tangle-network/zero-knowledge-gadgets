@@ -11,6 +11,7 @@ members = [
 ]
 
 exclude = [
+    "arkworks/plonk-hashing",
     "arkworks/plonk-gadgets",
     "arkworks/plonk-circuits",
     "arkworks/benchmarks",

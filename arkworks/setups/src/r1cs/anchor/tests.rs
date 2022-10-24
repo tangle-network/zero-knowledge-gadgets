@@ -262,7 +262,7 @@ fn should_fail_with_invalid_nullifier_hash() {
 	roots_new[0] = tree.root();
 
 	let mc = AnchorCircuit::<Bn254Fr, PoseidonGadget<Bn254Fr>, HEIGHT, ANCHOR_CT>::new(
-		arbitrary_input.clone(),
+		arbitrary_input,
 		secret,
 		nullifier,
 		chain_id,

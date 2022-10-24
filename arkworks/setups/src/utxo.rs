@@ -128,7 +128,7 @@ impl<F: PrimeField> Utxo<F> {
 				let signature = self.keypair.signature(&self.commitment, &i, hasher4)?;
 				let nullifier = hasher4.hash(&[self.commitment, i, signature]);
 				let nullifier = nullifier
-					.map_err::<UtxoError, _>(|_| UtxoError::NullifierNotCalculated.into())?;
+					.map_err::<UtxoError, _>(|_| UtxoError::NullifierNotCalculated)?;
 				Ok(nullifier)
 			}
 			None => Err(UtxoError::IndexNotSet.into()),

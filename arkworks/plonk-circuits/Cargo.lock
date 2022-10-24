@@ -152,7 +152,7 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "derivative",
- "hashbrown",
+ "hashbrown 0.11.2",
  "rayon",
 ]
 
@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-native-gadgets"
-version = "1.0.0"
+version = "1.2.0"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ff",
@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-plonk-circuits"
-version = "1.0.0"
+version = "1.2.0"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -271,19 +271,19 @@ dependencies = [
  "arkworks-native-gadgets",
  "arkworks-plonk-gadgets",
  "arkworks-utils",
- "plonk-core 0.8.2 (git+https://github.com/ZK-Garage/plonk)",
+ "plonk-core 0.1.0",
  "plonk-hashing",
 ]
 
 [[package]]
 name = "arkworks-plonk-gadgets"
-version = "1.0.0"
+version = "1.2.0"
 dependencies = [
  "ark-ec",
  "ark-ff",
  "ark-std",
  "arkworks-native-gadgets",
- "plonk-core 0.8.2 (git+https://github.com/ZK-Garage/plonk)",
+ "plonk-core 0.1.0",
 ]
 
 [[package]]
@@ -435,6 +435,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -448,6 +454,16 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "indexmap"
+version = "1.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
+dependencies = [
+ "autocfg",
+ "hashbrown 0.12.3",
+]
 
 [[package]]
 name = "itertools"
@@ -572,6 +588,28 @@ checksum = "e280fbe77cc62c91527259e9442153f4688736748d24660126286329742b4c6c"
 
 [[package]]
 name = "plonk-core"
+version = "0.1.0"
+source = "git+https://github.com/ZK-Garage/plonk#ec76fd36cc6b9e9d0f7a9495094e76b86e53dab4"
+dependencies = [
+ "ark-bls12-381",
+ "ark-ec",
+ "ark-ff",
+ "ark-poly",
+ "ark-poly-commit",
+ "ark-serialize",
+ "ark-std",
+ "blake2",
+ "derivative",
+ "hashbrown 0.11.2",
+ "indexmap",
+ "itertools",
+ "merlin",
+ "num-traits",
+ "rand_core",
+]
+
+[[package]]
+name = "plonk-core"
 version = "0.8.2"
 source = "git+https://github.com/ZK-Garage/plonk.git?branch=poseidon_hash#097353b1eec48eb3bb083c44342b8535a1e3d335"
 dependencies = [
@@ -584,28 +622,7 @@ dependencies = [
  "ark-std",
  "blake2",
  "derivative",
- "hashbrown",
- "itertools",
- "merlin",
- "num-traits",
- "rand",
-]
-
-[[package]]
-name = "plonk-core"
-version = "0.8.2"
-source = "git+https://github.com/ZK-Garage/plonk#78eff52a98d2f3b246e12dc9a958bf3ee88ae994"
-dependencies = [
- "ark-bls12-381",
- "ark-ec",
- "ark-ff",
- "ark-poly",
- "ark-poly-commit",
- "ark-serialize",
- "ark-std",
- "blake2",
- "derivative",
- "hashbrown",
+ "hashbrown 0.11.2",
  "itertools",
  "merlin",
  "num-traits",
@@ -627,10 +644,10 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "derivative",
- "hashbrown",
+ "hashbrown 0.11.2",
  "itertools",
  "num-traits",
- "plonk-core 0.8.2 (git+https://github.com/ZK-Garage/plonk.git?branch=poseidon_hash)",
+ "plonk-core 0.8.2",
  "thiserror",
 ]
 
