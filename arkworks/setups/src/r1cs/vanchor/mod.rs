@@ -69,10 +69,8 @@ where
 	) -> Result<Utxo<E::Fr>, Error> {
 		// Initialize hashers
 		let params2 = setup_params::<E::Fr>(curve, 5, 2);
-		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
-		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 		Utxo::new(
 			chain_id,
@@ -81,7 +79,6 @@ where
 			secret_key,
 			blinding,
 			&keypair_hasher,
-			&nullifier_hasher,
 			&leaf_hasher,
 			rng,
 		)
@@ -287,10 +284,8 @@ where
 	) -> Result<Utxo<E::Fr>, Error> {
 		// Initialize hashers
 		let params2 = setup_params::<E::Fr>(curve, 5, 2);
-		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
-		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 
 		let private_key_elt: E::Fr = E::Fr::from_be_bytes_mod_order(&private_key);
@@ -303,7 +298,6 @@ where
 			private_key_elt,
 			blinding_field_elt,
 			&keypair_hasher,
-			&nullifier_hasher,
 			&leaf_hasher,
 		)?;
 		Ok(utxo)
@@ -476,10 +470,8 @@ where
 	) -> Result<Utxo<<E as PairingEngine>::Fr>, Error> {
 		// Initialize hashers
 		let params2 = setup_params::<E::Fr>(curve, 5, 2);
-		let params4 = setup_params::<E::Fr>(curve, 5, 4);
 		let params5 = setup_params::<E::Fr>(curve, 5, 5);
 		let keypair_hasher = Poseidon::<E::Fr> { params: params2 };
-		let nullifier_hasher = Poseidon::<E::Fr> { params: params4 };
 		let leaf_hasher = Poseidon::<E::Fr> { params: params5 };
 
 		let amount_elt = E::Fr::from(amount);
@@ -490,7 +482,6 @@ where
 			None,
 			None,
 			&keypair_hasher,
-			&nullifier_hasher,
 			&leaf_hasher,
 			rng,
 		)?;

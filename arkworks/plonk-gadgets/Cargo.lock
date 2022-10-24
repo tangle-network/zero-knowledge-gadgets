@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-native-gadgets"
-version = "1.0.0"
+version = "1.2.0"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ff",
@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-plonk-gadgets"
-version = "1.0.0"
+version = "1.2.0"
 dependencies = [
  "ark-bn254",
  "ark-ec",
