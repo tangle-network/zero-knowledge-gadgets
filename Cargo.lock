@@ -311,7 +311,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-native-gadgets"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "ark-bn254",
  "ark-crypto-primitives",
@@ -324,7 +324,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-r1cs-circuits"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "ark-bls12-381",
  "ark-crypto-primitives",
@@ -347,7 +347,7 @@ dependencies = [
 
 [[package]]
 name = "arkworks-r1cs-gadgets"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "ark-bls12-381",
  "ark-crypto-primitives",
