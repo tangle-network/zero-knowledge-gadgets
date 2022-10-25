@@ -1,18 +1,19 @@
 [workspace]
 
 members = [
-    "arkworks-native-gadgets",
+    "arkworks/native-gadgets",
     # R1CS gadgets + circuits
-    "arkworks-r1cs-circuits",
-    "arkworks-r1cs-gadgets",
+    "arkworks/r1cs-circuits",
+    "arkworks/r1cs-gadgets",
     # Utils and setups
-    "arkworks-setups",
-    "arkworks-utils",
+    "arkworks/setups",
+    "arkworks/utils",
 ]
 
 exclude = [
-    "arkworks-plonk-circuits",
-    "arkworks-plonk-gadgets",
-    "arkworks-benchmarks",
-    "arkworks-utils"
+    "arkworks/plonk-hashing",
+    "arkworks/plonk-gadgets",
+    "arkworks/plonk-circuits",
+    "arkworks/benchmarks",
+    "arkworks/utils"
 ]

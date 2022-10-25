@@ -28,9 +28,9 @@ cargo build -p arkworks-setups --release --no-default-features --features aead &
 cargo build -p arkworks-setups --release --all-features
 
 # PLONK gadgets
-cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release --no-default-features && \
-cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release && \
+cargo build --manifest-path $BASEDIR/../arkworks/plonk-gadgets/Cargo.toml --release --no-default-features && \
+cargo build --manifest-path $BASEDIR/../arkworks/plonk-gadgets/Cargo.toml --release && \
 
 # PLONK circuits
-cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release --no-default-features && \
-cargo build --manifest-path $BASEDIR/../arkworks-plonk-gadgets/Cargo.toml --release
+cargo build --manifest-path $BASEDIR/../arkworks/plonk-gadgets/Cargo.toml --release --no-default-features && \
+cargo build --manifest-path $BASEDIR/../arkworks/plonk-gadgets/Cargo.toml --release
