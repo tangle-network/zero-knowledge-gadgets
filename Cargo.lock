@@ -310,6 +310,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "arkworks-benchmarks"
+version = "1.2.1"
+dependencies = [
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-crypto-primitives",
+ "ark-ec",
+ "ark-ed-on-bls12-381",
+ "ark-ed-on-bn254",
+ "ark-ff",
+ "ark-groth16",
+ "ark-marlin",
+ "ark-poly",
+ "ark-poly-commit",
+ "ark-r1cs-std",
+ "ark-relations",
+ "ark-serialize",
+ "ark-snark",
+ "ark-std",
+ "arkworks-native-gadgets",
+ "arkworks-r1cs-circuits",
+ "arkworks-r1cs-gadgets",
+ "arkworks-setups",
+ "arkworks-utils",
+ "blake2",
+ "digest",
+]
+
+[[package]]
 name = "arkworks-native-gadgets"
 version = "1.2.1"
 dependencies = [

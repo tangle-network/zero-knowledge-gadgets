@@ -1,7 +1,8 @@
 use ark_bls12_381::{Bls12_381, Fr as BlsFr};
-use ark_crypto_primitives::SNARK;
+use ark_bn254::Bn254;
+use ark_crypto_primitives::{Error, SNARK};
 use ark_ed_on_bls12_381::{EdwardsAffine, Fr as EdBlsFr};
-use ark_ff::{One, UniformRand};
+use ark_ff::{BigInteger, One, PrimeField, UniformRand};
 use ark_groth16::Groth16;
 use ark_marlin::Marlin;
 use ark_poly::univariate::DensePolynomial;
@@ -9,86 +10,156 @@ use ark_poly_commit::{ipa_pc::InnerProductArgPC, marlin_pc::MarlinKZG10, sonic_p
 use ark_std::{self, test_rng, time::Instant, vec::Vec};
 use arkworks_native_gadgets::{
 	merkle_tree::SparseMerkleTree,
-	poseidon::{FieldHasher, Poseidon},
+	poseidon::{sbox::PoseidonSbox, FieldHasher, Poseidon, PoseidonParameters},
 };
-use arkworks_r1cs_circuits::anchor::AnchorCircuit;
+use arkworks_r1cs_circuits::vanchor::VAnchorCircuit;
 use arkworks_r1cs_gadgets::poseidon::PoseidonGadget;
-
-use arkworks_utils::utils::common::{setup_params_x5_3, setup_params_x5_4};
+use arkworks_setups::{
+	common::{setup_keys_unchecked, setup_tree_and_create_path, SMT},
+	r1cs::vanchor::VAnchorR1CSProver,
+	VAnchorProver,
+};
+use arkworks_utils::{
+	bytes_matrix_to_f, bytes_vec_to_f, poseidon_params::setup_poseidon_params, Curve,
+};
 use blake2::Blake2s;
+use std::collections::btree_map::BTreeMap;
+
+pub fn setup_params<F: PrimeField>(curve: Curve, exp: i8, width: u8) -> PoseidonParameters<F> {
+	let pos_data = setup_poseidon_params(curve, exp, width).unwrap();
+
+	let mds_f = bytes_matrix_to_f(&pos_data.mds);
+	let rounds_f = bytes_vec_to_f(&pos_data.rounds);
+
+	PoseidonParameters {
+		mds_matrix: mds_f,
+		round_keys: rounds_f,
+		full_rounds: pos_data.full_rounds,
+		partial_rounds: pos_data.partial_rounds,
+		sbox: PoseidonSbox(pos_data.exp),
+		width: pos_data.width,
+	}
+}
 
 macro_rules! setup_circuit {
-	($test_field:ty) => {{
-		const ANCHOR_CT: usize = 4;
+	($test_engine:ty, $test_field:ty, $test_curve:expr) => {{
+		const N_INS: usize = 2;
+		const N_OUTS: usize = 2;
+		const ANCHOR_CT: usize = 2;
 		const HEIGHT: usize = 30;
 		const DEFAULT_LEAF: [u8; 32] = [0u8; 32];
 
-		type Circuit = AnchorCircuit<$test_field, PoseidonGadget<$test_field>, HEIGHT, ANCHOR_CT>;
+		// Initialize hashers
+		let params2 = setup_params::<$test_field>($test_curve, 5, 2);
+		let params3 = setup_params::<$test_field>($test_curve, 5, 3);
+		let params4 = setup_params::<$test_field>($test_curve, 5, 4);
+		let params5 = setup_params::<$test_field>($test_curve, 5, 5);
+
+		let keypair_hasher = Poseidon::<$test_field> { params: params2 };
+		let tree_hasher = Poseidon::<$test_field> { params: params3 };
+		let nullifier_hasher = Poseidon::<$test_field> { params: params4 };
+		let leaf_hasher = Poseidon::<$test_field> { params: params5 };
+
+		#[allow(non_camel_case_types)]
+		type Prover = VAnchorR1CSProver<$test_engine, HEIGHT, ANCHOR_CT, N_INS, N_OUTS>;
 
 		let rng = &mut test_rng();
-		let curve = arkworks_utils::utils::common::Curve::Bn254;
-		// Secret inputs for the leaf
-		let secret = <$test_field>::rand(rng);
-		let nullifier = <$test_field>::rand(rng);
-		// Public inputs for the leaf
-		let chain_id = <$test_field>::one();
+		let random_circuit = Prover::setup_random_circuit($test_curve, DEFAULT_LEAF, rng);
 
-		// Round params for the poseidon in leaf creation gadget
-		let params4 = setup_params_x5_4(curve);
-		let leaf_hasher = Poseidon::<$test_field>::new(params4);
+		// Make a proof now
+		let public_amount: u32 = 10;
+		let ext_data_hash = <$test_field>::rand(rng);
 
-		let params3 = setup_params_x5_3(curve);
-		let nullifier_hasher = Poseidon::<$test_field>::new(params3);
-		// Creating the leaf
-		let leaf_hash = leaf_hasher.hash(&[chain_id, secret, nullifier]).unwrap();
-		let nullifier_hash = nullifier_hasher.hash_two(&nullifier, &nullifier).unwrap();
+		// Input Utxos
+		let in_chain_id = 0u64;
+		let in_amount = 5;
+		let index = 0u64;
+		let in_utxo1 =
+			Prover::create_random_utxo($test_curve, in_chain_id, in_amount, Some(index), rng)
+				.unwrap();
+		let in_utxo2 =
+			Prover::create_random_utxo($test_curve, in_chain_id, in_amount, Some(1), rng).unwrap();
+		let in_utxos = [in_utxo1.clone(), in_utxo2.clone()];
 
-		// Arbitrary data
-		let arbitrary_input = <$test_field>::rand(rng);
+		// Output Utxos
+		let out_chain_id = 0u64;
+		let out_amount = 10;
+		let out_utxo1 =
+			Prover::create_random_utxo($test_curve, out_chain_id, out_amount, None, rng).unwrap();
+		let out_utxo2 =
+			Prover::create_random_utxo($test_curve, out_chain_id, out_amount, None, rng).unwrap();
+		let out_utxos = [out_utxo1, out_utxo2];
 
-		// Making params for poseidon in merkle tree
+		let leaf0 = in_utxo1.commitment;
+		let leaf1 = in_utxo2.commitment;
 
-		let params3 = setup_params_x5_3(curve);
-		let leaves = vec![
-			<$test_field>::rand(rng),
-			<$test_field>::rand(rng),
-			leaf_hash,
-			<$test_field>::rand(rng),
-		];
-		let tree_hasher = Poseidon::<$test_field>::new(params3);
-		// Making the merkle tree
-		let mt = SparseMerkleTree::<$test_field, Poseidon<$test_field>, HEIGHT>::new_sequential(
-			&leaves,
+		let (smt, _) = setup_tree_and_create_path::<$test_field, Poseidon<$test_field>, HEIGHT>(
 			&tree_hasher,
+			&[leaf0, leaf1],
+			0,
 			&DEFAULT_LEAF,
 		)
 		.unwrap();
-		// Getting the proof path
-		let path = mt.generate_membership_proof(2);
-		let root = mt.root();
-		let roots = [
-			<$test_field>::rand(rng),
-			<$test_field>::rand(rng),
-			<$test_field>::rand(rng),
-			root.clone(),
+
+		let in_paths = [
+			smt.generate_membership_proof(0),
+			smt.generate_membership_proof(1),
 		];
-		let mc = Circuit::new(
-			arbitrary_input.clone(),
-			secret,
-			nullifier,
-			chain_id,
-			roots.clone(),
-			path,
-			nullifier_hash,
-			tree_hasher,
-			leaf_hasher,
+
+		let mut in_leaves = BTreeMap::new();
+		in_leaves.insert(in_chain_id, vec![
+			leaf0.into_repr().to_bytes_be(),
+			leaf1.into_repr().to_bytes_be(),
+		]);
+		let in_indices: [u32; 2] = [0, 1];
+		let in_root_set = [
+			smt.root().into_repr().to_bytes_be(),
+			smt.root().into_repr().to_bytes_be(),
+		];
+
+		let in_nullifiers: Vec<$test_field> = in_utxos
+			.iter()
+			.map(|x| x.calculate_nullifier(&nullifier_hasher.clone()).unwrap())
+			.collect();
+
+		// Cast as field elements
+		let chain_id_elt = <$test_field>::from(in_chain_id);
+		let public_amount_elt = <$test_field>::from(public_amount);
+		let ext_data_hash_elt =
+			<$test_field>::from_be_bytes_mod_order(&ext_data_hash.into_repr().to_bytes_be());
+		// Generate the paths for each UTXO
+		let mut trees = BTreeMap::<u64, SMT<$test_field, Poseidon<$test_field>, HEIGHT>>::new();
+
+		let public_inputs = Prover::construct_public_inputs(
+			chain_id_elt,
+			public_amount_elt,
+			in_root_set
+				.clone()
+				.map(|elt| <$test_field>::from_be_bytes_mod_order(&elt))
+				.to_vec(),
+			in_nullifiers.to_vec(),
+			out_utxos.clone().map(|utxo| utxo.commitment).to_vec(),
+			ext_data_hash_elt,
 		);
-		let mut public_inputs = Vec::new();
-		public_inputs.push(chain_id);
-		public_inputs.push(nullifier_hash);
-		public_inputs.extend(roots.to_vec());
-		public_inputs.push(arbitrary_input);
-		(public_inputs, mc)
+
+		// Get the circuit
+		let circuit = Prover::setup_circuit(
+			chain_id_elt,
+			public_amount_elt,
+			ext_data_hash_elt,
+			in_utxos,
+			in_indices.map(<$test_field>::from),
+			in_paths.to_vec(),
+			in_root_set.map(|elt| <$test_field>::from_be_bytes_mod_order(&elt)),
+			out_utxos.clone(),
+			keypair_hasher,
+			tree_hasher,
+			nullifier_hasher,
+			leaf_hasher,
+		)
+		.unwrap();
+
+		(public_inputs, circuit)
 	}};
 }
 
@@ -111,9 +182,9 @@ macro_rules! measure {
 }
 
 macro_rules! benchmark_marlin {
-	($marlin:ty, $field:ty, $name:expr, $nc:expr, $nv:expr, $num_iter:expr) => {
+	($marlin:ty, $engine:ty, $field:ty, $curve:expr, $name:expr, $nc:expr, $nv:expr, $num_iter:expr) => {
 		let rng = &mut test_rng();
-		let (public_inputs, circuit) = setup_circuit!($field);
+		let (public_inputs, circuit) = setup_circuit!($engine, $field, $curve);
 
 		// Setup
 		let srs = measure!(
@@ -150,9 +221,9 @@ macro_rules! benchmark_marlin {
 }
 
 macro_rules! benchmark_groth {
-	($groth:ty, $field:ty, $num_iter:expr) => {
+	($groth:ty, $engine:ty, $field:ty, $curve:expr, $num_iter:expr) => {
 		let rng = &mut test_rng();
-		let (public_inputs, circuit) = setup_circuit!($field);
+		let (public_inputs, circuit) = setup_circuit!($engine, $field, $curve);
 
 		// Setup
 		let keys = measure!(
@@ -181,29 +252,29 @@ macro_rules! benchmark_groth {
 }
 
 fn benchmark_groth16(num_iter: u32) {
-	type GrothSetup = Groth16<Bls12_381>;
-	benchmark_groth!(GrothSetup, BlsFr, num_iter);
+	type GrothSetup = Groth16<Bn254>;
+	benchmark_groth!(GrothSetup, Bn254, ark_bn254::Fr, Curve::Bn254, num_iter);
 }
 
-fn benchmark_marlin_poly(nc: usize, nv: usize, num_iter: u32) {
-	type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
-	type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
-	benchmark_marlin!(MarlinSetup, BlsFr, "Marlin_PolyKZG10", nc, nv, num_iter);
-}
+// fn benchmark_marlin_poly(nc: usize, nv: usize, num_iter: u32) {
+// 	type KZG10 = MarlinKZG10<Bls12_381, DensePolynomial<BlsFr>>;
+// 	type MarlinSetup = Marlin<BlsFr, KZG10, Blake2s>;
+// 	benchmark_marlin!(MarlinSetup, BlsFr, "Marlin_PolyKZG10", nc, nv, num_iter);
+// }
 
-fn benchmark_marlin_sonic(nc: usize, nv: usize, num_iter: u32) {
-	type Sonic = SonicKZG10<Bls12_381, DensePolynomial<BlsFr>>;
-	type MarlinSetup = Marlin<BlsFr, Sonic, Blake2s>;
+// fn benchmark_marlin_sonic(nc: usize, nv: usize, num_iter: u32) {
+// 	type Sonic = SonicKZG10<Bls12_381, DensePolynomial<BlsFr>>;
+// 	type MarlinSetup = Marlin<BlsFr, Sonic, Blake2s>;
 
-	benchmark_marlin!(MarlinSetup, BlsFr, "Marlin_Sonic", nc, nv, num_iter);
-}
+// 	benchmark_marlin!(MarlinSetup, BlsFr, "Marlin_Sonic", nc, nv, num_iter);
+// }
 
-fn benchmark_marlin_ipa_pc(nc: usize, nv: usize, num_iter: u32) {
-	type IPA = InnerProductArgPC<EdwardsAffine, Blake2s, DensePolynomial<EdBlsFr>>;
-	type MarlinSetup = Marlin<EdBlsFr, IPA, Blake2s>;
+// fn benchmark_marlin_ipa_pc(nc: usize, nv: usize, num_iter: u32) {
+// 	type IPA = InnerProductArgPC<EdwardsAffine, Blake2s,
+// DensePolynomial<EdBlsFr>>; 	type MarlinSetup = Marlin<EdBlsFr, IPA, Blake2s>;
 
-	benchmark_marlin!(MarlinSetup, EdBlsFr, "Marlin_IPA_PC", nc, nv, num_iter);
-}
+// 	benchmark_marlin!(MarlinSetup, EdBlsFr, "Marlin_IPA_PC", nc, nv, num_iter);
+// }
 
 fn main() {
 	let nc = 65536;
@@ -212,10 +283,10 @@ fn main() {
 
 	// Groth16
 	benchmark_groth16(num_iter);
-	// MarlinKZG10
-	benchmark_marlin_poly(nc, nv, num_iter);
-	// Sonic
-	benchmark_marlin_sonic(nc, nv, num_iter);
-	// IPA
-	benchmark_marlin_ipa_pc(nc, nv, num_iter);
+	// // MarlinKZG10
+	// benchmark_marlin_poly(nc, nv, num_iter);
+	// // Sonic
+	// benchmark_marlin_sonic(nc, nv, num_iter);
+	// // IPA
+	// benchmark_marlin_ipa_pc(nc, nv, num_iter);
 }

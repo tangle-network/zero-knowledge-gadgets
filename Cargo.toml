@@ -8,12 +8,12 @@ members = [
     # Utils and setups
     "arkworks/setups",
     "arkworks/utils",
+    "arkworks/benchmarks",
 ]
 
 exclude = [
     "arkworks/plonk-hashing",
     "arkworks/plonk-gadgets",
     "arkworks/plonk-circuits",
-    "arkworks/benchmarks",
     "arkworks/utils"
 ]
