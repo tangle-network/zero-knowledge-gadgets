@@ -313,14 +313,14 @@ impl<F: PrimeField> FieldHasher<F> for Poseidon<F> {
 			let half_rounds = full_rounds / 2;
 
 			if r < half_rounds || r >= half_rounds + partial_rounds {
-				// Applying an exponentiation S-box to the *first* entry of the
-				// state vector, during partial rounds
+				// Applying an exponentiation S-box to *all* entries of the state
+				// vector, during full rounds
 				state
 					.iter_mut()
 					.try_for_each(|a| self.params.sbox.apply_sbox(*a).map(|f| *a = f))?;
 			} else {
-				//Applying an exponentiation S-box to *all* entries of the state
-				// vector, during full rounds
+				// Applying an exponentiation S-box to the *first* entry of the
+				// state vector, during partial rounds
 				state[0] = self.params.sbox.apply_sbox(state[0])?;
 			}
 
