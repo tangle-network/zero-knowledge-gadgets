@@ -1,12 +1,10 @@
-name: Set-Up & Build & Test
+name: checks
 
-# Controls when the action will run.
 on:
   push:
-    pull_request:
-      branches:
-        - "**" # matches every branch
-        - "!master" # excludes master
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
