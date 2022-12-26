@@ -1,0 +1,20 @@
+[package]
+name = "mpt-storage-proofs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ff = "0.11"
+rand = "0.8"
+group = "0.11"
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+blake = "2.0.2"
+
+num-bigint = {version = "0.2.2", features = ["rand"]}
+num-integer = "0.1.45"
+num-traits = "0.2"
+
+halo2wrong = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", branch = "master" }
+ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong.git", branch = "master" }
