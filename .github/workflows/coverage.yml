@@ -32,10 +32,10 @@ jobs:
           toolchain: stable
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v1.3.0
+        uses: Swatinem/rust-cache@v2
 
       - name: Install Tarpaulin
-        run: cargo install cargo-tarpaulin --locked
+        run: cargo install cargo-tarpaulin
 
       - name: Run Tarpaulin
         run: cargo tarpaulin --workspace --release --locked --out Xml --jobs 16 --timeout 5600 -- --test-threads 16
