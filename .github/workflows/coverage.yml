@@ -35,7 +35,7 @@ jobs:
         uses: Swatinem/rust-cache@v1.3.0
 
       - name: Install Tarpaulin
-        run: cargo install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin --locked
 
       - name: Run Tarpaulin
         run: cargo tarpaulin --workspace --release --locked --out Xml --jobs 16 --timeout 5600 -- --test-threads 16
